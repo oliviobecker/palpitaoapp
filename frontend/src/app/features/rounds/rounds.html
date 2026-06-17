@@ -1,0 +1,66 @@
+<div class="mb-3">
+  <h1 class="h4 fw-bold mb-0">{{ 'rounds.title' | translate }}</h1>
+</div>
+
+@if (loading()) {
+  <app-loading />
+} @else if (visible().length === 0) {
+  <app-empty-state [message]="'rounds.empty' | translate" />
+} @else {
+  <div class="vstack gap-2">
+    @for (round of visible(); track round.id) {
+      <div class="card round-accent r--{{ statusKey(round.status) }}">
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3">
+            <span class="round-tile">
+              <span class="round-tile__label">{{ 'adminRounds.tile' | translate }}</span>
+              <span class="round-tile__num">{{ round.number }}</span>
+            </span>
+            <div class="round-item__body">
+              <div class="fw-semibold">
+                {{ 'dashboard.round' | translate }} {{ round.number }}
+                @if (round.title) {
+                  · {{ round.title }}
+                }
+              </div>
+              <small class="text-muted"
+                >🕐 {{ round.matchCount }} {{ 'rounds.games' | translate }}</small
+              >
+            </div>
+            <span class="round-pill">{{ 'status.' + round.status | translate }}</span>
+          </div>
+
+          @if (round.status === RoundStatus.Published) {
+            <div class="small text-muted mt-3 mb-2">
+              {{ 'rounds.deadline' | translate }}:
+              {{ round.firstMatchStartsAt | date: 'dd/MM HH:mm' }} ·
+              <app-countdown [target]="round.firstMatchStartsAt ?? null" />
+            </div>
+            <a class="btn btn-primary w-100" [routerLink]="['/rounds', round.id, 'predictions']">{{
+              'rounds.predict' | translate
+            }}</a>
+          } @else if (round.status === RoundStatus.Locked) {
+            <a
+              class="btn btn-outline-primary w-100 mt-3"
+              [routerLink]="['/rounds', round.id, 'mirror']"
+              >{{ 'rounds.viewMirror' | translate }}</a
+            >
+          } @else if (round.status === RoundStatus.Scored) {
+            <div class="d-flex gap-2 mt-3">
+              <a
+                class="btn btn-outline-secondary flex-fill"
+                [routerLink]="['/rounds', round.id, 'mirror']"
+                >{{ 'rounds.mirror' | translate }}</a
+              >
+              <a
+                class="btn btn-primary flex-fill"
+                [routerLink]="['/rounds', round.id, 'results']"
+                >{{ 'rounds.result' | translate }}</a
+              >
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}

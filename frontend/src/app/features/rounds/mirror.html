@@ -1,0 +1,80 @@
+<div class="mb-3">
+  <div class="page-trail">
+    <a routerLink="/rounds">{{ 'nav.rounds' | translate }}</a> · {{ 'mirror.title' | translate }}
+  </div>
+  <h1 class="h4 fw-bold mb-0">{{ 'mirror.title' | translate }}</h1>
+</div>
+
+@if (loading()) {
+  <app-loading />
+} @else if (blocked()) {
+  <app-empty-state icon="🔒" [message]="'mirror.locked' | translate" />
+} @else if (mirror(); as data) {
+  <!-- Filters -->
+  <div class="row g-2 mb-3">
+    <div class="col-6">
+      <select
+        class="form-select"
+        [ngModel]="participantFilter()"
+        (ngModelChange)="participantFilter.set($event)"
+      >
+        <option value="">{{ 'mirror.allParticipants' | translate }}</option>
+        @for (p of data.participants; track p.userId) {
+          <option [value]="p.userId">{{ p.name }}</option>
+        }
+      </select>
+    </div>
+    <div class="col-6">
+      <select
+        class="form-select"
+        [ngModel]="matchFilter()"
+        (ngModelChange)="matchFilter.set($event)"
+      >
+        <option value="">{{ 'mirror.allGames' | translate }}</option>
+        @for (m of data.matches; track m.roundMatchId) {
+          <option [value]="m.roundMatchId">{{ m.homeTeamName }} x {{ m.awayTeamName }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  @if (participants().length === 0) {
+    <app-empty-state [message]="'mirror.noParticipants' | translate" />
+  } @else {
+    <div class="vstack gap-2">
+      @for (p of participants(); track p.userId) {
+        <div class="card" [class.border-danger]="p.isEliminated">
+          <div class="card-body">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+              <strong>{{ p.name }}</strong>
+              @if (p.isAbsent) {
+                <span class="badge text-bg-secondary">{{ 'mirror.absent' | translate }}</span>
+              }
+              @if (p.isEliminated) {
+                <span class="badge text-bg-danger">{{ 'mirror.eliminated' | translate }}</span>
+              }
+              @if (p.flavioRuleApplied) {
+                <span class="badge text-bg-warning">{{ 'mirror.flavio' | translate }}</span>
+              }
+            </div>
+
+            @if (p.predictions.length === 0) {
+              <div class="text-muted small">{{ 'mirror.noPredictions' | translate }}</div>
+            } @else {
+              <ul class="list-unstyled mb-0 small">
+                @for (pred of visiblePredictions(p); track pred.roundMatchId) {
+                  <li class="d-flex justify-content-between border-top py-1">
+                    <span class="text-truncate me-2">{{ matchLabel(pred.roundMatchId) }}</span>
+                    <span class="fw-semibold"
+                      >{{ pred.predictedHomeScore }} - {{ pred.predictedAwayScore }}</span
+                    >
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+}

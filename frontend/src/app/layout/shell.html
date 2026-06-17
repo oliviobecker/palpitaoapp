@@ -1,0 +1,128 @@
+<!-- Top bar -->
+<nav class="app-navbar sticky-top">
+  <div class="container-fluid app-navbar__inner">
+    <a class="app-brand" routerLink="/dashboard">
+      <span class="app-brand__logo">⚽</span>
+      <span class="app-brand__name">{{ 'app.name' | translate }}</span>
+    </a>
+
+    <!-- Desktop nav -->
+    <ul class="app-nav d-none d-md-flex">
+      <li>
+        <a class="app-nav__link" routerLink="/dashboard" routerLinkActive="is-active">{{
+          'nav.home' | translate
+        }}</a>
+      </li>
+      <li>
+        <a class="app-nav__link" routerLink="/rounds" routerLinkActive="is-active">{{
+          'nav.rounds' | translate
+        }}</a>
+      </li>
+      <li>
+        <a class="app-nav__link" routerLink="/standings" routerLinkActive="is-active">{{
+          'nav.standings' | translate
+        }}</a>
+      </li>
+      @if (group.isGroupAdmin()) {
+        <li>
+          <a class="app-nav__link" routerLink="/admin" routerLinkActive="is-active">{{
+            'nav.admin' | translate
+          }}</a>
+        </li>
+      }
+    </ul>
+
+    <div class="app-navbar__right">
+      <div class="app-lang" role="group" aria-label="Language">
+        <button
+          type="button"
+          class="app-lang__btn"
+          [class.is-active]="language.current() === 'pt-BR'"
+          (click)="setLanguage('pt-BR')"
+        >
+          PT
+        </button>
+        <button
+          type="button"
+          class="app-lang__btn"
+          [class.is-active]="language.current() === 'en-US'"
+          (click)="setLanguage('en-US')"
+        >
+          EN
+        </button>
+      </div>
+
+      @if (auth.isAdmin()) {
+        <span
+          class="badge text-bg-warning d-none d-sm-inline-flex align-items-center"
+          [title]="'superAdmin.hint' | translate"
+        >
+          {{ 'superAdmin.badge' | translate }}
+        </span>
+      }
+
+      @if (group.groupName(); as groupName) {
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-secondary d-none d-sm-inline-flex align-items-center gap-1"
+          (click)="switchGroup()"
+          [title]="'group.switch' | translate"
+        >
+          <span class="text-truncate" style="max-width: 14ch">{{ groupName }}</span>
+          <span aria-hidden="true">⇄</span>
+        </button>
+      }
+
+      <div class="app-user d-none d-sm-flex">
+        <span class="app-user__avatar">{{ initials() }}</span>
+        <span class="app-user__name">{{ auth.currentUser()?.name }}</span>
+      </div>
+
+      <button class="app-logout" (click)="logout()">
+        <span aria-hidden="true">⎋</span>
+        <span class="d-none d-md-inline">{{ 'nav.logout' | translate }}</span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- Global loading bar -->
+@if (loading.isLoading()) {
+  <div class="progress rounded-0" style="height: 3px">
+    <div
+      class="progress-bar progress-bar-striped progress-bar-animated w-100"
+      role="progressbar"
+    ></div>
+  </div>
+}
+
+<main class="container py-4 page-content">
+  @if (showBack()) {
+    <button type="button" class="btn-back mb-3" (click)="back()">
+      <span aria-hidden="true">←</span> {{ 'nav.back' | translate }}
+    </button>
+  }
+  <router-outlet />
+</main>
+
+<!-- Mobile bottom nav -->
+<nav class="app-bottomnav d-md-none">
+  <a class="app-bottomnav__link" routerLink="/dashboard" routerLinkActive="is-active">
+    <span class="app-bottomnav__icon">🏠</span>
+    {{ 'nav.home' | translate }}
+  </a>
+  <a class="app-bottomnav__link" routerLink="/rounds" routerLinkActive="is-active">
+    <span class="app-bottomnav__icon">📋</span>
+    {{ 'nav.rounds' | translate }}
+  </a>
+  <a class="app-bottomnav__link" routerLink="/standings" routerLinkActive="is-active">
+    <span class="app-bottomnav__icon">🏆</span>
+    {{ 'nav.standings' | translate }}
+  </a>
+  @if (group.isGroupAdmin()) {
+    <a class="app-bottomnav__link" routerLink="/admin" routerLinkActive="is-active">
+      <span class="app-bottomnav__icon">⚙️</span>
+      {{ 'nav.admin' | translate }}
+    </a>
+  }
+</nav>

@@ -1,0 +1,44 @@
+import { registerLocaleData } from '@angular/common';
+import localeEn from '@angular/common/locales/en';
+import localePt from '@angular/common/locales/pt';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { ApplicationConfig, LOCALE_ID, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
+import { routes } from './app.routes';
+import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { errorInterceptor } from './core/interceptors/error.interceptor';
+import { groupInterceptor } from './core/interceptors/group.interceptor';
+import { languageInterceptor } from './core/interceptors/language.interceptor';
+import { loadingInterceptor } from './core/interceptors/loading.interceptor';
+
+registerLocaleData(localePt);
+registerLocaleData(localeEn);
+
+// Translation JSON files are not content-hashed like the JS bundles, so browsers
+// (and proxies/IIS) can serve a stale copy after a deploy that added new keys —
+// which shows raw keys like "register.title". Append a per-load token so each app
+// load fetches the current files. The files are tiny, so the extra fetch is cheap.
+const I18N_VERSION = Date.now();
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideBrowserGlobalErrorListeners(),
+    provideRouter(routes),
+    provideHttpClient(
+      withInterceptors([
+        authInterceptor,
+        groupInterceptor,
+        languageInterceptor,
+        errorInterceptor,
+        loadingInterceptor,
+      ]),
+    ),
+    provideTranslateService({
+      loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: `.json?v=${I18N_VERSION}` }),
+      fallbackLang: 'en-US',
+    }),
+    { provide: LOCALE_ID, useValue: 'pt-BR' },
+  ],
+};

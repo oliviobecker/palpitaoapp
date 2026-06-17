@@ -1,0 +1,80 @@
+# ===========================================================================
+# Palpitão England 2025/2026 — monorepo .gitignore
+# ===========================================================================
+
+# --- Environment files -----------------------------------------------------
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Production / machine-specific app settings (never commit real secrets).
+**/appsettings.Production.json
+**/appsettings.*.local.json
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Local uploads / generated files
+uploads/
+**/wwwroot/uploads/
+temp/
+
+# Claude Code per-machine settings (local paths, permissions)
+.claude/settings.local.json
+
+# ===========================================================================
+# .NET / backend
+# ===========================================================================
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+project.lock.json
+artifacts/
+.vs/
+
+# ===========================================================================
+# Angular / frontend / Node
+# ===========================================================================
+node_modules/
+dist/
+tmp/
+out-tsc/
+.angular/
+.nx/
+coverage/
+
+# Playwright e2e
+test-results/
+playwright-report/
+playwright/.cache/
+*.log
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ===========================================================================
+# OCR — Tesseract language models (large binaries, downloaded per machine)
+# ===========================================================================
+backend/tessdata/*.traineddata
+# Local OCR sample images used for manual validation
+backend/test_ocr_sample.*
+
+# ===========================================================================
+# Editors / OS
+# ===========================================================================
+.idea/
+.vscode/
+.vs/
+*.swp
+.DS_Store
+Thumbs.db
