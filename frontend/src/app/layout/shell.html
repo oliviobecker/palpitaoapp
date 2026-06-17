@@ -103,11 +103,16 @@
     </button>
   }
   <router-outlet />
-
-  <footer class="app-footer text-center mt-4">
-    <small class="text-muted" [title]="buildInfo">v{{ version }}</small>
-  </footer>
 </main>
+
+<footer class="app-footer">
+  <small [title]="buildInfo">
+    v{{ version }}
+    @if (commit) {
+      <span class="app-footer__commit">· {{ commit }}</span>
+    }
+  </small>
+</footer>
 
 <!-- Mobile bottom nav -->
 <nav class="app-bottomnav d-md-none">

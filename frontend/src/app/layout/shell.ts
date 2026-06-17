@@ -27,8 +27,9 @@ export class Shell {
   private readonly router = inject(Router);
   private readonly location = inject(Location);
 
-  /** Build version shown in the footer; commit/time go in the tooltip. */
+  /** Build version shown in the footer; build time goes in the tooltip. */
   protected readonly version = APP_VERSION;
+  protected readonly commit = APP_COMMIT && APP_COMMIT !== 'unknown' ? APP_COMMIT : '';
   protected readonly buildInfo = [APP_COMMIT, APP_BUILD_TIME].filter(Boolean).join(' · ');
 
   private readonly currentUrl = signal(this.router.url);
