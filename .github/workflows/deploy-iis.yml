@@ -1,9 +1,14 @@
-name: Build and deploy on IIS Production (manual)
+name: Build and deploy on IIS Production
 
-# Production no longer auto-deploys on push. Trigger it manually from the Actions
-# tab (Run workflow) when you want to promote to prod. Pushes to main deploy to
-# staging instead — see deploy-staging.yml.
+# Production deploys when you push a version tag (e.g. v1.2.3), promoting the exact
+# commit you already validated on staging. You can also run it manually from the
+# Actions tab. Pushes to main deploy to staging instead — see deploy-staging.yml.
+#
+#   git tag v1.0.0 && git push origin v1.0.0
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 concurrency:

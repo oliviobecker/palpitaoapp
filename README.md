@@ -803,14 +803,16 @@ GitHub Actions workflows live in `.github/workflows/`:
 |---|---|---|
 | `ci.yml` | every pull request + push | Backend build + tests; frontend format check + build + unit + e2e |
 | `deploy-staging.yml` | push to `main` (+ manual) | Auto-deploys to the **staging** environment |
-| `deploy-iis.yml` | **manual only** (`workflow_dispatch`) | Promotes to **production** on demand |
+| `deploy-iis.yml` | push of a `v*` **tag** (+ manual) | Promotes to **production** |
 
 ### Branch / PR flow
 
-Work on a feature branch, open a PR to `main`, let CI go green, then merge. Merging into `main` is
-what auto-deploys to **staging** — production is never deployed automatically. To enforce this,
-enable a branch ruleset on `main` (Settings → Branches): *Require a pull request before merging* and
-*Require status checks to pass* (the `Backend` and `Frontend` checks from `ci.yml`).
+`main` is the single source of truth (trunk-based). Work on a feature branch, open a PR to `main`,
+let CI go green, then merge. Merging into `main` auto-deploys to **staging**; production is promoted
+separately by pushing a **version tag** to the exact commit you validated on staging (see below) —
+it never deploys on a plain push to `main`. To enforce the PR flow, enable a branch ruleset on `main`
+(Settings → Branches): *Require a pull request before merging* and *Require status checks to pass*
+(the `Backend` and `Frontend` checks from `ci.yml`).
 
 ### Staging deployment (`deploy-staging.yml`)
 
@@ -842,7 +844,16 @@ without publishing.
 
 ### Production deployment (`deploy-iis.yml`)
 
-Manual only: **Actions → Build and deploy on IIS Production (manual) → Run workflow**. It mirrors the
+Production is promoted by **pushing a version tag** to a commit that's already on `main` (and was
+deployed to staging), so prod always runs the exact code you validated:
+
+```bash
+git tag v1.0.0           # tag the tested commit (HEAD of main)
+git push origin v1.0.0   # → triggers the production deploy
+```
+
+This keeps a clean release history (each prod deploy = one `v*` tag). You can also run it manually
+(**Actions → Build and deploy on IIS Production → Run workflow**) as a fallback. It mirrors the
 staging job but targets the `production` environment and its secrets (`BACKEND_CONNECTION_STRING`,
 `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_KEY`) and the production IIS paths.
 
