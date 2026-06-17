@@ -41,7 +41,18 @@ import { buildClosingMessage } from '../../shared/utils/closing-message.util';
         <a routerLink="/admin/rounds">{{ 'nav.rounds' | translate }}</a> ·
         {{ 'roundDetail.crumb' | translate }}
       </div>
-      <h1 class="h4 fw-bold mb-0">{{ 'roundDetail.title' | translate }}</h1>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <h1 class="h4 fw-bold mb-0">{{ 'roundDetail.title' | translate }}</h1>
+        @if (group.allowParticipantsToSubmit()) {
+          <span class="badge text-bg-success">{{
+            'predictionSubmission.participantAppBadge' | translate
+          }}</span>
+        } @else {
+          <span class="badge text-bg-secondary">{{
+            'predictionSubmission.adminOnlyBadge' | translate
+          }}</span>
+        }
+      </div>
     </div>
 
     @if (loading()) {
@@ -300,7 +311,7 @@ export class AdminRoundDetail implements OnInit {
   private readonly api = inject(RoundsService);
   private readonly adminApi = inject(AdminService);
   private readonly standingsApi = inject(StandingsService);
-  private readonly group = inject(GroupContextService);
+  protected readonly group = inject(GroupContextService);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly translate = inject(TranslateService);

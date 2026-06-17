@@ -160,6 +160,8 @@ public partial class AuthService : IAuthService
             Slug = slug,
             Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description!.Trim(),
             TournamentType = request.TournamentType.Value,
+            AllowParticipantsToViewOthersPredictions = request.AllowParticipantsToViewOthersPredictions,
+            AllowParticipantsToSubmitPredictions = request.AllowParticipantsToSubmitPredictions,
             CreatedByUserId = admin.Id,
             OwnerUserId = admin.Id,
             IsActive = true,
@@ -181,7 +183,14 @@ public partial class AuthService : IAuthService
         });
 
         _audit.Add(admin.Id, "GroupCreated", nameof(Group), group.Id.ToString(),
-            new { group.Name, group.Slug, TournamentType = group.TournamentType.ToString() }, group.Id);
+            new
+            {
+                group.Name,
+                group.Slug,
+                TournamentType = group.TournamentType.ToString(),
+                group.AllowParticipantsToViewOthersPredictions,
+                group.AllowParticipantsToSubmitPredictions,
+            }, group.Id);
 
         await _db.SaveChangesAsync(ct);
     }

@@ -179,6 +179,13 @@ export class Admin implements OnInit {
       sub: 'adminDash.auditSub',
       link: '/admin/audit',
     },
+    {
+      icon: '👁️',
+      tile: 'icon-tile--violet',
+      title: 'adminDash.groupSettings',
+      sub: 'adminDash.groupSettingsSub',
+      link: '/admin/group-settings',
+    },
   ];
 
   ngOnInit(): void {

@@ -5,6 +5,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { RoundStatus } from '../../core/models/enums';
 import { RoundSummary } from '../../core/models/models';
 import { RoundsService } from '../../core/services/rounds.service';
+import { GroupContextService } from '../../core/services/group-context.service';
 import { Loading } from '../../shared/components/loading/loading';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { Countdown } from '../../shared/components/countdown/countdown';
@@ -16,6 +17,7 @@ import { Countdown } from '../../shared/components/countdown/countdown';
 })
 export class Rounds implements OnInit {
   private readonly roundsApi = inject(RoundsService);
+  protected readonly group = inject(GroupContextService);
   protected readonly RoundStatus = RoundStatus;
 
   statusKey(status: RoundStatus): string {

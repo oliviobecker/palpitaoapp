@@ -10,6 +10,8 @@ const group: MyGroup = {
   role: GroupRole.GroupAdmin,
   status: GroupUserStatus.Approved,
   tournamentType: TournamentType.PalpitaoEngland,
+  allowParticipantsToViewOthersPredictions: false,
+  allowParticipantsToSubmitPredictions: true,
 };
 
 describe('GroupContextService', () => {
@@ -52,5 +54,49 @@ describe('GroupContextService', () => {
     svc.select({ ...group, tournamentType: TournamentType.FifaWorldCup });
     expect(svc.tournamentType()).toBe(TournamentType.FifaWorldCup);
     expect(svc.isWorldCup()).toBe(true);
+  });
+
+  it('lets a participant view others only when the group enables it', () => {
+    const svc = new GroupContextService();
+    // Participant, feature disabled -> cannot view.
+    svc.select({ ...group, role: GroupRole.Participant });
+    expect(svc.allowViewOthersPredictions()).toBe(false);
+    expect(svc.canViewOthersPredictions()).toBe(false);
+
+    // Participant, feature enabled -> can view.
+    svc.select({
+      ...group,
+      role: GroupRole.Participant,
+      allowParticipantsToViewOthersPredictions: true,
+    });
+    expect(svc.canViewOthersPredictions()).toBe(true);
+  });
+
+  it('always lets a group admin view others, regardless of the setting', () => {
+    const svc = new GroupContextService();
+    svc.select({ ...group, role: GroupRole.GroupAdmin });
+    expect(svc.allowViewOthersPredictions()).toBe(false);
+    expect(svc.canViewOthersPredictions()).toBe(true);
+  });
+
+  it('updates the cached flag when the admin toggles the setting', () => {
+    const svc = new GroupContextService();
+    svc.select({ ...group, role: GroupRole.Participant });
+    expect(svc.canViewOthersPredictions()).toBe(false);
+
+    svc.setAllowViewOthersPredictions(true);
+    expect(svc.allowViewOthersPredictions()).toBe(true);
+    expect(svc.canViewOthersPredictions()).toBe(true);
+  });
+
+  it('tracks the in-app submission mode (defaults to allowed)', () => {
+    const svc = new GroupContextService();
+    expect(svc.allowParticipantsToSubmit()).toBe(true);
+
+    svc.select({ ...group, allowParticipantsToSubmitPredictions: false });
+    expect(svc.allowParticipantsToSubmit()).toBe(false);
+
+    svc.setAllowParticipantsToSubmit(true);
+    expect(svc.allowParticipantsToSubmit()).toBe(true);
   });
 });

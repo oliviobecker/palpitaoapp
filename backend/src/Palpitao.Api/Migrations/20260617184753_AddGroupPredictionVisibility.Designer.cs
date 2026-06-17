@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Palpitao.Api.Data;
@@ -11,9 +12,11 @@ using Palpitao.Api.Data;
 namespace Palpitao.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260617184753_AddGroupPredictionVisibility")]
+    partial class AddGroupPredictionVisibility
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -136,11 +139,6 @@ namespace Palpitao.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<bool>("AllowParticipantsToSubmitPredictions")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
                     b.Property<bool>("AllowParticipantsToViewOthersPredictions")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -195,7 +193,6 @@ namespace Palpitao.Api.Migrations
                         new
                         {
                             Id = new Guid("33333333-3333-3333-3333-333333333301"),
-                            AllowParticipantsToSubmitPredictions = true,
                             AllowParticipantsToViewOthersPredictions = false,
                             CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             CreatedByUserId = new Guid("22222222-2222-2222-2222-222222222201"),

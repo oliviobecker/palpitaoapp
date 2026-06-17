@@ -1,17 +1,24 @@
 using Microsoft.EntityFrameworkCore;
+using Palpitao.Api.Common;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Groups;
+using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
+using Palpitao.Api.Services.Audit;
 
 namespace Palpitao.Api.Services.Groups;
 
 public class GroupService : IGroupService
 {
     private readonly AppDbContext _db;
+    private readonly ICurrentGroupService _current;
+    private readonly IAuditService _audit;
 
-    public GroupService(AppDbContext db)
+    public GroupService(AppDbContext db, ICurrentGroupService current, IAuditService audit)
     {
         _db = db;
+        _current = current;
+        _audit = audit;
     }
 
     public async Task<IReadOnlyList<PublicGroupDto>> ListActiveAsync(CancellationToken ct)
@@ -44,6 +51,8 @@ public class GroupService : IGroupService
                     Role = GroupRole.GroupAdmin,
                     Status = GroupUserStatus.Approved,
                     TournamentType = g.TournamentType,
+                    AllowParticipantsToViewOthersPredictions = g.AllowParticipantsToViewOthersPredictions,
+                    AllowParticipantsToSubmitPredictions = g.AllowParticipantsToSubmitPredictions,
                 })
                 .ToListAsync(ct);
         }
@@ -59,7 +68,70 @@ public class GroupService : IGroupService
                 Role = gu.Role,
                 Status = gu.Status,
                 TournamentType = gu.Group!.TournamentType,
+                AllowParticipantsToViewOthersPredictions = gu.Group!.AllowParticipantsToViewOthersPredictions,
+                AllowParticipantsToSubmitPredictions = gu.Group!.AllowParticipantsToSubmitPredictions,
             })
             .ToListAsync(ct);
     }
+
+    public async Task<GroupSettingsDto> GetSettingsAsync(CancellationToken ct)
+    {
+        await _current.RequireGroupAdminAsync(ct);
+        var groupId = await _current.GetGroupIdAsync(ct);
+        var group = await _db.Groups.FirstOrDefaultAsync(g => g.Id == groupId, ct)
+            ?? throw new NotFoundException("notFound.group");
+
+        return await ToSettingsDtoAsync(group, ct);
+    }
+
+    public async Task<GroupSettingsDto> UpdateSettingsAsync(UpdateGroupSettingsRequest request, CancellationToken ct)
+    {
+        await _current.RequireGroupAdminAsync(ct);
+        var groupId = await _current.GetGroupIdAsync(ct);
+        var group = await _db.Groups.FirstOrDefaultAsync(g => g.Id == groupId, ct)
+            ?? throw new NotFoundException("notFound.group");
+
+        var changed = false;
+        changed |= ApplySetting(group, nameof(Group.AllowParticipantsToViewOthersPredictions),
+            group.AllowParticipantsToViewOthersPredictions, request.AllowParticipantsToViewOthersPredictions,
+            v => group.AllowParticipantsToViewOthersPredictions = v);
+        changed |= ApplySetting(group, nameof(Group.AllowParticipantsToSubmitPredictions),
+            group.AllowParticipantsToSubmitPredictions, request.AllowParticipantsToSubmitPredictions,
+            v => group.AllowParticipantsToSubmitPredictions = v);
+
+        if (changed)
+        {
+            group.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+        }
+
+        return await ToSettingsDtoAsync(group, ct);
+    }
+
+    /// <summary>Applies a boolean setting, auditing the change; returns true when it changed.</summary>
+    private bool ApplySetting(Group group, string setting, bool previous, bool next, Action<bool> assign)
+    {
+        if (previous == next)
+        {
+            return false;
+        }
+
+        assign(next);
+        _audit.Add(_current.UserId ?? Guid.Empty, "GroupSettingsUpdated", nameof(Group), group.Id.ToString(),
+            new { setting, previousValue = previous, newValue = next }, group.Id);
+        return true;
+    }
+
+    private async Task<GroupSettingsDto> ToSettingsDtoAsync(Group group, CancellationToken ct)
+        => new()
+        {
+            GroupId = group.Id,
+            GroupName = group.Name,
+            AllowParticipantsToViewOthersPredictions = group.AllowParticipantsToViewOthersPredictions,
+            AllowParticipantsToSubmitPredictions = group.AllowParticipantsToSubmitPredictions,
+            HasParticipantPredictions = await _db.Predictions.AnyAsync(
+                p => p.Source == PredictionSource.Participant
+                    && _db.Rounds.Any(r => r.Id == p.RoundId && r.GroupId == group.Id),
+                ct),
+        };
 }

@@ -12,4 +12,10 @@ public interface IGroupService
     /// (<paramref name="isSuperAdmin"/>) gets every group as <c>GroupAdmin</c>.
     /// </summary>
     Task<IReadOnlyList<MyGroupDto>> MyGroupsAsync(Guid userId, bool isSuperAdmin, CancellationToken ct);
+
+    /// <summary>Current group's settings (group admin only).</summary>
+    Task<GroupSettingsDto> GetSettingsAsync(CancellationToken ct);
+
+    /// <summary>Updates the current group's settings (group admin only); audits changes.</summary>
+    Task<GroupSettingsDto> UpdateSettingsAsync(UpdateGroupSettingsRequest request, CancellationToken ct);
 }

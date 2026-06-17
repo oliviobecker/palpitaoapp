@@ -214,7 +214,40 @@
     "standings": "Standings",
     "standingsSub": "Overall ranking",
     "audit": "Audit",
-    "auditSub": "Action history"
+    "auditSub": "Action history",
+    "groupSettings": "Group settings",
+    "groupSettingsSub": "Prediction visibility and more"
+  },
+  "settings": {
+    "allowParticipantsToViewOthersPredictions": "Allow participants to view other predictions",
+    "allowParticipantsToViewOthersPredictionsHelp": "When enabled, participants will be able to view other participants' predictions according to the round visibility rules."
+  },
+  "predictionsMirror": {
+    "title": "Participants' predictions",
+    "view": "View predictions",
+    "notAllowed": "You do not have permission to view other participants' predictions.",
+    "availableAfterLock": "Other predictions will be available after the round closes.",
+    "filterByParticipant": "Filter by participant",
+    "filterByMatch": "Filter by match",
+    "byMatch": "By match",
+    "byParticipant": "By participant"
+  },
+  "predictionSubmission": {
+    "modeLabel": "How will predictions be submitted?",
+    "participantsCanSubmit": "Participants can submit predictions in the app",
+    "participantsCanSubmitHelp": "Approved participants will be able to submit and edit their own predictions before the round closes.",
+    "adminOnly": "Only the administrator enters predictions",
+    "adminOnlyHelp": "Participants will not be able to submit predictions in the app. The administrator will enter them manually or via OCR.",
+    "adminOnlyNotice": "In this season, predictions are entered by the administrator. You can still follow your rounds and results in the app.",
+    "disabledError": "Participants cannot submit predictions in the app for this season. Predictions will be entered by the administrator.",
+    "adminOnlyBadge": "Predictions: admin only",
+    "participantAppBadge": "Predictions: participants in app",
+    "disableWarning": "There are already predictions submitted by participants. Disabling this option will not delete existing predictions, but it will prevent new submissions in the app."
+  },
+  "adminGroupSettings": {
+    "title": "Group settings",
+    "save": "Save",
+    "saved": "Settings saved successfully."
   },
   "adminSeasons": {
     "title": "Seasons",

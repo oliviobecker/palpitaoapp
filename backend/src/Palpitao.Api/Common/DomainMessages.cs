@@ -77,6 +77,7 @@ public static class DomainMessages
             ["notFound.user"] = ("Usuário não encontrado.", "User not found."),
             ["notFound.match"] = ("Jogo não encontrado.", "Match not found."),
             ["notFound.season"] = ("Temporada não encontrada.", "Season not found."),
+            ["notFound.group"] = ("Grupo não encontrado.", "Group not found."),
             ["notFound.team"] = ("Time informado não existe.", "The given team does not exist."),
             ["notFound.ocrBatch"] = ("Importação não encontrada.", "Import not found."),
             ["notFound.ocrCandidate"] = ("Candidato não encontrado.", "Candidate not found."),
@@ -196,9 +197,11 @@ public static class DomainMessages
             ["prediction.roundScored"] = ("A rodada já foi pontuada.", "The round has already been scored."),
             ["prediction.roundCancelled"] = ("A rodada foi cancelada.", "The round was cancelled."),
             ["prediction.deadlinePassed"] = ("O prazo para palpitar nesta rodada já encerrou.", "The deadline to predict for this round has passed."),
+            ["prediction.appSubmitDisabled"] = ("Participantes não podem enviar palpites pelo app nesta temporada. Os palpites serão inseridos pelo administrador.", "Participants cannot submit predictions in the app for this season. Predictions will be entered by the administrator."),
 
             // Mirror.
             ["mirror.afterLockOnly"] = ("O espelho fica disponível somente após o bloqueio da rodada.", "The mirror is only available after the round is locked."),
+            ["mirror.notAllowed"] = ("Você não tem permissão para visualizar os palpites dos demais participantes.", "You do not have permission to view other participants' predictions."),
 
             // Admin manual predictions.
             ["adminPrediction.eliminatedNeedsOverride"] = (

@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -18,6 +19,8 @@ export class Mirror implements OnInit {
 
   protected readonly loading = signal(true);
   protected readonly blocked = signal(false);
+  /** True when the API refused access (403) — group has the feature disabled. */
+  protected readonly forbidden = signal(false);
   protected readonly mirror = signal<MirrorView | null>(null);
   protected readonly participantFilter = signal('');
   protected readonly matchFilter = signal('');
@@ -43,8 +46,14 @@ export class Mirror implements OnInit {
         this.mirror.set(m);
         this.loading.set(false);
       },
-      error: () => {
-        this.blocked.set(true);
+      error: (err: HttpErrorResponse) => {
+        // 403 = group disabled the feature for participants; otherwise it's the
+        // pre-lock "mirror not released yet" case.
+        if (err.status === 403) {
+          this.forbidden.set(true);
+        } else {
+          this.blocked.set(true);
+        }
         this.loading.set(false);
       },
     });

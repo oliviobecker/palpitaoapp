@@ -64,6 +64,20 @@ public class PredictionsService : IPredictionsService
             .FirstOrDefaultAsync(gu => gu.UserId == userId, ct)
             ?? throw new NotFoundException("notFound.user");
 
+        // Admin-only mode: this endpoint always writes Source = Participant, so it is
+        // blocked entirely when the group disables in-app submission. Admins enter
+        // predictions through the admin manual / OCR endpoints instead.
+        var allowSubmit = await _db.Groups
+            .Where(g => g.Id == groupId)
+            .Select(g => g.AllowParticipantsToSubmitPredictions)
+            .FirstOrDefaultAsync(ct);
+        if (!allowSubmit)
+        {
+            SentrySdk.AddBreadcrumb("Prediction submission blocked by season settings.", "predictions",
+                level: BreadcrumbLevel.Warning);
+            throw new ForbiddenException("prediction.appSubmitDisabled");
+        }
+
         EnsureCanParticipate(membership);
         EnsureRoundOpenForPredictions(round);
         ValidateBatch(round, request);
@@ -122,8 +136,25 @@ public class PredictionsService : IPredictionsService
             .FirstOrDefaultAsync(r => r.Id == roundId && r.GroupId == groupId, ct)
             ?? throw new NotFoundException("notFound.round");
 
+        // Group admins (and platform SuperAdmins, resolved as GroupAdmin) can always
+        // view the mirror. Participants can only see others' predictions when the group
+        // has enabled it — otherwise 403.
+        var isAdmin = await _current.GetRoleAsync(ct) == GroupRole.GroupAdmin;
+        if (!isAdmin)
+        {
+            var allowed = await _db.Groups
+                .Where(g => g.Id == groupId)
+                .Select(g => g.AllowParticipantsToViewOthersPredictions)
+                .FirstOrDefaultAsync(ct);
+            if (!allowed)
+            {
+                throw new ForbiddenException("mirror.notAllowed");
+            }
+        }
+
         // Before the lock, predictions stay private — the mirror is only released
-        // after the round is locked (or already scored).
+        // after the round is locked (or already scored). This timing applies to
+        // everyone, including admins.
         if (round.Status is not (RoundStatus.Locked or RoundStatus.Scored))
         {
             throw new BusinessRuleException("mirror.afterLockOnly");
