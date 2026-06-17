@@ -801,7 +801,7 @@ GitHub Actions workflows live in `.github/workflows/`:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` | every pull request + push | Backend build + tests; frontend format check + build + unit + e2e |
+| `ci.yml` | every pull request + push | Backend build + tests; frontend format check + build + unit + e2e; workflow lint (actionlint) |
 | `deploy-staging.yml` | push to `main` (+ manual) | Auto-deploys to the **staging** environment |
 | `deploy-iis.yml` | push of a `v*` **tag** (+ manual) | Promotes to **production** |
 
@@ -812,7 +812,7 @@ let CI go green, then merge. Merging into `main` auto-deploys to **staging**; pr
 separately by pushing a **version tag** to the exact commit you validated on staging (see below) —
 it never deploys on a plain push to `main`. To enforce the PR flow, enable a branch ruleset on `main`
 (Settings → Branches): *Require a pull request before merging* and *Require status checks to pass*
-(the `Backend` and `Frontend` checks from `ci.yml`).
+(the `Backend`, `Frontend` and `Lint workflows (actionlint)` checks from `ci.yml`).
 
 ### Staging deployment (`deploy-staging.yml`)
 
