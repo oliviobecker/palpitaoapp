@@ -795,7 +795,58 @@ This repository is public: **never** commit real secrets. The versioned files
 Before going public (or when reviewing secrets), see
 [PUBLIC_RELEASE_CHECKLIST.md](PUBLIC_RELEASE_CHECKLIST.md).
 
-## 28. License
+## 28. Continuous integration and deployment
+
+GitHub Actions workflows live in `.github/workflows/`:
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `ci.yml` | every pull request + push | Backend build + tests; frontend format check + build + unit + e2e |
+| `deploy-staging.yml` | push to `main` (+ manual) | Auto-deploys to the **staging** environment |
+| `deploy-iis.yml` | **manual only** (`workflow_dispatch`) | Promotes to **production** on demand |
+
+### Branch / PR flow
+
+Work on a feature branch, open a PR to `main`, let CI go green, then merge. Merging into `main` is
+what auto-deploys to **staging** — production is never deployed automatically. To enforce this,
+enable a branch ruleset on `main` (Settings → Branches): *Require a pull request before merging* and
+*Require status checks to pass* (the `Backend` and `Frontend` checks from `ci.yml`).
+
+### Staging deployment (`deploy-staging.yml`)
+
+Runs on the **self-hosted** IIS runner. It restores, tests, publishes the backend, writes
+`appsettings.Staging.json` from secrets, sets `ASPNETCORE_ENVIRONMENT=Staging` in `web.config`,
+builds the frontend and copies both to the staging IIS site. Staging and production run on the
+**same machine** as **separate IIS sites/app pools**, so they don't collide:
+
+| | Production | Staging |
+|---|---|---|
+| Frontend IIS path | `C:\inetpub\palpitao` | `C:\inetpub\palpitao-staging` |
+| Backend IIS path | `C:\inetpub\palpitao\api` | `C:\inetpub\palpitao-staging\api` |
+| App pool | `palpitao-api` | `palpitao-staging-api` |
+
+The staging paths/app pool are overridable repo **Variables** (`STAGING_FRONTEND_IIS_PATH`,
+`STAGING_BACKEND_IIS_PATH`, `STAGING_BACKEND_APP_POOL`); the defaults above are used when unset.
+
+**Required GitHub setup** before merging to `main`:
+
+1. Create the `staging` **environment** (Settings → Environments).
+2. Add its **secrets**: `STAGING_BACKEND_CONNECTION_STRING`, `STAGING_JWT_ISSUER`,
+   `STAGING_JWT_AUDIENCE`, `STAGING_JWT_KEY` (and optional `STAGING_SENTRY_DSN`).
+3. On the server, create the staging **IIS site + `/api` application + app pool** at the paths above,
+   pointing the connection string at a **separate staging database** (e.g. `palpitao_staging`) so it
+   never touches production data.
+
+If a required secret is missing the job fails on purpose (at "Write backend staging settings")
+without publishing.
+
+### Production deployment (`deploy-iis.yml`)
+
+Manual only: **Actions → Build and deploy on IIS Production (manual) → Run workflow**. It mirrors the
+staging job but targets the `production` environment and its secrets (`BACKEND_CONNECTION_STRING`,
+`JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_KEY`) and the production IIS paths.
+
+## 29. License
 
 Distributed under the **Apache 2.0** license — see [LICENSE](LICENSE). In short: free use,
 modification and distribution (including commercial), keeping the copyright notice and the license,
