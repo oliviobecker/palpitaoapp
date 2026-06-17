@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Data;
 
 namespace Palpitao.Api.Controllers;
@@ -35,12 +36,27 @@ public class HealthController : ControllerBase
         {
             // CanConnectAsync can throw (not just return false) on auth/host/DNS
             // failures, so wrap it to always return a clean 503 instead of a 500.
-            if (await _db.Database.CanConnectAsync(cancellationToken))
+            if (!await _db.Database.CanConnectAsync(cancellationToken))
             {
-                return Ok(new { status = "ok", database = "postgres" });
+                return StatusCode(503, new { status = "unavailable", database = "postgres" });
             }
 
-            return StatusCode(503, new { status = "unavailable", database = "postgres" });
+            // Schema drift detection: a deploy that didn't run migrations leaves the app
+            // serving a stale schema (queries on new columns 500). Only meaningful for a
+            // migrated database — tests/dev use EnsureCreated (no migration history), so
+            // skip when nothing is recorded as applied.
+            var applied = await _db.Database.GetAppliedMigrationsAsync(cancellationToken);
+            if (applied.Any())
+            {
+                var pending = (await _db.Database.GetPendingMigrationsAsync(cancellationToken)).ToList();
+                if (pending.Count > 0)
+                {
+                    _logger.LogError("Migrations pendentes: {Pending}", string.Join(", ", pending));
+                    return StatusCode(503, new { status = "migrations-pending", database = "postgres", pendingMigrations = pending });
+                }
+            }
+
+            return Ok(new { status = "ok", database = "postgres" });
         }
         catch (Exception ex)
         {

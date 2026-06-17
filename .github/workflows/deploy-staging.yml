@@ -130,6 +130,19 @@ jobs:
         working-directory: frontend
         run: npm run build -- --configuration production
 
+      # Apply EF Core migrations BEFORE swapping the app so the schema is never
+      # behind the code. Fails the deploy (the old app keeps running) if it can't.
+      - name: Apply database migrations
+        shell: pwsh
+        env:
+          DB_CONNECTION: ${{ secrets.BACKEND_CONNECTION_STRING }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:DB_CONNECTION)) {
+            throw 'Missing required GitHub secret: BACKEND_CONNECTION_STRING (staging env)'
+          }
+          dotnet tool restore
+          dotnet ef database update --project backend/src/Palpitao.Api --connection "$env:DB_CONNECTION"
+
       - name: Deploy backend to IIS
         shell: powershell -NoProfile -ExecutionPolicy Bypass -File {0}
         run: |
