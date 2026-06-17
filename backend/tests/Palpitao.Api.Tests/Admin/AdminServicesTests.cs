@@ -36,7 +36,7 @@ public class AdminServicesTests
     };
 
     [Fact]
-    public async Task Create_persists_the_tournament_type_and_update_keeps_it_immutable()
+    public async Task Create_persists_the_tournament_type_and_update_can_change_it()
     {
         using var db = CreateContext();
         var service = new SeasonService(db, new AuditService(db), new FakeCurrentGroupService());
@@ -53,7 +53,7 @@ public class AdminServicesTests
             Admin, Ct);
         Assert.Equal(Palpitao.Api.Enums.TournamentType.FifaWorldCup, created.TournamentType);
 
-        // An update must NOT change the certame type, even if a different one is sent.
+        // An update may change the certame type.
         var updated = await service.UpdateAsync(created.Id,
             new SeasonRequest
             {
@@ -64,7 +64,7 @@ public class AdminServicesTests
                 TournamentType = Palpitao.Api.Enums.TournamentType.PalpitaoEngland,
             },
             Admin, Ct);
-        Assert.Equal(Palpitao.Api.Enums.TournamentType.FifaWorldCup, updated.TournamentType);
+        Assert.Equal(Palpitao.Api.Enums.TournamentType.PalpitaoEngland, updated.TournamentType);
     }
 
     [Fact]

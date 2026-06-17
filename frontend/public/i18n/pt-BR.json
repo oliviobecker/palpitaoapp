@@ -222,7 +222,7 @@
   },
   "settings": {
     "allowParticipantsToViewOthersPredictions": "Permitir que participantes vejam palpites dos demais",
-    "allowParticipantsToViewOthersPredictionsHelp": "Quando ativado, os participantes poderão visualizar os palpites dos outros participantes conforme as regras de visibilidade da rodada."
+    "allowParticipantsToViewOthersPredictionsHelp": "Quando ativado, os participantes veem os palpites dos demais durante a rodada aberta (em tempo real, antes do fechamento). Quando desativado, apenas os administradores veem, e somente após o fechamento da rodada."
   },
   "predictionsMirror": {
     "title": "Palpites dos participantes",
@@ -265,7 +265,7 @@
     "activate": "Ativar",
     "saved": "Temporada salva!",
     "activated": "Temporada ativada!",
-    "typeFixedHelp": "O tipo de certame é definido na criação e não pode ser alterado depois."
+    "typeFixedHelp": "O tipo de certame define os times e as regras disponíveis."
   },
   "adminRounds": {
     "title": "Rodadas",

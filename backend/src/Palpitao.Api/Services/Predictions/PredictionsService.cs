@@ -136,26 +136,31 @@ public class PredictionsService : IPredictionsService
             .FirstOrDefaultAsync(r => r.Id == roundId && r.GroupId == groupId, ct)
             ?? throw new NotFoundException("notFound.round");
 
-        // Group admins (and platform SuperAdmins, resolved as GroupAdmin) can always
-        // view the mirror. Participants can only see others' predictions when the group
-        // has enabled it — otherwise 403.
         var isAdmin = await _current.GetRoleAsync(ct) == GroupRole.GroupAdmin;
-        if (!isAdmin)
+
+        // The season flag both grants participants access and opens the mirror "live"
+        // (while the round is still open) for everyone, including admins.
+        var allowParticipantsLive = await _db.Seasons
+            .Where(s => s.Id == round.SeasonId)
+            .Select(s => s.AllowParticipantsToViewOthersPredictions)
+            .FirstOrDefaultAsync(ct);
+
+        // Group admins (and platform SuperAdmins, resolved as GroupAdmin) can always
+        // view the mirror. Participants can only see others' predictions when the
+        // season has enabled it — otherwise 403.
+        if (!isAdmin && !allowParticipantsLive)
         {
-            var allowed = await _db.Seasons
-                .Where(s => s.Id == round.SeasonId)
-                .Select(s => s.AllowParticipantsToViewOthersPredictions)
-                .FirstOrDefaultAsync(ct);
-            if (!allowed)
-            {
-                throw new ForbiddenException("mirror.notAllowed");
-            }
+            throw new ForbiddenException("mirror.notAllowed");
         }
 
-        // Before the lock, predictions stay private — the mirror is only released
-        // after the round is locked (or already scored). This timing applies to
-        // everyone, including admins.
-        if (round.Status is not (RoundStatus.Locked or RoundStatus.Scored))
+        // Timing. When the season allows live visibility, the mirror is released as
+        // soon as the round is Published — participants can see others' predictions
+        // before the lock. Otherwise predictions stay private until the round is
+        // Locked/Scored (admin-only by then). Draft/Cancelled never expose a mirror.
+        var released = allowParticipantsLive
+            ? round.Status is RoundStatus.Published or RoundStatus.Locked or RoundStatus.Scored
+            : round.Status is RoundStatus.Locked or RoundStatus.Scored;
+        if (!released)
         {
             throw new BusinessRuleException("mirror.afterLockOnly");
         }

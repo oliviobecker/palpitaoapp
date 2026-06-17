@@ -222,7 +222,7 @@
   },
   "settings": {
     "allowParticipantsToViewOthersPredictions": "Allow participants to view other predictions",
-    "allowParticipantsToViewOthersPredictionsHelp": "When enabled, participants will be able to view other participants' predictions according to the round visibility rules."
+    "allowParticipantsToViewOthersPredictionsHelp": "When enabled, participants can see others' predictions while the round is open (live, before the lock). When disabled, only admins can, and only after the round closes."
   },
   "predictionsMirror": {
     "title": "Participants' predictions",
@@ -265,7 +265,7 @@
     "activate": "Activate",
     "saved": "Season saved!",
     "activated": "Season activated!",
-    "typeFixedHelp": "The tournament type is set at creation and cannot be changed afterwards."
+    "typeFixedHelp": "The tournament type determines the available teams and rules."
   },
   "adminRounds": {
     "title": "Rounds",

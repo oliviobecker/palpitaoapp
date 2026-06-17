@@ -10,7 +10,7 @@ export interface SeasonRequest {
   startDate: string;
   endDate: string;
   isActive: boolean;
-  /** Set on creation; ignored on update (the certame type is immutable). */
+  /** Set on creation and editable afterwards. */
   tournamentType: TournamentType;
   allowParticipantsToViewOthersPredictions: boolean;
   allowParticipantsToSubmitPredictions: boolean;

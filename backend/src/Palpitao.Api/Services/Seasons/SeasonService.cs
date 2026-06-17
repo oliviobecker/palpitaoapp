@@ -70,7 +70,6 @@ public class SeasonService : ISeasonService
             StartDate = request.StartDate,
             EndDate = request.EndDate,
             IsActive = request.IsActive,
-            // The certame type is fixed at creation; UpdateAsync never changes it.
             TournamentType = Enum.IsDefined(request.TournamentType)
                 ? request.TournamentType
                 : TournamentType.PalpitaoEngland,
@@ -107,6 +106,10 @@ public class SeasonService : ISeasonService
         season.Name = request.Name;
         season.StartDate = request.StartDate;
         season.EndDate = request.EndDate;
+        if (Enum.IsDefined(request.TournamentType))
+        {
+            season.TournamentType = request.TournamentType;
+        }
         season.AllowParticipantsToViewOthersPredictions = request.AllowParticipantsToViewOthersPredictions;
         season.AllowParticipantsToSubmitPredictions = request.AllowParticipantsToSubmitPredictions;
 
@@ -119,6 +122,7 @@ public class SeasonService : ISeasonService
         _audit.Add(actingUserId, "SeasonUpdated", nameof(Season), season.Id.ToString(), new
         {
             season.Name,
+            TournamentType = season.TournamentType.ToString(),
             season.AllowParticipantsToViewOthersPredictions,
             season.AllowParticipantsToSubmitPredictions,
         });

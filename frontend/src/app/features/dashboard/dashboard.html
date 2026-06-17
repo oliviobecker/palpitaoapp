@@ -69,6 +69,11 @@
             ✏️
             {{ (allPredicted() ? 'dashboard.editPredictions' : 'dashboard.continue') | translate }}
           </a>
+          @if (round.allowParticipantsToViewOthersPredictions) {
+            <a class="hero-link mt-2" [routerLink]="['/rounds', round.id, 'mirror']">
+              👁 {{ 'predictionsMirror.view' | translate }}
+            </a>
+          }
         </div>
       } @else if (lockedRound(); as locked) {
         <div class="card h-100">

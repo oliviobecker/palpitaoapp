@@ -132,6 +132,24 @@
   color: var(--brand-700);
 }
 
+.hero-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.12s ease;
+}
+.hero-link:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
 /* ===== Standings preview ================================================== */
 .rank-row {
   display: flex;

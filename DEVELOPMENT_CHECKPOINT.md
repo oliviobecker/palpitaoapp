@@ -17,7 +17,7 @@ _Last updated: 2026-06-17 (end of session)._
   3. Earlier in the same baseline: prediction **view**/**submit** settings on `Season`; dashboard
      highlights **Create season**; deploy workflows apply EF migrations explicitly; `/health/db` flags
      pending migrations.
-- **Build/tests:** backend **331** xUnit green; frontend `ng build` + Prettier clean, **34** Vitest,
+- **Build/tests:** backend **333** xUnit green; frontend `ng build` + Prettier clean, **34** Vitest,
   **30** Playwright. (1 pre-existing xUnit2012 warning at `PredictionImportServiceTests.cs:108`.)
 - **Open items needing the human (not code):**
   - `appsettings*.json` are placeholders in git; real secrets only via env / user-secrets / GitHub
@@ -43,7 +43,7 @@ fully isolated. Two tournament types: **Palpitão England** (PL/FA Cup/Champions
 | Backend | C# / .NET 10, ASP.NET Core Web API (routes without `api/` prefix — IIS mounts at `/api`) |
 | ORM / DB | EF Core 10.0.9 (code-first) + PostgreSQL (Npgsql 10) |
 | Auth | JWT Bearer + BCrypt; multi-tenant via the `X-Group-Id` header |
-| Backend tests | xUnit + SQLite in-memory (**331** tests) |
+| Backend tests | xUnit + SQLite in-memory (**333** tests) |
 | Frontend | Angular 21 (standalone, signals), TypeScript, Bootstrap 5 (mobile-first) |
 | i18n | ngx-translate (frontend) + `Accept-Language`/`DomainMessages` (backend), PT-BR / EN-US |
 | Frontend tests | Vitest (**34** unit) + Playwright (**30** e2e, API mocked) |
@@ -118,8 +118,10 @@ fully isolated. Two tournament types: **Palpitão England** (PL/FA Cup/Champions
 - **Absences:** 1st–2nd = 0; 3rd–4th = −20; 5th = elimination (admin can reactivate).
 - **Flávio Rule:** England from round 16 / World Cup from the quarter-finals; leader gets a special
   deadline (24h, or 12h if published <24h before kickoff); late ⇒ half points (rounded down).
-- **Prediction visibility:** participant sees the mirror iff the season flag = true **and** round
-  `Locked`/`Scored`; admins always (post-lock). **Submission:** participants submit iff the season flag
+- **Prediction visibility:** when the season flag = true the mirror is **live** — participants (and
+  admins) see others' predictions from `Published` (open round) through `Locked`/`Scored`. When false,
+  only admins see it and only after `Locked`/`Scored`; `Draft`/`Cancelled` never expose a mirror.
+  **Submission:** participants submit iff the season flag
   = true; else admin-only (403; backend never writes `Participant` in admin-only mode).
 - **Certame type:** a match's competition/phase must belong to its season's `TournamentType`
   (`tournament.competitionNotAllowed` / `tournament.phaseNotAllowed` otherwise), enforced on both manual
@@ -136,7 +138,7 @@ cd backend
 dotnet ef database update --project src/Palpitao.Api     # apply migrations
 dotnet run   --project src/Palpitao.Api                  # https://localhost:7099 (Health: /api/health, /api/health/db)
 dotnet build Palpitao.slnx -c Release
-dotnet test  Palpitao.slnx -c Release                    # 331 tests
+dotnet test  Palpitao.slnx -c Release                    # 333 tests
 
 # Frontend
 cd frontend

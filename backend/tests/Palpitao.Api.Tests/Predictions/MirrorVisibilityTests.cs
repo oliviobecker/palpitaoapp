@@ -165,14 +165,41 @@ public class MirrorVisibilityTests
     }
 
     [Fact]
-    public async Task Participant_cannot_view_mirror_before_lock_even_when_enabled()
+    public async Task Participant_can_view_mirror_before_lock_when_enabled()
     {
         using var db = CreateContext();
         SetVisibility(db, true);
         var (roundId, user) = await RoundInStatus(db, RoundStatus.Published);
 
-        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+        // Live visibility: with the season flag on, the mirror opens while the round
+        // is still open (Published), before the lock.
+        var mirror = await Service(db, GroupRole.Participant).GetMirrorAsync(roundId, user, Ct);
+        Assert.Equal(RoundStatus.Published, mirror.Status);
+        Assert.Contains(mirror.Participants, p => p.UserId == user && p.Predictions.Count == 1);
+    }
+
+    [Fact]
+    public async Task Participant_cannot_view_mirror_before_lock_when_disabled()
+    {
+        using var db = CreateContext();
+        SetVisibility(db, false);
+        var (roundId, user) = await RoundInStatus(db, RoundStatus.Published);
+
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(
             () => Service(db, GroupRole.Participant).GetMirrorAsync(roundId, user, Ct));
+        Assert.Equal("mirror.notAllowed", ex.Key);
+    }
+
+    [Fact]
+    public async Task Admin_cannot_view_mirror_before_lock_when_disabled()
+    {
+        using var db = CreateContext();
+        SetVisibility(db, false);
+        var (roundId, user) = await RoundInStatus(db, RoundStatus.Published);
+
+        // Without the live flag the mirror stays private until the lock, even for admins.
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => Service(db, GroupRole.GroupAdmin).GetMirrorAsync(roundId, user, Ct));
         Assert.Equal("mirror.afterLockOnly", ex.Key);
     }
 

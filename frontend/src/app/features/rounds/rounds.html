@@ -39,7 +39,13 @@
             <a class="btn btn-primary w-100" [routerLink]="['/rounds', round.id, 'predictions']">{{
               'rounds.predict' | translate
             }}</a>
-            @if (canViewOthers(round)) {
+            @if (canViewLive(round)) {
+              <a
+                class="btn btn-outline-primary w-100 mt-2"
+                [routerLink]="['/rounds', round.id, 'mirror']"
+                >{{ 'predictionsMirror.view' | translate }}</a
+              >
+            } @else if (canViewOthers(round)) {
               <div class="small text-muted mt-2">
                 {{ 'predictionsMirror.availableAfterLock' | translate }}
               </div>

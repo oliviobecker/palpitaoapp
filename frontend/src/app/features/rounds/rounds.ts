@@ -29,6 +29,15 @@ export class Rounds implements OnInit {
     return round.allowParticipantsToViewOthersPredictions === true || this.group.isGroupAdmin();
   }
 
+  /**
+   * Live visibility: when the season flag is on, others' predictions are released
+   * while the round is still open (before the lock), for everyone. Admins without
+   * the flag still only see the mirror after the lock.
+   */
+  canViewLive(round: RoundSummary): boolean {
+    return round.allowParticipantsToViewOthersPredictions === true;
+  }
+
   protected readonly loading = signal(true);
   protected readonly rounds = signal<RoundSummary[]>([]);
 

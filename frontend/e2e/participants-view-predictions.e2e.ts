@@ -39,6 +39,23 @@ function lockedRound(allowViewOthers: boolean) {
   };
 }
 
+/** An open (Published) round; live visibility opens the mirror before the lock. */
+function publishedRound(allowViewOthers: boolean) {
+  return {
+    id: 'r1',
+    seasonId: 's1',
+    number: 5,
+    title: null,
+    status: 'Published',
+    firstMatchStartsAt: '2999-01-01T18:00:00Z',
+    publishedAt: '2026-01-01T00:00:00Z',
+    lockedAt: null,
+    matchCount: 1,
+    allowParticipantsToViewOthersPredictions: allowViewOthers,
+    allowParticipantsToSubmitPredictions: true,
+  };
+}
+
 const mirror = {
   roundId: 'r1',
   status: 'Locked',
@@ -107,6 +124,39 @@ test.describe("Participants view others' predictions", () => {
     await expect(page.getByRole('strong').filter({ hasText: 'João Silva' })).toBeVisible();
     await expect(page.getByRole('strong').filter({ hasText: 'Maria Souza' })).toBeVisible();
     await expect(page.getByText('2 - 1')).toBeVisible();
+  });
+
+  test('shows the View predictions button on an OPEN round when enabled (live)', async ({
+    page,
+  }) => {
+    await seedParticipant(page);
+    await installApi(page, [
+      { method: 'GET', match: path('/rounds'), respond: () => ({ json: [publishedRound(true)] }) },
+      {
+        method: 'GET',
+        match: path('/rounds/r1/mirror'),
+        respond: () => ({ json: { ...mirror, status: 'Published' } }),
+      },
+    ]);
+
+    await page.goto('/rounds');
+    // The button shows even though the round is still open (not locked).
+    await page.getByRole('link', { name: 'View predictions' }).click();
+
+    await expect(page.getByRole('heading', { name: "Participants' predictions" })).toBeVisible();
+    await expect(page.getByRole('strong').filter({ hasText: 'Maria Souza' })).toBeVisible();
+  });
+
+  test('hides the button on an OPEN round when disabled', async ({ page }) => {
+    await seedParticipant(page);
+    await installApi(page, [
+      { method: 'GET', match: path('/rounds'), respond: () => ({ json: [publishedRound(false)] }) },
+    ]);
+
+    await page.goto('/rounds');
+
+    await expect(page.getByText('Round 5')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'View predictions' })).toHaveCount(0);
   });
 
   test('shows a friendly message when the API forbids access (403)', async ({ page }) => {

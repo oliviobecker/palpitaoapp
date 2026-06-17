@@ -796,13 +796,14 @@ separate endpoint:
 
 | | Setting `false` | Setting `true` |
 |---|---|---|
-| **Group admin** | sees the mirror (after the round is `Locked`/`Scored`) | same |
-| **Participant** | **403 Forbidden** | sees the mirror once the round is `Locked`/`Scored` |
+| **Group admin** | sees the mirror (after the round is `Locked`/`Scored`) | sees the mirror **live**, from `Published` (open) through `Locked`/`Scored` |
+| **Participant** | **403 Forbidden** | sees the mirror **live**, from `Published` (open) through `Locked`/`Scored` |
 
-So a participant may view others' predictions only when **all** hold: approved member of the current
-group **and** the round's season has `AllowParticipantsToViewOthersPredictions = true` **and** the round
-is `Locked` or `Scored`. Before the lock predictions stay private for everyone (admins use the admin screens for the
-in-progress round). The mirror returns matches, participants, each prediction with its submission time,
+So when the season has `AllowParticipantsToViewOthersPredictions = true`, the mirror is **live**: it
+opens as soon as the round is `Published` (still open, before the lock) for participants and admins
+alike — useful for casual/transparent pools. When the setting is `false`, predictions stay private
+until the round is `Locked`/`Scored` and only admins can see them (participants get **403**); `Draft`/
+`Cancelled` rounds never expose a mirror. The mirror returns matches, participants, each prediction with its submission time,
 absent/eliminated/Flávio flags — and **no** sensitive data (no email, password hash, tokens or admin
 justifications).
 
@@ -817,8 +818,9 @@ justifications).
 
 - **As admin:** edit the season (admin → **Seasons**) and toggle the setting. With it **off**, open a
   `Locked` round's mirror — you (admin) still see it.
-- **As participant, setting on:** wait for the round to be `Locked`/`Scored`, open **Rounds** → the
-  **"View predictions"** button appears → see everyone's predictions.
+- **As participant, setting on:** even with the round still **open** (`Published`), open **Rounds** (or
+  the dashboard's open-round card) → the **"View predictions"** button appears → see everyone's
+  predictions live; it stays available through `Locked`/`Scored`.
 - **As participant, setting off:** the **"View predictions"** button does not appear; hitting
   `/rounds/{id}/mirror` directly shows the "no permission" message, and the API returns **403**.
 
