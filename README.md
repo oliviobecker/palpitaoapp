@@ -803,16 +803,21 @@ GitHub Actions workflows live in `.github/workflows/`:
 |---|---|---|
 | `ci.yml` | every pull request + push | Backend build + tests; frontend format check + build + unit + e2e; workflow lint (actionlint) |
 | `deploy-staging.yml` | push to `main` (+ manual) | Auto-deploys to the **staging** environment |
-| `deploy-iis.yml` | push of a `v*` **tag** (+ manual) | Promotes to **production** |
+| `release.yml` | push to `main` | **semantic-release**: tags + GitHub Release, then deploys **production** |
+| `deploy-iis.yml` | called by `release.yml` (+ manual) | Builds + deploys to **production** (reusable) |
 
 ### Branch / PR flow
 
 `main` is the single source of truth (trunk-based). Work on a feature branch, open a PR to `main`,
-let CI go green, then merge. Merging into `main` auto-deploys to **staging**; production is promoted
-separately by pushing a **version tag** to the exact commit you validated on staging (see below) —
-it never deploys on a plain push to `main`. To enforce the PR flow, enable a branch ruleset on `main`
-(Settings → Branches): *Require a pull request before merging* and *Require status checks to pass*
-(the `Backend`, `Frontend` and `Lint workflows (actionlint)` checks from `ci.yml`).
+let CI go green, then merge. Merging into `main` auto-deploys to **staging** and, in parallel,
+runs **semantic-release**: based on the [Conventional Commits](https://www.conventionalcommits.org/)
+since the last release (`feat` → minor, `fix` → patch, `BREAKING CHANGE` → major) it decides the next
+version, tags it and — if there's something to release — deploys that tag to **production**. So a
+single merge can ship to staging and production; commits with no user-facing change (`chore`, `ci`,
+`docs`, `refactor`, `test`) tag nothing and don't deploy to prod. To enforce the PR flow, enable a
+branch ruleset on `main` (Settings → Branches): *Require a pull request before merging* and *Require
+status checks to pass* (the `Backend`, `Frontend` and `Lint workflows (actionlint)` checks from
+`ci.yml`).
 
 ### Staging deployment (`deploy-staging.yml`)
 
@@ -833,39 +838,39 @@ The staging paths/app pool are overridable repo **Variables** (`STAGING_FRONTEND
 **Required GitHub setup** before merging to `main`:
 
 1. Create the `staging` **environment** (Settings → Environments).
-2. Add its **secrets**: `STAGING_BACKEND_CONNECTION_STRING`, `STAGING_JWT_ISSUER`,
-   `STAGING_JWT_AUDIENCE`, `STAGING_JWT_KEY` (and optional `STAGING_SENTRY_DSN`).
+2. Add its **secrets** — the **same names** as production (the environment scopes them):
+   `BACKEND_CONNECTION_STRING`, `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_KEY` (and optional `SENTRY_DSN`).
+   Point `BACKEND_CONNECTION_STRING` at the **staging database**.
 3. On the server, create the staging **IIS site + `/api` application + app pool** at the paths above,
    pointing the connection string at a **separate staging database** (e.g. `palpitao_staging`) so it
    never touches production data.
 
+> Secrets are **environment-scoped**, so `staging` and `production` each have their own
+> `BACKEND_CONNECTION_STRING` / `JWT_*` — no prefix needed. Make sure they live under the matching
+> environment, not loose at the repo level.
+
 If a required secret is missing the job fails on purpose (at "Write backend staging settings")
 without publishing.
 
-### Production deployment (`deploy-iis.yml`)
+### Releases & production deployment (`release.yml` + `deploy-iis.yml`)
 
-Production is promoted by **pushing a version tag** to a commit that's already on `main` (and was
-deployed to staging), so prod always runs the exact code you validated. The app **footer shows the
-version** (read from `frontend/package.json` at build time).
+Releases are **automatic** via [semantic-release](https://semantic-release.gitbook.io/). On each push
+to `main` it analyses the Conventional Commits since the last `v*` tag, computes the next version,
+creates the **git tag + GitHub Release** (the Release notes are your changelog), and then the
+`deploy-production` job builds that tag and deploys it to the `production` environment. The app
+**footer shows the version** — read at build time from the latest git tag (`git describe`), so prod
+shows the released `v*` and staging shows the last release plus the short commit.
 
-**First release** — `frontend/package.json` already starts at `1.0.0`, so just tag the tested commit:
+You don't bump versions by hand: just merge Conventional Commits and semantic-release does the rest.
+It does **not** push a commit back to `main` (no bump commit), so it works with branch protection and
+needs no PAT. `deploy-iis.yml` is a **reusable** workflow (`workflow_call`) invoked by `release.yml`;
+you can also run it manually (**Actions → Build and deploy on IIS Production → Run workflow**,
+optionally passing a `ref`) as a fallback. It targets the `production` environment and its secrets
+(`BACKEND_CONNECTION_STRING`, `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_KEY`) and the production IIS paths.
 
-```bash
-git tag v1.0.0 && git push origin v1.0.0   # → triggers the production deploy
-```
-
-**Subsequent releases** — bump the version in `frontend/` with `npm version`, which updates the
-footer **and** creates the matching `v*` tag in one step:
-
-```bash
-cd frontend && npm version patch   # or minor / 1.2.0 — bumps package.json + commits + tags v*
-cd .. && git push --follow-tags    # pushes the commit (→ staging) and the tag (→ production)
-```
-
-This keeps a clean release history (each prod deploy = one `v*` tag). You can also run it manually
-(**Actions → Build and deploy on IIS Production → Run workflow**) as a fallback. It mirrors the
-staging job but targets the `production` environment and its secrets (`BACKEND_CONNECTION_STRING`,
-`JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_KEY`) and the production IIS paths.
+> **Want a manual gate before prod instead of fully-automatic?** Swap semantic-release for
+> [release-please](https://github.com/googleapis/release-please), which opens a "release PR" you merge
+> when ready — that merge creates the tag and triggers the same production deploy.
 
 ## 29. License
 

@@ -1,15 +1,22 @@
 name: Build and deploy on IIS Production
 
-# Production deploys when you push a version tag (e.g. v1.2.3), promoting the exact
-# commit you already validated on staging. You can also run it manually from the
-# Actions tab. Pushes to main deploy to staging instead — see deploy-staging.yml.
-#
-#   git tag v1.0.0 && git push origin v1.0.0
+# Production is deployed by the Release workflow (release.yml) after semantic-release
+# publishes a new version — it calls this workflow with the new tag. You can also run
+# it manually from the Actions tab (optionally passing a ref). Pushes to main deploy to
+# staging instead — see deploy-staging.yml.
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref (tag/branch/SHA) to deploy'
+        required: false
+        type: string
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref (tag/branch/SHA) to deploy; defaults to the current ref'
+        required: false
+        type: string
 
 concurrency:
   group: deploy-iis
@@ -29,7 +36,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0 # full history + tags so the version footer can read git describe
+
       - name: Show tool versions
         shell: pwsh
         run: |
