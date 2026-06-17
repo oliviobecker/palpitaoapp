@@ -1,5 +1,8 @@
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* ===== Top navbar ========================================================= */
@@ -157,7 +160,23 @@
 
 /* ===== Page content ======================================================= */
 .page-content {
+  flex: 1 0 auto; /* grow so the footer sticks to the bottom on short pages */
   padding-bottom: 1.5rem;
+}
+
+/* ===== Footer ============================================================= */
+.app-footer {
+  flex-shrink: 0;
+  padding: 0.85rem 1rem;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+
+.app-footer__commit {
+  opacity: 0.7;
 }
 
 .btn-back {
@@ -224,7 +243,9 @@
 }
 
 @media (max-width: 767.98px) {
-  .page-content {
-    padding-bottom: 5rem;
+  /* The footer is the last in-flow element, so it carries the clearance for the
+     fixed bottom nav instead of .page-content. */
+  .app-footer {
+    padding-bottom: calc(0.85rem + 4.75rem + env(safe-area-inset-bottom, 0px));
   }
 }

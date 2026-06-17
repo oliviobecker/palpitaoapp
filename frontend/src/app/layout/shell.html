@@ -105,6 +105,15 @@
   <router-outlet />
 </main>
 
+<footer class="app-footer">
+  <small [title]="buildInfo">
+    v{{ version }}
+    @if (commit) {
+      <span class="app-footer__commit">· {{ commit }}</span>
+    }
+  </small>
+</footer>
+
 <!-- Mobile bottom nav -->
 <nav class="app-bottomnav d-md-none">
   <a class="app-bottomnav__link" routerLink="/dashboard" routerLinkActive="is-active">
