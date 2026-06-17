@@ -40,6 +40,12 @@ public class RoundSummaryDto
     public DateTime? PublishedAt { get; set; }
     public DateTime? LockedAt { get; set; }
     public int MatchCount { get; set; }
+
+    /// <summary>From the round's season: whether participants may view others' predictions.</summary>
+    public bool AllowParticipantsToViewOthersPredictions { get; set; }
+
+    /// <summary>From the round's season: whether participants submit predictions in the app.</summary>
+    public bool AllowParticipantsToSubmitPredictions { get; set; } = true;
 }
 
 public class RoundDto
@@ -57,6 +63,12 @@ public class RoundDto
     public DateTime? MirrorPublishedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public List<MatchDto> Matches { get; set; } = new();
+
+    /// <summary>From the round's season: whether participants may view others' predictions.</summary>
+    public bool AllowParticipantsToViewOthersPredictions { get; set; }
+
+    /// <summary>From the round's season: whether participants submit predictions in the app.</summary>
+    public bool AllowParticipantsToSubmitPredictions { get; set; } = true;
 
     /// <summary>Flávio-rule info for the group message (null when not applicable).</summary>
     public RoundFlavioDto? Flavio { get; set; }

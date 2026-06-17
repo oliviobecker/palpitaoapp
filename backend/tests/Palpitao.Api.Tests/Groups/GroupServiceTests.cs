@@ -3,9 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Data;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
-using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
-using Palpitao.Api.Tests.TestSupport;
 using Xunit;
 
 namespace Palpitao.Api.Tests.Groups;
@@ -15,8 +13,7 @@ public class GroupServiceTests
     private static readonly CancellationToken Ct = CancellationToken.None;
     private static readonly Guid GroupB = Guid.Parse("99999999-9999-9999-9999-999999999901");
 
-    private static GroupService NewService(AppDbContext db)
-        => new(db, new FakeCurrentGroupService(), new AuditService(db));
+    private static GroupService NewService(AppDbContext db) => new(db);
 
     private static AppDbContext CreateContext()
     {

@@ -203,6 +203,8 @@
     "shortcuts": "Atalhos",
     "createRound": "Criar rodada",
     "createRoundSub": "Monte uma nova rodada de palpites",
+    "createSeason": "Criar temporada",
+    "createSeasonSub": "Crie a temporada antes das rodadas",
     "registerResult": "Cadastrar resultado",
     "registerResultSub": "Lança placares finais",
     "seasons": "Temporadas",

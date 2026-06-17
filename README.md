@@ -779,15 +779,15 @@ rows pointing at a seeded **default group** — _Palpitão England 2025/2026_
 
 ## 27. Participant prediction visibility
 
-By default, participants **cannot** see each other's predictions — only group admins can. A per-group
+By default, participants **cannot** see each other's predictions — only group admins can. A per-season
 setting opens this up to participants, still respecting the post-lock timing of the mirror.
 
 ### The setting
 
-`Group.AllowParticipantsToViewOthersPredictions` (boolean, **default `false`** for privacy). The admin
-sets it when creating the group (a toggle on `/create-group`) and can change it any time in
-**/admin/group-settings** (`Group settings` card on the admin dashboard). Every change is written to the
-`AuditLog` (`GroupSettingsUpdated`, with the previous/new value, the admin and the `GroupId`).
+`Season.AllowParticipantsToViewOthersPredictions` (boolean, **default `false`** for privacy). It lives
+on the **season** (the certame instance), so the admin sets it when **creating or editing a season**
+(admin → **Seasons**). Every change is written to the `AuditLog` (`SeasonUpdated`). A round resolves the
+flag from its season, and the API exposes it on the round so the participant UI can show/hide the option.
 
 ### Who can see what
 
@@ -800,8 +800,8 @@ separate endpoint:
 | **Participant** | **403 Forbidden** | sees the mirror once the round is `Locked`/`Scored` |
 
 So a participant may view others' predictions only when **all** hold: approved member of the current
-group **and** `AllowParticipantsToViewOthersPredictions = true` **and** the round is `Locked` or
-`Scored`. Before the lock predictions stay private for everyone (admins use the admin screens for the
+group **and** the round's season has `AllowParticipantsToViewOthersPredictions = true` **and** the round
+is `Locked` or `Scored`. Before the lock predictions stay private for everyone (admins use the admin screens for the
 in-progress round). The mirror returns matches, participants, each prediction with its submission time,
 absent/eliminated/Flávio flags — and **no** sensitive data (no email, password hash, tokens or admin
 justifications).
@@ -815,8 +815,8 @@ justifications).
 
 ### How to test manually
 
-- **As admin:** create/edit a group, toggle the setting in **/admin/group-settings**. With it **off**,
-  open a `Locked` round's mirror — you (admin) still see it.
+- **As admin:** edit the season (admin → **Seasons**) and toggle the setting. With it **off**, open a
+  `Locked` round's mirror — you (admin) still see it.
 - **As participant, setting on:** wait for the round to be `Locked`/`Scored`, open **Rounds** → the
   **"View predictions"** button appears → see everyone's predictions.
 - **As participant, setting off:** the **"View predictions"** button does not appear; hitting
@@ -824,17 +824,17 @@ justifications).
 
 ## 28. Prediction submission modes
 
-Each group chooses **how predictions are entered**, via a per-group boolean
-`Group.AllowParticipantsToSubmitPredictions` (kept as a simple boolean for consistency with the other
-group flags). The admin picks it on `/create-group` ("How will predictions be submitted?") and can
-change it later in **/admin/group-settings**. Every change is audited (`GroupSettingsUpdated`).
+Each **season** chooses **how predictions are entered**, via a per-season boolean
+`Season.AllowParticipantsToSubmitPredictions` (kept as a simple boolean for consistency with the other
+season flags). The admin picks it when **creating or editing a season** (admin → **Seasons**, "How will
+predictions be submitted?"). Every change is audited (`SeasonUpdated`).
 
 | Mode | Setting | Participant app | Admin |
 |---|---|---|---|
 | **Participants submit** (default) | `true` | normal predictions screen: submit/edit before the deadline | can also enter predictions manually / via OCR |
 | **Admin only** | `false` | predictions screen is **read-only** with a notice; **no save** button; API returns **403** | enters all predictions manually or via OCR |
 
-**Default is `true`** so existing groups keep submitting in the app.
+**Default is `true`** so existing seasons keep submitting in the app.
 
 ### Participant experience
 
@@ -854,7 +854,7 @@ predictions are **kept** — only new in-app submissions are blocked.
 
 The participant endpoint `POST|PUT /api/rounds/{roundId}/predictions` always writes
 `Source = Participant`, so it is blocked entirely (**403** `prediction.appSubmitDisabled`) when the
-group is admin-only — a participant can't bypass it via the API. The admin endpoints
+season is admin-only — a participant can't bypass it via the API. The admin endpoints
 (`/api/admin/rounds/{roundId}/predictions/manual`, `/predictions/import-image`,
 `/api/admin/ocr-imports/{batchId}/confirm`) are **unaffected** and keep their own sources
 (`AdminManual`, `AdminOcr`). So the backend never creates a `Participant`-sourced prediction in
@@ -862,7 +862,7 @@ admin-only mode.
 
 ### How to test manually
 
-- **Create:** on `/create-group`, pick "Only the administrator enters predictions".
+- **Create:** when creating/editing a season (admin → **Seasons**), pick "Only the administrator enters predictions".
 - **Participant submits (submit mode):** open **Rounds → Predict**, enter scores, **Save**.
 - **Admin-only:** as a participant, open a published round → read-only form + notice, no Save; calling
   `POST /api/rounds/{id}/predictions` directly returns **403**.

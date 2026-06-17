@@ -24,6 +24,11 @@ export class Rounds implements OnInit {
     return status.toLowerCase();
   }
 
+  /** Mirror is offered when the round's season allows it, or to group admins. */
+  canViewOthers(round: RoundSummary): boolean {
+    return round.allowParticipantsToViewOthersPredictions === true || this.group.isGroupAdmin();
+  }
+
   protected readonly loading = signal(true);
   protected readonly rounds = signal<RoundSummary[]>([]);
 

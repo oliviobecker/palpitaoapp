@@ -3,6 +3,7 @@ using Palpitao.Api.Common;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Seasons;
 using Palpitao.Api.Entities;
+using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
 
@@ -27,16 +28,33 @@ public class SeasonService : ISeasonService
         return await _db.Seasons
             .Where(s => s.GroupId == groupId)
             .OrderByDescending(s => s.StartDate)
-            .Select(s => Map(s))
+            .Select(ProjectExpr)
             .ToListAsync(ct);
     }
 
     public async Task<SeasonDto?> GetActiveAsync(CancellationToken ct)
     {
         var groupId = await _current.GetGroupIdAsync(ct);
-        var season = await _db.Seasons.FirstOrDefaultAsync(s => s.IsActive && s.GroupId == groupId, ct);
-        return season is null ? null : Map(season);
+        return await _db.Seasons
+            .Where(s => s.IsActive && s.GroupId == groupId)
+            .Select(ProjectExpr)
+            .FirstOrDefaultAsync(ct);
     }
+
+    /// <summary>Server-side projection including the "has participant predictions" subquery.</summary>
+    private System.Linq.Expressions.Expression<Func<Season, SeasonDto>> ProjectExpr => s => new SeasonDto
+    {
+        Id = s.Id,
+        Name = s.Name,
+        StartDate = s.StartDate,
+        EndDate = s.EndDate,
+        IsActive = s.IsActive,
+        AllowParticipantsToViewOthersPredictions = s.AllowParticipantsToViewOthersPredictions,
+        AllowParticipantsToSubmitPredictions = s.AllowParticipantsToSubmitPredictions,
+        HasParticipantPredictions = _db.Predictions.Any(
+            p => p.Source == PredictionSource.Participant
+                && _db.Rounds.Any(r => r.Id == p.RoundId && r.SeasonId == s.Id)),
+    };
 
     public async Task<SeasonDto> CreateAsync(SeasonRequest request, Guid actingUserId, CancellationToken ct)
     {
@@ -51,6 +69,8 @@ public class SeasonService : ISeasonService
             StartDate = request.StartDate,
             EndDate = request.EndDate,
             IsActive = request.IsActive,
+            AllowParticipantsToViewOthersPredictions = request.AllowParticipantsToViewOthersPredictions,
+            AllowParticipantsToSubmitPredictions = request.AllowParticipantsToSubmitPredictions,
             CreatedAt = DateTime.UtcNow,
         };
 
@@ -60,9 +80,14 @@ public class SeasonService : ISeasonService
         }
 
         _db.Seasons.Add(season);
-        _audit.Add(actingUserId, "SeasonCreated", nameof(Season), season.Id.ToString(), new { season.Name });
+        _audit.Add(actingUserId, "SeasonCreated", nameof(Season), season.Id.ToString(), new
+        {
+            season.Name,
+            season.AllowParticipantsToViewOthersPredictions,
+            season.AllowParticipantsToSubmitPredictions,
+        });
         await _db.SaveChangesAsync(ct);
-        return Map(season);
+        return Map(season, hasParticipantPredictions: false);
     }
 
     public async Task<SeasonDto> UpdateAsync(Guid id, SeasonRequest request, Guid actingUserId, CancellationToken ct)
@@ -76,6 +101,8 @@ public class SeasonService : ISeasonService
         season.Name = request.Name;
         season.StartDate = request.StartDate;
         season.EndDate = request.EndDate;
+        season.AllowParticipantsToViewOthersPredictions = request.AllowParticipantsToViewOthersPredictions;
+        season.AllowParticipantsToSubmitPredictions = request.AllowParticipantsToSubmitPredictions;
 
         if (request.IsActive && !season.IsActive)
         {
@@ -83,9 +110,14 @@ public class SeasonService : ISeasonService
         }
         season.IsActive = request.IsActive;
 
-        _audit.Add(actingUserId, "SeasonUpdated", nameof(Season), season.Id.ToString(), new { season.Name });
+        _audit.Add(actingUserId, "SeasonUpdated", nameof(Season), season.Id.ToString(), new
+        {
+            season.Name,
+            season.AllowParticipantsToViewOthersPredictions,
+            season.AllowParticipantsToSubmitPredictions,
+        });
         await _db.SaveChangesAsync(ct);
-        return Map(season);
+        return Map(season, await HasParticipantPredictionsAsync(season.Id, ct));
     }
 
     public async Task<SeasonDto> SetActiveAsync(Guid id, Guid actingUserId, CancellationToken ct)
@@ -99,7 +131,7 @@ public class SeasonService : ISeasonService
 
         _audit.Add(actingUserId, "SeasonActivated", nameof(Season), season.Id.ToString(), null);
         await _db.SaveChangesAsync(ct);
-        return Map(season);
+        return Map(season, await HasParticipantPredictionsAsync(season.Id, ct));
     }
 
     private async Task DeactivateOthersAsync(Guid keepId, CancellationToken ct)
@@ -112,6 +144,12 @@ public class SeasonService : ISeasonService
         }
     }
 
+    private Task<bool> HasParticipantPredictionsAsync(Guid seasonId, CancellationToken ct)
+        => _db.Predictions.AnyAsync(
+            p => p.Source == PredictionSource.Participant
+                && _db.Rounds.Any(r => r.Id == p.RoundId && r.SeasonId == seasonId),
+            ct);
+
     private static void ValidateDates(SeasonRequest request)
     {
         if (request.EndDate < request.StartDate)
@@ -120,12 +158,15 @@ public class SeasonService : ISeasonService
         }
     }
 
-    private static SeasonDto Map(Season s) => new()
+    private static SeasonDto Map(Season s, bool hasParticipantPredictions) => new()
     {
         Id = s.Id,
         Name = s.Name,
         StartDate = s.StartDate,
         EndDate = s.EndDate,
         IsActive = s.IsActive,
+        AllowParticipantsToViewOthersPredictions = s.AllowParticipantsToViewOthersPredictions,
+        AllowParticipantsToSubmitPredictions = s.AllowParticipantsToSubmitPredictions,
+        HasParticipantPredictions = hasParticipantPredictions,
     };
 }

@@ -36,6 +36,7 @@ public class MirrorVisibilityTests
         db.Seasons.Add(new Season
         {
             Id = SeasonId,
+            GroupId = SeedIds.DefaultGroup,
             Name = "Season",
             StartDate = new DateOnly(2025, 8, 1),
             EndDate = new DateOnly(2026, 5, 31),
@@ -54,8 +55,7 @@ public class MirrorVisibilityTests
 
     private static void SetVisibility(AppDbContext db, bool allowed)
     {
-        var group = db.Groups.First(g => g.Id == SeedIds.DefaultGroup);
-        group.AllowParticipantsToViewOthersPredictions = allowed;
+        db.Seasons.First(s => s.Id == SeasonId).AllowParticipantsToViewOthersPredictions = allowed;
         db.SaveChanges();
     }
 
@@ -124,11 +124,10 @@ public class MirrorVisibilityTests
     }
 
     [Fact]
-    public void Default_group_has_visibility_disabled()
+    public void Default_season_has_visibility_disabled()
     {
         using var db = CreateContext();
-        var group = db.Groups.First(g => g.Id == SeedIds.DefaultGroup);
-        Assert.False(group.AllowParticipantsToViewOthersPredictions);
+        Assert.False(db.Seasons.First(s => s.Id == SeasonId).AllowParticipantsToViewOthersPredictions);
     }
 
     [Fact]
@@ -212,34 +211,5 @@ public class MirrorVisibilityTests
         var service = new PredictionsService(db, new AuditService(db), otherGroup);
 
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetMirrorAsync(roundId, user, Ct));
-    }
-
-    // --- Group settings (admin) -------------------------------------------------
-
-    private static GroupService GroupSvc(AppDbContext db)
-        => new(db, new FakeCurrentGroupService(role: GroupRole.GroupAdmin, userId: SeedIds.AdminUser), new AuditService(db));
-
-    [Fact]
-    public async Task Admin_can_enable_setting_and_change_is_audited()
-    {
-        using var db = CreateContext();
-        var result = await GroupSvc(db).UpdateSettingsAsync(
-            new UpdateGroupSettingsRequest { AllowParticipantsToViewOthersPredictions = true }, Ct);
-
-        Assert.True(result.AllowParticipantsToViewOthersPredictions);
-        Assert.True(db.Groups.First(g => g.Id == SeedIds.DefaultGroup).AllowParticipantsToViewOthersPredictions);
-        Assert.Contains(db.AuditLogs, a => a.Action == "GroupSettingsUpdated" && a.GroupId == SeedIds.DefaultGroup);
-    }
-
-    [Fact]
-    public async Task Admin_can_disable_setting()
-    {
-        using var db = CreateContext();
-        SetVisibility(db, true);
-
-        var result = await GroupSvc(db).UpdateSettingsAsync(
-            new UpdateGroupSettingsRequest { AllowParticipantsToViewOthersPredictions = false }, Ct);
-
-        Assert.False(result.AllowParticipantsToViewOthersPredictions);
     }
 }

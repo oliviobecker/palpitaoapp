@@ -86,8 +86,10 @@ export class Predictions implements OnInit {
   protected readonly matches = signal<RoundMatch[]>([]);
 
   private readonly groupContext = inject(GroupContextService);
-  /** Admin-only submission mode: participants can't submit in the app. */
-  protected readonly adminOnly = computed(() => !this.groupContext.allowParticipantsToSubmit());
+  /** Admin-only submission mode (from the round's season): participants can't submit. */
+  protected readonly adminOnly = computed(
+    () => this.round()?.allowParticipantsToSubmitPredictions === false,
+  );
   /** World Cup certame: show the signed-prints notice on the predictions screen. */
   protected readonly isWorldCup = computed(() => this.groupContext.isWorldCup());
   /** World Cup Flávio rule notice: the round has a match from the quarter-finals on. */

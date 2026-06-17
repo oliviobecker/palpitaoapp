@@ -3,17 +3,17 @@ using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Admin;
-using Palpitao.Api.DTOs.Groups;
 using Palpitao.Api.DTOs.Matches;
 using Palpitao.Api.DTOs.Predictions;
 using Palpitao.Api.DTOs.Rounds;
+using Palpitao.Api.DTOs.Seasons;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.AdminPredictions;
 using Palpitao.Api.Services.Audit;
-using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Predictions;
 using Palpitao.Api.Services.Rounds;
+using Palpitao.Api.Services.Seasons;
 using Palpitao.Api.Tests.TestSupport;
 using Xunit;
 
@@ -39,6 +39,7 @@ public class PredictionSubmissionModeTests
         db.Seasons.Add(new Season
         {
             Id = SeasonId,
+            GroupId = SeedIds.DefaultGroup,
             Name = "Season",
             StartDate = new DateOnly(2025, 8, 1),
             EndDate = new DateOnly(2026, 5, 31),
@@ -54,7 +55,7 @@ public class PredictionSubmissionModeTests
 
     private static void SetSubmitMode(AppDbContext db, bool allow)
     {
-        db.Groups.First(g => g.Id == SeedIds.DefaultGroup).AllowParticipantsToSubmitPredictions = allow;
+        db.Seasons.First(s => s.Id == SeasonId).AllowParticipantsToSubmitPredictions = allow;
         db.SaveChanges();
     }
 
@@ -100,10 +101,10 @@ public class PredictionSubmissionModeTests
         };
 
     [Fact]
-    public void Default_group_allows_in_app_submission()
+    public void Default_season_allows_in_app_submission()
     {
         using var db = CreateContext();
-        Assert.True(db.Groups.First(g => g.Id == SeedIds.DefaultGroup).AllowParticipantsToSubmitPredictions);
+        Assert.True(db.Seasons.First(s => s.Id == SeasonId).AllowParticipantsToSubmitPredictions);
     }
 
     [Fact]
@@ -183,7 +184,7 @@ public class PredictionSubmissionModeTests
     }
 
     [Fact]
-    public async Task Settings_report_participant_predictions_and_audit_the_change()
+    public async Task Season_settings_report_participant_predictions_and_audit_the_change()
     {
         using var db = CreateContext();
         SetSubmitMode(db, true);
@@ -191,22 +192,26 @@ public class PredictionSubmissionModeTests
         var user = AddParticipant(db);
         await Predictions(db).SavePredictionsAsync(round.Id, user, Batch(round), isEdit: false, Ct);
 
-        var groups = new GroupService(db,
-            new FakeCurrentGroupService(role: GroupRole.GroupAdmin, userId: SeedIds.AdminUser), new AuditService(db));
+        var seasons = new SeasonService(db, new AuditService(db),
+            new FakeCurrentGroupService(role: GroupRole.GroupAdmin, userId: SeedIds.AdminUser));
 
-        var before = await groups.GetSettingsAsync(Ct);
+        var before = (await seasons.ListAsync(Ct)).First(s => s.Id == SeasonId);
         Assert.True(before.HasParticipantPredictions);
         Assert.True(before.AllowParticipantsToSubmitPredictions);
 
-        var after = await groups.UpdateSettingsAsync(new UpdateGroupSettingsRequest
+        var after = await seasons.UpdateAsync(SeasonId, new SeasonRequest
         {
+            Name = before.Name,
+            StartDate = before.StartDate,
+            EndDate = before.EndDate,
+            IsActive = before.IsActive,
             AllowParticipantsToViewOthersPredictions = false,
             AllowParticipantsToSubmitPredictions = false,
-        }, Ct);
+        }, SeedIds.AdminUser, Ct);
 
         Assert.False(after.AllowParticipantsToSubmitPredictions);
         // Existing predictions are kept, only new submissions are blocked.
         Assert.NotEmpty(db.Predictions.Where(p => p.UserId == user));
-        Assert.Contains(db.AuditLogs, a => a.Action == "GroupSettingsUpdated" && a.GroupId == SeedIds.DefaultGroup);
+        Assert.Contains(db.AuditLogs, a => a.Action == "SeasonUpdated" && a.EntityId == SeasonId.ToString());
     }
 }

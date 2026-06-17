@@ -66,6 +66,47 @@ import { Loading } from '../../shared/components/loading/loading';
               'adminSeasons.active' | translate
             }}</label>
           </div>
+
+          <hr class="my-1" />
+
+          <div>
+            <div class="fw-semibold mb-1">{{ 'predictionSubmission.modeLabel' | translate }}</div>
+            <div class="form-check form-switch">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                id="allowSubmit"
+                formControlName="allowParticipantsToSubmitPredictions"
+              />
+              <label class="form-check-label" for="allowSubmit">{{
+                'predictionSubmission.participantsCanSubmit' | translate
+              }}</label>
+            </div>
+            <div class="form-text">{{ 'predictionSubmission.adminOnlyHelp' | translate }}</div>
+            @if (
+              editingHasPredictions() && !form.controls.allowParticipantsToSubmitPredictions.value
+            ) {
+              <div class="alert alert-warning py-2 small mt-2 mb-0" role="alert">
+                {{ 'predictionSubmission.disableWarning' | translate }}
+              </div>
+            }
+          </div>
+
+          <div class="form-check form-switch">
+            <input
+              type="checkbox"
+              class="form-check-input"
+              id="allowView"
+              formControlName="allowParticipantsToViewOthersPredictions"
+            />
+            <label class="form-check-label" for="allowView">{{
+              'settings.allowParticipantsToViewOthersPredictions' | translate
+            }}</label>
+            <div class="form-text">
+              {{ 'settings.allowParticipantsToViewOthersPredictionsHelp' | translate }}
+            </div>
+          </div>
+
           <div class="d-flex gap-2">
             <button
               type="submit"
@@ -132,11 +173,15 @@ export class AdminSeasons implements OnInit {
   protected readonly seasons = signal<Season[]>([]);
   protected readonly editingId = signal<string | null>(null);
 
+  protected readonly editingHasPredictions = signal(false);
+
   protected readonly form = this.fb.nonNullable.group({
     name: ['', Validators.required],
     startDate: ['', Validators.required],
     endDate: ['', Validators.required],
     isActive: [false],
+    allowParticipantsToSubmitPredictions: [true],
+    allowParticipantsToViewOthersPredictions: [false],
   });
 
   ngOnInit(): void {
@@ -156,17 +201,28 @@ export class AdminSeasons implements OnInit {
 
   edit(season: Season): void {
     this.editingId.set(season.id);
+    this.editingHasPredictions.set(season.hasParticipantPredictions);
     this.form.setValue({
       name: season.name,
       startDate: season.startDate.substring(0, 10),
       endDate: season.endDate.substring(0, 10),
       isActive: season.isActive,
+      allowParticipantsToSubmitPredictions: season.allowParticipantsToSubmitPredictions,
+      allowParticipantsToViewOthersPredictions: season.allowParticipantsToViewOthersPredictions,
     });
   }
 
   resetForm(): void {
     this.editingId.set(null);
-    this.form.reset({ name: '', startDate: '', endDate: '', isActive: false });
+    this.editingHasPredictions.set(false);
+    this.form.reset({
+      name: '',
+      startDate: '',
+      endDate: '',
+      isActive: false,
+      allowParticipantsToSubmitPredictions: true,
+      allowParticipantsToViewOthersPredictions: false,
+    });
   }
 
   save(): void {

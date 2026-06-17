@@ -39,13 +39,13 @@
             <a class="btn btn-primary w-100" [routerLink]="['/rounds', round.id, 'predictions']">{{
               'rounds.predict' | translate
             }}</a>
-            @if (group.canViewOthersPredictions()) {
+            @if (canViewOthers(round)) {
               <div class="small text-muted mt-2">
                 {{ 'predictionsMirror.availableAfterLock' | translate }}
               </div>
             }
           } @else if (round.status === RoundStatus.Locked) {
-            @if (group.canViewOthersPredictions()) {
+            @if (canViewOthers(round)) {
               <a
                 class="btn btn-outline-primary w-100 mt-3"
                 [routerLink]="['/rounds', round.id, 'mirror']"
@@ -54,7 +54,7 @@
             }
           } @else if (round.status === RoundStatus.Scored) {
             <div class="d-flex gap-2 mt-3">
-              @if (group.canViewOthersPredictions()) {
+              @if (canViewOthers(round)) {
                 <a
                   class="btn btn-outline-secondary flex-fill"
                   [routerLink]="['/rounds', round.id, 'mirror']"

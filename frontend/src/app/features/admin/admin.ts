@@ -75,11 +75,11 @@ import { Loading } from '../../shared/components/loading/loading';
 
       <div class="section-label mb-2">{{ 'adminDash.shortcuts' | translate }}</div>
 
-      <a class="cta-hero mb-3" routerLink="/admin/rounds/new">
-        <span class="cta-hero__icon">➕</span>
+      <a class="cta-hero mb-3" routerLink="/admin/seasons">
+        <span class="cta-hero__icon">📅</span>
         <div>
-          <div class="cta-hero__title">{{ 'adminDash.createRound' | translate }}</div>
-          <div class="cta-hero__sub">{{ 'adminDash.createRoundSub' | translate }}</div>
+          <div class="cta-hero__title">{{ 'adminDash.createSeason' | translate }}</div>
+          <div class="cta-hero__sub">{{ 'adminDash.createSeasonSub' | translate }}</div>
         </div>
       </a>
 
@@ -138,18 +138,18 @@ export class Admin implements OnInit {
 
   protected readonly actionCards = [
     {
+      icon: '➕',
+      tile: 'icon-tile--green',
+      title: 'adminDash.createRound',
+      sub: 'adminDash.createRoundSub',
+      link: '/admin/rounds/new',
+    },
+    {
       icon: '🎯',
       tile: 'icon-tile--blue',
       title: 'adminDash.registerResult',
       sub: 'adminDash.registerResultSub',
       link: '/admin/rounds',
-    },
-    {
-      icon: '📅',
-      tile: 'icon-tile--violet',
-      title: 'adminDash.seasons',
-      sub: 'adminDash.seasonsSub',
-      link: '/admin/seasons',
     },
     {
       icon: '👥',
@@ -178,13 +178,6 @@ export class Admin implements OnInit {
       title: 'adminDash.audit',
       sub: 'adminDash.auditSub',
       link: '/admin/audit',
-    },
-    {
-      icon: '👁️',
-      tile: 'icon-tile--violet',
-      title: 'adminDash.groupSettings',
-      sub: 'adminDash.groupSettingsSub',
-      link: '/admin/group-settings',
     },
   ];
 

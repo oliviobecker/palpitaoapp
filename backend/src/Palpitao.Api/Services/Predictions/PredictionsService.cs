@@ -67,9 +67,9 @@ public class PredictionsService : IPredictionsService
         // Admin-only mode: this endpoint always writes Source = Participant, so it is
         // blocked entirely when the group disables in-app submission. Admins enter
         // predictions through the admin manual / OCR endpoints instead.
-        var allowSubmit = await _db.Groups
-            .Where(g => g.Id == groupId)
-            .Select(g => g.AllowParticipantsToSubmitPredictions)
+        var allowSubmit = await _db.Seasons
+            .Where(s => s.Id == round.SeasonId)
+            .Select(s => s.AllowParticipantsToSubmitPredictions)
             .FirstOrDefaultAsync(ct);
         if (!allowSubmit)
         {
@@ -142,9 +142,9 @@ public class PredictionsService : IPredictionsService
         var isAdmin = await _current.GetRoleAsync(ct) == GroupRole.GroupAdmin;
         if (!isAdmin)
         {
-            var allowed = await _db.Groups
-                .Where(g => g.Id == groupId)
-                .Select(g => g.AllowParticipantsToViewOthersPredictions)
+            var allowed = await _db.Seasons
+                .Where(s => s.Id == round.SeasonId)
+                .Select(s => s.AllowParticipantsToViewOthersPredictions)
                 .FirstOrDefaultAsync(ct);
             if (!allowed)
             {

@@ -9,6 +9,8 @@ export interface SeasonRequest {
   startDate: string;
   endDate: string;
   isActive: boolean;
+  allowParticipantsToViewOthersPredictions: boolean;
+  allowParticipantsToSubmitPredictions: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

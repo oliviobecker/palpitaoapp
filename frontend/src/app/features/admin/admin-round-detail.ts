@@ -43,14 +43,16 @@ import { buildClosingMessage } from '../../shared/utils/closing-message.util';
       </div>
       <div class="d-flex align-items-center gap-2 flex-wrap">
         <h1 class="h4 fw-bold mb-0">{{ 'roundDetail.title' | translate }}</h1>
-        @if (group.allowParticipantsToSubmit()) {
-          <span class="badge text-bg-success">{{
-            'predictionSubmission.participantAppBadge' | translate
-          }}</span>
-        } @else {
-          <span class="badge text-bg-secondary">{{
-            'predictionSubmission.adminOnlyBadge' | translate
-          }}</span>
+        @if (round(); as r) {
+          @if (r.allowParticipantsToSubmitPredictions === false) {
+            <span class="badge text-bg-secondary">{{
+              'predictionSubmission.adminOnlyBadge' | translate
+            }}</span>
+          } @else {
+            <span class="badge text-bg-success">{{
+              'predictionSubmission.participantAppBadge' | translate
+            }}</span>
+          }
         }
       </div>
     </div>

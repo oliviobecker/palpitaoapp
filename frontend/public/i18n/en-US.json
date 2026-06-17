@@ -203,6 +203,8 @@
     "shortcuts": "Shortcuts",
     "createRound": "Create round",
     "createRoundSub": "Build a new predictions round",
+    "createSeason": "Create season",
+    "createSeasonSub": "Create the season before the rounds",
     "registerResult": "Register result",
     "registerResultSub": "Enter final scores",
     "seasons": "Seasons",

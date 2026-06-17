@@ -1,42 +1,43 @@
 import { expect, Page, test } from '@playwright/test';
 import { API, installApi, path } from './support';
 
-/** Seeds an authenticated participant + group context, with the visibility flag. */
-async function seedParticipant(page: Page, allowViewOthers: boolean): Promise<void> {
-  await page.addInitScript(
-    ({ allow }) => {
-      localStorage.setItem('palpitao.token', 'e2e-fake-jwt');
-      localStorage.setItem(
-        'palpitao.user',
-        JSON.stringify({
-          id: 'p1',
-          name: 'João Silva',
-          email: 'joao@x.com',
-          role: 'Participant',
-          isActive: true,
-        }),
-      );
-      localStorage.setItem('palpitao.groupId', 'g1');
-      localStorage.setItem('palpitao.groupName', 'Palpitão England 2025/2026');
-      localStorage.setItem('palpitao.groupRole', 'Participant');
-      localStorage.setItem('palpitao.groupViewOthers', String(allow));
-      localStorage.setItem('palpitao.lang', 'en-US');
-    },
-    { allow: allowViewOthers },
-  );
+/** Seeds an authenticated participant + group context. */
+async function seedParticipant(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    localStorage.setItem('palpitao.token', 'e2e-fake-jwt');
+    localStorage.setItem(
+      'palpitao.user',
+      JSON.stringify({
+        id: 'p1',
+        name: 'João Silva',
+        email: 'joao@x.com',
+        role: 'Participant',
+        isActive: true,
+      }),
+    );
+    localStorage.setItem('palpitao.groupId', 'g1');
+    localStorage.setItem('palpitao.groupName', 'Palpitão England 2025/2026');
+    localStorage.setItem('palpitao.groupRole', 'Participant');
+    localStorage.setItem('palpitao.lang', 'en-US');
+  });
 }
 
-const lockedRound = {
-  id: 'r1',
-  seasonId: 's1',
-  number: 5,
-  title: null,
-  status: 'Locked',
-  firstMatchStartsAt: '2026-01-01T18:00:00Z',
-  publishedAt: '2026-01-01T00:00:00Z',
-  lockedAt: '2026-01-01T18:00:00Z',
-  matchCount: 1,
-};
+/** A locked round; the season's visibility flag rides on the round summary. */
+function lockedRound(allowViewOthers: boolean) {
+  return {
+    id: 'r1',
+    seasonId: 's1',
+    number: 5,
+    title: null,
+    status: 'Locked',
+    firstMatchStartsAt: '2026-01-01T18:00:00Z',
+    publishedAt: '2026-01-01T00:00:00Z',
+    lockedAt: '2026-01-01T18:00:00Z',
+    matchCount: 1,
+    allowParticipantsToViewOthersPredictions: allowViewOthers,
+    allowParticipantsToSubmitPredictions: true,
+  };
+}
 
 const mirror = {
   roundId: 'r1',
@@ -79,10 +80,10 @@ const mirror = {
 };
 
 test.describe("Participants view others' predictions", () => {
-  test('hides the View predictions button when the group disables it', async ({ page }) => {
-    await seedParticipant(page, false);
+  test('hides the View predictions button when the season disables it', async ({ page }) => {
+    await seedParticipant(page);
     await installApi(page, [
-      { method: 'GET', match: path('/rounds'), respond: () => ({ json: [lockedRound] }) },
+      { method: 'GET', match: path('/rounds'), respond: () => ({ json: [lockedRound(false)] }) },
     ]);
 
     await page.goto('/rounds');
@@ -92,9 +93,9 @@ test.describe("Participants view others' predictions", () => {
   });
 
   test('shows the button when enabled and opens the mirror', async ({ page }) => {
-    await seedParticipant(page, true);
+    await seedParticipant(page);
     await installApi(page, [
-      { method: 'GET', match: path('/rounds'), respond: () => ({ json: [lockedRound] }) },
+      { method: 'GET', match: path('/rounds'), respond: () => ({ json: [lockedRound(true)] }) },
       { method: 'GET', match: path('/rounds/r1/mirror'), respond: () => ({ json: mirror }) },
     ]);
 
@@ -109,7 +110,7 @@ test.describe("Participants view others' predictions", () => {
   });
 
   test('shows a friendly message when the API forbids access (403)', async ({ page }) => {
-    await seedParticipant(page, true);
+    await seedParticipant(page);
     await installApi(page, [
       {
         method: 'GET',

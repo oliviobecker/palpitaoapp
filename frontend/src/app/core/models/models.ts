@@ -37,20 +37,6 @@ export interface MyGroup {
   role: GroupRole;
   status: GroupUserStatus;
   tournamentType: TournamentType;
-  /** Whether participants may view others' predictions (drives the UI option). */
-  allowParticipantsToViewOthersPredictions: boolean;
-  /** Whether participants submit predictions in the app (false = admin-only). */
-  allowParticipantsToSubmitPredictions: boolean;
-}
-
-/** Admin-facing group settings. */
-export interface GroupSettings {
-  groupId: string;
-  groupName: string;
-  allowParticipantsToViewOthersPredictions: boolean;
-  allowParticipantsToSubmitPredictions: boolean;
-  /** True when participant-submitted predictions already exist (warn before disabling). */
-  hasParticipantPredictions: boolean;
 }
 
 export interface User {
@@ -73,6 +59,12 @@ export interface Season {
   startDate: string;
   endDate: string;
   isActive: boolean;
+  /** Whether participants may view others' predictions (default false). */
+  allowParticipantsToViewOthersPredictions: boolean;
+  /** Whether participants submit predictions in the app (false = admin-only). */
+  allowParticipantsToSubmitPredictions: boolean;
+  /** True when participant-submitted predictions already exist (warn before disabling). */
+  hasParticipantPredictions: boolean;
 }
 
 export interface Team {
@@ -181,6 +173,10 @@ export interface Round {
   createdAt: string;
   matches: RoundMatch[];
   flavio?: RoundFlavio | null;
+  /** From the round's season: whether participants may view others' predictions. */
+  allowParticipantsToViewOthersPredictions?: boolean;
+  /** From the round's season: whether participants submit predictions in the app. */
+  allowParticipantsToSubmitPredictions?: boolean;
 }
 
 export interface RoundSummary {
@@ -195,6 +191,10 @@ export interface RoundSummary {
   publishedAt?: string | null;
   lockedAt?: string | null;
   matchCount: number;
+  /** From the round's season: whether participants may view others' predictions. */
+  allowParticipantsToViewOthersPredictions?: boolean;
+  /** From the round's season: whether participants submit predictions in the app. */
+  allowParticipantsToSubmitPredictions?: boolean;
 }
 
 export interface FixtureCandidate {

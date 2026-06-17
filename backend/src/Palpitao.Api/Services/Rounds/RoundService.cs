@@ -47,6 +47,8 @@ public class RoundService : IRoundService
                 PublishedAt = r.PublishedAt,
                 LockedAt = r.LockedAt,
                 MatchCount = r.Matches.Count,
+                AllowParticipantsToViewOthersPredictions = r.Season!.AllowParticipantsToViewOthersPredictions,
+                AllowParticipantsToSubmitPredictions = r.Season!.AllowParticipantsToSubmitPredictions,
             })
             .ToListAsync(ct);
     }
@@ -61,6 +63,12 @@ public class RoundService : IRoundService
             ?? throw new NotFoundException("notFound.round");
 
         var dto = MapRound(round);
+        var season = await _db.Seasons
+            .Where(s => s.Id == round.SeasonId)
+            .Select(s => new { s.AllowParticipantsToViewOthersPredictions, s.AllowParticipantsToSubmitPredictions })
+            .FirstAsync(ct);
+        dto.AllowParticipantsToViewOthersPredictions = season.AllowParticipantsToViewOthersPredictions;
+        dto.AllowParticipantsToSubmitPredictions = season.AllowParticipantsToSubmitPredictions;
         dto.Flavio = await BuildFlavioAsync(round, ct);
         return dto;
     }
