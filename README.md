@@ -845,19 +845,20 @@ without publishing.
 ### Production deployment (`deploy-iis.yml`)
 
 Production is promoted by **pushing a version tag** to a commit that's already on `main` (and was
-deployed to staging), so prod always runs the exact code you validated:
+deployed to staging), so prod always runs the exact code you validated. The app **footer shows the
+version** (read from `frontend/package.json` at build time).
+
+**First release** — `frontend/package.json` already starts at `1.0.0`, so just tag the tested commit:
 
 ```bash
-git tag v1.0.0           # tag the tested commit (HEAD of main)
-git push origin v1.0.0   # → triggers the production deploy
+git tag v1.0.0 && git push origin v1.0.0   # → triggers the production deploy
 ```
 
-The app **footer shows this version** (read from `frontend/package.json` at build time). Bumping it
-with `npm version` in `frontend/` updates the footer **and** creates the matching `v*` tag in one
-step — the recommended way to release:
+**Subsequent releases** — bump the version in `frontend/` with `npm version`, which updates the
+footer **and** creates the matching `v*` tag in one step:
 
 ```bash
-cd frontend && npm version 1.0.0   # bumps package.json + commits + creates tag v1.0.0
+cd frontend && npm version patch   # or minor / 1.2.0 — bumps package.json + commits + tags v*
 cd .. && git push --follow-tags    # pushes the commit (→ staging) and the tag (→ production)
 ```
 
