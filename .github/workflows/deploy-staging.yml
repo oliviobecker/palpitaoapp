@@ -1,30 +1,34 @@
-name: Build and deploy on IIS Production (manual)
+name: Build and deploy on IIS Staging
 
-# Production no longer auto-deploys on push. Trigger it manually from the Actions
-# tab (Run workflow) when you want to promote to prod. Pushes to main deploy to
-# staging instead — see deploy-staging.yml.
+# Auto-deploys to the staging/test environment on every push to main (i.e. after a
+# PR is merged). Production is manual — see deploy-iis.yml. Configure the staging
+# target with repo/environment Variables and the `staging` environment Secrets
+# (see the names referenced below).
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 concurrency:
-  group: deploy-iis
+  group: deploy-iis-staging
   cancel-in-progress: false
 
 env:
-  FRONTEND_IIS_PATH: ${{ vars.FRONTEND_IIS_PATH || 'C:\inetpub\palpitao' }}
-  BACKEND_IIS_PATH: ${{ vars.BACKEND_IIS_PATH || 'C:\inetpub\palpitao\api' }}
-  BACKEND_APP_POOL: ${{ vars.BACKEND_APP_POOL || 'palpitao-api' }}
+  FRONTEND_IIS_PATH: ${{ vars.STAGING_FRONTEND_IIS_PATH || 'C:\inetpub\palpitao-staging' }}
+  BACKEND_IIS_PATH: ${{ vars.STAGING_BACKEND_IIS_PATH || 'C:\inetpub\palpitao-staging\api' }}
+  BACKEND_APP_POOL: ${{ vars.STAGING_BACKEND_APP_POOL || 'palpitao-staging-api' }}
 
 jobs:
   build-and-deploy:
-    name: Build and deploy on IIS Production
+    name: Build and deploy on IIS Staging
     runs-on: [self-hosted]
-    environment: production
+    environment: staging
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
+
       - name: Show tool versions
         shell: pwsh
         run: |
@@ -48,16 +52,17 @@ jobs:
       - name: Publish backend
         shell: pwsh
         run: |
-          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "${{ runner.temp }}\palpitao-api"
-          dotnet publish backend/src/Palpitao.Api/Palpitao.Api.csproj --configuration Release --output "${{ runner.temp }}\palpitao-api" --no-restore
+          Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "${{ runner.temp }}\palpitao-staging-api"
+          dotnet publish backend/src/Palpitao.Api/Palpitao.Api.csproj --configuration Release --output "${{ runner.temp }}\palpitao-staging-api" --no-restore
 
-      - name: Write backend production settings
+      - name: Write backend staging settings
         shell: pwsh
         env:
-          BACKEND_CONNECTION_STRING: ${{ secrets.BACKEND_CONNECTION_STRING }}
-          JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
-          JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
-          JWT_KEY: ${{ secrets.JWT_KEY }}
+          BACKEND_CONNECTION_STRING: ${{ secrets.STAGING_BACKEND_CONNECTION_STRING }}
+          JWT_ISSUER: ${{ secrets.STAGING_JWT_ISSUER }}
+          JWT_AUDIENCE: ${{ secrets.STAGING_JWT_AUDIENCE }}
+          JWT_KEY: ${{ secrets.STAGING_JWT_KEY }}
+          SENTRY_DSN: ${{ secrets.STAGING_SENTRY_DSN }}
         run: |
           $settings = @{
             ConnectionStrings = @{
@@ -68,20 +73,48 @@ jobs:
               Audience = $env:JWT_AUDIENCE
               Key = $env:JWT_KEY
             }
+            Sentry = @{
+              # Empty/unset keeps Sentry off in staging; set the STAGING_SENTRY_DSN
+              # secret to enable it.
+              Dsn = $env:SENTRY_DSN
+              Environment = 'Staging'
+            }
           }
 
           $missing = @()
-          if ([string]::IsNullOrWhiteSpace($settings.ConnectionStrings.DefaultConnection)) { $missing += 'BACKEND_CONNECTION_STRING' }
-          if ([string]::IsNullOrWhiteSpace($settings.Jwt.Issuer)) { $missing += 'JWT_ISSUER' }
-          if ([string]::IsNullOrWhiteSpace($settings.Jwt.Audience)) { $missing += 'JWT_AUDIENCE' }
-          if ([string]::IsNullOrWhiteSpace($settings.Jwt.Key)) { $missing += 'JWT_KEY' }
+          if ([string]::IsNullOrWhiteSpace($settings.ConnectionStrings.DefaultConnection)) { $missing += 'STAGING_BACKEND_CONNECTION_STRING' }
+          if ([string]::IsNullOrWhiteSpace($settings.Jwt.Issuer)) { $missing += 'STAGING_JWT_ISSUER' }
+          if ([string]::IsNullOrWhiteSpace($settings.Jwt.Audience)) { $missing += 'STAGING_JWT_AUDIENCE' }
+          if ([string]::IsNullOrWhiteSpace($settings.Jwt.Key)) { $missing += 'STAGING_JWT_KEY' }
           if ($missing.Count -gt 0) {
             throw "Missing required GitHub secret(s): $($missing -join ', ')"
           }
 
           $settings |
             ConvertTo-Json -Depth 5 |
-            Set-Content -Path "${{ runner.temp }}\palpitao-api\appsettings.Production.json" -Encoding UTF8
+            Set-Content -Path "${{ runner.temp }}\palpitao-staging-api\appsettings.Staging.json" -Encoding UTF8
+
+      - name: Set ASPNETCORE_ENVIRONMENT=Staging in web.config
+        shell: pwsh
+        run: |
+          $webConfig = "${{ runner.temp }}\palpitao-staging-api\web.config"
+          [xml]$xml = Get-Content $webConfig
+          $aspNetCore = $xml.configuration.'system.webServer'.aspNetCore
+          if (-not $aspNetCore.environmentVariables) {
+            $ev = $xml.CreateElement('environmentVariables')
+            $aspNetCore.AppendChild($ev) | Out-Null
+          }
+          $existing = $aspNetCore.environmentVariables.environmentVariable |
+            Where-Object { $_.name -eq 'ASPNETCORE_ENVIRONMENT' }
+          if ($existing) {
+            $existing.value = 'Staging'
+          } else {
+            $e = $xml.CreateElement('environmentVariable')
+            $e.SetAttribute('name', 'ASPNETCORE_ENVIRONMENT')
+            $e.SetAttribute('value', 'Staging')
+            $aspNetCore.environmentVariables.AppendChild($e) | Out-Null
+          }
+          $xml.Save($webConfig)
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -128,7 +161,7 @@ jobs:
           # (= /E /PURGE) robocopy would otherwise delete it as an "extra" file, bringing the
           # app back online mid-copy and re-locking Palpitao.Api.dll. /R:/W: avoid the
           # default million-retry/30s-wait hang if a file is still briefly locked.
-          robocopy "${{ runner.temp }}\palpitao-api" "${{ env.BACKEND_IIS_PATH }}" /MIR /XD logs /XF app_offline.htm /R:10 /W:3
+          robocopy "${{ runner.temp }}\palpitao-staging-api" "${{ env.BACKEND_IIS_PATH }}" /MIR /XD logs /XF app_offline.htm /R:10 /W:3
           $robocopyExitCode = $LASTEXITCODE
           if ($robocopyExitCode -gt 7) {
             throw "Backend robocopy failed with exit code $robocopyExitCode"
