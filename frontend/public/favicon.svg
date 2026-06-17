@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1bbf5c" />
+      <stop offset="1" stop-color="#0f7a39" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#g)" />
+  <!-- soccer ball -->
+  <circle cx="32" cy="32" r="17" fill="#ffffff" />
+  <g fill="#10261a">
+    <!-- centre pentagon -->
+    <polygon points="32,25 38,29.5 35.7,36.5 28.3,36.5 26,29.5" />
+    <!-- three outer wedges -->
+    <polygon points="32,15.2 36,18 33.5,22.5 30.5,22.5 28,18" />
+    <polygon points="47.7,37.5 44.5,41 39.5,38.5 40.5,34 45,33.5" />
+    <polygon points="16.3,37.5 19.5,41 24.5,38.5 23.5,34 19,33.5" />
+  </g>
+</svg>

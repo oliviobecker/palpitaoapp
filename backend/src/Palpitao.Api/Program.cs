@@ -1,0 +1,235 @@
+using System.Text;
+using System.Text.Json.Serialization;
+using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Palpitao.Api.Auth;
+using Palpitao.Api.Validation;
+using Palpitao.Api.Data;
+using Palpitao.Api.Middlewares;
+using Palpitao.Api.Monitoring;
+using Palpitao.Api.Services.Absences;
+using Palpitao.Api.Services.Auth;
+using Palpitao.Api.Services.Registrations;
+using Palpitao.Api.Services.AdminPredictions;
+using Palpitao.Api.Services.Audit;
+using Palpitao.Api.Services.Fixtures;
+using Palpitao.Api.Services.Flavio;
+using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Services.Localization;
+using Palpitao.Api.Services.Ocr;
+using Palpitao.Api.Services.Predictions;
+using Palpitao.Api.Services.Results;
+using Palpitao.Api.Services.Rounds;
+using Palpitao.Api.Services.Scoring;
+using Palpitao.Api.Services.Scouts;
+using Palpitao.Api.Services.Seasons;
+using Palpitao.Api.Services.Standings;
+using Palpitao.Api.Services.Users;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UsePalpitaoSentry();
+
+// --- Services ---------------------------------------------------------------
+builder.Services.AddControllers(options =>
+    {
+        // FluentValidation runs the request validators and throws a localized 400.
+        options.Filters.Add<ValidationActionFilter>();
+    })
+    .AddJsonOptions(options =>
+    {
+        // Serialize enums as readable strings (e.g. "PremierLeague").
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+
+// Validation: FluentValidation validators + suppress the DataAnnotations ModelState
+// 400 so the ValidationActionFilter owns validation (localized via DomainMessages).
+builder.Services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
+builder.Services.Configure<ApiBehaviorOptions>(options => options.SuppressModelStateInvalidFilter = true);
+
+// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Services.AddOpenApi();
+
+// PostgreSQL + EF Core (code-first). Connection string comes from configuration
+// ("ConnectionStrings:DefaultConnection") and can be overridden by the
+// environment variable ConnectionStrings__DefaultConnection (see .env.example).
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString));
+
+// --- Auth (JWT) -------------------------------------------------------------
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+        };
+    });
+builder.Services.AddAuthorization();
+
+// --- Application / domain services ------------------------------------------
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ILocalizationService, LocalizationService>();
+builder.Services.AddSingleton<IScoringService, ScoringService>();
+builder.Services.AddScoped<IRoundScoringService, RoundScoringService>();
+builder.Services.AddScoped<IStandingsService, StandingsService>();
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ICurrentGroupService, CurrentGroupService>();
+builder.Services.AddScoped<IGroupService, GroupService>();
+builder.Services.AddScoped<IRegistrationRequestService, RegistrationRequestService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IRoundService, RoundService>();
+builder.Services.AddScoped<IPredictionsService, PredictionsService>();
+builder.Services.AddScoped<IAbsenceService, AbsenceService>();
+builder.Services.AddScoped<IFlavioRuleService, FlavioRuleService>();
+builder.Services.AddScoped<ISeasonService, SeasonService>();
+builder.Services.AddScoped<IUserAdminService, UserAdminService>();
+builder.Services.AddScoped<IAdminPredictionService, AdminPredictionService>();
+builder.Services.AddScoped<IPredictionImportService, PredictionImportService>();
+builder.Services.AddScoped<IOcrService, OcrService>();
+builder.Services.AddSingleton<IOcrEngine, TesseractOcrEngine>();
+
+// --- External fixtures (round-by-period import) -----------------------------
+builder.Services.Configure<FixtureOptions>(builder.Configuration.GetSection(FixtureOptions.SectionName));
+// Isolated provider with its own HttpClient (timeout + key/user-agent set in ctor).
+// Selected by Fixtures:Provider — change config (or this block) to swap the source.
+var fixtureOptions = builder.Configuration.GetSection(FixtureOptions.SectionName).Get<FixtureOptions>()
+    ?? new FixtureOptions();
+switch (fixtureOptions.Provider?.ToLowerInvariant())
+{
+    case "fixturedownload":
+        // Free, no key, but only Premier League + Championship.
+        builder.Services.AddHttpClient<IFixtureProvider, FixtureDownloadFixtureProvider>();
+        break;
+    case "apifootball":
+        // All four competitions, but the free tier lacks the current season (paid).
+        builder.Services.AddHttpClient<IFixtureProvider, ApiFootballFixtureProvider>();
+        break;
+    case "thesportsdb":
+        // Free, but the public test key only returns sample data.
+        builder.Services.AddHttpClient<IFixtureProvider, TheSportsDbFixtureProvider>();
+        break;
+    default:
+        // Default: OneFootball web-experience API — free and covers all four tracked
+        // competitions (Premier League, Championship, League One, FA Cup).
+        builder.Services.AddHttpClient<IFixtureProvider, OneFootballFixtureProvider>();
+        break;
+}
+builder.Services.AddScoped<IFixtureImportService, FixtureImportService>();
+
+// --- Match results (refresh + temporary standings) --------------------------
+builder.Services.Configure<ResultsProviderOptions>(
+    builder.Configuration.GetSection(ResultsProviderOptions.SectionName));
+var resultsOptions = builder.Configuration.GetSection(ResultsProviderOptions.SectionName)
+    .Get<ResultsProviderOptions>() ?? new ResultsProviderOptions();
+if (string.Equals(resultsOptions.Provider, "OneFootball", StringComparison.OrdinalIgnoreCase))
+{
+    // Real source: same OneFootball web-experience API used for fixture import.
+    builder.Services.AddHttpClient<IResultsProvider, OneFootballResultsProvider>();
+}
+else if (string.Equals(resultsOptions.Provider, "ConfiguredWebsite", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddHttpClient<IResultsProvider, ConfiguredWebsiteResultsProvider>();
+}
+else
+{
+    // Default: manual results (no external fetch; temporary standings still work).
+    builder.Services.AddScoped<IResultsProvider, ManualResultsProvider>();
+}
+builder.Services.AddScoped<IResultsUpdateService, ResultsUpdateService>();
+builder.Services.AddScoped<ITemporaryStandingsService, TemporaryStandingsService>();
+builder.Services.AddScoped<IScoutService, ScoutService>();
+
+// Periodic background results refresh (disabled by default; safe no-op when off).
+builder.Services.Configure<ResultsRefreshOptions>(
+    builder.Configuration.GetSection(ResultsRefreshOptions.SectionName));
+builder.Services.AddHostedService<ResultsRefreshBackgroundService>();
+
+// Permissive CORS for local development (Angular dev server).
+const string DevCorsPolicy = "AllowFrontendDev";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(DevCorsPolicy, policy =>
+        policy.WithOrigins("http://localhost:4200")
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
+
+var app = builder.Build();
+
+// Apply pending migrations on startup (creates the schema + seed on first run).
+// Resilient: if the database is unreachable, log and keep the API up so /health
+// still responds and the real error is visible in the logs.
+using (var scope = app.Services.CreateScope())
+{
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        // Log the target database (password redacted) so a misconfigured
+        // production connection string is obvious in the logs.
+        logger.LogInformation("Conectando ao banco: {ConnectionString}", MaskConnectionString(connectionString));
+
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.Migrate();
+        logger.LogInformation("Migrations aplicadas com sucesso.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Falha ao aplicar migrations no startup.");
+    }
+}
+
+// --- HTTP pipeline ----------------------------------------------------------
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.UseCors(DevCorsPolicy);
+    app.UseHttpsRedirection();
+}
+
+app.UseAuthentication();
+app.UseMiddleware<SentryUserContextMiddleware>();
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();
+
+// Redacts the password from a Npgsql connection string for safe logging.
+static string MaskConnectionString(string? connectionString)
+{
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        return "(não configurada)";
+    }
+
+    try
+    {
+        var builder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString);
+        if (!string.IsNullOrEmpty(builder.Password))
+        {
+            builder.Password = "***";
+        }
+
+        return builder.ConnectionString;
+    }
+    catch
+    {
+        return "(string de conexão inválida)";
+    }
+}

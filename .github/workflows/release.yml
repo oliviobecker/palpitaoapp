@@ -1,0 +1,56 @@
+name: Release
+
+# On every push to main, semantic-release reads the Conventional Commits since the
+# last release, decides the next version, and (only if there's something to release)
+# creates the v* tag + GitHub Release. When a release is published, the production
+# deploy runs automatically against that tag.
+#
+# Staging deploys in parallel on the same push (see deploy-staging.yml). Releasing
+# does NOT push a commit back to main (no bump commit), so it works with branch
+# protection and needs no PAT — the footer version comes from the git tag.
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write # create tags + GitHub Releases
+  issues: write # semantic-release may comment on released issues
+  pull-requests: write # ...and on released PRs
+
+jobs:
+  release:
+    name: Semantic release
+    runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.semantic.outputs.new_release_published }}
+      version: ${{ steps.semantic.outputs.new_release_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so semantic-release can analyse all commits
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Semantic release
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-production:
+    name: Deploy released version to production
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    uses: ./.github/workflows/deploy-iis.yml
+    with:
+      ref: v${{ needs.release.outputs.version }}
+    secrets: inherit

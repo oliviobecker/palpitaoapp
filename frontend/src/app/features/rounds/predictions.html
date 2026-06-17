@@ -1,0 +1,114 @@
+@if (loading()) {
+  <app-loading />
+} @else if (round(); as r) {
+  <div class="mb-3">
+    <div class="page-trail">
+      <a routerLink="/rounds">{{ 'nav.rounds' | translate }}</a> ·
+      {{ 'dashboard.round' | translate }}
+      {{ r.number }}
+    </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <h1 class="h4 fw-bold mb-0">{{ 'dashboard.round' | translate }} {{ r.number }}</h1>
+      @if (editable()) {
+        <span class="badge text-bg-light border"
+          >{{ 'predictions.closesIn' | translate }}
+          <app-countdown [target]="r.firstMatchStartsAt ?? null"
+        /></span>
+      }
+    </div>
+  </div>
+
+  @if (adminOnly()) {
+    <div class="alert alert-info py-2" role="alert">
+      {{ 'predictionSubmission.adminOnlyNotice' | translate }}
+    </div>
+  }
+
+  @if (blockedMessage()) {
+    <div class="alert alert-warning py-2">{{ blockedMessage() | translate }}</div>
+  }
+
+  @if (flavioActive()) {
+    <div class="alert alert-warning py-2 small" role="alert">
+      {{ 'flavioRule.worldCupNotice' | translate }}
+    </div>
+  }
+
+  @if (isWorldCup()) {
+    <div class="alert alert-info py-2 small" role="alert">
+      {{ 'predictionNotice.worldCupSignedPrints' | translate }}
+    </div>
+  }
+
+  <form>
+    <div class="vstack gap-2">
+      @for (m of matches(); track m.id; let i = $index) {
+        <div class="card" [class.border-primary]="classic(m)" [class.border-warning]="leagueOne(m)">
+          <div class="card-body" [formGroup]="group(i)">
+            <!-- Header: competition | phase | multiplier | time -->
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+              <app-competition-badge [competition]="m.competition" />
+              @if (m.phase !== 'Regular') {
+                <span class="badge text-bg-light border">{{ 'phase.' + m.phase | translate }}</span>
+              }
+              <app-multiplier-badge [multiplier]="multiplier(m)" />
+              @if (classic(m)) {
+                <span class="badge text-bg-primary">{{ 'predictions.classic' | translate }}</span>
+              }
+              @if (leagueOne(m)) {
+                <span class="badge text-bg-warning">{{ 'predictions.leagueOne' | translate }}</span>
+              }
+              <small class="text-muted ms-auto">{{ m.startsAt | date: 'EEE, dd/MM HH:mm' }}</small>
+            </div>
+
+            <!-- Score row -->
+            <div class="d-flex align-items-center gap-2">
+              <span class="team-badge" [style.background]="teamColor(m.homeTeamName)">{{
+                abbr(m.homeTeamName)
+              }}</span>
+              <span class="fw-semibold team-name">{{ m.homeTeamName }}</span>
+              <input
+                type="number"
+                inputmode="numeric"
+                min="0"
+                class="form-control score-box"
+                formControlName="home"
+                [class.is-invalid]="
+                  group(i).controls['home'].touched && group(i).controls['home'].invalid
+                "
+                (input)="onInput()"
+              />
+              <span class="text-muted">×</span>
+              <input
+                type="number"
+                inputmode="numeric"
+                min="0"
+                class="form-control score-box"
+                formControlName="away"
+                [class.is-invalid]="
+                  group(i).controls['away'].touched && group(i).controls['away'].invalid
+                "
+                (input)="onInput()"
+              />
+              <span class="fw-semibold team-name text-end">{{ m.awayTeamName }}</span>
+              <span class="team-badge" [style.background]="teamColor(m.awayTeamName)">{{
+                abbr(m.awayTeamName)
+              }}</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </form>
+
+  @if (editable()) {
+    <div class="py-3 mt-2">
+      <button class="btn btn-primary btn-lg w-100" (click)="save()" [disabled]="saving()">
+        @if (saving()) {
+          <span class="spinner-border spinner-border-sm me-2"></span>
+        }
+        💾 {{ (saved() ? 'predictions.saved' : 'predictions.save') | translate }}
+      </button>
+    </div>
+  }
+}
