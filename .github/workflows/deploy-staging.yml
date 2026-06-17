@@ -102,22 +102,24 @@ jobs:
         shell: pwsh
         run: |
           $webConfig = "${{ runner.temp }}\palpitao-staging-api\web.config"
-          [xml]$xml = Get-Content $webConfig
-          $aspNetCore = $xml.configuration.'system.webServer'.aspNetCore
-          if (-not $aspNetCore.environmentVariables) {
-            $ev = $xml.CreateElement('environmentVariables')
-            $aspNetCore.AppendChild($ev) | Out-Null
+          [xml]$xml = Get-Content $webConfig -Raw
+          # The publish-generated web.config nests <system.webServer> inside a
+          # <location> element, so navigate with XPath (//aspNetCore) to find the
+          # node regardless of where it sits.
+          $aspNetCore = $xml.SelectSingleNode('//aspNetCore')
+          if ($null -eq $aspNetCore) {
+            throw 'web.config has no <aspNetCore> element — cannot set ASPNETCORE_ENVIRONMENT.'
           }
-          $existing = $aspNetCore.environmentVariables.environmentVariable |
-            Where-Object { $_.name -eq 'ASPNETCORE_ENVIRONMENT' }
-          if ($existing) {
-            $existing.value = 'Staging'
-          } else {
-            $e = $xml.CreateElement('environmentVariable')
-            $e.SetAttribute('name', 'ASPNETCORE_ENVIRONMENT')
-            $e.SetAttribute('value', 'Staging')
-            $aspNetCore.environmentVariables.AppendChild($e) | Out-Null
+          $envVars = $aspNetCore.SelectSingleNode('environmentVariables')
+          if ($null -eq $envVars) {
+            $envVars = $aspNetCore.AppendChild($xml.CreateElement('environmentVariables'))
           }
+          $envVar = $envVars.SelectSingleNode("environmentVariable[@name='ASPNETCORE_ENVIRONMENT']")
+          if ($null -eq $envVar) {
+            $envVar = $envVars.AppendChild($xml.CreateElement('environmentVariable'))
+            $envVar.SetAttribute('name', 'ASPNETCORE_ENVIRONMENT')
+          }
+          $envVar.SetAttribute('value', 'Staging')
           $xml.Save($webConfig)
 
       - name: Install frontend dependencies
