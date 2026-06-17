@@ -27,6 +27,9 @@ temp/
 # Claude Code per-machine settings (local paths, permissions)
 .claude/settings.local.json
 
+# Generated at build time (frontend version stamp)
+frontend/src/version.ts
+
 # ===========================================================================
 # .NET / backend
 # ===========================================================================

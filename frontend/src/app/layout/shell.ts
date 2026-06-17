@@ -8,6 +8,7 @@ import { AuthService } from '../core/auth/auth.service';
 import { Lang, LanguageService } from '../core/i18n/language.service';
 import { LoadingService } from '../core/notifications/loading.service';
 import { GroupContextService } from '../core/services/group-context.service';
+import { APP_BUILD_TIME, APP_COMMIT, APP_VERSION } from '../../version';
 
 /** Top-level tabs reached from the nav — they don't get a back button. */
 const ROOT_ROUTES = ['/dashboard', '/rounds', '/standings', '/admin'];
@@ -25,6 +26,10 @@ export class Shell {
   protected readonly language = inject(LanguageService);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
+
+  /** Build version shown in the footer; commit/time go in the tooltip. */
+  protected readonly version = APP_VERSION;
+  protected readonly buildInfo = [APP_COMMIT, APP_BUILD_TIME].filter(Boolean).join(' · ');
 
   private readonly currentUrl = signal(this.router.url);
   /** How many in-app navigations happened — tells us if history.back() is safe. */

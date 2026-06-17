@@ -103,6 +103,10 @@
     </button>
   }
   <router-outlet />
+
+  <footer class="app-footer text-center mt-4">
+    <small class="text-muted" [title]="buildInfo">v{{ version }}</small>
+  </footer>
 </main>
 
 <!-- Mobile bottom nav -->

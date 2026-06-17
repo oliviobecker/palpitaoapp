@@ -852,6 +852,15 @@ git tag v1.0.0           # tag the tested commit (HEAD of main)
 git push origin v1.0.0   # → triggers the production deploy
 ```
 
+The app **footer shows this version** (read from `frontend/package.json` at build time). Bumping it
+with `npm version` in `frontend/` updates the footer **and** creates the matching `v*` tag in one
+step — the recommended way to release:
+
+```bash
+cd frontend && npm version 1.0.0   # bumps package.json + commits + creates tag v1.0.0
+cd .. && git push --follow-tags    # pushes the commit (→ staging) and the tag (→ production)
+```
+
 This keeps a clean release history (each prod deploy = one `v*` tag). You can also run it manually
 (**Actions → Build and deploy on IIS Production → Run workflow**) as a fallback. It mirrors the
 staging job but targets the `production` environment and its secrets (`BACKEND_CONNECTION_STRING`,
