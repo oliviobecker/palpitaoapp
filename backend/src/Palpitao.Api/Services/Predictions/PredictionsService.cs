@@ -64,6 +64,20 @@ public class PredictionsService : IPredictionsService
             .FirstOrDefaultAsync(gu => gu.UserId == userId, ct)
             ?? throw new NotFoundException("notFound.user");
 
+        // Admin-only mode: this endpoint always writes Source = Participant, so it is
+        // blocked entirely when the group disables in-app submission. Admins enter
+        // predictions through the admin manual / OCR endpoints instead.
+        var allowSubmit = await _db.Groups
+            .Where(g => g.Id == groupId)
+            .Select(g => g.AllowParticipantsToSubmitPredictions)
+            .FirstOrDefaultAsync(ct);
+        if (!allowSubmit)
+        {
+            SentrySdk.AddBreadcrumb("Prediction submission blocked by season settings.", "predictions",
+                level: BreadcrumbLevel.Warning);
+            throw new ForbiddenException("prediction.appSubmitDisabled");
+        }
+
         EnsureCanParticipate(membership);
         EnsureRoundOpenForPredictions(round);
         ValidateBatch(round, request);

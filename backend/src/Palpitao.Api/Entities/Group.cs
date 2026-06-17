@@ -27,6 +27,13 @@ public class Group
     /// </summary>
     public bool AllowParticipantsToViewOthersPredictions { get; set; }
 
+    /// <summary>
+    /// When true (default), approved participants submit/edit their own predictions in
+    /// the app. When false, only the admin enters predictions (manual / OCR) and the
+    /// participant submission endpoints are blocked (403); existing predictions are kept.
+    /// </summary>
+    public bool AllowParticipantsToSubmitPredictions { get; set; } = true;
+
     /// <summary>URL-friendly unique identifier, derived from the name.</summary>
     public string Slug { get; set; } = string.Empty;
 

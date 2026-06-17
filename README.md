@@ -822,7 +822,54 @@ justifications).
 - **As participant, setting off:** the **"View predictions"** button does not appear; hitting
   `/rounds/{id}/mirror` directly shows the "no permission" message, and the API returns **403**.
 
-## 28. Security and secret configuration
+## 28. Prediction submission modes
+
+Each group chooses **how predictions are entered**, via a per-group boolean
+`Group.AllowParticipantsToSubmitPredictions` (kept as a simple boolean for consistency with the other
+group flags). The admin picks it on `/create-group` ("How will predictions be submitted?") and can
+change it later in **/admin/group-settings**. Every change is audited (`GroupSettingsUpdated`).
+
+| Mode | Setting | Participant app | Admin |
+|---|---|---|---|
+| **Participants submit** (default) | `true` | normal predictions screen: submit/edit before the deadline | can also enter predictions manually / via OCR |
+| **Admin only** | `false` | predictions screen is **read-only** with a notice; **no save** button; API returns **403** | enters all predictions manually or via OCR |
+
+**Default is `true`** so existing groups keep submitting in the app.
+
+### Participant experience
+
+- **Submit mode:** the score inputs and the **Save** button are shown; predictions can be edited until
+  the round's first match.
+- **Admin-only mode:** the screen shows _"In this season, predictions are entered by the
+  administrator…"_, the form is read-only and there is **no Save button**.
+
+### Admin experience
+
+The round detail shows a badge — **"Predictions: participants in app"** or **"Predictions: admin
+only"**. Regardless of the mode, the admin keeps the manual-entry, OCR import and OCR-review flows.
+Editing the setting to admin-only when participant predictions already exist shows a warning; existing
+predictions are **kept** — only new in-app submissions are blocked.
+
+### Backend (source of truth)
+
+The participant endpoint `POST|PUT /api/rounds/{roundId}/predictions` always writes
+`Source = Participant`, so it is blocked entirely (**403** `prediction.appSubmitDisabled`) when the
+group is admin-only — a participant can't bypass it via the API. The admin endpoints
+(`/api/admin/rounds/{roundId}/predictions/manual`, `/predictions/import-image`,
+`/api/admin/ocr-imports/{batchId}/confirm`) are **unaffected** and keep their own sources
+(`AdminManual`, `AdminOcr`). So the backend never creates a `Participant`-sourced prediction in
+admin-only mode.
+
+### How to test manually
+
+- **Create:** on `/create-group`, pick "Only the administrator enters predictions".
+- **Participant submits (submit mode):** open **Rounds → Predict**, enter scores, **Save**.
+- **Admin-only:** as a participant, open a published round → read-only form + notice, no Save; calling
+  `POST /api/rounds/{id}/predictions` directly returns **403**.
+- **Admin manual:** **/admin/rounds/{id}/manual-predictions** works in either mode (source `AdminManual`).
+- **OCR:** **/admin/rounds/{id}/import-predictions** works in either mode (source `AdminOcr`).
+
+## 29. Security and secret configuration
 
 This repository is public: **never** commit real secrets. The versioned files
 (`appsettings*.json`, `.env.example`) carry only **placeholders**.
@@ -840,7 +887,7 @@ This repository is public: **never** commit real secrets. The versioned files
 Before going public (or when reviewing secrets), see
 [PUBLIC_RELEASE_CHECKLIST.md](PUBLIC_RELEASE_CHECKLIST.md).
 
-## 29. Continuous integration and deployment
+## 30. Continuous integration and deployment
 
 GitHub Actions workflows live in `.github/workflows/`:
 
@@ -917,7 +964,7 @@ optionally passing a `ref`) as a fallback. It targets the `production` environme
 > [release-please](https://github.com/googleapis/release-please), which opens a "release PR" you merge
 > when ready — that merge creates the tag and triggers the same production deploy.
 
-## 30. License
+## 31. License
 
 Distributed under the **Apache 2.0** license — see [LICENSE](LICENSE). In short: free use,
 modification and distribution (including commercial), keeping the copyright notice and the license,

@@ -7,6 +7,7 @@ const GROUP_NAME_KEY = 'palpitao.groupName';
 const GROUP_ROLE_KEY = 'palpitao.groupRole';
 const GROUP_TYPE_KEY = 'palpitao.groupType';
 const GROUP_VIEW_OTHERS_KEY = 'palpitao.groupViewOthers';
+const GROUP_ALLOW_SUBMIT_KEY = 'palpitao.groupAllowSubmit';
 
 /** Reads the current group id straight from storage (no DI) for the interceptor. */
 export function storedGroupId(): string | null {
@@ -30,6 +31,10 @@ export class GroupContextService {
   private readonly _allowViewOthers = signal<boolean>(
     localStorage.getItem(GROUP_VIEW_OTHERS_KEY) === 'true',
   );
+  // Defaults to true (in-app submission) when unset, matching the backend default.
+  private readonly _allowSubmit = signal<boolean>(
+    localStorage.getItem(GROUP_ALLOW_SUBMIT_KEY) !== 'false',
+  );
 
   readonly groupId = this._groupId.asReadonly();
   readonly groupName = this._groupName.asReadonly();
@@ -44,6 +49,8 @@ export class GroupContextService {
   readonly canViewOthersPredictions = computed(
     () => this.isGroupAdmin() || this._allowViewOthers(),
   );
+  /** Whether participants submit predictions in the app (false = admin-only mode). */
+  readonly allowParticipantsToSubmit = this._allowSubmit.asReadonly();
 
   /** Selects a group as the current acting context. */
   select(group: MyGroup): void {
@@ -55,17 +62,28 @@ export class GroupContextService {
       GROUP_VIEW_OTHERS_KEY,
       String(group.allowParticipantsToViewOthersPredictions),
     );
+    localStorage.setItem(
+      GROUP_ALLOW_SUBMIT_KEY,
+      String(group.allowParticipantsToSubmitPredictions),
+    );
     this._groupId.set(group.groupId);
     this._groupName.set(group.groupName);
     this._role.set(group.role);
     this._tournamentType.set(group.tournamentType);
     this._allowViewOthers.set(group.allowParticipantsToViewOthersPredictions);
+    this._allowSubmit.set(group.allowParticipantsToSubmitPredictions);
   }
 
   /** Updates the cached "view others" flag (after an admin toggles the setting). */
   setAllowViewOthersPredictions(value: boolean): void {
     localStorage.setItem(GROUP_VIEW_OTHERS_KEY, String(value));
     this._allowViewOthers.set(value);
+  }
+
+  /** Updates the cached "in-app submission" flag (after an admin toggles the setting). */
+  setAllowParticipantsToSubmit(value: boolean): void {
+    localStorage.setItem(GROUP_ALLOW_SUBMIT_KEY, String(value));
+    this._allowSubmit.set(value);
   }
 
   /** Clears the current group (logout / switch group). */
@@ -75,10 +93,12 @@ export class GroupContextService {
     localStorage.removeItem(GROUP_ROLE_KEY);
     localStorage.removeItem(GROUP_TYPE_KEY);
     localStorage.removeItem(GROUP_VIEW_OTHERS_KEY);
+    localStorage.removeItem(GROUP_ALLOW_SUBMIT_KEY);
     this._groupId.set(null);
     this._groupName.set(null);
     this._role.set(null);
     this._tournamentType.set(null);
     this._allowViewOthers.set(false);
+    this._allowSubmit.set(true);
   }
 }

@@ -11,6 +11,7 @@ const group: MyGroup = {
   status: GroupUserStatus.Approved,
   tournamentType: TournamentType.PalpitaoEngland,
   allowParticipantsToViewOthersPredictions: false,
+  allowParticipantsToSubmitPredictions: true,
 };
 
 describe('GroupContextService', () => {
@@ -86,5 +87,16 @@ describe('GroupContextService', () => {
     svc.setAllowViewOthersPredictions(true);
     expect(svc.allowViewOthersPredictions()).toBe(true);
     expect(svc.canViewOthersPredictions()).toBe(true);
+  });
+
+  it('tracks the in-app submission mode (defaults to allowed)', () => {
+    const svc = new GroupContextService();
+    expect(svc.allowParticipantsToSubmit()).toBe(true);
+
+    svc.select({ ...group, allowParticipantsToSubmitPredictions: false });
+    expect(svc.allowParticipantsToSubmit()).toBe(false);
+
+    svc.setAllowParticipantsToSubmit(true);
+    expect(svc.allowParticipantsToSubmit()).toBe(true);
   });
 });

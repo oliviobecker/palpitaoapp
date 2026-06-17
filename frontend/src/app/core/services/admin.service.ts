@@ -90,10 +90,11 @@ export class AdminService {
     return this.http.get<GroupSettings>(`${this.base}/group/settings`);
   }
 
-  updateGroupSettings(allow: boolean): Observable<GroupSettings> {
-    return this.http.put<GroupSettings>(`${this.base}/group/settings`, {
-      allowParticipantsToViewOthersPredictions: allow,
-    });
+  updateGroupSettings(settings: {
+    allowParticipantsToViewOthersPredictions: boolean;
+    allowParticipantsToSubmitPredictions: boolean;
+  }): Observable<GroupSettings> {
+    return this.http.put<GroupSettings>(`${this.base}/group/settings`, settings);
   }
 
   // --- Participants -------------------------------------------------------

@@ -232,6 +232,18 @@
     "byMatch": "Por jogo",
     "byParticipant": "Por participante"
   },
+  "predictionSubmission": {
+    "modeLabel": "Como os palpites serão enviados?",
+    "participantsCanSubmit": "Participantes podem palpitar pelo app",
+    "participantsCanSubmitHelp": "Os participantes aprovados poderão enviar e editar seus próprios palpites antes do fechamento da rodada.",
+    "adminOnly": "Apenas o administrador insere os palpites",
+    "adminOnlyHelp": "Os participantes não poderão enviar palpites pelo app. O administrador fará o cadastro manualmente ou via OCR.",
+    "adminOnlyNotice": "Nesta temporada, os palpites são inseridos pelo administrador. Você poderá acompanhar suas rodadas e resultados pelo app.",
+    "disabledError": "Participantes não podem enviar palpites pelo app nesta temporada. Os palpites serão inseridos pelo administrador.",
+    "adminOnlyBadge": "Palpites: somente admin",
+    "participantAppBadge": "Palpites: participantes pelo app",
+    "disableWarning": "Já existem palpites enviados por participantes. Desabilitar essa opção não apagará os palpites existentes, mas impedirá novos envios pelo app."
+  },
   "adminGroupSettings": {
     "title": "Configurações do grupo",
     "save": "Salvar",

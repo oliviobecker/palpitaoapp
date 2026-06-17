@@ -232,6 +232,18 @@
     "byMatch": "By match",
     "byParticipant": "By participant"
   },
+  "predictionSubmission": {
+    "modeLabel": "How will predictions be submitted?",
+    "participantsCanSubmit": "Participants can submit predictions in the app",
+    "participantsCanSubmitHelp": "Approved participants will be able to submit and edit their own predictions before the round closes.",
+    "adminOnly": "Only the administrator enters predictions",
+    "adminOnlyHelp": "Participants will not be able to submit predictions in the app. The administrator will enter them manually or via OCR.",
+    "adminOnlyNotice": "In this season, predictions are entered by the administrator. You can still follow your rounds and results in the app.",
+    "disabledError": "Participants cannot submit predictions in the app for this season. Predictions will be entered by the administrator.",
+    "adminOnlyBadge": "Predictions: admin only",
+    "participantAppBadge": "Predictions: participants in app",
+    "disableWarning": "There are already predictions submitted by participants. Disabling this option will not delete existing predictions, but it will prevent new submissions in the app."
+  },
   "adminGroupSettings": {
     "title": "Group settings",
     "save": "Save",

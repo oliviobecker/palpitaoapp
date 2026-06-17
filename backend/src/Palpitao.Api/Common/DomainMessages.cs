@@ -197,6 +197,7 @@ public static class DomainMessages
             ["prediction.roundScored"] = ("A rodada já foi pontuada.", "The round has already been scored."),
             ["prediction.roundCancelled"] = ("A rodada foi cancelada.", "The round was cancelled."),
             ["prediction.deadlinePassed"] = ("O prazo para palpitar nesta rodada já encerrou.", "The deadline to predict for this round has passed."),
+            ["prediction.appSubmitDisabled"] = ("Participantes não podem enviar palpites pelo app nesta temporada. Os palpites serão inseridos pelo administrador.", "Participants cannot submit predictions in the app for this season. Predictions will be entered by the administrator."),
 
             // Mirror.
             ["mirror.afterLockOnly"] = ("O espelho fica disponível somente após o bloqueio da rodada.", "The mirror is only available after the round is locked."),

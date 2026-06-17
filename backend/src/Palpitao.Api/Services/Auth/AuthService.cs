@@ -161,6 +161,7 @@ public partial class AuthService : IAuthService
             Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description!.Trim(),
             TournamentType = request.TournamentType.Value,
             AllowParticipantsToViewOthersPredictions = request.AllowParticipantsToViewOthersPredictions,
+            AllowParticipantsToSubmitPredictions = request.AllowParticipantsToSubmitPredictions,
             CreatedByUserId = admin.Id,
             OwnerUserId = admin.Id,
             IsActive = true,
@@ -188,6 +189,7 @@ public partial class AuthService : IAuthService
                 group.Slug,
                 TournamentType = group.TournamentType.ToString(),
                 group.AllowParticipantsToViewOthersPredictions,
+                group.AllowParticipantsToSubmitPredictions,
             }, group.Id);
 
         await _db.SaveChangesAsync(ct);

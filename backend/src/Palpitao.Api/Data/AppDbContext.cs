@@ -70,6 +70,9 @@ public class AppDbContext : DbContext
             // Off by default: participants cannot see others' predictions unless the
             // admin opts in.
             e.Property(x => x.AllowParticipantsToViewOthersPredictions).HasDefaultValue(false);
+            // On by default: participants submit their own predictions in the app
+            // (preserves the existing flow).
+            e.Property(x => x.AllowParticipantsToSubmitPredictions).HasDefaultValue(true);
             e.HasIndex(x => x.Slug).IsUnique();
             e.HasIndex(x => x.IsActive);
         });

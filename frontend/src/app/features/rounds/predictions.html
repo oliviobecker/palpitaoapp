@@ -18,6 +18,12 @@
     </div>
   </div>
 
+  @if (adminOnly()) {
+    <div class="alert alert-info py-2" role="alert">
+      {{ 'predictionSubmission.adminOnlyNotice' | translate }}
+    </div>
+  }
+
   @if (blockedMessage()) {
     <div class="alert alert-warning py-2">{{ blockedMessage() | translate }}</div>
   }

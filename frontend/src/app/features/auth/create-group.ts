@@ -200,6 +200,48 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
                 }
               </div>
 
+              <div class="mb-3">
+                <label class="form-label d-block">{{
+                  'predictionSubmission.modeLabel' | translate
+                }}</label>
+                <div class="row g-2">
+                  <div class="col-12">
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary w-100 text-start p-3"
+                      [class.active]="
+                        form.controls.allowParticipantsToSubmitPredictions.value === true
+                      "
+                      (click)="selectSubmitMode(true)"
+                    >
+                      <span class="fw-semibold d-block">{{
+                        'predictionSubmission.participantsCanSubmit' | translate
+                      }}</span>
+                      <span class="small d-block">{{
+                        'predictionSubmission.participantsCanSubmitHelp' | translate
+                      }}</span>
+                    </button>
+                  </div>
+                  <div class="col-12">
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary w-100 text-start p-3"
+                      [class.active]="
+                        form.controls.allowParticipantsToSubmitPredictions.value === false
+                      "
+                      (click)="selectSubmitMode(false)"
+                    >
+                      <span class="fw-semibold d-block">{{
+                        'predictionSubmission.adminOnly' | translate
+                      }}</span>
+                      <span class="small d-block">{{
+                        'predictionSubmission.adminOnlyHelp' | translate
+                      }}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div class="form-check form-switch mb-4">
                 <input
                   id="allowViewOthers"
@@ -250,9 +292,14 @@ export class CreateGroup {
       password: ['', [Validators.required, Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d).{8,}$/)]],
       confirmPassword: ['', [Validators.required]],
       allowParticipantsToViewOthersPredictions: [false],
+      allowParticipantsToSubmitPredictions: [true],
     },
     { validators: passwordsMatch },
   );
+
+  selectSubmitMode(allow: boolean): void {
+    this.form.controls.allowParticipantsToSubmitPredictions.setValue(allow);
+  }
 
   selectType(type: string): void {
     this.form.controls.tournamentType.setValue(type);

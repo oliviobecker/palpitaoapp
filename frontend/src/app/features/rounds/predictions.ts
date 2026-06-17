@@ -86,6 +86,8 @@ export class Predictions implements OnInit {
   protected readonly matches = signal<RoundMatch[]>([]);
 
   private readonly groupContext = inject(GroupContextService);
+  /** Admin-only submission mode: participants can't submit in the app. */
+  protected readonly adminOnly = computed(() => !this.groupContext.allowParticipantsToSubmit());
   /** World Cup certame: show the signed-prints notice on the predictions screen. */
   protected readonly isWorldCup = computed(() => this.groupContext.isWorldCup());
   /** World Cup Flávio rule notice: the round has a match from the quarter-finals on. */
@@ -119,6 +121,8 @@ export class Predictions implements OnInit {
   protected readonly blockedMessage = computed(() => {
     const r = this.round();
     if (!r) return '';
+    // Admin-only mode shows its own dedicated notice, not the round-status warnings.
+    if (this.adminOnly()) return '';
     switch (r.status) {
       case RoundStatus.Draft:
         return 'predictions.blockedDraft';
@@ -150,7 +154,8 @@ export class Predictions implements OnInit {
         const beforeDeadline = round.firstMatchStartsAt
           ? new Date(round.firstMatchStartsAt).getTime() > Date.now()
           : false;
-        this.editable.set(open && beforeDeadline);
+        // In admin-only mode the form is read-only — predictions come from the admin.
+        this.editable.set(open && beforeDeadline && !this.adminOnly());
         this.isEdit = mine.predictions.length > 0;
         this.saved.set(this.isEdit);
 
