@@ -200,6 +200,21 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
                 }
               </div>
 
+              <div class="form-check form-switch mb-4">
+                <input
+                  id="allowViewOthers"
+                  type="checkbox"
+                  class="form-check-input"
+                  formControlName="allowParticipantsToViewOthersPredictions"
+                />
+                <label class="form-check-label" for="allowViewOthers">{{
+                  'settings.allowParticipantsToViewOthersPredictions' | translate
+                }}</label>
+                <div class="form-text">
+                  {{ 'settings.allowParticipantsToViewOthersPredictionsHelp' | translate }}
+                </div>
+              </div>
+
               <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="submitting()">
                 @if (submitting()) {
                   <span class="spinner-border spinner-border-sm me-2"></span>
@@ -234,6 +249,7 @@ export class CreateGroup {
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d).{8,}$/)]],
       confirmPassword: ['', [Validators.required]],
+      allowParticipantsToViewOthersPredictions: [false],
     },
     { validators: passwordsMatch },
   );

@@ -61,6 +61,7 @@ export class AuthService {
     email: string;
     password: string;
     confirmPassword: string;
+    allowParticipantsToViewOthersPredictions: boolean;
   }): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(
       `${environment.apiBaseUrl}/auth/create-group`,

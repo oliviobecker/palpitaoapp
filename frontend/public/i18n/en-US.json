@@ -214,7 +214,28 @@
     "standings": "Standings",
     "standingsSub": "Overall ranking",
     "audit": "Audit",
-    "auditSub": "Action history"
+    "auditSub": "Action history",
+    "groupSettings": "Group settings",
+    "groupSettingsSub": "Prediction visibility and more"
+  },
+  "settings": {
+    "allowParticipantsToViewOthersPredictions": "Allow participants to view other predictions",
+    "allowParticipantsToViewOthersPredictionsHelp": "When enabled, participants will be able to view other participants' predictions according to the round visibility rules."
+  },
+  "predictionsMirror": {
+    "title": "Participants' predictions",
+    "view": "View predictions",
+    "notAllowed": "You do not have permission to view other participants' predictions.",
+    "availableAfterLock": "Other predictions will be available after the round closes.",
+    "filterByParticipant": "Filter by participant",
+    "filterByMatch": "Filter by match",
+    "byMatch": "By match",
+    "byParticipant": "By participant"
+  },
+  "adminGroupSettings": {
+    "title": "Group settings",
+    "save": "Save",
+    "saved": "Settings saved successfully."
   },
   "adminSeasons": {
     "title": "Seasons",

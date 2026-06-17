@@ -77,6 +77,7 @@ public static class DomainMessages
             ["notFound.user"] = ("Usuário não encontrado.", "User not found."),
             ["notFound.match"] = ("Jogo não encontrado.", "Match not found."),
             ["notFound.season"] = ("Temporada não encontrada.", "Season not found."),
+            ["notFound.group"] = ("Grupo não encontrado.", "Group not found."),
             ["notFound.team"] = ("Time informado não existe.", "The given team does not exist."),
             ["notFound.ocrBatch"] = ("Importação não encontrada.", "Import not found."),
             ["notFound.ocrCandidate"] = ("Candidato não encontrado.", "Candidate not found."),
@@ -199,6 +200,7 @@ public static class DomainMessages
 
             // Mirror.
             ["mirror.afterLockOnly"] = ("O espelho fica disponível somente após o bloqueio da rodada.", "The mirror is only available after the round is locked."),
+            ["mirror.notAllowed"] = ("Você não tem permissão para visualizar os palpites dos demais participantes.", "You do not have permission to view other participants' predictions."),
 
             // Admin manual predictions.
             ["adminPrediction.eliminatedNeedsOverride"] = (

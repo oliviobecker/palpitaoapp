@@ -214,7 +214,28 @@
     "standings": "Classificação",
     "standingsSub": "Ranking geral",
     "audit": "Auditoria",
-    "auditSub": "Histórico de ações"
+    "auditSub": "Histórico de ações",
+    "groupSettings": "Configurações do grupo",
+    "groupSettingsSub": "Visibilidade de palpites e mais"
+  },
+  "settings": {
+    "allowParticipantsToViewOthersPredictions": "Permitir que participantes vejam palpites dos demais",
+    "allowParticipantsToViewOthersPredictionsHelp": "Quando ativado, os participantes poderão visualizar os palpites dos outros participantes conforme as regras de visibilidade da rodada."
+  },
+  "predictionsMirror": {
+    "title": "Palpites dos participantes",
+    "view": "Ver palpites",
+    "notAllowed": "Você não tem permissão para visualizar os palpites dos demais participantes.",
+    "availableAfterLock": "Palpites dos demais disponíveis após o fechamento da rodada.",
+    "filterByParticipant": "Filtrar por participante",
+    "filterByMatch": "Filtrar por jogo",
+    "byMatch": "Por jogo",
+    "byParticipant": "Por participante"
+  },
+  "adminGroupSettings": {
+    "title": "Configurações do grupo",
+    "save": "Salvar",
+    "saved": "Configurações salvas com sucesso."
   },
   "adminSeasons": {
     "title": "Temporadas",

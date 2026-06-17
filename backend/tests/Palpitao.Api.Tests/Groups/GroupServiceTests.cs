@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Data;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
+using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Tests.TestSupport;
 using Xunit;
 
 namespace Palpitao.Api.Tests.Groups;
@@ -12,6 +14,9 @@ public class GroupServiceTests
 {
     private static readonly CancellationToken Ct = CancellationToken.None;
     private static readonly Guid GroupB = Guid.Parse("99999999-9999-9999-9999-999999999901");
+
+    private static GroupService NewService(AppDbContext db)
+        => new(db, new FakeCurrentGroupService(), new AuditService(db));
 
     private static AppDbContext CreateContext()
     {
@@ -40,7 +45,7 @@ public class GroupServiceTests
     public async Task SuperAdmin_my_groups_returns_every_group_as_group_admin()
     {
         using var db = CreateContext();
-        var service = new GroupService(db);
+        var service = NewService(db);
         var userId = Guid.NewGuid(); // no memberships at all
 
         var groups = await service.MyGroupsAsync(userId, isSuperAdmin: true, Ct);
@@ -56,7 +61,7 @@ public class GroupServiceTests
     public async Task Regular_user_my_groups_returns_only_approved_memberships()
     {
         using var db = CreateContext();
-        var service = new GroupService(db);
+        var service = NewService(db);
 
         var userId = Guid.NewGuid();
         db.Users.Add(new User { Id = userId, Name = "U", Email = "u@x.com", PasswordHash = "x", CreatedAt = DateTime.UtcNow });

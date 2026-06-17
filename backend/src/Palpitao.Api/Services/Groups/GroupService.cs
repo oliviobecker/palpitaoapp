@@ -1,17 +1,24 @@
 using Microsoft.EntityFrameworkCore;
+using Palpitao.Api.Common;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Groups;
+using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
+using Palpitao.Api.Services.Audit;
 
 namespace Palpitao.Api.Services.Groups;
 
 public class GroupService : IGroupService
 {
     private readonly AppDbContext _db;
+    private readonly ICurrentGroupService _current;
+    private readonly IAuditService _audit;
 
-    public GroupService(AppDbContext db)
+    public GroupService(AppDbContext db, ICurrentGroupService current, IAuditService audit)
     {
         _db = db;
+        _current = current;
+        _audit = audit;
     }
 
     public async Task<IReadOnlyList<PublicGroupDto>> ListActiveAsync(CancellationToken ct)
@@ -44,6 +51,7 @@ public class GroupService : IGroupService
                     Role = GroupRole.GroupAdmin,
                     Status = GroupUserStatus.Approved,
                     TournamentType = g.TournamentType,
+                    AllowParticipantsToViewOthersPredictions = g.AllowParticipantsToViewOthersPredictions,
                 })
                 .ToListAsync(ct);
         }
@@ -59,7 +67,55 @@ public class GroupService : IGroupService
                 Role = gu.Role,
                 Status = gu.Status,
                 TournamentType = gu.Group!.TournamentType,
+                AllowParticipantsToViewOthersPredictions = gu.Group!.AllowParticipantsToViewOthersPredictions,
             })
             .ToListAsync(ct);
+    }
+
+    public async Task<GroupSettingsDto> GetSettingsAsync(CancellationToken ct)
+    {
+        await _current.RequireGroupAdminAsync(ct);
+        var groupId = await _current.GetGroupIdAsync(ct);
+        var group = await _db.Groups.FirstOrDefaultAsync(g => g.Id == groupId, ct)
+            ?? throw new NotFoundException("notFound.group");
+
+        return new GroupSettingsDto
+        {
+            GroupId = group.Id,
+            GroupName = group.Name,
+            AllowParticipantsToViewOthersPredictions = group.AllowParticipantsToViewOthersPredictions,
+        };
+    }
+
+    public async Task<GroupSettingsDto> UpdateSettingsAsync(UpdateGroupSettingsRequest request, CancellationToken ct)
+    {
+        await _current.RequireGroupAdminAsync(ct);
+        var groupId = await _current.GetGroupIdAsync(ct);
+        var group = await _db.Groups.FirstOrDefaultAsync(g => g.Id == groupId, ct)
+            ?? throw new NotFoundException("notFound.group");
+
+        var previous = group.AllowParticipantsToViewOthersPredictions;
+        if (previous != request.AllowParticipantsToViewOthersPredictions)
+        {
+            group.AllowParticipantsToViewOthersPredictions = request.AllowParticipantsToViewOthersPredictions;
+            group.UpdatedAt = DateTime.UtcNow;
+
+            _audit.Add(_current.UserId ?? Guid.Empty, "GroupSettingsUpdated", nameof(Group), group.Id.ToString(),
+                new
+                {
+                    setting = nameof(Group.AllowParticipantsToViewOthersPredictions),
+                    previousValue = previous,
+                    newValue = group.AllowParticipantsToViewOthersPredictions,
+                }, group.Id);
+
+            await _db.SaveChangesAsync(ct);
+        }
+
+        return new GroupSettingsDto
+        {
+            GroupId = group.Id,
+            GroupName = group.Name,
+            AllowParticipantsToViewOthersPredictions = group.AllowParticipantsToViewOthersPredictions,
+        };
     }
 }

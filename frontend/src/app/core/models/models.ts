@@ -37,6 +37,15 @@ export interface MyGroup {
   role: GroupRole;
   status: GroupUserStatus;
   tournamentType: TournamentType;
+  /** Whether participants may view others' predictions (drives the UI option). */
+  allowParticipantsToViewOthersPredictions: boolean;
+}
+
+/** Admin-facing group settings. */
+export interface GroupSettings {
+  groupId: string;
+  groupName: string;
+  allowParticipantsToViewOthersPredictions: boolean;
 }
 
 export interface User {

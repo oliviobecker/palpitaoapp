@@ -67,6 +67,9 @@ public class AppDbContext : DbContext
             // Existing groups default to the England certame on migration.
             e.Property(x => x.TournamentType).HasConversion<string>().HasMaxLength(40)
                 .HasDefaultValue(TournamentType.PalpitaoEngland);
+            // Off by default: participants cannot see others' predictions unless the
+            // admin opts in.
+            e.Property(x => x.AllowParticipantsToViewOthersPredictions).HasDefaultValue(false);
             e.HasIndex(x => x.Slug).IsUnique();
             e.HasIndex(x => x.IsActive);
         });

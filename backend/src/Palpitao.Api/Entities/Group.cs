@@ -20,6 +20,13 @@ public class Group
     /// </summary>
     public TournamentType TournamentType { get; set; } = TournamentType.PalpitaoEngland;
 
+    /// <summary>
+    /// When true, approved participants may view the other participants' predictions
+    /// (the prediction mirror), still subject to the round being locked/scored. When
+    /// false (default), only group admins can. Off by default for privacy.
+    /// </summary>
+    public bool AllowParticipantsToViewOthersPredictions { get; set; }
+
     /// <summary>URL-friendly unique identifier, derived from the name.</summary>
     public string Slug { get; set; } = string.Empty;
 

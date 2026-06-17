@@ -6,6 +6,7 @@ import { SKIP_ERROR_TOAST } from '../interceptors/http-context';
 import {
   Absence,
   AuditLog,
+  GroupSettings,
   ImportFixturesResponse,
   OcrBatch,
   Participant,
@@ -83,6 +84,17 @@ export interface AuditFilter {
 export class AdminService {
   private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiBaseUrl}/admin`;
+
+  // --- Group settings -----------------------------------------------------
+  getGroupSettings(): Observable<GroupSettings> {
+    return this.http.get<GroupSettings>(`${this.base}/group/settings`);
+  }
+
+  updateGroupSettings(allow: boolean): Observable<GroupSettings> {
+    return this.http.put<GroupSettings>(`${this.base}/group/settings`, {
+      allowParticipantsToViewOthersPredictions: allow,
+    });
+  }
 
   // --- Participants -------------------------------------------------------
   listParticipants(): Observable<Participant[]> {

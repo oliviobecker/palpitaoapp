@@ -1,14 +1,17 @@
 <div class="mb-3">
   <div class="page-trail">
-    <a routerLink="/rounds">{{ 'nav.rounds' | translate }}</a> · {{ 'mirror.title' | translate }}
+    <a routerLink="/rounds">{{ 'nav.rounds' | translate }}</a> ·
+    {{ 'predictionsMirror.title' | translate }}
   </div>
-  <h1 class="h4 fw-bold mb-0">{{ 'mirror.title' | translate }}</h1>
+  <h1 class="h4 fw-bold mb-0">{{ 'predictionsMirror.title' | translate }}</h1>
 </div>
 
 @if (loading()) {
   <app-loading />
+} @else if (forbidden()) {
+  <app-empty-state icon="🔒" [message]="'predictionsMirror.notAllowed' | translate" />
 } @else if (blocked()) {
-  <app-empty-state icon="🔒" [message]="'mirror.locked' | translate" />
+  <app-empty-state icon="🔒" [message]="'predictionsMirror.availableAfterLock' | translate" />
 } @else if (mirror(); as data) {
   <!-- Filters -->
   <div class="row g-2 mb-3">

@@ -106,6 +106,11 @@ export const routes: Routes = [
               import('./features/admin/admin-ocr-import').then((m) => m.AdminOcrImport),
           },
           {
+            path: 'group-settings',
+            loadComponent: () =>
+              import('./features/admin/admin-group-settings').then((m) => m.AdminGroupSettings),
+          },
+          {
             path: 'participants',
             loadComponent: () =>
               import('./features/admin/admin-participants').then((m) => m.AdminParticipants),
