@@ -102,12 +102,28 @@ test.describe('Multi-group login', () => {
     await expect(page).toHaveURL(/\/dashboard$/);
   });
 
-  test('blocks login when the user has no approved group', async ({ page }) => {
+  test('with no approved group, lands on the awaiting-approval screen', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('palpitao.lang', 'pt-BR'));
 
     await installApi(page, [
       { method: 'POST', match: path('/auth/login'), respond: () => ({ json: loginResponse }) },
       { method: 'GET', match: path('/auth/my-groups'), respond: () => ({ json: [] }) },
+      {
+        method: 'GET',
+        match: path('/auth/my-groups/pending'),
+        respond: () => ({
+          json: [
+            {
+              groupId: 'g9',
+              groupName: 'Liga dos Novatos',
+              slug: 'novatos',
+              role: 'Participant',
+              status: 'PendingApproval',
+              isActive: true,
+            },
+          ],
+        }),
+      },
     ]);
 
     await page.goto('/login');
@@ -115,7 +131,10 @@ test.describe('Multi-group login', () => {
     await page.fill('#password', 'Senha123');
     await page.getByRole('button', { name: 'Entrar' }).click();
 
-    await expect(page.getByText(/aguarde a aprovação do administrador do grupo/i)).toBeVisible();
-    await expect(page).toHaveURL(/\/login$/);
+    // No approved group -> redirected to the awaiting-approval screen, which lists the
+    // pending membership.
+    await expect(page).toHaveURL(/\/pending$/);
+    await expect(page.getByText('Aguardando aprovação')).toBeVisible();
+    await expect(page.getByText('Liga dos Novatos')).toBeVisible();
   });
 });

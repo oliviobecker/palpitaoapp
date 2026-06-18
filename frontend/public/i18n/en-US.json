@@ -566,6 +566,7 @@
   },
   "group": {
     "switch": "Switch group",
+    "switchTo": "Switch group (current: {{name}})",
     "current": "Current group",
     "noApprovedAccess": "You do not have approved access to any group yet. Please wait for the group administrator approval.",
     "noAccess": "You do not have access to this group."
