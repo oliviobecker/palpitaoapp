@@ -1,0 +1,620 @@
+/* ===========================================================================
+   Palpitão — global theme (mobile-first). Bootstrap 5.3 is loaded via
+   angular.json; this file layers a refined design system on top of it so every
+   page (built with Bootstrap classes) inherits the new look automatically.
+   =========================================================================== */
+
+:root {
+  // --- Palette ------------------------------------------------------------
+  --app-bg: #f3f5f9;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --ink: #1f2733;
+  --ink-soft: #475467;
+  --muted: #8a94a6;
+  --border: #e7eaf0;
+  --border-strong: #dde2ea;
+
+  --brand: #16a34a;
+  --brand-600: #149045;
+  --brand-700: #0f7a39;
+
+  --navbar-bg: #161d2c;
+  --navbar-bg-2: #1d2738;
+  --navbar-ink: #eef1f6;
+  --navbar-muted: #9aa6b8;
+
+  // --- Radii & shadows ----------------------------------------------------
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 18px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.05);
+  --shadow: 0 6px 20px rgba(16, 24, 40, 0.06);
+
+  // --- Bootstrap overrides (cascade app-wide) -----------------------------
+  --bs-body-bg: var(--app-bg);
+  --bs-body-color: var(--ink);
+  --bs-secondary-color: var(--ink-soft);
+  --bs-tertiary-color: var(--muted);
+  --bs-border-color: var(--border);
+  --bs-border-radius: var(--radius);
+  --bs-border-radius-sm: var(--radius-sm);
+  --bs-border-radius-lg: var(--radius-lg);
+  --bs-body-font-family:
+    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --bs-success: var(--brand);
+  --bs-success-rgb: 22, 163, 74;
+}
+
+// --- Dark theme ------------------------------------------------------------
+// Bootstrap 5.3 flips its own variables under [data-bs-theme='dark']; here we
+// remap our custom tokens so cards, text, borders and shadows follow too. The
+// --bs-* tokens defined in :root reference these, so they recompute for free.
+// (The initial attribute is set by the inline script in index.html; the
+// ThemeService keeps it in sync afterwards.)
+:root[data-bs-theme='dark'] {
+  --app-bg: #0e1422;
+  --surface: #161f30;
+  --surface-2: #1d2840;
+  --ink: #e6eaf2;
+  --ink-soft: #aeb9cb;
+  --muted: #8290a8;
+  --border: #28344a;
+  --border-strong: #3a4a66;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+html,
+body {
+  overflow-x: hidden;
+}
+
+// --- Keyboard focus --------------------------------------------------------
+// A clear, consistent focus ring for keyboard users (mouse clicks don't trigger
+// :focus-visible, so this never shows on pointer interactions). Covers links,
+// buttons and any custom interactive element (e.g. clickable cards/tiles).
+:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+a:focus-visible,
+.btn:focus-visible,
+.action-card:focus-visible,
+.cta-hero:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+body {
+  background-color: var(--app-bg);
+  color: var(--ink);
+  font-family: var(--bs-body-font-family);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+// Long audit/JSON details and any inline code must wrap instead of overflowing.
+code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+// --- Cards -----------------------------------------------------------------
+.card {
+  --bs-card-bg: var(--surface);
+  --bs-card-border-color: var(--border);
+  --bs-card-border-radius: var(--radius-lg);
+  --bs-card-inner-border-radius: calc(var(--radius-lg) - 1px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  transition:
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.card.shadow-sm {
+  box-shadow: var(--shadow-sm) !important;
+}
+
+// --- Buttons ---------------------------------------------------------------
+.btn {
+  --bs-btn-border-radius: var(--radius-sm);
+  --bs-btn-font-weight: 600;
+  --bs-btn-padding-y: 0.5rem;
+  --bs-btn-padding-x: 0.9rem;
+  letter-spacing: 0.01em;
+  transition:
+    filter 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.05s ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-lg {
+  --bs-btn-border-radius: var(--radius);
+  --bs-btn-padding-y: 0.7rem;
+}
+
+.btn-sm {
+  --bs-btn-border-radius: 8px;
+}
+
+.btn-primary {
+  --bs-btn-bg: #2563eb;
+  --bs-btn-border-color: #2563eb;
+  --bs-btn-hover-bg: #1d4fd0;
+  --bs-btn-hover-border-color: #1d4fd0;
+  --bs-btn-active-bg: #1a47bb;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.22);
+}
+
+.btn-success {
+  --bs-btn-bg: var(--brand);
+  --bs-btn-border-color: var(--brand);
+  --bs-btn-hover-bg: var(--brand-600);
+  --bs-btn-hover-border-color: var(--brand-600);
+  --bs-btn-active-bg: var(--brand-700);
+  box-shadow: 0 6px 16px rgba(22, 163, 74, 0.22);
+}
+
+// Outline buttons: lighter, neutral border to match the mockup's quiet actions.
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-outline-info,
+.btn-outline-success {
+  --bs-btn-color: var(--ink);
+  --bs-btn-border-color: var(--border-strong);
+  --bs-btn-bg: var(--surface);
+  --bs-btn-hover-bg: var(--surface-2);
+  --bs-btn-hover-border-color: var(--muted);
+  --bs-btn-hover-color: var(--ink);
+}
+
+// Copy-ready message preview (WhatsApp text). Uses theme tokens instead of
+// Bootstrap's `bg-light`, which kept a light background under the dark theme
+// and left the (light) text illegible.
+.copy-message {
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+
+// --- Forms -----------------------------------------------------------------
+.form-control,
+.form-select {
+  --bs-border-radius: var(--radius-sm);
+  background-color: var(--surface-2);
+  border-color: var(--border-strong);
+  color: var(--ink);
+  padding: 0.55rem 0.8rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: var(--surface);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.14);
+}
+
+.form-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin-bottom: 0.3rem;
+}
+
+// Leading-icon boxes blend with the field (same surface) for a seamless look.
+.input-group-text {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  color: var(--muted);
+}
+.input-group:focus-within .form-control,
+.input-group:focus-within .form-select {
+  border-color: #2563eb;
+}
+
+// Soft (tinted) button — quiet primary action like "Search fixtures".
+.btn-soft-primary {
+  --bs-btn-color: #2563eb;
+  --bs-btn-bg: rgba(37, 99, 235, 0.08);
+  --bs-btn-border-color: rgba(37, 99, 235, 0.18);
+  --bs-btn-hover-color: #1d4fd0;
+  --bs-btn-hover-bg: rgba(37, 99, 235, 0.14);
+  --bs-btn-hover-border-color: rgba(37, 99, 235, 0.28);
+  --bs-btn-active-bg: rgba(37, 99, 235, 0.18);
+  --bs-btn-disabled-color: #2563eb;
+  --bs-btn-disabled-bg: rgba(37, 99, 235, 0.06);
+  --bs-btn-disabled-border-color: rgba(37, 99, 235, 0.12);
+}
+
+// --- Badges ----------------------------------------------------------------
+.badge {
+  --bs-badge-border-radius: 999px;
+  --bs-badge-font-weight: 600;
+  --bs-badge-padding-x: 0.6em;
+  --bs-badge-padding-y: 0.4em;
+  letter-spacing: 0.01em;
+}
+
+// --- Alerts / tables / misc ------------------------------------------------
+.alert {
+  --bs-alert-border-radius: var(--radius);
+  border: 1px solid transparent;
+}
+
+.table {
+  --bs-table-border-color: var(--border);
+}
+
+.dropdown-menu,
+.list-group {
+  --bs-dropdown-border-radius: var(--radius);
+  --bs-list-group-border-radius: var(--radius);
+  border-color: var(--border);
+  box-shadow: var(--shadow);
+}
+
+.text-muted {
+  color: var(--muted) !important;
+}
+
+// --- Reusable utilities ----------------------------------------------------
+
+// Tiny uppercase section label (e.g. "GERENCIAR", "CICLO DA RODADA").
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+// Soft tinted icon tile used in action lists / stat cards.
+.icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 12px;
+  background: rgba(37, 99, 235, 0.1);
+  font-size: 1.15rem;
+  flex: none;
+}
+// The accent colour doubles as the icon colour: app-icon uses currentColor, so
+// any <app-icon> placed inside a tile picks up the matching tint automatically.
+.icon-tile--blue {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+.icon-tile--green {
+  background: rgba(22, 163, 74, 0.14);
+  color: var(--brand);
+}
+.icon-tile--amber {
+  background: rgba(245, 158, 11, 0.16);
+  color: #d97706;
+}
+.icon-tile--red {
+  background: rgba(239, 68, 68, 0.13);
+  color: #dc2626;
+}
+.icon-tile--teal {
+  background: rgba(13, 148, 136, 0.14);
+  color: #0d9488;
+}
+.icon-tile--violet {
+  background: rgba(124, 58, 237, 0.13);
+  color: #7c3aed;
+}
+
+// Stat card: icon tile + big number + label (admin dashboard).
+.stat-card .stat-card__value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.stat-card .stat-card__label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+// Action card: icon tile + title/subtitle + trailing arrow (clickable tiles).
+.action-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  color: var(--ink);
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
+}
+.action-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
+  color: var(--ink);
+}
+.action-card__title {
+  font-weight: 600;
+}
+.action-card__sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.action-card__arrow {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+// Hero CTA (the big green "create round" call to action).
+.cta-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-700) 100%);
+  box-shadow: 0 12px 28px rgba(22, 163, 74, 0.3);
+  color: #fff;
+  text-decoration: none;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.15s ease;
+}
+.cta-hero:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 34px rgba(22, 163, 74, 0.36);
+  color: #fff;
+}
+.cta-hero__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 1.4rem;
+  flex: none;
+}
+.cta-hero__title {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.cta-hero__sub {
+  font-size: 0.82rem;
+  opacity: 0.9;
+}
+
+// --- Round list visuals (admin + participant) -----------------------------
+// A card/row keyed by round status via the --c custom property.
+.r--draft {
+  --c: #64748b;
+}
+.r--published {
+  --c: #16a34a;
+}
+.r--locked {
+  --c: #f59e0b;
+}
+.r--scored {
+  --c: #2563eb;
+}
+.r--cancelled {
+  --c: #ef4444;
+}
+.round-accent {
+  border-left: 4px solid var(--c, #64748b);
+}
+.round-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 12px;
+  flex: none;
+  background: color-mix(in srgb, var(--c, #64748b) 14%, transparent);
+  color: var(--c, #64748b);
+}
+.round-tile__label {
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  opacity: 0.85;
+}
+.round-tile__num {
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.round-item__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.round-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: none;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--c, #64748b) 12%, transparent);
+  color: var(--c, #64748b);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.round-pill::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--c, #64748b);
+}
+
+// Small green "active" pill (e.g. TEMPORADA ATIVA).
+.pill-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--brand-700);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.pill-active::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+// Breadcrumb-ish muted trail above page titles.
+.page-trail {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.page-trail a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.page-trail a:hover {
+  color: var(--ink-soft);
+}
+
+// Navbar theme-toggle chip (kept global to keep shell.scss within its style budget).
+.app-theme {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: transparent;
+  color: var(--navbar-ink);
+  border-radius: 999px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.app-theme:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+// --- Auth screens (login / register) --------------------------------------
+.auth-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(22, 163, 74, 0.18), transparent 60%),
+    radial-gradient(900px 500px at 110% 110%, rgba(37, 99, 235, 0.18), transparent 55%),
+    linear-gradient(160deg, #0f1626 0%, #131c2e 100%);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 430px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: 0 24px 60px rgba(8, 12, 24, 0.45);
+  padding: 2rem;
+}
+
+.auth-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  margin-bottom: 0.5rem;
+  font-size: 1.6rem;
+  background: linear-gradient(150deg, var(--brand) 0%, var(--brand-700) 100%);
+  box-shadow: 0 10px 24px rgba(22, 163, 74, 0.4);
+}
+
+// --- Loading skeletons -----------------------------------------------------
+// Shimmering placeholder blocks (see app-skeleton / app-skeleton-list). They
+// mirror the shape of the content that is loading instead of a bare spinner.
+.skeleton {
+  display: block;
+  background: linear-gradient(
+    100deg,
+    var(--surface-2) 30%,
+    color-mix(in srgb, var(--surface-2) 55%, var(--border-strong)) 50%,
+    var(--surface-2) 70%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.3s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+// --- Entrance animation ----------------------------------------------------
+// Subtle fade/rise applied to content when it first renders after loading.
+.fade-in-up {
+  animation: fade-in-up 0.25s ease-out both;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// Honour reduced-motion: drop the shimmer and the entrance movement.
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .fade-in-up {
+    animation: none;
+  }
+}
