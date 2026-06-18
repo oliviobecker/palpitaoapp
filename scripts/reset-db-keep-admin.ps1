@@ -48,8 +48,6 @@ if (Test-Path $envFile) {
     }
 }
 
-$defaultGroupId = "33333333-3333-3333-3333-333333333301"
-
 # --- Confirm the container is running ---
 $running = docker ps --filter "name=$Container" --format "{{.Names}}"
 if ($running -notcontains $Container) {
@@ -59,7 +57,7 @@ if ($running -notcontains $Container) {
 Write-Host "Target container : $Container"
 Write-Host "Database         : $dbName (user $dbUser)"
 Write-Host "Keeping admin    : $AdminEmail"
-Write-Host "Keeping group    : $defaultGroupId (default group) + all Teams" -ForegroundColor DarkGray
+Write-Host "Keeping          : groups owned by that admin + all Teams" -ForegroundColor DarkGray
 Write-Host ""
 
 if (-not $Force) {
@@ -71,13 +69,12 @@ if (-not $Force) {
     }
 }
 
-# --- Execute: pipe the SQL file into psql inside the container ---
-Get-Content -Raw $sqlFile | docker exec -i $Container psql `
-    -U $dbUser -d $dbName `
-    -v ON_ERROR_STOP=1 `
-    --set=admin_email=$AdminEmail `
-    --set=default_group_id=$defaultGroupId `
-    -f -
+# --- Execute: inject the chosen admin email, pipe the SQL into psql ---
+# The SQL is portable plain SQL (a DO block); we set the kept admin by rewriting
+# the v_admin_email literal rather than relying on psql -v variables.
+$sql = Get-Content -Raw $sqlFile
+$sql = $sql -replace "v_admin_email text := '[^']*'", "v_admin_email text := '$AdminEmail'"
+$sql | docker exec -i $Container psql -U $dbUser -d $dbName -v ON_ERROR_STOP=1
 
 if ($LASTEXITCODE -ne 0) {
     throw "psql exited with code $LASTEXITCODE - database was NOT modified (transaction rolled back)."
