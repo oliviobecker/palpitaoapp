@@ -1,6 +1,6 @@
 # DEVELOPMENT_CHECKPOINT
 
-_Last updated: 2026-06-18 (usability roadmap session)._
+_Last updated: 2026-06-18 (UI modernization pack: shared page-header, skeleton loaders, dark mode, Lucide icons, predictions local draft)._
 
 ## 0. Status at a glance
 
@@ -11,10 +11,11 @@ _Last updated: 2026-06-18 (usability roadmap session)._
 | Frontend build (`ng build` prod) | ✅ success |
 | Frontend lint (`ng lint`) | ✅ 0 errors (24 pre-existing `label-has-associated-control` warnings) |
 | Frontend unit tests (Vitest) | ✅ **34** passed (10 files) |
+| Frontend prod budgets | ✅ within budget (no warnings) |
+| i18n parity | ✅ 508 = 508 (`en-US` / `pt-BR`) |
 | Working tree | Uncommitted changes on `main` (this session). Not yet committed. |
 
-> One small test break introduced this session (`group-context.service.spec.ts` missing the new
-> `MyGroup.isActive`) was fixed. No other build/test regressions.
+> The UI modernization pack is frontend-only; the backend is untouched (still **362** tests green).
 
 ## 1. Project overview
 
@@ -33,7 +34,9 @@ overall standings update.
 - **Backend:** C# / .NET 10, ASP.NET Core Web API (controllers), EF Core 10 (code-first) + PostgreSQL 16.
   Auth: JWT Bearer (access + rotating refresh tokens) + BCrypt. Sentry. Tesseract (OCR).
 - **Frontend:** Angular 21 (standalone, signals), TypeScript, Bootstrap 5 (mobile-first),
-  ngx-translate. Tests: Vitest (`@angular/build:unit-test`) + Playwright (e2e).
+  ngx-translate, **Lucide icons** (`@lucide/angular` via the `<app-icon>` wrapper), **light/dark
+  theme** (Bootstrap `data-bs-theme` + CSS-variable tokens). Tests: Vitest
+  (`@angular/build:unit-test`) + Playwright (e2e).
 - **Repo:** monorepo — `backend/` (`src/Palpitao.Api`, `tests/Palpitao.Api.Tests`), `frontend/`,
   `docker-compose.yml` (Postgres 16), `README.md`.
 
@@ -66,7 +69,7 @@ overall standings update.
   is blocked from that group (403 `group.membershipInactive`); SuperAdmin bypasses; `User.IsActive`
   remains the global account login gate.
 
-**Usability / polish (this session)**
+**Usability / polish**
 - HTTP error messages localized (PT/EN) via `errors.*` keys; per-page **error states** with retry on
   the 5 participant fetch screens (predictions, results, rounds, standings, temporary-standings);
   shared `error-state` component.
@@ -74,11 +77,26 @@ overall standings update.
   visibly required; tournament type locked on edit (UI + backend).
 - Shared `round-results-editor` (used inline in round-detail; dedicated admin `/results` route removed).
 
+**UI modernization pack (this session)**
+- Shared `page-header` (trail + title + actions) unifying screen headers; **error-state triad**
+  (loading/error/empty) now also on the admin home + all admin list screens (`admin-rounds`,
+  `admin-participants`, `admin-seasons`, `admin-registration-requests`, `admin-audit`, `admin-matches`).
+- **Skeleton loaders** (`app-skeleton` + `app-skeleton-list`) replacing spinners on dashboard, rounds,
+  standings, admin-rounds; subtle `.fade-in-up` entrance (both honour `prefers-reduced-motion`).
+- **Light/dark theme**: `ThemeService` (persisted, follows OS until overridden), no-FOUC inline script
+  in `index.html`, dark token overrides + a navbar sun/moon toggle.
+- **Lucide icons** via `<app-icon name="…">` (registered in `app.config.ts`) replacing emoji across the
+  **whole UI** — shell, state components, dashboards, participant **and** admin screens (`.icon-tile`
+  accent flows to the icon via `currentColor`). Only brand `⚽` logos, WhatsApp message content
+  (`*-message.util.ts`) and a `<select>` `✓` remain as text by design.
+- **Predictions local draft**: edits persist to `localStorage` (per round) and restore on return; a
+  sticky status bar shows remaining/all-filled + an unsaved badge; draft cleared on successful save.
+
 ## 4. Pending / not implemented (roadmap)
 
-- **Autosave / draft + per-field validation** on the participant predictions form.
+- **Server-side autosave** of predictions (current draft is client-side only; needs partial/incremental
+  save on the backend).
 - **Batch import** of predictions across participants (grid or CSV) — deferred by request.
-- **Per-page error states on admin screens** (only participant screens covered so far).
 - OCR: file-size guard + progress; surface candidate confidence.
 - Public create-group requires a **new** email (existing user creating another group not supported).
 - `AdminSentryController` (diagnostics) still uses the global role.
@@ -97,7 +115,7 @@ overall standings update.
   and recomputes standings; reopening just flips status (no data wiped).
 - **Active season:** one per group; frontend resolves it via `GET /api/seasons/active` (not `rounds[0]`).
 - **i18n:** runtime switching (ngx-translate); backend localizes via `Accept-Language` + `DomainMessages`.
-  `en-US.json`/`pt-BR.json` kept at **key parity** (503 keys each).
+  `en-US.json`/`pt-BR.json` kept at **key parity** (508 keys each).
 - Dates/times stored in **UTC**, displayed in pt-BR locale.
 
 ## 6. Main business rules
@@ -148,10 +166,10 @@ Seed dev admin: `admin@palpitao.local` / `Admin@123`.
 ## 8. Recommended next steps
 
 1. **Commit** this session's work on a branch and open a PR (working tree is currently dirty on `main`).
-2. Manual end-to-end pass of the new flows (needs DB + API + ng serve up): guided lifecycle incl.
-   **reopen**; **/pending** awaiting-approval (deactivated badge); per-group deactivation 403 + reactivate.
-3. Pick the next roadmap item: **autosave on predictions** (highest day-to-day value) or
-   **admin error states** (consistency with participant screens).
+2. Manual end-to-end pass (needs DB + API + ng serve up): toggle **dark/light** across screens; confirm
+   **skeletons** on load and **error states** (incl. admin) with retry; verify the **predictions draft**
+   restores on return and clears on save.
+3. Finish the **Phase 4 remainder** (admin-form/auth emoji → Lucide) for a fully emoji-free UI.
 4. Optional: redirect to `/pending` on a `group.membershipInactive` 403 (mid-session deactivation).
 
 ## 9. Files changed this session (highlights)
@@ -167,3 +185,11 @@ Seed dev admin: `admin@palpitao.local` / `Admin@123`.
 results); deleted `features/admin/admin-results.ts`; `core/{interceptors/error.interceptor,notifications/
 http-error,services/{groups,rounds,group-context},models/models}.ts`; auth (`login/register/create-group`);
 5 participant screens (error states); `app.routes.ts`; `layout/shell.html`; i18n JSONs.
+
+**Frontend (UI modernization pack):** new `shared/components/{page-header,skeleton/skeleton,skeleton/skeleton-list,icon}`;
+new `core/theme/theme.service.ts`; `@lucide/angular` dependency + `provideLucideIcons(...)` in `app.config.ts`;
+`index.html` (no-FOUC theme script); `styles.scss` (dark tokens, skeleton/fade-in keyframes, icon-tile
+accent colour, `.app-theme`); `layout/{shell.ts,shell.html,shell.scss}` (theme toggle + Lucide chrome);
+`app.ts` (ThemeService init); migrated `features/{dashboard,admin/admin,rounds/{rounds,results,predictions},
+standings/standings}` + admin list screens (headers + error states + skeletons + icons);
+`features/rounds/predictions.{ts,html}` (local draft + status bar); shared `error-state`/`empty-state` (Lucide).

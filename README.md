@@ -75,7 +75,7 @@ both clubs and national teams (`TeamType`).
 | Auth | JWT Bearer (access + rotating refresh tokens) + BCrypt |
 | Backend tests | xUnit + SQLite in-memory (362 tests) |
 | Frontend | Angular 21 (standalone, signals), TypeScript |
-| UI | Bootstrap 5 (mobile-first) |
+| UI | Bootstrap 5 (mobile-first), Lucide icons (`@lucide/angular`), light/dark theme (`data-bs-theme`) |
 | Frontend tests | Vitest (Angular 21 default runner) |
 
 > **Why Bootstrap** (instead of Material/Tailwind): mobile-first by default, already integrated,
