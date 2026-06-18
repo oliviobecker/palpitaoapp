@@ -110,6 +110,6 @@ test.describe('Results refresh + temporary standings', () => {
     ).toBeVisible();
     await expect(page.getByText('João Silva')).toBeVisible();
     await expect(page.getByText('+18')).toBeVisible();
-    await expect(page.getByText('138')).toBeVisible();
+    await expect(page.getByText('Oficial: 120 · Projetada: 138')).toBeVisible();
   });
 });
