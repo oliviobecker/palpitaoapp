@@ -169,6 +169,12 @@
     "flavio": "Regra Flávio"
   },
   "results": {
+    "title": "Resultados",
+    "notScored": "Esta rodada ainda não foi pontuada.",
+    "roundTotal": "Total da rodada",
+    "yourPrediction": "Seu palpite",
+    "absent": "Ausente",
+    "flavioApplied": "Regra Flávio aplicada",
     "refresh": "Atualizar resultados",
     "refreshed": "Resultados atualizados com sucesso",
     "error": "Erro ao atualizar resultados",

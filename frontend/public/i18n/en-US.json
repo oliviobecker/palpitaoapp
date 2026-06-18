@@ -169,6 +169,12 @@
     "flavio": "Flávio Rule"
   },
   "results": {
+    "title": "Results",
+    "notScored": "This round hasn't been scored yet.",
+    "roundTotal": "Round total",
+    "yourPrediction": "Your prediction",
+    "absent": "Absent",
+    "flavioApplied": "Flávio Rule applied",
     "refresh": "Refresh results",
     "refreshed": "Results refreshed successfully",
     "error": "Error refreshing results",
