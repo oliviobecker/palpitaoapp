@@ -53,7 +53,7 @@ public class CurrentGroupServiceTests
         return id;
     }
 
-    private static void SeedMembership(AppDbContext db, Guid groupId, Guid userId, GroupRole role, GroupUserStatus status)
+    private static void SeedMembership(AppDbContext db, Guid groupId, Guid userId, GroupRole role, GroupUserStatus status, bool isActive = true)
     {
         db.GroupUsers.Add(new GroupUser
         {
@@ -62,6 +62,7 @@ public class CurrentGroupServiceTests
             UserId = userId,
             Role = role,
             Status = status,
+            IsActive = isActive,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         });
@@ -165,6 +166,31 @@ public class CurrentGroupServiceTests
         var service = Service(db, userId, SeedIds.DefaultGroup.ToString());
 
         await Assert.ThrowsAsync<ForbiddenException>(() => service.RequireApprovedMemberAsync(Ct));
+    }
+
+    [Fact]
+    public async Task Deactivated_member_is_denied()
+    {
+        using var db = CreateContext();
+        var userId = SeedUser(db);
+        SeedMembership(db, SeedIds.DefaultGroup, userId, GroupRole.Participant, GroupUserStatus.Approved, isActive: false);
+
+        var service = Service(db, userId, SeedIds.DefaultGroup.ToString());
+
+        await Assert.ThrowsAsync<ForbiddenException>(() => service.RequireApprovedMemberAsync(Ct));
+    }
+
+    [Fact]
+    public async Task SuperAdmin_with_deactivated_membership_is_still_allowed()
+    {
+        using var db = CreateContext();
+        var userId = SeedUser(db);
+        SeedMembership(db, SeedIds.DefaultGroup, userId, GroupRole.Participant, GroupUserStatus.Approved, isActive: false);
+
+        var service = Service(db, userId, SeedIds.DefaultGroup.ToString(), isSuperAdmin: true);
+
+        // SuperAdmin bypasses the per-group active gate.
+        Assert.Equal(SeedIds.DefaultGroup, await service.GetGroupIdAsync(Ct));
     }
 
     [Fact]

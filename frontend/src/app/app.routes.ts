@@ -17,6 +17,12 @@ export const routes: Routes = [
     loadComponent: () => import('./features/groups/select-group').then((m) => m.SelectGroup),
   },
   {
+    path: 'pending',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/groups/awaiting-approval').then((m) => m.AwaitingApproval),
+  },
+  {
     path: '',
     loadComponent: () => import('./layout/shell').then((m) => m.Shell),
     canActivate: [authGuard],
@@ -82,11 +88,6 @@ export const routes: Routes = [
             path: 'rounds/:id/matches',
             loadComponent: () =>
               import('./features/admin/admin-matches').then((m) => m.AdminMatches),
-          },
-          {
-            path: 'rounds/:id/results',
-            loadComponent: () =>
-              import('./features/admin/admin-results').then((m) => m.AdminResults),
           },
           {
             path: 'rounds/:id/scout',

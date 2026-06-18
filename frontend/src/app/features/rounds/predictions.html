@@ -1,5 +1,7 @@
 @if (loading()) {
   <app-loading />
+} @else if (error()) {
+  <app-error-state (retry)="load()" />
 } @else if (round(); as r) {
   <div class="mb-3">
     <div class="page-trail">

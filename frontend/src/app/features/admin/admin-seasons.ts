@@ -87,6 +87,7 @@ import { Loading } from '../../shared/components/loading/loading';
                   [class.active]="
                     form.controls.tournamentType.value === TournamentType.PalpitaoEngland
                   "
+                  [disabled]="!!editingId()"
                   (click)="selectType(TournamentType.PalpitaoEngland)"
                 >
                   <span class="fw-semibold d-block">{{
@@ -102,6 +103,7 @@ import { Loading } from '../../shared/components/loading/loading';
                   [class.active]="
                     form.controls.tournamentType.value === TournamentType.FifaWorldCup
                   "
+                  [disabled]="!!editingId()"
                   (click)="selectType(TournamentType.FifaWorldCup)"
                 >
                   <span class="fw-semibold d-block">{{
@@ -236,8 +238,11 @@ export class AdminSeasons implements OnInit {
     allowParticipantsToViewOthersPredictions: [false],
   });
 
-  /** The certame type can be chosen both when creating and when editing. */
+  /** The certame type is fixed after creation; it can only be chosen while creating. */
   selectType(type: TournamentType): void {
+    if (this.editingId()) {
+      return;
+    }
     this.form.controls.tournamentType.setValue(type);
   }
 

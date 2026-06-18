@@ -30,6 +30,11 @@ export class GroupContextService {
   readonly hasGroup = computed(() => this._groupId() !== null);
   readonly isGroupAdmin = computed(() => this._role() === GroupRole.GroupAdmin);
 
+  /** Landing route for a group, by role (admins land on /admin, participants on /dashboard). */
+  homePath(role: GroupRole): string {
+    return role === GroupRole.GroupAdmin ? '/admin' : '/dashboard';
+  }
+
   /** Selects a group as the current acting context. */
   select(group: MyGroup): void {
     localStorage.setItem(GROUP_ID_KEY, group.groupId);

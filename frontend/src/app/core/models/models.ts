@@ -35,6 +35,8 @@ export interface MyGroup {
   slug: string;
   role: GroupRole;
   status: GroupUserStatus;
+  /** Per-group active flag; false = deactivated by the group admin (blocked). */
+  isActive: boolean;
 }
 
 export interface User {

@@ -90,6 +90,13 @@ public class CurrentGroupService : ICurrentGroupService
                     && gu.Status == GroupUserStatus.Approved,
                 ct);
 
+        // A member deactivated in this group (per-group IsActive = false) is blocked
+        // from the group entirely — not just excluded from scoring. SuperAdmins bypass.
+        if (_resolved is not null && !_resolved.IsActive && !IsSuperAdmin)
+        {
+            throw new ForbiddenException("group.membershipInactive");
+        }
+
         // Platform SuperAdmin: full GroupAdmin access to any existing group, even
         // without an explicit membership row. Still requires a valid header pointing
         // at a real group, so isolation for non-SuperAdmins is unaffected.

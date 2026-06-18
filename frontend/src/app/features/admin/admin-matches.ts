@@ -143,9 +143,15 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
               @if (form.controls.manualMultiplierOverride.value) {
                 <input
                   class="form-control"
+                  [class.is-invalid]="justificationMissing()"
                   [placeholder]="'adminMatches.justification' | translate"
                   formControlName="manualMultiplierJustification"
                 />
+                @if (justificationMissing()) {
+                  <div class="invalid-feedback d-block">
+                    {{ 'adminMatches.needJustification' | translate }}
+                  </div>
+                }
               }
 
               @if (leagueOneWarning()) {
@@ -158,7 +164,7 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
                 <button
                   type="submit"
                   class="btn btn-primary btn-lg flex-fill"
-                  [disabled]="form.invalid || saving()"
+                  [disabled]="form.invalid || saving() || justificationMissing()"
                 >
                   ➕ {{ (editingId() ? 'adminMatches.save' : 'adminMatches.addGame') | translate }}
                 </button>
@@ -231,6 +237,12 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
               >
                 {{ 'fixtures.addSelected' | translate: { count: selection().items.length } }}
               </button>
+            }
+
+            @if (searchError()) {
+              <div class="alert alert-warning py-2 mt-2 mb-0">
+                {{ 'fixtures.searchError' | translate }}
+              </div>
             }
           </div>
         </div>
@@ -369,6 +381,8 @@ export class AdminMatches implements OnInit {
   // --- External fixture import (into this existing round) -----------------
   protected readonly searching = signal(false);
   protected readonly searched = signal(false);
+  /** True when the last fixture search failed (source down) — show the manual fallback hint. */
+  protected readonly searchError = signal(false);
   protected readonly importing = signal(false);
   protected readonly source = signal('');
   protected readonly fixtures = signal<FixtureCandidate[]>([]);
@@ -422,6 +436,7 @@ export class AdminMatches implements OnInit {
     if (!this.canSearch()) return;
     const { startDate, endDate } = this.searchForm.getRawValue();
     this.searching.set(true);
+    this.searchError.set(false);
     this.adminApi
       .searchFixtures(
         {
@@ -441,7 +456,10 @@ export class AdminMatches implements OnInit {
           }
           this.searching.set(false);
         },
-        error: () => this.searching.set(false),
+        error: () => {
+          this.searchError.set(true);
+          this.searching.set(false);
+        },
       });
   }
 
@@ -467,6 +485,7 @@ export class AdminMatches implements OnInit {
     if (!this.canSearch()) return;
     const { startDate, endDate } = this.searchForm.getRawValue();
     this.searching.set(true);
+    this.searchError.set(false);
     this.adminApi
       .searchFixtures({
         startDate: `${startDate}T00:00:00`,
@@ -481,7 +500,10 @@ export class AdminMatches implements OnInit {
           this.searched.set(true);
           this.searching.set(false);
         },
-        error: () => this.searching.set(false),
+        error: () => {
+          this.searchError.set(true);
+          this.searching.set(false);
+        },
       });
   }
 
@@ -540,6 +562,18 @@ export class AdminMatches implements OnInit {
       manualMultiplierOverride: null,
       manualMultiplierJustification: '',
     });
+  }
+
+  /**
+   * True when a manual multiplier override is set but the (required) justification
+   * is still empty. Drives the invalid-feedback and disables Save, so the rule is
+   * visible up front instead of only as a toast at submit time.
+   */
+  justificationMissing(): boolean {
+    const { manualMultiplierOverride, manualMultiplierJustification } = this.form.controls;
+    return (
+      manualMultiplierOverride.value != null && !(manualMultiplierJustification.value ?? '').trim()
+    );
   }
 
   save(): void {

@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   DestroyRef,
   OnInit,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -10,9 +11,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { forkJoin, switchMap } from 'rxjs';
+import { forkJoin } from 'rxjs';
 import { RoundStatus } from '../../core/models/enums';
-import { Round } from '../../core/models/models';
+import { Round, RoundMatch } from '../../core/models/models';
 import { ConfirmService } from '../../core/notifications/confirm.service';
 import { ToastService } from '../../core/notifications/toast.service';
 import { AdminService } from '../../core/services/admin.service';
@@ -22,10 +23,12 @@ import { StandingsService } from '../../core/services/standings.service';
 import { RefreshResultsResponse } from '../../core/models/models';
 import { Loading } from '../../shared/components/loading/loading';
 import { MatchList } from '../../shared/components/match-list/match-list';
+import { RoundResultsEditor } from '../../shared/components/round-results-editor/round-results-editor';
 import { RoundStatusBadge } from '../../shared/components/round-status-badge/round-status-badge';
 import { buildRoundMessage } from '../../shared/utils/round-message.util';
 import { buildClosingMessage } from '../../shared/utils/closing-message.util';
 import { AdminRoundMessages } from './admin-round-messages';
+import { RoundStepper } from './round-stepper';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,6 +41,8 @@ import { AdminRoundMessages } from './admin-round-messages';
     MatchList,
     RoundStatusBadge,
     AdminRoundMessages,
+    RoundStepper,
+    RoundResultsEditor,
   ],
   template: `
     <div class="mb-3">
@@ -168,36 +173,60 @@ import { AdminRoundMessages } from './admin-round-messages';
                 </a>
               </div>
             }
-            @if (r.status === RoundStatus.Locked || r.status === RoundStatus.Scored) {
-              <div class="col-12 col-md-6">
-                <a class="action-card h-100" [routerLink]="['/admin/rounds', r.id, 'results']">
-                  <span class="icon-tile icon-tile--violet">📋</span>
-                  <div class="action-card__title">{{ 'roundDetail.results' | translate }}</div>
-                  <span class="action-card__arrow">→</span>
-                </a>
-              </div>
-            }
           </div>
 
           <!-- Round lifecycle -->
           <div class="section-label mt-3 mb-2">{{ 'roundDetail.lifecycle' | translate }}</div>
-          <div class="d-grid gap-2">
-            @if (r.status === RoundStatus.Draft) {
-              <button class="btn btn-success" (click)="publish(r)">
+          <app-round-stepper [status]="r.status" class="d-block mb-3" />
+
+          <!-- Next step: one guided primary action per state -->
+          @if (r.status === RoundStatus.Draft) {
+            <div class="d-grid gap-2">
+              @if (r.matches.length === 0) {
+                <div class="alert alert-warning py-2 mb-0">
+                  {{ 'roundDetail.needMatchesToPublish' | translate }}
+                  <a [routerLink]="['/admin/rounds', r.id, 'matches']">{{
+                    'roundDetail.manageGames' | translate
+                  }}</a>
+                </div>
+              }
+              <button
+                class="btn btn-success btn-lg"
+                (click)="publish(r)"
+                [disabled]="r.matches.length === 0"
+              >
                 {{ 'roundDetail.publish' | translate }}
               </button>
-            }
-            @if (r.status === RoundStatus.Published) {
-              <button class="btn btn-outline-warning" (click)="lock(r)">
-                {{ 'roundDetail.lock' | translate }}
+            </div>
+          }
+
+          @if (r.status === RoundStatus.Published) {
+            <div class="d-grid gap-2">
+              <button class="btn btn-warning btn-lg" (click)="lock(r)">
+                🔒 {{ 'roundDetail.lock' | translate }}
               </button>
-            }
-            @if (
-              r.status === RoundStatus.Published ||
-              r.status === RoundStatus.Locked ||
-              r.status === RoundStatus.Scored
-            ) {
-              <button class="btn btn-primary" (click)="score(r)" [disabled]="finalizing()">
+              <p class="text-muted small mb-0">{{ 'roundDetail.lockHint' | translate }}</p>
+            </div>
+          }
+
+          @if (r.status === RoundStatus.Locked || r.status === RoundStatus.Scored) {
+            <div class="section-label mt-1 mb-2">{{ 'adminResults.title' | translate }}</div>
+            <app-round-results-editor [matches]="matches()" (saved)="load()" />
+
+            <div class="d-grid gap-2 mt-3">
+              @if (r.status === RoundStatus.Locked && !resultsComplete()) {
+                <div class="alert alert-info py-2 mb-0">
+                  {{
+                    'roundDetail.resultsMissing'
+                      | translate: { count: missingResults(), total: r.matches.length }
+                  }}
+                </div>
+              }
+              <button
+                class="btn btn-primary btn-lg"
+                (click)="score(r)"
+                [disabled]="finalizing() || (r.status === RoundStatus.Locked && !resultsComplete())"
+              >
                 @if (finalizing()) {
                   <span class="spinner-border spinner-border-sm me-2"></span>
                 }
@@ -208,13 +237,22 @@ import { AdminRoundMessages } from './admin-round-messages';
                   ) | translate
                 }}
               </button>
-            }
-            @if (r.status !== RoundStatus.Scored && r.status !== RoundStatus.Cancelled) {
+              @if (r.status === RoundStatus.Scored) {
+                <button class="btn btn-outline-warning" (click)="reopen(r)">
+                  ↩️ {{ 'roundDetail.reopen' | translate }}
+                </button>
+              }
+            </div>
+          }
+
+          <!-- Cancel: secondary, destructive -->
+          @if (r.status !== RoundStatus.Scored && r.status !== RoundStatus.Cancelled) {
+            <div class="d-grid mt-3">
               <button class="btn btn-outline-danger" (click)="cancel(r)">
                 {{ 'roundDetail.cancelRound' | translate }}
               </button>
-            }
-          </div>
+            </div>
+          }
         </div>
       </div>
 
@@ -273,8 +311,20 @@ export class AdminRoundDetail implements OnInit {
   protected readonly refreshing = signal(false);
   protected readonly refreshSummary = signal<RefreshResultsResponse | null>(null);
   protected readonly round = signal<Round | null>(null);
+  /** Sorted matches (stable reference per load) — feeds the inline results editor. */
+  protected readonly matches = signal<RoundMatch[]>([]);
   protected readonly closing = signal('');
   private id = '';
+
+  /** All matches have a result entered — gate for scoring (mirrors the backend rule). */
+  protected readonly resultsComplete = computed(() => {
+    const ms = this.matches();
+    return ms.length > 0 && ms.every((m) => m.homeScore != null && m.awayScore != null);
+  });
+  /** How many matches still lack a result, for the "X of Y" hint. */
+  protected readonly missingResults = computed(
+    () => this.matches().filter((m) => m.homeScore == null || m.awayScore == null).length,
+  );
 
   protected readonly form = this.fb.nonNullable.group({
     number: [1, [Validators.required, Validators.min(1)]],
@@ -294,6 +344,11 @@ export class AdminRoundDetail implements OnInit {
       .subscribe({
         next: (r) => {
           this.round.set(r);
+          this.matches.set(
+            [...r.matches].sort(
+              (a, b) => a.order - b.order || a.startsAt.localeCompare(b.startsAt),
+            ),
+          );
           this.form.setValue({ number: r.number, title: r.title ?? '' });
           this.loading.set(false);
           this.loadClosing(r);
@@ -340,28 +395,49 @@ export class AdminRoundDetail implements OnInit {
       .subscribe({ next: () => this.after('roundDetail.published') });
   }
 
-  lock(r: Round): void {
+  async lock(r: Round): Promise<void> {
+    const ok = await this.confirm.ask(this.translate.instant('roundDetail.confirmLock'), {
+      title: this.translate.instant('roundDetail.lock'),
+      confirmText: this.translate.instant('roundDetail.lock'),
+    });
+    if (!ok) {
+      return;
+    }
     this.api
       .lock(r.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ next: () => this.after('roundDetail.locked') });
   }
 
-  score(r: Round): void {
-    // "Finalizar" from a published round locks it first, then scores; an
-    // already-locked round just scores; re-running on a scored round recalculates.
+  async score(r: Round): Promise<void> {
+    // Scoring runs only on a locked (or already-scored) round: locking is now an
+    // explicit prior step, and results must be entered first (button is gated).
+    const recalculating = r.status === RoundStatus.Scored;
+    const ok = await this.confirm.ask(
+      this.translate.instant(
+        recalculating ? 'roundDetail.confirmRecalculate' : 'roundDetail.confirmFinalize',
+      ),
+      {
+        title: this.translate.instant(recalculating ? 'roundDetail.recalculate' : 'roundDetail.finalize'),
+        confirmText: this.translate.instant(
+          recalculating ? 'roundDetail.recalculate' : 'roundDetail.finalize',
+        ),
+      },
+    );
+    if (!ok) {
+      return;
+    }
     this.finalizing.set(true);
-    const finish = () => {
-      this.finalizing.set(false);
-      this.after(r.status === RoundStatus.Scored ? 'roundDetail.scored' : 'roundDetail.finalized');
-    };
-    const onError = () => this.finalizing.set(false);
-
-    const score$ =
-      r.status === RoundStatus.Published
-        ? this.api.lock(r.id).pipe(switchMap(() => this.api.score(r.id)))
-        : this.api.score(r.id);
-    score$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: finish, error: onError });
+    this.api
+      .score(r.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.finalizing.set(false);
+          this.after(recalculating ? 'roundDetail.scored' : 'roundDetail.finalized');
+        },
+        error: () => this.finalizing.set(false),
+      });
   }
 
   async cancel(r: Round): Promise<void> {
@@ -376,6 +452,20 @@ export class AdminRoundDetail implements OnInit {
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({ next: () => this.after('roundDetail.cancelled') });
     }
+  }
+
+  async reopen(r: Round): Promise<void> {
+    const ok = await this.confirm.ask(this.translate.instant('roundDetail.confirmReopen'), {
+      title: this.translate.instant('roundDetail.reopen'),
+      confirmText: this.translate.instant('roundDetail.reopen'),
+    });
+    if (!ok) {
+      return;
+    }
+    this.api
+      .reopen(r.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: () => this.after('roundDetail.reopened') });
   }
 
   refreshResults(round: Round): void {

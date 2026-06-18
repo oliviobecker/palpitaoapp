@@ -41,13 +41,30 @@ name, not the app's name.
 
 ## 1. Overview
 
-- **Rounds** created manually by the admin, with the lifecycle `Draft → Published → Locked → Scored` (or `Cancelled`).
+- **Rounds** created manually by the admin, with the lifecycle `Draft → Published → Locked → Scored` (or `Cancelled`), driven by a **guided stepper** (one action per step); a Scored round can be **reopened** back to Locked.
 - **Predictions** of the score per match, editable while the round is open; the deadline is the first match kickoff.
 - **Prediction mirror** released after the round is locked.
-- **Scoring** by column/exact score, with **multipliers** by competition/phase/classic.
+- **Scoring** by column/exact score, with **multipliers** by competition/phase/classic (§13).
 - **Absences** with progressive penalties and elimination on the 5th.
-- **Flávio Rule**: from round 16 on, the leader gets a special deadline; if late, loses half of the round's points.
+- **Flávio Rule**: penalizes a late leader — **England** from round 16, **FIFA World Cup** from the quarter-finals (§15).
 - **Overall standings**, ordered and recomputable idempotently.
+
+### Tournament types (certames)
+
+Each **season** runs a `TournamentType` — **Palpitão England** or **FIFA World Cup** — chosen on
+creation and **fixed afterwards** (the type drives the allowed competitions/phases, the multipliers
+in §13 and the Flávio Rule variant in §15):
+
+- **Palpitão England** — `Competition`: Premier League, FA Cup, Championship, League One. The
+  **Big Seven** clubs (Arsenal, Chelsea, Liverpool, Manchester City, Manchester United, Newcastle,
+  Tottenham) define the classics. Seeded club catalogue.
+- **FIFA World Cup** — a single `FifaWorldCup` competition with phases group stage → round of
+  32 → round of 16 → quarter-final → semi-final → third place → final. Played with **national
+  teams**; the seeded former world champions (Brazil, Germany, Argentina, France, Uruguay, Spain,
+  England, ranked by `WorldCupTitles`) define the knockout **classics** (campeãs mundiais).
+
+A group can host multiple seasons of either type. **`Team`** is a single global catalogue holding
+both clubs and national teams (`TeamType`).
 
 ## 2. Stack
 
@@ -55,8 +72,8 @@ name, not the app's name.
 |---|---|
 | Backend | C# / .NET 10, ASP.NET Core Web API (controllers) |
 | ORM / Database | EF Core 10 (code-first) + PostgreSQL 16 |
-| Auth | JWT Bearer + BCrypt |
-| Backend tests | xUnit + SQLite in-memory (317 tests) |
+| Auth | JWT Bearer (access + rotating refresh tokens) + BCrypt |
+| Backend tests | xUnit + SQLite in-memory (362 tests) |
 | Frontend | Angular 21 (standalone, signals), TypeScript |
 | UI | Bootstrap 5 (mobile-first) |
 | Frontend tests | Vitest (Angular 21 default runner) |
@@ -72,14 +89,14 @@ palpitaoapp/
 │   ├── src/Palpitao.Api/
 │   │   ├── Auth/            # JWT (settings, token service, claims)
 │   │   ├── Common/          # business exceptions (BusinessRule/NotFound)
-│   │   ├── Controllers/     # Auth, Rounds, Matches, Predictions, Seasons, Teams, Admin*
+│   │   ├── Controllers/     # Auth, Rounds, Matches, Predictions, Seasons, Teams, Groups, Admin*
 │   │   ├── Data/            # AppDbContext, SeedIds, design-time factory, Migrations
 │   │   ├── DTOs/            # input/output contracts per area
 │   │   ├── Entities/        # User, Season, Team, Round, RoundMatch, Prediction, ...
 │   │   ├── Enums/           # Competition, MatchPhase, RoundStatus, ScoreCategory, ...
 │   │   ├── Middlewares/     # global error handling (localized)
-│   │   └── Services/        # Scoring, Rounds, Predictions, Absences, Flavio,
-│   │                        #   Standings, Seasons, Users, Audit
+│   │   └── Services/        # Auth, Groups, Scoring, Tournaments, Rounds, Predictions,
+│   │                        #   Absences, Flavio, Standings, Seasons, Results, Audit
 │   └── tests/Palpitao.Api.Tests/
 ├── frontend/
 │   └── src/app/
@@ -115,7 +132,9 @@ cd backend
 dotnet ef database update --project src/Palpitao.Api
 ```
 
-This creates all tables and the **initial seed** (7 Big Seven clubs + admin user).
+This creates all tables and the **initial seed**: the club catalogue (Premier League, Championship
+and League One), the seven national-team **world champions** (for World Cup certames), the **default
+group** + its admin membership, and the dev admin user.
 For new migrations: `dotnet ef migrations add <Name> --project src/Palpitao.Api`.
 
 ## 7. Run the backend
@@ -149,37 +168,55 @@ The development `apiBaseUrl` (`src/environments/environment.development.ts`) poi
 
 Development only — change it in production.
 
-### Public sign-up with admin approval
+### Public sign-up with per-group approval
 
-New participants can **sign up themselves** on the public **`/register`** screen ("Don't have an
-account yet? Sign up" link on the login screen). Sign-up **does not grant access automatically**:
+New participants **sign up themselves** on the public **`/register`** screen ("Don't have an
+account yet? Sign up" link on the login screen) by **choosing which group to join**. Sign-up
+**does not grant access automatically** — the group's admin must approve the membership:
 
-1. The user provides name, email, password and confirmation. Validations: name and email
-   required, valid email, matching passwords and a strong password (at least 8 characters, with
-   at least **one letter and one number**). Duplicate email is rejected.
-2. `POST /api/auth/register` creates the user as `Role = Participant`,
-   `Status = PendingApproval`, `IsActive = false`. The password is stored with a **BCrypt hash**;
-   **no JWT** is issued. It returns only the success message.
-3. The admin sees the requests in **/admin/registration-requests** ("Registration requests") and
-   can **approve** or **reject** (with an optional reason).
-4. Once approved, the user can log in normally as a participant.
+1. The user picks an **active group** (active-groups list, see §26) and provides name, email,
+   password and confirmation. Validations: group, name and email required, valid email, matching
+   passwords and a strong password (≥ 8 characters with at least **one letter and one number**).
+2. `POST /api/auth/register` creates (or reuses) the **global account** as `Role = Participant`,
+   `Status = Approved`, **plus a `GroupUser` membership `PendingApproval`** in the chosen group.
+   The password is stored with a **BCrypt hash**; **no token** is issued — only the success message.
+3. The **group's** admin sees the requests in **/admin/registration-requests** and can **approve**
+   or **reject** (optional reason) — only for their own group (§26).
+4. Once the **membership** is approved, the user logs in and enters the group. While they have no
+   approved group, login succeeds but lands on the "waiting for approval" message.
 
-The admin can also create participants directly in **/admin/participants** (already approved and
-active).
+The admin can also create participants directly in **/admin/participants** (membership already
+approved and active). Creating a group and switching between groups are covered in **§26**.
+
+### Tokens (JWT access + refresh)
+
+`POST /api/auth/login` returns an **access token** (JWT Bearer, `Jwt:ExpiresHours`, default **12h**)
+and a **refresh token** (`Jwt:RefreshTokenDays`, default **30 days**), plus the user object.
+
+- **Refresh:** `POST /api/auth/refresh` exchanges a valid refresh token for a **new access token and
+  a rotated refresh token** (the old one is invalidated). The frontend's HTTP interceptor does this
+  transparently on a `401`, retrying the original request **once**; a second `401` ends the session.
+- **Logout:** `POST /api/auth/logout` **revokes** the refresh token (idempotent for unknown/expired
+  ones). Refresh tokens are stored **hashed** (`RefreshToken` entity), never in plain text.
+- Public sign-up / create-group return no token (the user logs in afterwards).
 
 ### User status (`UserStatus`)
 
+`UserStatus` is the **account-level** login gate. With groups, approval moved to the **membership**
+(`GroupUser.Status`, §26): public sign-up now creates an **`Approved`** account plus a
+`PendingApproval` group membership — so `UserStatus.PendingApproval` is mostly legacy/pre-groups.
+
 | Status | IsActive | Can log in? | Origin |
 |---|---|---|---|
-| `PendingApproval` | false | ❌ | public sign-up, awaiting approval |
-| `Approved` | true | ✅ | approved by the admin / created by the admin |
-| `Rejected` | false | ❌ | rejected by the admin (with `RejectionReason`) |
-| `Inactive` | false | ❌ | participant deactivated by the admin |
+| `PendingApproval` | false | ❌ | legacy (pre-groups); new sign-ups are `Approved` at the account level |
+| `Approved` | true | ✅ | public sign-up, create-group admin, or admin-created |
+| `Rejected` | false | ❌ | rejected at the account level (with `RejectionReason`) |
+| `Inactive` | false | ❌ | account deactivated |
 
-**Login is allowed only when `Status = Approved` **and** `IsActive = true`.** In any other case
-login is blocked with a friendly message (and the attempt is recorded in the `AuditLog` as
-`LoginBlocked`). The `RegistrationSubmitted`, `RegistrationApproved` and `RegistrationRejected`
-events are also audited.
+**Authentication requires `Status = Approved` **and** `IsActive = true`** at the account level;
+**access to a group** additionally requires an **`Approved` `GroupUser`** membership (§26). A blocked
+attempt shows a friendly message and is recorded in the `AuditLog` as `LoginBlocked`. The
+`RegistrationSubmitted`, `RegistrationApproved` and `RegistrationRejected` events are also audited.
 
 ### Messages in PT/EN
 
@@ -220,11 +257,11 @@ Jwt__Key=<long random secret, >= 32 bytes>
 
 ## 11. Main endpoints
 
-**Auth** · `POST /api/auth/login` · `POST /api/auth/register` (public sign-up pending approval)
+**Auth** · `POST /api/auth/login` (returns access + refresh token) · `POST /api/auth/refresh` (rotate) · `POST /api/auth/logout` (revoke) · `POST /api/auth/register` (public sign-up, pending group approval) · `POST /api/auth/create-group` (public) · `GET /api/auth/my-groups` · `GET /api/auth/my-groups/pending` (pending/rejected/deactivated, for the `/pending` screen)
 
 **Rounds / Matches** (mutations: Admin)
 - `GET /api/rounds` · `GET /api/rounds/{id}` · `POST /api/rounds` · `PUT /api/rounds/{id}` (round with `startDate`/`endDate`)
-- `POST /api/rounds/{id}/publish|lock|cancel|score` · `GET /api/rounds/{id}/results`
+- `POST /api/rounds/{id}/publish|lock|cancel|score|reopen` · `GET /api/rounds/{id}/results`
 - `POST /api/rounds/{roundId}/matches` · `PUT /api/matches/{id}` · `DELETE /api/matches/{id}`
 - `POST /api/matches/{id}/result`
 
@@ -271,6 +308,8 @@ Exact-score categories (symmetric — e.g. 1x0 ≡ 0x1):
 
 ## 13. Multipliers
 
+**Palpitão England**
+
 | Competition / phase | Multiplier |
 |---|---|
 | Premier League — classic (two Big Seven) | 2 |
@@ -282,8 +321,18 @@ Exact-score categories (symmetric — e.g. 1x0 ≡ 0x1):
 | Championship — others | 1 |
 | League One — every match | 2 |
 
-The phase prevails and **does not stack** (a Big Seven classic in the FA Cup final = 3, not 6).
+**FIFA World Cup** — by phase, **doubled** for a knockout **classic** (both teams former world champions):
+
+| Phase | Multiplier | Classic (both champions) |
+|---|---|---|
+| Group stage | 1 | 1 (group-stage classics are **not** doubled) |
+| Round of 32 / Round of 16 | 2 | 4 |
+| Quarter-final / Semi-final / Third place / Final | 3 | 6 |
+
+The phase prevails and **does not stack** in England (a Big Seven classic in the FA Cup final = 3,
+not 6); in the World Cup the classic only doubles the phase multiplier from the **knockout** on.
 **Big Seven**: Arsenal, Chelsea, Liverpool, Manchester City, Manchester United, Newcastle, Tottenham.
+**World champions** (campeãs mundiais): Brazil, Germany, Argentina, France, Uruguay, Spain, England.
 There is also a per-match **manual multiplier override** (requires a justification).
 
 ## 14. Absence rules
@@ -301,7 +350,7 @@ An eliminated participant no longer predicts, unless **manually reactivated** by
 
 ## 15. Flávio Rule
 
-From **round 16** on, the standings leader (before the round) gets a special deadline:
+The standings **leader** gets a special deadline before the round; missing it costs points:
 - Reference = `MirrorPublishedAt` (or `PublishedAt`).
 - Window = **24h**, or **12h** if the round was published less than 24h before the first match.
 - The **general lock** (first match kickoff) always prevails.
@@ -309,6 +358,12 @@ From **round 16** on, the standings leader (before the round) gets a special dea
 If the leader completes the predictions **after** that deadline (but before the lock), they lose
 **half** of the round's points (rounded down — 17 → 8). If they don't predict, they are treated as
 a normal **absence**. A tie at the top ⇒ it applies to all tied leaders.
+
+**Activation by tournament type:**
+- **Palpitão England** — from **round 16** on; the target is the **live leader(s)** before the round.
+- **FIFA World Cup** — whenever the round contains a **quarter-final-or-later** match; the target is
+  the **single leader captured at publication** (`FlavioRuleTargetUserId`), so a mid-round standings
+  change can't move it.
 
 ## 16. Overall standings
 
@@ -329,8 +384,10 @@ eliminations and re-scores the finished rounds in order — **idempotent**.
   `SubmittedAt` among their round predictions).
 - **Tie at the top**: the Flávio Rule applies to all tied leaders.
 - **Multiplier on the frontend** (before scoring): computed on the client mirroring the backend
-  rule, by the Big Seven club names.
-- **Active season**: only one at a time; the frontend derives `seasonId` from the rounds.
+  rule — by the Big Seven club names (England) or the world-champion national teams (World Cup).
+- **Active season**: only one per group at a time; the frontend resolves it via
+  `GET /api/seasons/active` (the standings and dashboard read the **active season's** id, not
+  `rounds[0]`).
 - **Dates/times** always in **UTC** in the database; displayed in the `pt-BR` timezone/locale.
 
 ## 18. Predictions entered by the admin (manual)
@@ -451,11 +508,11 @@ That endpoint returns 404 outside `Development` and requires admin.
 ## 22. How to run the tests
 
 ```bash
-# Backend (317 tests — xUnit + SQLite in-memory)
+# Backend (362 tests — xUnit + SQLite in-memory)
 cd backend && dotnet test
 
-# Frontend (Vitest — 35 unit tests)
-cd frontend && npm test          # or: npx ng test --watch=false
+# Frontend (Vitest — 34 unit tests)
+cd frontend && npm test -- --watch=false   # run once
 
 # Frontend e2e (Playwright — 25 tests; starts ng serve and mocks the API)
 cd frontend && npm run e2e
@@ -473,9 +530,10 @@ cd frontend && npm run e2e
 
 Instead of registering each match manually, the admin can **create the round by period** and
 import the matches automatically from an external provider. The default provider is **OneFootball**
-(free, no key, covers the **four** competitions — Premier League, Championship, League One and
-FA Cup — with the **current season**). There are also `FixtureDownload`, `ApiFootball` and
-`TheSportsDb` as alternatives. Switch via `Fixtures:Provider`.
+(free, no key, covers the four England competitions — Premier League, Championship, League One and
+FA Cup — with the **current season**, and also **FIFA World Cup** national-team fixtures via the
+`fifa-world-cup-12` slug). There are also `FixtureDownload`, `ApiFootball` and `TheSportsDb` as
+alternatives. Switch via `Fixtures:Provider`.
 
 > **Off-season:** in June/July OneFootball hasn't published the next season's matches yet, so the
 > search comes back **empty** — that's expected (the Premier League starts in mid-August). Within
@@ -514,8 +572,9 @@ with a ready WhatsApp-style text — title, round number, **deadline (first matc
 matches grouped by competition with their multipliers/phases — plus a **Copy** button that works
 even on mobile (Clipboard API with fallback). Just copy and paste it into the group.
 
-**Flávio Rule in the message:** from **round 16** on, and only then, the message includes a line
-with the current leader(s) and their **special deadline** (e.g. "Leader @Manoel Neto has until
+**Flávio Rule in the message:** when the Flávio Rule applies to the round (England round 16+, World
+Cup quarter-finals+), and only then, the message includes a line with the current leader(s) and
+their **special deadline** (e.g. "Leader @Manoel Neto has until
 23:59 on Friday (22/05/2026) to predict."). The backend computes this in `RoundDto.Flavio` (leaders
 = top of the season standings; deadline = 24h, or 12h if the round was published less than 24h
 before the first match, with the general lock prevailing). The line only appears when the round has
@@ -725,15 +784,18 @@ between groups.**
 
 ### Login and switching groups
 
-- After authenticating, the frontend calls `GET /auth/my-groups`: **0** approved → pending message;
-  **1** → enter directly; **several** → `/select-group` screen.
+- After authenticating, the frontend calls `GET /auth/my-groups` (approved **and active**): **0** →
+  the **`/pending`** screen (awaiting-approval, lists pending/rejected/**deactivated** memberships with
+  re-check + logout); **1** → enter directly; **several** → `/select-group` screen.
 - The current group is kept in `localStorage` and shown in the header, with a **Switch group** button.
+- A member **deactivated** in a group (`GroupUser.IsActive=false`) is **blocked** from it: `my-groups`
+  hides it and `CurrentGroupService` returns 403 `group.membershipInactive` (SuperAdmin bypasses).
 
 ### How the frontend sends the group / how the backend validates it
 
 - The `group.interceptor` injects the **`X-Group-Id`** header on every authenticated call.
 - The `CurrentGroupService` (backend) reads that header, **validates** that the user has an
-  `Approved` `GroupUser` in the group and exposes `GroupId`/`Role`. The `[RequireGroupAdmin]` /
+  `Approved` **and active** `GroupUser` in the group and exposes `GroupId`/`Role`. The `[RequireGroupAdmin]` /
   `[RequireGroupParticipant]` filters protect the controllers. A missing/invalid header or no access
   ⇒ **HTTP 403**. The frontend is **never** trusted alone — every endpoint revalidates the group.
 
@@ -763,9 +825,9 @@ rows pointing at a seeded **default group** — _Palpitão England 2025/2026_
 
 ### Current limitations
 
-- `User.IsActive` / `User.IsEliminated` are still **global** (used by the calculation). For a user in
-  more than one group, eliminating/deactivating reflects across all of them — moving those flags to
-  `GroupUser` is left as future work.
+- Per-group **`IsActive`** and **`IsEliminated`** live on **`GroupUser`**: elimination and per-bolão
+  deactivation are scoped to the group (scoring/standings read the per-group flags). `User.IsActive`
+  remains the **global account** login gate.
 - Creating a group via the public screen requires a **new** email (an existing user creating another
   group is left for later). `AdminSentryController` (diagnostics) still uses the global role.
 

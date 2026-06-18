@@ -54,6 +54,12 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<MyGroupDto>>> MyGroups(CancellationToken ct)
         => Ok(await _groups.MyGroupsAsync(User.GetUserId(), User.IsInRole(UserRole.Admin.ToString()), ct));
 
+    /// <summary>The user's not-yet-approved memberships (pending/rejected), for the awaiting-approval screen.</summary>
+    [HttpGet("my-groups/pending")]
+    [Authorize]
+    public async Task<ActionResult<IReadOnlyList<MyGroupDto>>> PendingGroups(CancellationToken ct)
+        => Ok(await _groups.PendingMembershipsAsync(User.GetUserId(), ct));
+
     /// <summary>Authenticates a user and returns a JWT access token.</summary>
     [HttpPost("login")]
     public async Task<ActionResult<LoginResponse>> Login(LoginRequest request, CancellationToken ct)

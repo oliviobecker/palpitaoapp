@@ -17,12 +17,13 @@ import { RoundsService } from '../../core/services/rounds.service';
 import { GroupContextService } from '../../core/services/group-context.service';
 import { Loading } from '../../shared/components/loading/loading';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
+import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Countdown } from '../../shared/components/countdown/countdown';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-rounds',
-  imports: [RouterLink, DatePipe, TranslatePipe, Loading, EmptyState, Countdown],
+  imports: [RouterLink, DatePipe, TranslatePipe, Loading, EmptyState, ErrorState, Countdown],
   templateUrl: './rounds.html',
 })
 export class Rounds implements OnInit {
@@ -50,6 +51,7 @@ export class Rounds implements OnInit {
   }
 
   protected readonly loading = signal(true);
+  protected readonly error = signal(false);
   protected readonly rounds = signal<RoundSummary[]>([]);
 
   // Participants only care about published/locked/scored rounds, newest first.
@@ -65,6 +67,7 @@ export class Rounds implements OnInit {
 
   load(): void {
     this.loading.set(true);
+    this.error.set(false);
     this.roundsApi
       .getAll()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -73,7 +76,10 @@ export class Rounds implements OnInit {
           this.rounds.set(list);
           this.loading.set(false);
         },
-        error: () => this.loading.set(false),
+        error: () => {
+          this.error.set(true);
+          this.loading.set(false);
+        },
       });
   }
 }

@@ -160,6 +160,39 @@ public class RoundServiceTests
     }
 
     [Fact]
+    public async Task Reopen_scored_round_returns_to_locked()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+        await service.AddMatchAsync(round.Id, Match(SeedIds.Arsenal, SeedIds.Chelsea, new DateTime(2025, 8, 10, 14, 0, 0, DateTimeKind.Utc)), ActingUser, Ct);
+        await service.PublishAsync(round.Id, ActingUser, Ct);
+        await service.LockAsync(round.Id, ActingUser, Ct);
+
+        // Scoring itself lives in RoundScoringService; move the round to Scored directly.
+        var entity = db.Rounds.Single(r => r.Id == round.Id);
+        entity.Status = RoundStatus.Scored;
+        await db.SaveChangesAsync(Ct);
+
+        var reopened = await service.ReopenAsync(round.Id, ActingUser, Ct);
+
+        Assert.Equal(RoundStatus.Locked, reopened.Status);
+    }
+
+    [Fact]
+    public async Task Reopen_non_scored_round_is_rejected()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.ReopenAsync(round.Id, ActingUser, Ct));
+
+        Assert.Contains("reabertas", ex.Message);
+    }
+
+    [Fact]
     public async Task Cannot_add_match_to_locked_round_without_override()
     {
         using var db = CreateContext();

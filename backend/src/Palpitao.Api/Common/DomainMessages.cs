@@ -49,6 +49,9 @@ public static class DomainMessages
             ["group.adminOnly"] = (
                 "Apenas administradores do grupo podem realizar esta ação.",
                 "Only group administrators can perform this action."),
+            ["group.membershipInactive"] = (
+                "Seu acesso a este grupo foi desativado. Fale com o administrador.",
+                "Your access to this group has been deactivated. Contact the administrator."),
             ["group.nameRequired"] = (
                 "O nome do grupo é obrigatório.",
                 "The group name is required."),
@@ -130,6 +133,7 @@ public static class DomainMessages
             ["round.onlyPublishedLocked"] = ("Apenas rodadas publicadas podem ser bloqueadas.", "Only published rounds can be locked."),
             ["round.cannotCancelScored"] = ("Não é possível cancelar uma rodada já pontuada.", "Cannot cancel a round that has already been scored."),
             ["round.alreadyCancelled"] = ("A rodada já está cancelada.", "The round is already cancelled."),
+            ["round.onlyScoredReopened"] = ("Apenas rodadas pontuadas podem ser reabertas.", "Only scored rounds can be reopened."),
             ["round.mustBeLockedToScore"] = ("A rodada precisa estar bloqueada para ser calculada.", "The round must be locked to be scored."),
             ["round.noMatches"] = ("A rodada não possui jogos.", "The round has no matches."),
             ["round.allResultsRequired"] = ("Cadastre o resultado de todos os jogos antes de calcular a rodada.", "Enter the result of every match before scoring the round."),

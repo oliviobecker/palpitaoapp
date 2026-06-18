@@ -57,6 +57,10 @@ export class RoundsService {
     return this.http.post<Round>(`${this.base}/${id}/cancel`, {});
   }
 
+  reopen(id: string): Observable<Round> {
+    return this.http.post<Round>(`${this.base}/${id}/reopen`, {});
+  }
+
   addMatch(roundId: string, request: unknown): Observable<RoundMatch> {
     return this.http.post<RoundMatch>(`${this.base}/${roundId}/matches`, request);
   }

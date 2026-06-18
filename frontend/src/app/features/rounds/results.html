@@ -7,6 +7,8 @@
 
 @if (loading()) {
   <app-loading />
+} @else if (error()) {
+  <app-error-state (retry)="load()" />
 } @else if (!scored()) {
   <app-empty-state icon="⏳" [message]="'results.notScored' | translate" />
   <div class="d-grid mt-3">

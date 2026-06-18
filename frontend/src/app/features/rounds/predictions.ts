@@ -20,6 +20,7 @@ import { PredictionsService } from '../../core/services/predictions.service';
 import { RoundsService } from '../../core/services/rounds.service';
 import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
 import { Countdown } from '../../shared/components/countdown/countdown';
+import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Loading } from '../../shared/components/loading/loading';
 import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
 import {
@@ -39,6 +40,7 @@ import {
     TranslatePipe,
     CompetitionBadge,
     Countdown,
+    ErrorState,
     Loading,
     MultiplierBadge,
   ],
@@ -109,6 +111,7 @@ export class Predictions implements OnInit {
       this.isWorldCup() && this.matches().some((m) => WORLD_CUP_FLAVIO_PHASES.includes(m.phase)),
   );
   protected readonly editable = signal(false);
+  protected readonly error = signal(false);
   protected readonly saving = signal(false);
   protected readonly saved = signal(false);
   private isEdit = false;
@@ -151,6 +154,15 @@ export class Predictions implements OnInit {
 
   ngOnInit(): void {
     this.roundId = this.route.snapshot.paramMap.get('id') ?? '';
+    this.load();
+  }
+
+  load(): void {
+    this.loading.set(true);
+    this.error.set(false);
+    // Rebuild from scratch so a retry doesn't duplicate the score controls.
+    this.form.clear();
+    this.form.enable();
     forkJoin({
       round: this.roundsApi.getById(this.roundId),
       mine: this.predictionsApi.getMine(this.roundId),
@@ -193,7 +205,10 @@ export class Predictions implements OnInit {
           }
           this.loading.set(false);
         },
-        error: () => this.loading.set(false),
+        error: () => {
+          this.error.set(true);
+          this.loading.set(false);
+        },
       });
   }
 

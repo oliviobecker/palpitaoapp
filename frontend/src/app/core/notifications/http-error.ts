@@ -1,12 +1,18 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { TranslateService } from '@ngx-translate/core';
 
-/** Extracts a friendly (Portuguese) message from an API error response. */
-export function httpErrorMessage(error: HttpErrorResponse): string {
+/**
+ * Extracts a friendly, localized message from an API error response. Network and
+ * generic failures use translation keys (so they follow the selected language);
+ * messages already produced by the backend (body.message / body.errors) are
+ * surfaced as-is, since the server localizes them.
+ */
+export function httpErrorMessage(error: HttpErrorResponse, translate: TranslateService): string {
   if (error.status === 0) {
-    return 'Não foi possível conectar ao servidor. Verifique se a API está no ar.';
+    return translate.instant('errors.network');
   }
   if (error.status === 401) {
-    return 'E-mail ou senha inválidos.';
+    return translate.instant('errors.invalidCredentials');
   }
 
   const body = error.error;
@@ -22,5 +28,5 @@ export function httpErrorMessage(error: HttpErrorResponse): string {
     }
   }
 
-  return 'Ocorreu um erro inesperado. Tente novamente.';
+  return translate.instant('errors.unexpected');
 }

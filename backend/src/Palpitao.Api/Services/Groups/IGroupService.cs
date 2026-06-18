@@ -12,4 +12,10 @@ public interface IGroupService
     /// (<paramref name="isSuperAdmin"/>) gets every group as <c>GroupAdmin</c>.
     /// </summary>
     Task<IReadOnlyList<MyGroupDto>> MyGroupsAsync(Guid userId, bool isSuperAdmin, CancellationToken ct);
+
+    /// <summary>
+    /// The user's memberships that are NOT approved yet (pending/rejected), with the
+    /// group name — for the "awaiting approval" screen.
+    /// </summary>
+    Task<IReadOnlyList<MyGroupDto>> PendingMembershipsAsync(Guid userId, CancellationToken ct);
 }

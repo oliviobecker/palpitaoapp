@@ -9,7 +9,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { Lang, LanguageService } from '../../core/i18n/language.service';
 import { httpErrorMessage } from '../../core/notifications/http-error';
@@ -184,6 +184,7 @@ export class CreateGroup {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   protected readonly language = inject(LanguageService);
+  private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly submitting = signal(false);
@@ -223,7 +224,7 @@ export class CreateGroup {
         },
         error: (err: HttpErrorResponse) => {
           this.submitting.set(false);
-          this.error.set(httpErrorMessage(err));
+          this.error.set(httpErrorMessage(err, this.translate));
         },
       });
   }

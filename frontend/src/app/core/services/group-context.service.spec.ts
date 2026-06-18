@@ -9,6 +9,7 @@ const group: MyGroup = {
   slug: 'eng',
   role: GroupRole.GroupAdmin,
   status: GroupUserStatus.Approved,
+  isActive: true,
 };
 
 describe('GroupContextService', () => {

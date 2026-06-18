@@ -11,7 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { FormBuilder } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Lang, LanguageService } from '../../core/i18n/language.service';
 import { PublicGroup } from '../../core/models/models';
 import { httpErrorMessage } from '../../core/notifications/http-error';
@@ -185,6 +185,7 @@ export class Register implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly groupsApi = inject(GroupsService);
   protected readonly language = inject(LanguageService);
+  private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly submitting = signal(false);
@@ -232,7 +233,7 @@ export class Register implements OnInit {
         },
         error: (err: HttpErrorResponse) => {
           this.submitting.set(false);
-          this.error.set(httpErrorMessage(err));
+          this.error.set(httpErrorMessage(err, this.translate));
         },
       });
   }

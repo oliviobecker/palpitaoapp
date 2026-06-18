@@ -20,6 +20,22 @@
     "logout": "Sign out",
     "back": "Back"
   },
+  "errors": {
+    "network": "Could not reach the server. Check that the API is running.",
+    "invalidCredentials": "Invalid email or password.",
+    "unexpected": "Something went wrong. Please try again.",
+    "loadFailed": "Couldn't load this page. Please try again."
+  },
+  "awaitingApproval": {
+    "title": "Awaiting approval",
+    "intro": "Your account is ready, but you don't have active access to a group yet.",
+    "pendingBadge": "Pending",
+    "rejectedBadge": "Rejected",
+    "deactivatedBadge": "Deactivated",
+    "recheck": "Check again",
+    "stillPending": "Still awaiting approval.",
+    "noMemberships": "You have no group requests. Sign up for a group or contact the administrator."
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -323,6 +339,7 @@
     "justification": "Justification",
     "manualHint": "You can still add matches manually on the round screen.",
     "noneFoundManual": "No fixtures found. Create the round and add matches manually.",
+    "searchError": "Couldn't search for fixtures right now. You can add the matches manually.",
     "createManual": "Create round and add matches manually",
     "importedToast": "{{imported}} match(es) imported, {{skipped}} skipped.",
     "comp": {
@@ -341,6 +358,9 @@
     "save": "Save",
     "manage": "Manage",
     "lifecycle": "Round lifecycle",
+    "needMatchesToPublish": "Add at least one match before publishing.",
+    "lockHint": "Locking closes prediction entry. After that, enter the results and calculate the score.",
+    "resultsMissing": "{{count}} of {{total}} results still missing.",
     "manageGames": "Manage matches",
     "registerPredictions": "Register predictions",
     "importImage": "Import from image",
@@ -355,6 +375,12 @@
     "cancelRound": "Cancel round",
     "games": "Matches",
     "confirmCancel": "Are you sure you want to cancel this round?",
+    "confirmLock": "Locking closes prediction entry and freezes the matches for this round. Continue?",
+    "confirmFinalize": "This will lock the round (if it isn't already) and calculate the final score. Continue?",
+    "confirmRecalculate": "This will recalculate the round score from the current results. Continue?",
+    "reopen": "Reopen round",
+    "confirmReopen": "This reopens the round back to Locked so you can fix results. Scores stay until you calculate again. Continue?",
+    "reopened": "Round reopened.",
     "published": "Round published!",
     "locked": "Round locked!",
     "scored": "Score calculated!",
@@ -409,13 +435,9 @@
   },
   "adminResults": {
     "title": "Results",
-    "round": "Round",
-    "lockFirst": "Lock the round before registering results and calculating.",
     "finished": "Finished",
     "saveResults": "Save results",
-    "calculate": "Calculate round score",
-    "saved": "Results saved!",
-    "calculated": "Score calculated!"
+    "saved": "Results saved!"
   },
   "adminRegistrations": {
     "title": "Registration requests",

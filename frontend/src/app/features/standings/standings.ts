@@ -15,12 +15,13 @@ import { Standing } from '../../core/models/models';
 import { SeasonsService } from '../../core/services/seasons.service';
 import { StandingsService } from '../../core/services/standings.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
+import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Loading } from '../../shared/components/loading/loading';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-standings',
-  imports: [TranslatePipe, EmptyState, Loading],
+  imports: [TranslatePipe, EmptyState, ErrorState, Loading],
   templateUrl: './standings.html',
 })
 export class Standings implements OnInit {
@@ -30,13 +31,20 @@ export class Standings implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
+  protected readonly error = signal(false);
   protected readonly standings = signal<Standing[]>([]);
   protected readonly myId = computed(() => this.auth.currentUser()?.id);
 
   ngOnInit(): void {
+    this.load();
+  }
+
+  load(): void {
     // Standings belong to the group's active season (certame). Deriving the
     // season from rounds[0] picked the wrong certame whenever a group had more
     // than one, leaving the table empty for the certame actually being scored.
+    this.loading.set(true);
+    this.error.set(false);
     this.seasonsApi
       .getActive()
       .pipe(
@@ -52,7 +60,10 @@ export class Standings implements OnInit {
           }
           this.loading.set(false);
         },
-        error: () => this.loading.set(false),
+        error: () => {
+          this.error.set(true);
+          this.loading.set(false);
+        },
       });
   }
 }

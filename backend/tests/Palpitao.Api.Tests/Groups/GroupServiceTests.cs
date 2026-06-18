@@ -80,4 +80,37 @@ public class GroupServiceTests
         Assert.Equal(GroupB, groups[0].GroupId);
         Assert.Equal(GroupRole.Participant, groups[0].Role);
     }
+
+    [Fact]
+    public async Task My_groups_excludes_a_deactivated_membership_but_pending_includes_it()
+    {
+        using var db = CreateContext();
+        var service = NewService(db);
+
+        var userId = Guid.NewGuid();
+        db.Users.Add(new User { Id = userId, Name = "U", Email = "u@x.com", PasswordHash = "x", CreatedAt = DateTime.UtcNow });
+        db.GroupUsers.Add(new GroupUser
+        {
+            Id = Guid.NewGuid(),
+            GroupId = GroupB,
+            UserId = userId,
+            Role = GroupRole.Participant,
+            Status = GroupUserStatus.Approved,
+            IsActive = false, // deactivated by the group admin
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        });
+        db.SaveChanges();
+
+        // Not offered as accessible…
+        var groups = await service.MyGroupsAsync(userId, isSuperAdmin: false, Ct);
+        Assert.Empty(groups);
+
+        // …but surfaced on the awaiting-approval screen with IsActive = false.
+        var pending = await service.PendingMembershipsAsync(userId, Ct);
+        Assert.Single(pending);
+        Assert.Equal(GroupB, pending[0].GroupId);
+        Assert.False(pending[0].IsActive);
+        Assert.Equal(GroupUserStatus.Approved, pending[0].Status);
+    }
 }

@@ -51,7 +51,8 @@ import { Loading } from '../../shared/components/loading/loading';
               <option value="">{{ 'manual.selectParticipant' | translate }}</option>
               @for (p of participants(); track p.id) {
                 <option [value]="p.id">
-                  {{ p.name }}{{ p.isEliminated ? ' (eliminado)' : '' }}
+                  {{ p.name
+                  }}{{ p.isEliminated ? ' (' + ('standings.eliminated' | translate) + ')' : '' }}
                 </option>
               }
             </select>

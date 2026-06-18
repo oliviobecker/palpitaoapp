@@ -1,162 +1,169 @@
 # DEVELOPMENT_CHECKPOINT
 
-_Last updated: 2026-06-17 (end of session)._
+_Last updated: 2026-06-18 (usability roadmap session)._
 
-## 0. Where we are right now
+## 0. Status at a glance
 
-- **Git:** history was **squashed to a single `Initial commit`** (`main`, clean working tree, no tags,
-  no open PRs) as the public-release baseline. Everything below is already in that one commit.
-- **Latest changes folded into the baseline (this session):**
-  1. **Certame type moved from `Group` to `Season`** (`Season.TournamentType`, set on creation,
-     immutable on update). Resolved per round via `Round.Season`; exposed on `RoundDto`/`RoundSummaryDto`
-     so the match/prediction screens gate competitions, phases and World Cup notices without extra calls.
-     Migration `MoveTournamentTypeToSeason` adds the column on `Seasons`, **backfills each season from its
-     group's old type**, then drops the `Groups` column (ordered so no data is lost; no empty `UpdateData`).
-  2. **i18n fix:** added the missing `tournament.competitionNotAllowed` / `tournament.phaseNotAllowed`
-     message keys (the UI was showing the raw key in a toast).
-  3. Earlier in the same baseline: prediction **view**/**submit** settings on `Season`; dashboard
-     highlights **Create season**; deploy workflows apply EF migrations explicitly; `/health/db` flags
-     pending migrations.
-- **Build/tests:** backend **333** xUnit green; frontend `ng build` + Prettier clean, **34** Vitest,
-  **30** Playwright. (1 pre-existing xUnit2012 warning at `PredictionImportServiceTests.cs:108`.)
-- **Open items needing the human (not code):**
-  - `appsettings*.json` are placeholders in git; real secrets only via env / user-secrets / GitHub
-    Secrets. (If they ever show as "modified" with no diff, it is just CRLF noise — `git checkout` them.)
-  - On any fresh/managed database run `dotnet ef database update` to apply all migrations.
-  - **Rotate** the 3 secrets that were once public (api-sports key, Postgres password, Sentry DSN).
-  - CI/CD deploy workflows exist but target the user's self-hosted IIS — wire the GitHub
-    Secrets/Variables before relying on them.
+| Check | Result |
+|---|---|
+| Backend build (`dotnet build`) | ✅ 0 warnings / 0 errors |
+| Backend tests (`dotnet test`) | ✅ **362** passed, 0 failed |
+| Frontend build (`ng build` prod) | ✅ success |
+| Frontend lint (`ng lint`) | ✅ 0 errors (24 pre-existing `label-has-associated-control` warnings) |
+| Frontend unit tests (Vitest) | ✅ **34** passed (10 files) |
+| Working tree | Uncommitted changes on `main` (this session). Not yet committed. |
 
-## 1. Overview
+> One small test break introduced this session (`group-context.service.spec.ts` missing the new
+> `MyGroup.isActive`) was fixed. No other build/test regressions.
 
-**Palpitão (pt) / FanPicks (en)** — a multi-group football prediction platform. Each **group** is an
-independent pool (tenant) with its own seasons, rounds, matches, predictions, standings, members and
-audit. An admin creates rounds with matches; participants predict scores until the first kickoff; the
-system scores them, applies absences and the Flávio Rule, and keeps the overall standings — per group,
-fully isolated. Two tournament types: **Palpitão England** (PL/FA Cup/Championship/League One) and
-**FIFA World Cup**.
+## 1. Project overview
+
+**Palpitão / FanPicks** — a multi-group football **prediction pool** ("bolão"). Each group is an
+independent pool with its own admins, participants, seasons, rounds, matches, predictions and
+standings; data never crosses groups. Two tournament types (per **season**): **Palpitão England**
+(Premier League, FA Cup, Championship, League One) and **FIFA World Cup** (national teams).
+Mobile-first. PT/EN at runtime.
+
+Flow: admin creates a round with matches → participants predict scores until the first kickoff →
+admin locks, enters results and scores → system applies multipliers, absences and the Flávio Rule →
+overall standings update.
 
 ## 2. Stack
 
-| Layer | Tech |
-|---|---|
-| Backend | C# / .NET 10, ASP.NET Core Web API (routes without `api/` prefix — IIS mounts at `/api`) |
-| ORM / DB | EF Core 10.0.9 (code-first) + PostgreSQL (Npgsql 10) |
-| Auth | JWT Bearer + BCrypt; multi-tenant via the `X-Group-Id` header |
-| Backend tests | xUnit + SQLite in-memory (**333** tests) |
-| Frontend | Angular 21 (standalone, signals), TypeScript, Bootstrap 5 (mobile-first) |
-| i18n | ngx-translate (frontend) + `Accept-Language`/`DomainMessages` (backend), PT-BR / EN-US |
-| Frontend tests | Vitest (**34** unit) + Playwright (**30** e2e, API mocked) |
-| OCR | Tesseract (`por`/`eng` traineddata, not committed) |
-| Monitoring | Sentry (optional, DSN via env, off by default) |
-| CI/CD | GitHub Actions: CI (build/test/lint/actionlint), staging on push to main, semantic-release → prod |
+- **Backend:** C# / .NET 10, ASP.NET Core Web API (controllers), EF Core 10 (code-first) + PostgreSQL 16.
+  Auth: JWT Bearer (access + rotating refresh tokens) + BCrypt. Sentry. Tesseract (OCR).
+- **Frontend:** Angular 21 (standalone, signals), TypeScript, Bootstrap 5 (mobile-first),
+  ngx-translate. Tests: Vitest (`@angular/build:unit-test`) + Playwright (e2e).
+- **Repo:** monorepo — `backend/` (`src/Palpitao.Api`, `tests/Palpitao.Api.Tests`), `frontend/`,
+  `docker-compose.yml` (Postgres 16), `README.md`.
 
 ## 3. Implemented features
 
-- **Auth & accounts:** login (JWT), public self-registration into a group with admin approval,
-  status gate (`PendingApproval`/`Approved`/`Rejected`/`Inactive`), audited login blocks.
-- **Multi-group (multi-tenant):** `Group` tenant + `GroupUser` membership (`GroupAdmin`/`Participant`,
-  per-group `IsActive`/`IsEliminated`); `CurrentGroupService` validates `X-Group-Id`;
-  `[RequireGroupAdmin]`/`[RequireGroupParticipant]`. Platform **SuperAdmin** (global `UserRole.Admin`)
-  gets GroupAdmin on any group. Full isolation (cross-group ⇒ 403/404).
-- **Tournament types (per Season):** `Season.TournamentType` (England / FIFA World Cup), chosen when the
-  season is created and immutable after; allowed competitions/phases, scoring multipliers, classics
-  (Big Seven / world champions) and Flávio variant per type. A group can run seasons of either type.
-- **Rounds & matches:** lifecycle `Draft→Published→Locked→Scored`/`Cancelled`; create by period +
-  external fixture import (OneFootball default; FixtureDownload/ApiFootball/TheSportsDb alternatives).
-- **Predictions:** participant submit/edit before deadline; **prediction mirror** (after lock);
-  admin manual entry; **OCR import** (Tesseract) with mandatory review; `Source`
-  (`Participant`/`AdminManual`/`AdminOcr`).
-- **Scoring/standings:** column/exact-score categories + multipliers (incl. manual override);
-  absences with progressive penalties + elimination on the 5th; **Flávio Rule**; idempotent
-  recalculation; temporary (live) standings.
-- **Prediction visibility (per Season):** `Season.AllowParticipantsToViewOthersPredictions`
-  (default false) — participants can open the mirror only when enabled (admins always); 403 otherwise.
-- **Prediction submission mode (per Season):** `Season.AllowParticipantsToSubmitPredictions`
-  (default true) — when false, the in-app submit endpoint returns 403 (`prediction.appSubmitDisabled`)
-  and the participant screen is read-only; admin manual/OCR unaffected (never writes `Participant`).
-- **Admin UI:** dashboard (hero = **Create season**), seasons (with the two prediction settings +
-  "disable" warning), participants, registration requests, audit, rounds/results/scout/manual/OCR.
-- **i18n / branding:** FanPicks (en) / Palpitão (pt) via `app.name`; FluentValidation localized PT/EN.
-- **App version footer** (`vX.Y.Z` from the latest git tag) + PWA manifest.
-- **CI/CD:** trunk-based; PR → CI; merge to main → staging; **semantic-release** tags + GitHub Release
-  → production deploy (now applies EF migrations before swapping the app).
+**Core domain**
+- Round lifecycle `Draft → Published → Locked → Scored` (+ `Cancelled`), now with a **guided stepper**
+  in the admin round-detail screen (one primary action per state, prerequisites enforced).
+- **Reopen** a Scored round back to Locked (admin), keeping scores until recalculated.
+- Predictions per match (editable while Published, deadline = first kickoff); prediction **mirror**
+  after lock; **scoring** by column/exact score with **multipliers** by competition/phase/classic.
+- **Absences** (progressive penalties, elimination on the 5th) + **Flávio Rule** (England: round 16+,
+  live leader; World Cup: quarter-finals+, leader captured at publication).
+- **Overall standings** (idempotent recompute); **temporary standings** while in play.
+- **Two tournament types** per season (England / FIFA World Cup), fixed after creation; World Cup uses
+  seeded national-team world champions for the knockout "classic" multiplier.
+- Admin: manual predictions, **OCR import** (Tesseract, review-before-confirm), external **fixture
+  import** (OneFootball default; the four England competitions + FIFA World Cup), **results refresh**
+  (OneFootball provider) + periodic background refresh.
 
-## 4. Pending / not done
+**Multi-tenant / auth**
+- Groups (tenants) with per-group `GroupAdmin`/`Participant` roles; public **create-group** and
+  **register-into-a-group** (per-group approval); group switcher; `X-Group-Id` header validated
+  server-side on every call (`CurrentGroupService`).
+- **Refresh tokens** (rotate on `/auth/refresh`, revoke on `/auth/logout`, stored hashed); frontend
+  interceptor refreshes-and-retries once on 401.
+- **Awaiting-approval screen** (`/pending`): after login with no active group, shows pending/rejected/
+  **deactivated** memberships, with re-check and logout.
+- **Per-group deactivation** is now a real access gate: a deactivated member (`GroupUser.IsActive=false`)
+  is blocked from that group (403 `group.membershipInactive`); SuperAdmin bypasses; `User.IsActive`
+  remains the global account login gate.
 
-- **Run migrations** on any fresh/managed database (`dotnet ef database update`); **rotate** the 3
-  exposed secrets; wire the deploy workflows' GitHub Secrets/Variables before relying on CI deploys.
-- Real OneFootball results provider validation + enable `ResultsProvider:Enabled` (off by default).
-- Email/push notifications (round open/close, approve/reject), refresh token / session renewal.
-- Integration tests for the group gates; ESLint on the frontend.
-- PWA PNG icons (192/512); SuperAdmin platform-admin UI; World Cup x4/x6 multiplier badges.
-- Pagination/indexes for AuditLog & Standings in long seasons.
+**Usability / polish (this session)**
+- HTTP error messages localized (PT/EN) via `errors.*` keys; per-page **error states** with retry on
+  the 5 participant fetch screens (predictions, results, rounds, standings, temporary-standings);
+  shared `error-state` component.
+- aria-labels on icon-only buttons; confirmations before Lock/Finalize/Reopen; multiplier justification
+  visibly required; tournament type locked on edit (UI + backend).
+- Shared `round-results-editor` (used inline in round-detail; dedicated admin `/results` route removed).
 
-## 5. Important technical decisions
+## 4. Pending / not implemented (roadmap)
 
-- **Certame type and prediction settings live on `Season`** (the certame instance), resolved per round
-  via `Round.Season`; exposed on `RoundDto`/`RoundSummaryDto` so the participant/admin UI gates
-  competitions, phases, World Cup notices and submit/view permissions without extra calls. (They used to
-  live on `Group`; both were moved to `Season` so one group can host seasons of different types.)
-- **Mirror is the single source** for "others' predictions" (no separate endpoint); released only
-  after `Locked`/`Scored` for everyone.
-- **`GroupId` only on tenant roots** (Season/Round/Standing/RoundParticipantResult/AuditLog/GroupUser);
-  per-round entities derive the group from the parent.
-- **Migrations apply at startup** via `db.Database.Migrate()` **but the call swallows errors** (logs +
-  continues), which can mask schema drift. Mitigated by: deploys run `dotnet ef database update`
-  explicitly (fail the deploy on error) + `/health/db` reports pending migrations (guarded so
-  `EnsureCreated` dev/test DBs stay healthy).
-- **EF gotcha:** an empty `UpdateData(columns: [], values: [])` renders as `UPDATE … SET WHERE …`,
-  valid on SQLite but a syntax error on PostgreSQL — never scaffold/keep one.
-- Secrets only via env / user-secrets / GitHub Secrets; `appsettings*.json` hold placeholders.
-- Releases are automatic (semantic-release, Conventional Commits); footer version comes from the tag.
+- **Autosave / draft + per-field validation** on the participant predictions form.
+- **Batch import** of predictions across participants (grid or CSV) — deferred by request.
+- **Per-page error states on admin screens** (only participant screens covered so far).
+- OCR: file-size guard + progress; surface candidate confidence.
+- Public create-group requires a **new** email (existing user creating another group not supported).
+- `AdminSentryController` (diagnostics) still uses the global role.
+- Real secrets must be configured via env/user-secrets/GitHub Secrets; rotate the 3 once-public secrets.
+
+## 5. Key technical decisions
+
+- **Certame type lives on `Season`** (`TournamentType`), not the group; immutable after creation
+  (UI disables it on edit and the backend ignores changes on update).
+- **Tenant isolation:** `GroupId` only on tenant roots (Season/Round/Standing/RoundParticipantResult/
+  AuditLog/GroupUser); per-round entities derive the group from their parent. `Team` is a **global**
+  catalogue (clubs + national teams). `CurrentGroupService` is the single access chokepoint.
+- **Per-group `IsActive`/`IsEliminated`** on `GroupUser` (roster/scoring use these); `User.IsActive` is
+  the account-level login gate only.
+- **Scoring is idempotent:** re-scoring a round clears its `PredictionScores`/`RoundParticipantResults`
+  and recomputes standings; reopening just flips status (no data wiped).
+- **Active season:** one per group; frontend resolves it via `GET /api/seasons/active` (not `rounds[0]`).
+- **i18n:** runtime switching (ngx-translate); backend localizes via `Accept-Language` + `DomainMessages`.
+  `en-US.json`/`pt-BR.json` kept at **key parity** (503 keys each).
+- Dates/times stored in **UTC**, displayed in pt-BR locale.
 
 ## 6. Main business rules
 
-- **Scoring base:** miss=0, column only=1, exact Traditional=3 / Medium=5 / Uncommon=7 / Extra=10;
-  `final = base × multiplier` (miss stays 0). World Cup adds phase multipliers + champion classics.
-- **Absences:** 1st–2nd = 0; 3rd–4th = −20; 5th = elimination (admin can reactivate).
-- **Flávio Rule:** England from round 16 / World Cup from the quarter-finals; leader gets a special
-  deadline (24h, or 12h if published <24h before kickoff); late ⇒ half points (rounded down).
-- **Prediction visibility:** when the season flag = true the mirror is **live** — participants (and
-  admins) see others' predictions from `Published` (open round) through `Locked`/`Scored`. When false,
-  only admins see it and only after `Locked`/`Scored`; `Draft`/`Cancelled` never expose a mirror.
-  **Submission:** participants submit iff the season flag
-  = true; else admin-only (403; backend never writes `Participant` in admin-only mode).
-- **Certame type:** a match's competition/phase must belong to its season's `TournamentType`
-  (`tournament.competitionNotAllowed` / `tournament.phaseNotAllowed` otherwise), enforced on both manual
-  add/edit and fixture import.
+- **Base points:** column-only 1; exact score Traditional 3 / Medium 5 / Uncommon 7 / Extra-uncommon 10;
+  wrong = 0. `final = base × multiplier`.
+- **Multipliers (England):** PL Big-Seven derby ×2; FA Cup semi ×2 / final ×3 (Big-Seven derby ×2);
+  Championship playoffs ×2; League One every match ×2 (max 1 per round). Manual override needs justification.
+- **Multipliers (World Cup):** group ×1; round of 32/16 ×2; QF/SF/3rd/final ×3; doubled for a knockout
+  **classic** (both teams former world champions). Phase prevails, no stacking.
+- **Absences:** 1st–2nd none; 3rd–4th −20 total; 5th → eliminated (manual reactivate only). Per-group.
+- **Flávio Rule:** leader gets a 24h (or 12h) special deadline; missing it = lose half the round; no
+  prediction = treated as absence; ties apply to all leaders.
+- **Login/access:** account requires `Status=Approved` + `User.IsActive`; group access additionally
+  requires an `Approved` + active `GroupUser`.
 
 ## 7. Commands
 
+**Database (Postgres via Docker):**
 ```bash
-# DB (Docker)
-cp .env.example .env && docker compose up -d            # PostgreSQL on localhost:5432
-
-# Backend
-cd backend
-dotnet ef database update --project src/Palpitao.Api     # apply migrations
-dotnet run   --project src/Palpitao.Api                  # https://localhost:7099 (Health: /api/health, /api/health/db)
-dotnet build Palpitao.slnx -c Release
-dotnet test  Palpitao.slnx -c Release                    # 333 tests
-
-# Frontend
-cd frontend
-npm install
-npm start                                                # http://localhost:4200
-npm run build
-npm run format:check
-npm test -- --watch=false                                # Vitest (34)
-npm run e2e                                              # Playwright (30)
-
-# Release (automatic): merge Conventional Commits to main → semantic-release tags + deploys.
+cp .env.example .env
+docker compose up -d
 ```
+**Backend** (`backend/`):
+```bash
+dotnet ef database update --project src/Palpitao.Api   # apply migrations + seed
+dotnet run   --project src/Palpitao.Api                 # https://localhost:7099, http://localhost:5146
+dotnet build Palpitao.slnx
+dotnet test  tests/Palpitao.Api.Tests/Palpitao.Api.Tests.csproj
+```
+**Frontend** (`frontend/`):
+```bash
+npm install
+npm start                  # ng serve → http://localhost:4200
+npm run build              # ng build (prod)
+npm run lint               # ng lint
+npm test -- --watch=false  # Vitest (run once)
+npm run e2e                # Playwright (starts ng serve, mocks the API)
+npm run format:check       # Prettier
+```
+**i18n parity check:**
+```bash
+node -e "const f=o=>Object.entries(o).flatMap(([k,v])=>v&&typeof v==='object'?f(v).map(s=>k+'.'+s):[k]);const en=require('./frontend/public/i18n/en-US.json'),pt=require('./frontend/public/i18n/pt-BR.json');const a=new Set(f(en)),b=new Set(f(pt));console.log('onlyEn',[...a].filter(k=>!b.has(k)),'onlyPt',[...b].filter(k=>!a.has(k)));"
+```
+
+Seed dev admin: `admin@palpitao.local` / `Admin@123`.
 
 ## 8. Recommended next steps
 
-1. **Provision a real DB:** point `appsettings`/env at it, run `dotnet ef database update`, and confirm
-   `/api/health/db` is `ok` (covers the `MoveTournamentTypeToSeason` migration + backfill).
-2. **Rotate** the 3 secrets (api-sports key, Postgres password, Sentry DSN); wire the deploy workflows'
-   GitHub Secrets/Variables before relying on CI deploys.
-3. Validate the real OneFootball results provider and enable `ResultsProvider:Enabled`; then
-   notifications (approve/reject, round open/close) / refresh token.
+1. **Commit** this session's work on a branch and open a PR (working tree is currently dirty on `main`).
+2. Manual end-to-end pass of the new flows (needs DB + API + ng serve up): guided lifecycle incl.
+   **reopen**; **/pending** awaiting-approval (deactivated badge); per-group deactivation 403 + reactivate.
+3. Pick the next roadmap item: **autosave on predictions** (highest day-to-day value) or
+   **admin error states** (consistency with participant screens).
+4. Optional: redirect to `/pending` on a `group.membershipInactive` 403 (mid-session deactivation).
+
+## 9. Files changed this session (highlights)
+
+**Backend:** `Services/Rounds/RoundService.cs` (+`IRoundService`, `RoundsController` — reopen);
+`Services/Groups/{CurrentGroupService,GroupService,IGroupService}.cs` + `DTOs/Groups/GroupDtos.cs`
+(per-group access gate, pending memberships, `MyGroupDto.IsActive`); `Controllers/AuthController.cs`
+(`my-groups/pending`); `Services/Seasons/SeasonService.cs` (immutable tournament type);
+`Common/DomainMessages.cs` (`round.onlyScoredReopened`, `group.membershipInactive`); tests in
+`tests/Palpitao.Api.Tests/{Rounds,Groups,Admin}`.
+**Frontend:** new `shared/components/{error-state,round-results-editor}`, `features/admin/round-stepper.ts`,
+`features/groups/awaiting-approval.ts`; rewritten `features/admin/admin-round-detail.ts` (stepper + inline
+results); deleted `features/admin/admin-results.ts`; `core/{interceptors/error.interceptor,notifications/
+http-error,services/{groups,rounds,group-context},models/models}.ts`; auth (`login/register/create-group`);
+5 participant screens (error states); `app.routes.ts`; `layout/shell.html`; i18n JSONs.

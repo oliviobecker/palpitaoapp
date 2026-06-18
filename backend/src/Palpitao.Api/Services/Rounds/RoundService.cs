@@ -278,6 +278,26 @@ public class RoundService : IRoundService
         return await GetByIdAsync(round.Id, ct);
     }
 
+    public async Task<RoundDto> ReopenAsync(Guid roundId, Guid actingUserId, CancellationToken ct)
+    {
+        var round = await LoadRoundWithMatches(roundId, ct);
+
+        if (round.Status != RoundStatus.Scored)
+        {
+            throw new BusinessRuleException("round.onlyScoredReopened");
+        }
+
+        // Reopening only steps the round back to Locked; the existing scores and
+        // standings stay untouched until the admin re-scores (idempotent re-score
+        // clears this round's results and recomputes the standings).
+        round.Status = RoundStatus.Locked;
+
+        _audit.Add(actingUserId, "RoundReopened", nameof(Round), round.Id.ToString(), null);
+        await _db.SaveChangesAsync(ct);
+
+        return await GetByIdAsync(round.Id, ct);
+    }
+
     // -----------------------------------------------------------------------
     // Matches
     // -----------------------------------------------------------------------

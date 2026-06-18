@@ -42,12 +42,15 @@ public class GroupService : IGroupService
                     Slug = g.Slug,
                     Role = GroupRole.GroupAdmin,
                     Status = GroupUserStatus.Approved,
+                    IsActive = true,
                 })
                 .ToListAsync(ct);
         }
 
+        // Only approved AND active memberships grant access; deactivated ones are
+        // hidden here (and surface on the awaiting-approval screen instead).
         return await _db.GroupUsers
-            .Where(gu => gu.UserId == userId && gu.Status == GroupUserStatus.Approved)
+            .Where(gu => gu.UserId == userId && gu.Status == GroupUserStatus.Approved && gu.IsActive)
             .OrderBy(gu => gu.Group!.Name)
             .Select(gu => new MyGroupDto
             {
@@ -56,7 +59,26 @@ public class GroupService : IGroupService
                 Slug = gu.Group!.Slug,
                 Role = gu.Role,
                 Status = gu.Status,
+                IsActive = gu.IsActive,
             })
             .ToListAsync(ct);
     }
+
+    public async Task<IReadOnlyList<MyGroupDto>> PendingMembershipsAsync(Guid userId, CancellationToken ct)
+        // Anything that blocks access: not approved (pending/rejected) OR approved but
+        // deactivated by the group admin.
+        => await _db.GroupUsers
+            .Where(gu => gu.UserId == userId
+                && (gu.Status != GroupUserStatus.Approved || !gu.IsActive))
+            .OrderBy(gu => gu.Group!.Name)
+            .Select(gu => new MyGroupDto
+            {
+                GroupId = gu.GroupId,
+                GroupName = gu.Group!.Name,
+                Slug = gu.Group!.Slug,
+                Role = gu.Role,
+                Status = gu.Status,
+                IsActive = gu.IsActive,
+            })
+            .ToListAsync(ct);
 }

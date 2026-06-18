@@ -106,10 +106,9 @@ public class SeasonService : ISeasonService
         season.Name = request.Name;
         season.StartDate = request.StartDate;
         season.EndDate = request.EndDate;
-        if (Enum.IsDefined(request.TournamentType))
-        {
-            season.TournamentType = request.TournamentType;
-        }
+        // TournamentType is fixed after creation: a certame's teams, phases and scoring
+        // are derived from it, so changing it on an existing season (with rounds/predictions)
+        // would leave inconsistent data. Ignore any value sent on update.
         season.AllowParticipantsToViewOthersPredictions = request.AllowParticipantsToViewOthersPredictions;
         season.AllowParticipantsToSubmitPredictions = request.AllowParticipantsToSubmitPredictions;
 

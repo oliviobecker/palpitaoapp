@@ -20,6 +20,22 @@
     "logout": "Sair",
     "back": "Voltar"
   },
+  "errors": {
+    "network": "Não foi possível conectar ao servidor. Verifique se a API está no ar.",
+    "invalidCredentials": "E-mail ou senha inválidos.",
+    "unexpected": "Ocorreu um erro inesperado. Tente novamente.",
+    "loadFailed": "Não foi possível carregar esta página. Tente novamente."
+  },
+  "awaitingApproval": {
+    "title": "Aguardando aprovação",
+    "intro": "Sua conta está pronta, mas você ainda não tem acesso ativo a um grupo.",
+    "pendingBadge": "Pendente",
+    "rejectedBadge": "Rejeitado",
+    "deactivatedBadge": "Desativado",
+    "recheck": "Verificar de novo",
+    "stillPending": "Ainda aguardando aprovação.",
+    "noMemberships": "Você não tem solicitações de grupo. Cadastre-se em um grupo ou fale com o administrador."
+  },
   "common": {
     "save": "Salvar",
     "cancel": "Cancelar",
@@ -323,6 +339,7 @@
     "justification": "Justificativa",
     "manualHint": "Você ainda pode adicionar jogos manualmente na tela da rodada.",
     "noneFoundManual": "Nenhum jogo encontrado. Crie a rodada e adicione os jogos manualmente.",
+    "searchError": "Não foi possível buscar os jogos agora. Você pode adicionar as partidas manualmente.",
     "createManual": "Criar rodada e adicionar jogos manualmente",
     "importedToast": "{{imported}} jogo(s) importado(s), {{skipped}} ignorado(s).",
     "comp": {
@@ -341,6 +358,9 @@
     "save": "Salvar",
     "manage": "Gerenciar",
     "lifecycle": "Ciclo da rodada",
+    "needMatchesToPublish": "Adicione ao menos uma partida antes de publicar.",
+    "lockHint": "Travar encerra o envio de palpites. Depois, lance os resultados e calcule a pontuação.",
+    "resultsMissing": "Faltam {{count}} de {{total}} resultados.",
     "manageGames": "Gerir jogos",
     "registerPredictions": "Registrar palpites",
     "importImage": "Importar por imagem",
@@ -355,6 +375,12 @@
     "cancelRound": "Cancelar rodada",
     "games": "Jogos",
     "confirmCancel": "Tem certeza que deseja cancelar esta rodada?",
+    "confirmLock": "Travar encerra o envio de palpites e congela as partidas desta rodada. Continuar?",
+    "confirmFinalize": "Isto vai travar a rodada (se ainda não estiver) e calcular a pontuação final. Continuar?",
+    "confirmRecalculate": "Isto vai recalcular a pontuação da rodada com os resultados atuais. Continuar?",
+    "reopen": "Reabrir rodada",
+    "confirmReopen": "Isto reabre a rodada para Travada para você corrigir resultados. As pontuações ficam até você calcular de novo. Continuar?",
+    "reopened": "Rodada reaberta.",
     "published": "Rodada publicada!",
     "locked": "Rodada bloqueada!",
     "scored": "Pontuação calculada!",
@@ -409,13 +435,9 @@
   },
   "adminResults": {
     "title": "Resultados",
-    "round": "Rodada",
-    "lockFirst": "Bloqueie a rodada antes de cadastrar resultados e calcular.",
     "finished": "Finalizado",
     "saveResults": "Salvar resultados",
-    "calculate": "Calcular pontuação da rodada",
-    "saved": "Resultados salvos!",
-    "calculated": "Pontuação calculada!"
+    "saved": "Resultados salvos!"
   },
   "adminRegistrations": {
     "title": "Solicitações de cadastro",

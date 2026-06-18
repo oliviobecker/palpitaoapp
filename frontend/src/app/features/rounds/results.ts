@@ -23,13 +23,22 @@ import { RoundsService } from '../../core/services/rounds.service';
 import { PredictionsService } from '../../core/services/predictions.service';
 import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
+import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Loading } from '../../shared/components/loading/loading';
 import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-results',
-  imports: [TranslatePipe, RouterLink, CompetitionBadge, EmptyState, Loading, MultiplierBadge],
+  imports: [
+    TranslatePipe,
+    RouterLink,
+    CompetitionBadge,
+    EmptyState,
+    ErrorState,
+    Loading,
+    MultiplierBadge,
+  ],
   templateUrl: './results.html',
 })
 export class Results implements OnInit {
@@ -41,6 +50,7 @@ export class Results implements OnInit {
 
   protected readonly roundId = signal('');
   protected readonly loading = signal(true);
+  protected readonly error = signal(false);
   protected readonly results = signal<RoundResults | null>(null);
   protected readonly mine = signal<MyPredictions | null>(null);
 
@@ -52,11 +62,16 @@ export class Results implements OnInit {
   protected readonly matches = computed<RoundResultMatch[]>(() => this.results()?.matches ?? []);
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id') ?? '';
-    this.roundId.set(id);
+    this.roundId.set(this.route.snapshot.paramMap.get('id') ?? '');
+    this.load();
+  }
+
+  load(): void {
+    this.loading.set(true);
+    this.error.set(false);
     forkJoin({
-      results: this.roundsApi.getResults(id),
-      mine: this.predictionsApi.getMine(id),
+      results: this.roundsApi.getResults(this.roundId()),
+      mine: this.predictionsApi.getMine(this.roundId()),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -65,7 +80,10 @@ export class Results implements OnInit {
           this.mine.set(mine);
           this.loading.set(false);
         },
-        error: () => this.loading.set(false),
+        error: () => {
+          this.error.set(true);
+          this.loading.set(false);
+        },
       });
   }
 

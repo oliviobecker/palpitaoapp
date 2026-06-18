@@ -15,12 +15,13 @@ import { AuthService } from '../../core/auth/auth.service';
 import { TemporaryStandings } from '../../core/models/models';
 import { RoundsService } from '../../core/services/rounds.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
+import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Loading } from '../../shared/components/loading/loading';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-temporary-standings',
-  imports: [RouterLink, TranslatePipe, DatePipe, EmptyState, Loading],
+  imports: [RouterLink, TranslatePipe, DatePipe, EmptyState, ErrorState, Loading],
   template: `
     <div class="mb-3">
       <div class="page-trail">
@@ -32,6 +33,8 @@ import { Loading } from '../../shared/components/loading/loading';
 
     @if (loading()) {
       <app-loading />
+    } @else if (error()) {
+      <app-error-state (retry)="load()" />
     } @else if (data(); as d) {
       <div class="alert alert-warning py-2">⏱️ {{ 'temporaryStandings.notice' | translate }}</div>
 
@@ -92,20 +95,31 @@ export class TemporaryStandingsView implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
+  protected readonly error = signal(false);
   protected readonly data = signal<TemporaryStandings | null>(null);
   private readonly myId = computed(() => this.auth.currentUser()?.id ?? null);
+  private roundId = '';
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id') ?? '';
+    this.roundId = this.route.snapshot.paramMap.get('id') ?? '';
+    this.load();
+  }
+
+  load(): void {
+    this.loading.set(true);
+    this.error.set(false);
     this.roundsApi
-      .getTemporaryStandings(id)
+      .getTemporaryStandings(this.roundId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (d) => {
           this.data.set(d);
           this.loading.set(false);
         },
-        error: () => this.loading.set(false),
+        error: () => {
+          this.error.set(true);
+          this.loading.set(false);
+        },
       });
   }
 

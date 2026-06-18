@@ -19,6 +19,9 @@ public class MyGroupDto
     public string Slug { get; set; } = string.Empty;
     public GroupRole Role { get; set; }
     public GroupUserStatus Status { get; set; }
+
+    /// <summary>Per-group active flag; false = deactivated by the group admin (blocked).</summary>
+    public bool IsActive { get; set; }
 }
 
 /// <summary>Public create-group request: creates the group and its admin account.</summary>

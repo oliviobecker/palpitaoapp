@@ -130,6 +130,10 @@ import { ordinalRoundName } from '../../shared/utils/round-name.util';
       <div class="alert alert-info py-2">{{ 'fixtures.noneFoundManual' | translate }}</div>
     }
 
+    @if (searchError()) {
+      <div class="alert alert-warning py-2">{{ 'fixtures.searchError' | translate }}</div>
+    }
+
     <button
       type="button"
       class="btn btn-primary btn-lg w-100"
@@ -163,6 +167,8 @@ export class AdminRoundForm implements OnInit {
   protected readonly saving = signal(false);
   protected readonly searching = signal(false);
   protected readonly searched = signal(false);
+  /** True when the last fixture search failed (source down) — show the manual fallback hint. */
+  protected readonly searchError = signal(false);
   protected readonly source = signal('');
   protected readonly fixtures = signal<FixtureCandidate[]>([]);
   protected readonly selection = signal<FixtureSelectionState>({
@@ -239,6 +245,7 @@ export class AdminRoundForm implements OnInit {
     if (!this.canSearch()) return;
     const { startDate, endDate } = this.form.getRawValue();
     this.searching.set(true);
+    this.searchError.set(false);
     this.adminApi
       .searchFixtures(
         { startDate: `${startDate}T00:00:00`, endDate: `${endDate}T23:59:59` },
@@ -254,7 +261,10 @@ export class AdminRoundForm implements OnInit {
           }
           this.searching.set(false);
         },
-        error: () => this.searching.set(false),
+        error: () => {
+          this.searchError.set(true);
+          this.searching.set(false);
+        },
       });
   }
 
@@ -274,6 +284,7 @@ export class AdminRoundForm implements OnInit {
     if (!this.canSearch()) return;
     const { startDate, endDate } = this.form.getRawValue();
     this.searching.set(true);
+    this.searchError.set(false);
     this.adminApi
       .searchFixtures({ startDate: `${startDate}T00:00:00`, endDate: `${endDate}T23:59:59` })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -284,7 +295,10 @@ export class AdminRoundForm implements OnInit {
           this.searched.set(true);
           this.searching.set(false);
         },
-        error: () => this.searching.set(false),
+        error: () => {
+          this.searchError.set(true);
+          this.searching.set(false);
+        },
       });
   }
 

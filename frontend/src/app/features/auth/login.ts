@@ -5,7 +5,6 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
-import { GroupRole } from '../../core/models/enums';
 import { MyGroup } from '../../core/models/models';
 import { httpErrorMessage } from '../../core/notifications/http-error';
 import { GroupContextService } from '../../core/services/group-context.service';
@@ -51,7 +50,7 @@ export class Login {
         next: () => this.routeByGroups(),
         error: (err: HttpErrorResponse) => {
           this.submitting.set(false);
-          this.error.set(httpErrorMessage(err));
+          this.error.set(httpErrorMessage(err, this.translate));
         },
       });
   }
@@ -66,8 +65,9 @@ export class Login {
         next: (groups) => {
           this.submitting.set(false);
           if (groups.length === 0) {
-            this.auth.logout();
-            this.error.set(this.translate.instant('group.noApprovedAccess'));
+            // Account is valid but has no approved group yet — show the pending screen
+            // (session kept so it can read the pending memberships).
+            this.router.navigate(['/pending']);
             return;
           }
           if (groups.length === 1) {
@@ -78,13 +78,13 @@ export class Login {
         },
         error: (err: HttpErrorResponse) => {
           this.submitting.set(false);
-          this.error.set(httpErrorMessage(err));
+          this.error.set(httpErrorMessage(err, this.translate));
         },
       });
   }
 
   private enterGroup(group: MyGroup): void {
     this.groupContext.select(group);
-    this.router.navigate([group.role === GroupRole.GroupAdmin ? '/admin' : '/dashboard']);
+    this.router.navigate([this.groupContext.homePath(group.role)]);
   }
 }

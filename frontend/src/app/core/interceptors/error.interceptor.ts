@@ -1,6 +1,7 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { TranslateService } from '@ngx-translate/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { httpErrorMessage } from '../notifications/http-error';
@@ -17,6 +18,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const toast = inject(ToastService);
   const auth = inject(AuthService);
   const router = inject(Router);
+  const translate = inject(TranslateService);
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
@@ -44,7 +46,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       if (!req.context.get(SKIP_ERROR_TOAST)) {
-        toast.error(httpErrorMessage(error));
+        toast.error(httpErrorMessage(error, translate));
       }
       return throwError(() => error);
     }),

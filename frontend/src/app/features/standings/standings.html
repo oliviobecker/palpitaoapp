@@ -4,6 +4,8 @@
 
 @if (loading()) {
   <app-loading />
+} @else if (error()) {
+  <app-error-state (retry)="load()" />
 } @else if (standings().length === 0) {
   <app-empty-state [message]="'standings.empty' | translate" />
 } @else {
