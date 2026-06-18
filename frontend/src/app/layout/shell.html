@@ -33,6 +33,16 @@
     </ul>
 
     <div class="app-navbar__right">
+      <button
+        type="button"
+        class="app-theme"
+        (click)="theme.toggle()"
+        [title]="'theme.toggle' | translate"
+        [attr.aria-label]="'theme.toggle' | translate"
+      >
+        <app-icon [name]="theme.current() === 'dark' ? 'sun' : 'moon'" [size]="16" />
+      </button>
+
       <div class="app-lang" role="group" aria-label="Language">
         <button
           type="button"
@@ -70,7 +80,7 @@
           [attr.aria-label]="'group.switch' | translate"
         >
           <span class="text-truncate" style="max-width: 14ch">{{ groupName }}</span>
-          <span aria-hidden="true">⇄</span>
+          <app-icon name="arrow-left-right" [size]="14" />
         </button>
       }
 
@@ -80,7 +90,7 @@
       </div>
 
       <button class="app-logout" (click)="logout()" [attr.aria-label]="'nav.logout' | translate">
-        <span aria-hidden="true">⎋</span>
+        <app-icon name="log-out" [size]="16" />
         <span class="d-none d-md-inline">{{ 'nav.logout' | translate }}</span>
       </button>
     </div>
@@ -100,7 +110,7 @@
 <main class="container py-4 page-content">
   @if (showBack()) {
     <button type="button" class="btn-back mb-3" (click)="back()">
-      <span aria-hidden="true">←</span> {{ 'nav.back' | translate }}
+      <app-icon name="arrow-left" [size]="16" /> {{ 'nav.back' | translate }}
     </button>
   }
   <router-outlet />
@@ -118,20 +128,20 @@
 <!-- Mobile bottom nav -->
 <nav class="app-bottomnav d-md-none">
   <a class="app-bottomnav__link" routerLink="/dashboard" routerLinkActive="is-active">
-    <span class="app-bottomnav__icon">🏠</span>
+    <span class="app-bottomnav__icon"><app-icon name="house" [size]="22" /></span>
     {{ 'nav.home' | translate }}
   </a>
   <a class="app-bottomnav__link" routerLink="/rounds" routerLinkActive="is-active">
-    <span class="app-bottomnav__icon">📋</span>
+    <span class="app-bottomnav__icon"><app-icon name="list" [size]="22" /></span>
     {{ 'nav.rounds' | translate }}
   </a>
   <a class="app-bottomnav__link" routerLink="/standings" routerLinkActive="is-active">
-    <span class="app-bottomnav__icon">🏆</span>
+    <span class="app-bottomnav__icon"><app-icon name="trophy" [size]="22" /></span>
     {{ 'nav.standings' | translate }}
   </a>
   @if (group.isGroupAdmin()) {
     <a class="app-bottomnav__link" routerLink="/admin" routerLinkActive="is-active">
-      <span class="app-bottomnav__icon">⚙️</span>
+      <span class="app-bottomnav__icon"><app-icon name="settings" [size]="22" /></span>
       {{ 'nav.admin' | translate }}
     </a>
   }

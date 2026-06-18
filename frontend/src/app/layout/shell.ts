@@ -6,8 +6,10 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { filter } from 'rxjs';
 import { AuthService } from '../core/auth/auth.service';
 import { Lang, LanguageService } from '../core/i18n/language.service';
+import { ThemeService } from '../core/theme/theme.service';
 import { LoadingService } from '../core/notifications/loading.service';
 import { GroupContextService } from '../core/services/group-context.service';
+import { Icon } from '../shared/components/icon/icon';
 import { APP_BUILD_TIME, APP_COMMIT, APP_VERSION } from '../../version';
 
 /** Top-level tabs reached from the nav — they don't get a back button. */
@@ -16,7 +18,7 @@ const ROOT_ROUTES = ['/dashboard', '/rounds', '/standings', '/admin'];
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, Icon],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
 })
@@ -25,6 +27,7 @@ export class Shell {
   protected readonly group = inject(GroupContextService);
   protected readonly loading = inject(LoadingService);
   protected readonly language = inject(LanguageService);
+  protected readonly theme = inject(ThemeService);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
 
