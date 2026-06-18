@@ -46,6 +46,26 @@
   --bs-success-rgb: 22, 163, 74;
 }
 
+// --- Dark theme ------------------------------------------------------------
+// Bootstrap 5.3 flips its own variables under [data-bs-theme='dark']; here we
+// remap our custom tokens so cards, text, borders and shadows follow too. The
+// --bs-* tokens defined in :root reference these, so they recompute for free.
+// (The initial attribute is set by the inline script in index.html; the
+// ThemeService keeps it in sync afterwards.)
+:root[data-bs-theme='dark'] {
+  --app-bg: #0e1422;
+  --surface: #161f30;
+  --surface-2: #1d2840;
+  --ink: #e6eaf2;
+  --ink-soft: #aeb9cb;
+  --muted: #8290a8;
+  --border: #28344a;
+  --border-strong: #3a4a66;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
 html,
 body {
   overflow-x: hidden;
@@ -271,23 +291,31 @@ h6 {
   font-size: 1.15rem;
   flex: none;
 }
+// The accent colour doubles as the icon colour: app-icon uses currentColor, so
+// any <app-icon> placed inside a tile picks up the matching tint automatically.
 .icon-tile--blue {
   background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
 }
 .icon-tile--green {
   background: rgba(22, 163, 74, 0.14);
+  color: var(--brand);
 }
 .icon-tile--amber {
   background: rgba(245, 158, 11, 0.16);
+  color: #d97706;
 }
 .icon-tile--red {
   background: rgba(239, 68, 68, 0.13);
+  color: #dc2626;
 }
 .icon-tile--teal {
   background: rgba(13, 148, 136, 0.14);
+  color: #0d9488;
 }
 .icon-tile--violet {
   background: rgba(124, 58, 237, 0.13);
+  color: #7c3aed;
 }
 
 // Stat card: icon tile + big number + label (admin dashboard).
@@ -478,6 +506,25 @@ h6 {
   color: var(--ink-soft);
 }
 
+// Navbar theme-toggle chip (kept global to keep shell.scss within its style budget).
+.app-theme {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: transparent;
+  color: var(--navbar-ink);
+  border-radius: 999px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.app-theme:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 // --- Auth screens (login / register) --------------------------------------
 .auth-wrapper {
   min-height: 100vh;
@@ -512,4 +559,53 @@ h6 {
   font-size: 1.6rem;
   background: linear-gradient(150deg, var(--brand) 0%, var(--brand-700) 100%);
   box-shadow: 0 10px 24px rgba(22, 163, 74, 0.4);
+}
+
+// --- Loading skeletons -----------------------------------------------------
+// Shimmering placeholder blocks (see app-skeleton / app-skeleton-list). They
+// mirror the shape of the content that is loading instead of a bare spinner.
+.skeleton {
+  display: block;
+  background: linear-gradient(
+    100deg,
+    var(--surface-2) 30%,
+    color-mix(in srgb, var(--surface-2) 55%, var(--border-strong)) 50%,
+    var(--surface-2) 70%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.3s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+// --- Entrance animation ----------------------------------------------------
+// Subtle fade/rise applied to content when it first renders after loading.
+.fade-in-up {
+  animation: fade-in-up 0.25s ease-out both;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// Honour reduced-motion: drop the shimmer and the entrance movement.
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .fade-in-up {
+    animation: none;
+  }
 }

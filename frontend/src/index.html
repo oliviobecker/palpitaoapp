@@ -8,6 +8,22 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0d6efd" />
+    <script>
+      // Apply the saved (or OS) theme before first paint to avoid a flash of the
+      // light theme. ThemeService takes over once Angular boots. Keep in sync with
+      // THEME_STORAGE_KEY in core/theme/theme.service.ts.
+      (function () {
+        try {
+          var t = localStorage.getItem('palpitao.theme');
+          if (t !== 'light' && t !== 'dark') {
+            t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          document.documentElement.setAttribute('data-bs-theme', t);
+        } catch (e) {
+          /* localStorage/matchMedia unavailable — default light. */
+        }
+      })();
+    </script>
     <!-- PWA manifest. Product name is FanPicks (en); in-app branding still switches
          per language (Palpitão in pt-BR) via the app.name translation. -->
     <link rel="manifest" href="manifest.webmanifest" />
