@@ -1,19 +1,19 @@
 # DEVELOPMENT_CHECKPOINT
 
-_Last updated: 2026-06-18 (UI modernization pack: shared page-header, skeleton loaders, dark mode, Lucide icons, predictions local draft)._
+_Last updated: 2026-06-18 (UI modernization pack — committed on `feat/ui-modernization-pack`, [PR #9](https://github.com/oliviobecker/palpitaoapp/pull/9): shared page-header, skeleton loaders, dark mode, full Lucide icon migration, predictions local draft)._
 
 ## 0. Status at a glance
 
 | Check | Result |
 |---|---|
-| Backend build (`dotnet build`) | ✅ 0 warnings / 0 errors |
+| Backend build (`dotnet build`) | ✅ 0 errors (1 pre-existing xUnit2012 analyzer warning) |
 | Backend tests (`dotnet test`) | ✅ **362** passed, 0 failed |
 | Frontend build (`ng build` prod) | ✅ success |
 | Frontend lint (`ng lint`) | ✅ 0 errors (24 pre-existing `label-has-associated-control` warnings) |
 | Frontend unit tests (Vitest) | ✅ **34** passed (10 files) |
 | Frontend prod budgets | ✅ within budget (no warnings) |
 | i18n parity | ✅ 508 = 508 (`en-US` / `pt-BR`) |
-| Working tree | Uncommitted changes on `main` (this session). Not yet committed. |
+| Working tree | Clean. Work committed in 6 logical commits on `feat/ui-modernization-pack`; [PR #9](https://github.com/oliviobecker/palpitaoapp/pull/9) open. `main` untouched. |
 
 > The UI modernization pack is frontend-only; the backend is untouched (still **362** tests green).
 
@@ -165,12 +165,14 @@ Seed dev admin: `admin@palpitao.local` / `Admin@123`.
 
 ## 8. Recommended next steps
 
-1. **Commit** this session's work on a branch and open a PR (working tree is currently dirty on `main`).
+1. **Review & merge [PR #9](https://github.com/oliviobecker/palpitaoapp/pull/9)** (UI modernization pack).
 2. Manual end-to-end pass (needs DB + API + ng serve up): toggle **dark/light** across screens; confirm
    **skeletons** on load and **error states** (incl. admin) with retry; verify the **predictions draft**
    restores on return and clears on save.
-3. Finish the **Phase 4 remainder** (admin-form/auth emoji → Lucide) for a fully emoji-free UI.
-4. Optional: redirect to `/pending` on a `group.membershipInactive` 403 (mid-session deactivation).
+3. Pick the next roadmap item (§4): **server-side autosave** of predictions (highest value) or the
+   smaller polish items.
+4. Optional: redirect to `/pending` on a `group.membershipInactive` 403 (mid-session deactivation);
+   add a `.gitattributes` (`* text=auto eol=lf`) to silence the Windows LF→CRLF warnings.
 
 ## 9. Files changed this session (highlights)
 

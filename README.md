@@ -81,6 +81,19 @@ both clubs and national teams (`TeamType`).
 > **Why Bootstrap** (instead of Material/Tailwind): mobile-first by default, already integrated,
 > ready-made components (navbar, cards, toasts, modals) and a lean bundle for a simple UI.
 
+**UX conventions:**
+
+- **Light/dark theme** — `ThemeService` applies Bootstrap's `data-bs-theme` (follows the OS until the
+  user toggles it in the navbar); custom CSS-variable tokens flip alongside. An inline script in
+  `index.html` sets the theme before first paint to avoid a flash.
+- **Icons** — a single `<app-icon name="…">` wrapper over Lucide (icons registered in `app.config.ts`).
+  Emoji are reserved for the brand logo and WhatsApp message content.
+- **Loading/empty/error** — shared `app-skeleton`/`app-skeleton-list`, `app-empty-state` and
+  `app-error-state` (with retry); a shared `app-page-header` unifies screen headers. Animations honour
+  `prefers-reduced-motion`.
+- **Predictions draft** — in-progress scores persist to `localStorage` per round and restore on return
+  (cleared on save); a status bar shows remaining/all-filled and an unsaved indicator.
+
 ## 3. Folder structure
 
 ```
