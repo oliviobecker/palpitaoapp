@@ -36,8 +36,12 @@ export const appConfig: ApplicationConfig = {
       ]),
     ),
     provideTranslateService({
-      loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: `.json?v=${I18N_VERSION}` }),
-      fallbackLang: 'en-US',
+    loader: provideTranslateHttpLoader({
+      prefix: '/i18n/',
+      suffix: `.json?v=${I18N_VERSION}`,
+      useHttpBackend: true,
+    }),   
+   fallbackLang: 'en-US',
     }),
     { provide: LOCALE_ID, useValue: 'pt-BR' },
   ],
