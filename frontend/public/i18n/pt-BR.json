@@ -171,7 +171,11 @@
     "save": "Salvar palpites",
     "saved": "Salvo ✓",
     "savedToast": "Palpites salvos!",
-    "fillAll": "Preencha o placar de todos os jogos."
+    "fillAll": "Preencha o placar de todos os jogos.",
+    "draftRestored": "Rascunho não salvo restaurado.",
+    "remaining": "Faltam {{count}} jogo(s)",
+    "allFilled": "Todos os jogos preenchidos",
+    "unsaved": "Não salvo"
   },
   "mirror": {
     "title": "Espelho de palpites",
@@ -574,6 +578,9 @@
     "badge": "Super Admin",
     "hint": "Administrador da plataforma: você pode acessar todos os grupos.",
     "selectGroupHint": "Como administrador da plataforma, você pode entrar em qualquer grupo abaixo."
+  },
+  "theme": {
+    "toggle": "Alternar tema claro/escuro"
   },
   "tournamentType": {
     "label": "Tipo do certame",

@@ -171,7 +171,11 @@
     "save": "Save predictions",
     "saved": "Saved ✓",
     "savedToast": "Predictions saved!",
-    "fillAll": "Fill in the score for every match."
+    "fillAll": "Fill in the score for every match.",
+    "draftRestored": "Unsaved draft restored.",
+    "remaining": "{{count}} match(es) left",
+    "allFilled": "All matches filled in",
+    "unsaved": "Unsaved"
   },
   "mirror": {
     "title": "Predictions mirror",
@@ -574,6 +578,9 @@
     "badge": "Super Admin",
     "hint": "Platform administrator: you can access every group.",
     "selectGroupHint": "As a platform administrator you can enter any group below."
+  },
+  "theme": {
+    "toggle": "Toggle light/dark theme"
   },
   "tournamentType": {
     "label": "Tournament type",
