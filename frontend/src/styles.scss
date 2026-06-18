@@ -187,6 +187,15 @@ h6 {
   --bs-btn-hover-color: var(--ink);
 }
 
+// Copy-ready message preview (WhatsApp text). Uses theme tokens instead of
+// Bootstrap's `bg-light`, which kept a light background under the dark theme
+// and left the (light) text illegible.
+.copy-message {
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+
 // --- Forms -----------------------------------------------------------------
 .form-control,
 .form-select {

@@ -25,7 +25,7 @@ import { Icon } from '../../shared/components/icon/icon';
             </button>
           </div>
           <pre
-            class="small mb-0 p-2 bg-light rounded border"
+            class="small mb-0 p-2 copy-message rounded"
             style="white-space: pre-wrap; word-break: break-word"
             >{{ closingMessage() }}</pre
           >
@@ -43,7 +43,7 @@ import { Icon } from '../../shared/components/icon/icon';
             </button>
           </div>
           <pre
-            class="small mb-0 p-2 bg-light rounded border"
+            class="small mb-0 p-2 copy-message rounded"
             style="white-space: pre-wrap; word-break: break-word"
             >{{ groupMessage() }}</pre
           >

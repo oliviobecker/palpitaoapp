@@ -62,7 +62,7 @@ import { buildMatchScoutMessage } from '../../shared/utils/scout-message.util';
               </button>
             </div>
             <pre
-              class="small mb-0 p-2 bg-light rounded border"
+              class="small mb-0 p-2 copy-message rounded"
               style="white-space: pre-wrap; word-break: break-word"
               >{{ message() }}</pre
             >
