@@ -1,5 +1,13 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -9,6 +17,7 @@ import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { Loading } from '../../shared/components/loading/loading';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-audit',
   imports: [FormsModule, DatePipe, RouterLink, TranslatePipe, EmptyState, Loading],
   template: `
@@ -85,6 +94,7 @@ import { Loading } from '../../shared/components/loading/loading';
 })
 export class AdminAudit implements OnInit {
   private readonly api = inject(AdminService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly entities = ['Round', 'RoundMatch', 'Prediction', 'User', 'Season'];
   protected readonly loading = signal(true);
@@ -105,12 +115,15 @@ export class AdminAudit implements OnInit {
     if (this.from) filter.from = `${this.from}T00:00:00`;
     if (this.to) filter.to = `${this.to}T23:59:59`;
 
-    this.api.getAuditLogs(filter).subscribe({
-      next: (list) => {
-        this.logs.set(list);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    this.api
+      .getAuditLogs(filter)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (list) => {
+          this.logs.set(list);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 }

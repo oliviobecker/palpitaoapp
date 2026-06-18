@@ -123,9 +123,11 @@ namespace Palpitao.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("GroupId");
+                    b.HasIndex("EntityName");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("GroupId", "CreatedAt");
 
                     b.ToTable("AuditLogs");
                 });
@@ -484,6 +486,42 @@ namespace Palpitao.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("PredictionScores");
+                });
+
+            modelBuilder.Entity("Palpitao.Api.Entities.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReplacedByTokenId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("Palpitao.Api.Entities.Round", b =>
@@ -1912,6 +1950,17 @@ namespace Palpitao.Api.Migrations
                     b.Navigation("Round");
 
                     b.Navigation("RoundMatch");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Palpitao.Api.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("Palpitao.Api.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

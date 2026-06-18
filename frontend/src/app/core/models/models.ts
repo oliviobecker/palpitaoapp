@@ -48,6 +48,8 @@ export interface User {
 export interface LoginResponse {
   token: string;
   expiresAtUtc: string;
+  refreshToken: string;
+  refreshTokenExpiresAtUtc: string;
   user: User;
 }
 

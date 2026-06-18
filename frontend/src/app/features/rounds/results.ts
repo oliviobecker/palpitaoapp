@@ -1,4 +1,13 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
@@ -18,6 +27,7 @@ import { Loading } from '../../shared/components/loading/loading';
 import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-results',
   imports: [TranslatePipe, RouterLink, CompetitionBadge, EmptyState, Loading, MultiplierBadge],
   templateUrl: './results.html',
@@ -27,6 +37,7 @@ export class Results implements OnInit {
   private readonly roundsApi = inject(RoundsService);
   private readonly predictionsApi = inject(PredictionsService);
   private readonly auth = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly roundId = signal('');
   protected readonly loading = signal(true);
@@ -46,14 +57,16 @@ export class Results implements OnInit {
     forkJoin({
       results: this.roundsApi.getResults(id),
       mine: this.predictionsApi.getMine(id),
-    }).subscribe({
-      next: ({ results, mine }) => {
-        this.results.set(results);
-        this.mine.set(mine);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ results, mine }) => {
+          this.results.set(results);
+          this.mine.set(mine);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 
   prediction(matchId: string): string {

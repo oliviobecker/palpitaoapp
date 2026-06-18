@@ -1,13 +1,29 @@
-import { Component, OnDestroy, OnInit, computed, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  OnDestroy,
+  OnInit,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-countdown',
   imports: [],
   template: `
     @if (target()) {
-      <span class="badge" [class.text-bg-danger]="urgent()" [class.text-bg-secondary]="!urgent()">
-        ⏱ {{ label() }}
+      <span
+        class="badge"
+        role="timer"
+        [class.text-bg-danger]="urgent()"
+        [class.text-bg-secondary]="!urgent()"
+        [attr.aria-label]="ariaLabel()"
+      >
+        <span aria-hidden="true">⏱ {{ label() }}</span>
       </span>
     }
   `,
@@ -38,6 +54,11 @@ export class Countdown implements OnInit, OnDestroy {
     const ms = this.remainingMs();
     return ms > 0 && ms < 60 * 60 * 1000;
   });
+
+  /** Spoken label so screen readers announce what the badge represents. */
+  readonly ariaLabel = computed(
+    () => `${this.translate.instant('countdown.timeRemaining')}: ${this.label()}`,
+  );
 
   readonly label = computed(() => {
     const ms = this.remainingMs();

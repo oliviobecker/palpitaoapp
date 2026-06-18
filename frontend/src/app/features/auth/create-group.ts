@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormBuilder,
@@ -21,6 +22,7 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-create-group',
   imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
   template: `
@@ -182,6 +184,7 @@ export class CreateGroup {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   protected readonly language = inject(LanguageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -210,15 +213,18 @@ export class CreateGroup {
     }
 
     this.submitting.set(true);
-    this.auth.createGroup(this.form.getRawValue()).subscribe({
-      next: (response) => {
-        this.submitting.set(false);
-        this.success.set(response.message);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.submitting.set(false);
-        this.error.set(httpErrorMessage(err));
-      },
-    });
+    this.auth
+      .createGroup(this.form.getRawValue())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.submitting.set(false);
+          this.success.set(response.message);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.submitting.set(false);
+          this.error.set(httpErrorMessage(err));
+        },
+      });
   }
 }

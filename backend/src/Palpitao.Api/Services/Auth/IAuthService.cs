@@ -29,4 +29,13 @@ public interface IAuthService
 
     /// <summary>Authenticates a user, enforcing approval status and active flag.</summary>
     Task<LoginOutcome> LoginAsync(LoginRequest request, CancellationToken ct);
+
+    /// <summary>
+    /// Exchanges a valid refresh token for a fresh access token and a rotated refresh
+    /// token. Returns an invalid outcome (401) if the token is unknown/expired/revoked.
+    /// </summary>
+    Task<LoginOutcome> RefreshAsync(string refreshToken, CancellationToken ct);
+
+    /// <summary>Revokes the given refresh token (logout). No-op for an unknown token.</summary>
+    Task LogoutAsync(string refreshToken, CancellationToken ct);
 }

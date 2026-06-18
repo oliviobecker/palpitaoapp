@@ -1,4 +1,13 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { RoundStatus } from '../../core/models/enums';
@@ -18,6 +27,7 @@ const STATUS_ORDER: RoundStatus[] = [
 ];
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-rounds',
   imports: [RouterLink, TranslatePipe, EmptyState, Loading],
   template: `
@@ -135,6 +145,7 @@ const STATUS_ORDER: RoundStatus[] = [
 })
 export class AdminRounds implements OnInit {
   private readonly api = inject(RoundsService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
   protected readonly rounds = signal<RoundSummary[]>([]);
@@ -167,12 +178,15 @@ export class AdminRounds implements OnInit {
   }
 
   ngOnInit(): void {
-    this.api.getAll().subscribe({
-      next: (list) => {
-        this.rounds.set(list);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    this.api
+      .getAll()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (list) => {
+          this.rounds.set(list);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 }

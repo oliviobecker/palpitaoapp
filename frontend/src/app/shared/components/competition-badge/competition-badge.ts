@@ -1,7 +1,8 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, input } from '@angular/core';
 import { Competition } from '../../../core/models/enums';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-competition-badge',
   imports: [],
   template: `<span class="badge {{ cls() }}">{{ label() }}</span>`,

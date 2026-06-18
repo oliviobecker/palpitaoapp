@@ -51,6 +51,24 @@ body {
   overflow-x: hidden;
 }
 
+// --- Keyboard focus --------------------------------------------------------
+// A clear, consistent focus ring for keyboard users (mouse clicks don't trigger
+// :focus-visible, so this never shows on pointer interactions). Covers links,
+// buttons and any custom interactive element (e.g. clickable cards/tiles).
+:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+a:focus-visible,
+.btn:focus-visible,
+.action-card:focus-visible,
+.cta-hero:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 body {
   background-color: var(--app-bg);
   color: var(--ink);

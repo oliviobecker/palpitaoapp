@@ -1,5 +1,14 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -9,6 +18,7 @@ import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { Loading } from '../../shared/components/loading/loading';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-mirror',
   imports: [FormsModule, RouterLink, TranslatePipe, EmptyState, Loading],
   templateUrl: './mirror.html',
@@ -16,6 +26,7 @@ import { Loading } from '../../shared/components/loading/loading';
 export class Mirror implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly predictionsApi = inject(PredictionsService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
   protected readonly blocked = signal(false);
@@ -41,22 +52,25 @@ export class Mirror implements OnInit {
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
-    this.predictionsApi.getMirror(id).subscribe({
-      next: (m) => {
-        this.mirror.set(m);
-        this.loading.set(false);
-      },
-      error: (err: HttpErrorResponse) => {
-        // 403 = group disabled the feature for participants; otherwise it's the
-        // pre-lock "mirror not released yet" case.
-        if (err.status === 403) {
-          this.forbidden.set(true);
-        } else {
-          this.blocked.set(true);
-        }
-        this.loading.set(false);
-      },
-    });
+    this.predictionsApi
+      .getMirror(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (m) => {
+          this.mirror.set(m);
+          this.loading.set(false);
+        },
+        error: (err: HttpErrorResponse) => {
+          // 403 = group disabled the feature for participants; otherwise it's the
+          // pre-lock "mirror not released yet" case.
+          if (err.status === 403) {
+            this.forbidden.set(true);
+          } else {
+            this.blocked.set(true);
+          }
+          this.loading.set(false);
+        },
+      });
   }
 
   matchLabel(roundMatchId: string): string {

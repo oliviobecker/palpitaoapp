@@ -1,4 +1,12 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -10,6 +18,7 @@ import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { Loading } from '../../shared/components/loading/loading';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-seasons',
   imports: [ReactiveFormsModule, RouterLink, TranslatePipe, EmptyState, Loading],
   template: `
@@ -205,6 +214,7 @@ export class AdminSeasons implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly translate = inject(TranslateService);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** Exposed so the template can reference the enum members in the type selector. */
   protected readonly TournamentType = TournamentType;
@@ -237,13 +247,16 @@ export class AdminSeasons implements OnInit {
 
   load(): void {
     this.loading.set(true);
-    this.api.list().subscribe({
-      next: (list) => {
-        this.seasons.set(list);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    this.api
+      .list()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (list) => {
+          this.seasons.set(list);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 
   edit(season: Season): void {
@@ -283,7 +296,7 @@ export class AdminSeasons implements OnInit {
     const value = this.form.getRawValue();
     const id = this.editingId();
     const request$ = id ? this.api.update(id, value) : this.api.create(value);
-    request$.subscribe({
+    request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.success(this.translate.instant('adminSeasons.saved'));
         this.saving.set(false);
@@ -295,11 +308,14 @@ export class AdminSeasons implements OnInit {
   }
 
   activate(season: Season): void {
-    this.api.activate(season.id).subscribe({
-      next: () => {
-        this.toast.success(this.translate.instant('adminSeasons.activated'));
-        this.load();
-      },
-    });
+    this.api
+      .activate(season.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toast.success(this.translate.instant('adminSeasons.activated'));
+          this.load();
+        },
+      });
   }
 }

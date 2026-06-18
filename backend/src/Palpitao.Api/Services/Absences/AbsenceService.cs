@@ -102,11 +102,18 @@ public class AbsenceService : IAbsenceService
         var now = DateTime.UtcNow;
         var outcomes = new List<AbsenceOutcome>();
 
+        // Prior season absences for every absentee in a single query (this round's
+        // records were cleared above), instead of one COUNT query per absentee.
+        var priorCounts = await _db.Absences
+            .Where(a => absentees.Contains(a.UserId)
+                && _db.Rounds.Any(r => r.Id == a.RoundId && r.SeasonId == round.SeasonId))
+            .GroupBy(a => a.UserId)
+            .Select(g => new { UserId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.UserId, x => x.Count, ct);
+
         foreach (var userId in absentees)
         {
-            // Prior absences in the season (this round was already cleared above).
-            var prior = await CountSeasonAbsencesAsync(round.SeasonId, userId, ct);
-            var absenceNumber = prior + 1;
+            var absenceNumber = priorCounts.GetValueOrDefault(userId) + 1;
             var (penalty, eliminated) = PenaltyFor(absenceNumber);
 
             _db.Absences.Add(new Absence

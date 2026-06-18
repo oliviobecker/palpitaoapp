@@ -1,5 +1,13 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -11,6 +19,7 @@ import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { Loading } from '../../shared/components/loading/loading';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-registration-requests',
   imports: [FormsModule, DatePipe, RouterLink, TranslatePipe, EmptyState, Loading],
   template: `
@@ -90,6 +99,7 @@ export class AdminRegistrationRequests implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly translate = inject(TranslateService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
   protected readonly requests = signal<RegistrationRequest[]>([]);
@@ -103,13 +113,16 @@ export class AdminRegistrationRequests implements OnInit {
 
   load(): void {
     this.loading.set(true);
-    this.api.listRegistrationRequests().subscribe({
-      next: (list) => {
-        this.requests.set(list);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    this.api
+      .listRegistrationRequests()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (list) => {
+          this.requests.set(list);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 
   async approve(r: RegistrationRequest): Promise<void> {
@@ -120,14 +133,17 @@ export class AdminRegistrationRequests implements OnInit {
     if (!ok) return;
 
     this.busyId.set(r.id);
-    this.api.approveRegistration(r.id).subscribe({
-      next: () => {
-        this.toast.success(this.translate.instant('adminRegistrations.approvedMsg'));
-        this.busyId.set(null);
-        this.load();
-      },
-      error: () => this.busyId.set(null),
-    });
+    this.api
+      .approveRegistration(r.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toast.success(this.translate.instant('adminRegistrations.approvedMsg'));
+          this.busyId.set(null);
+          this.load();
+        },
+        error: () => this.busyId.set(null),
+      });
   }
 
   startReject(r: RegistrationRequest): void {
@@ -142,15 +158,18 @@ export class AdminRegistrationRequests implements OnInit {
 
   confirmReject(r: RegistrationRequest): void {
     this.busyId.set(r.id);
-    this.api.rejectRegistration(r.id, this.reason.trim() || undefined).subscribe({
-      next: () => {
-        this.toast.success(this.translate.instant('adminRegistrations.rejectedMsg'));
-        this.busyId.set(null);
-        this.rejectingId.set(null);
-        this.reason = '';
-        this.load();
-      },
-      error: () => this.busyId.set(null),
-    });
+    this.api
+      .rejectRegistration(r.id, this.reason.trim() || undefined)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toast.success(this.translate.instant('adminRegistrations.rejectedMsg'));
+          this.busyId.set(null);
+          this.rejectingId.set(null);
+          this.reason = '';
+          this.load();
+        },
+        error: () => this.busyId.set(null),
+      });
   }
 }

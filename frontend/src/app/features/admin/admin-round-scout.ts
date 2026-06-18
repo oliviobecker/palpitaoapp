@@ -1,4 +1,13 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -11,6 +20,7 @@ import { copyToClipboard } from '../../shared/utils/clipboard.util';
 import { buildMatchScoutMessage } from '../../shared/utils/scout-message.util';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-round-scout',
   imports: [RouterLink, FormsModule, TranslatePipe, EmptyState, Loading],
   template: `
@@ -68,6 +78,7 @@ export class AdminRoundScout implements OnInit {
   private readonly adminApi = inject(AdminService);
   private readonly toast = inject(ToastService);
   private readonly translate = inject(TranslateService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
   protected readonly scout = signal<RoundScout | null>(null);
@@ -85,14 +96,17 @@ export class AdminRoundScout implements OnInit {
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
-    this.adminApi.getRoundScout(id).subscribe({
-      next: (s) => {
-        this.scout.set(s);
-        this.selectedMatchId.set(s.matches[0]?.roundMatchId ?? '');
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    this.adminApi
+      .getRoundScout(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (s) => {
+          this.scout.set(s);
+          this.selectedMatchId.set(s.matches[0]?.roundMatchId ?? '');
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 
   async copy(): Promise<void> {

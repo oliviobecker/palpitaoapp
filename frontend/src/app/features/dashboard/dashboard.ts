@@ -1,8 +1,18 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnDestroy,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin, of, switchMap } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { RoundStatus } from '../../core/models/enums';
 import {
@@ -21,6 +31,7 @@ import { CompetitionBadge } from '../../shared/components/competition-badge/comp
 import { Loading } from '../../shared/components/loading/loading';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-dashboard',
   imports: [RouterLink, DatePipe, TranslatePipe, Loading, CompetitionBadge],
   templateUrl: './dashboard.html',
@@ -32,6 +43,7 @@ export class Dashboard implements OnInit, OnDestroy {
   private readonly standingsApi = inject(StandingsService);
   private readonly seasonsApi = inject(SeasonsService);
   protected readonly auth = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
   protected readonly error = signal(false);
@@ -123,35 +135,35 @@ export class Dashboard implements OnInit, OnDestroy {
   load(): void {
     this.loading.set(true);
     this.error.set(false);
-    this.roundsApi.getAll().subscribe({
-      next: (list) => {
-        const open = list.find((r) => r.status === RoundStatus.Published);
-        this.lockedRound.set(list.find((r) => r.status === RoundStatus.Locked) ?? null);
-        const seasonId = list[0]?.seasonId;
+    this.roundsApi
+      .getAll()
+      .pipe(
+        switchMap((list) => {
+          const open = list.find((r) => r.status === RoundStatus.Published);
+          this.lockedRound.set(list.find((r) => r.status === RoundStatus.Locked) ?? null);
+          const seasonId = list[0]?.seasonId;
 
-        forkJoin({
-          detail: open ? this.roundsApi.getById(open.id) : of(null),
-          mine: open ? this.predictionsApi.getMine(open.id) : of(null),
-          standings: seasonId ? this.standingsApi.getStandings(seasonId) : of([]),
-          season: this.seasonsApi.getActive(),
-        }).subscribe({
-          next: ({ detail, mine, standings, season }) => {
-            this.openRound.set(detail);
-            this.myPredictions.set(mine);
-            this.standings.set(standings);
-            this.seasonName.set(season?.name ?? null);
-            this.loading.set(false);
-          },
-          error: () => {
-            this.error.set(true);
-            this.loading.set(false);
-          },
-        });
-      },
-      error: () => {
-        this.error.set(true);
-        this.loading.set(false);
-      },
-    });
+          return forkJoin({
+            detail: open ? this.roundsApi.getById(open.id) : of(null),
+            mine: open ? this.predictionsApi.getMine(open.id) : of(null),
+            standings: seasonId ? this.standingsApi.getStandings(seasonId) : of([]),
+            season: this.seasonsApi.getActive(),
+          });
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: ({ detail, mine, standings, season }) => {
+          this.openRound.set(detail);
+          this.myPredictions.set(mine);
+          this.standings.set(standings);
+          this.seasonName.set(season?.name ?? null);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.error.set(true);
+          this.loading.set(false);
+        },
+      });
   }
 }

@@ -1,5 +1,14 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
@@ -13,6 +22,7 @@ import { Loading } from '../../shared/components/loading/loading';
 import { RoundStatusBadge } from '../../shared/components/round-status-badge/round-status-badge';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-results',
   imports: [
     ReactiveFormsModule,
@@ -144,6 +154,7 @@ export class AdminResults implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly translate = inject(TranslateService);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -179,26 +190,29 @@ export class AdminResults implements OnInit {
 
   load(): void {
     this.loading.set(true);
-    this.roundsApi.getById(this.id).subscribe({
-      next: (r) => {
-        const sorted = [...r.matches].sort(
-          (a, b) => a.order - b.order || a.startsAt.localeCompare(b.startsAt),
-        );
-        this.round.set(r);
-        this.matches.set(sorted);
-        this.form.clear();
-        for (const m of sorted) {
-          this.form.push(
-            this.fb.group({
-              home: [m.homeScore ?? 0, [Validators.required, Validators.min(0)]],
-              away: [m.awayScore ?? 0, [Validators.required, Validators.min(0)]],
-            }),
+    this.roundsApi
+      .getById(this.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (r) => {
+          const sorted = [...r.matches].sort(
+            (a, b) => a.order - b.order || a.startsAt.localeCompare(b.startsAt),
           );
-        }
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+          this.round.set(r);
+          this.matches.set(sorted);
+          this.form.clear();
+          for (const m of sorted) {
+            this.form.push(
+              this.fb.group({
+                home: [m.homeScore ?? 0, [Validators.required, Validators.min(0)]],
+                away: [m.awayScore ?? 0, [Validators.required, Validators.min(0)]],
+              }),
+            );
+          }
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 
   group(i: number): FormGroup {
@@ -217,25 +231,30 @@ export class AdminResults implements OnInit {
         awayScore: Number(this.group(i).value.away),
       }),
     );
-    forkJoin(calls).subscribe({
-      next: () => {
-        this.toast.success(this.translate.instant('adminResults.saved'));
-        this.saving.set(false);
-        this.load();
-      },
-      error: () => this.saving.set(false),
-    });
+    forkJoin(calls)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toast.success(this.translate.instant('adminResults.saved'));
+          this.saving.set(false);
+          this.load();
+        },
+        error: () => this.saving.set(false),
+      });
   }
 
   calculate(): void {
     this.scoring.set(true);
-    this.roundsApi.score(this.id).subscribe({
-      next: () => {
-        this.toast.success(this.translate.instant('adminResults.calculated'));
-        this.scoring.set(false);
-        this.load();
-      },
-      error: () => this.scoring.set(false),
-    });
+    this.roundsApi
+      .score(this.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toast.success(this.translate.instant('adminResults.calculated'));
+          this.scoring.set(false);
+          this.load();
+        },
+        error: () => this.scoring.set(false),
+      });
   }
 }

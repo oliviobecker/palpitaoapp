@@ -1,4 +1,12 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
@@ -8,6 +16,7 @@ import { GroupContextService } from '../../core/services/group-context.service';
 import { GroupsService } from '../../core/services/groups.service';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-select-group',
   imports: [TranslatePipe],
   template: `
@@ -60,18 +69,22 @@ export class SelectGroup implements OnInit {
   private readonly groupContext = inject(GroupContextService);
   protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
   protected readonly groups = signal<MyGroup[]>([]);
 
   ngOnInit(): void {
-    this.groupsApi.myGroups().subscribe({
-      next: (groups) => {
-        this.groups.set(groups);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    this.groupsApi
+      .myGroups()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (groups) => {
+          this.groups.set(groups);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 
   enter(group: MyGroup): void {

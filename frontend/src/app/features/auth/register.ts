@@ -1,5 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { FormBuilder } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -18,6 +26,7 @@ export function passwordsMatch(group: AbstractControl): ValidationErrors | null 
 }
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-register',
   imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
   template: `
@@ -176,6 +185,7 @@ export class Register implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly groupsApi = inject(GroupsService);
   protected readonly language = inject(LanguageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -194,7 +204,10 @@ export class Register implements OnInit {
   );
 
   ngOnInit(): void {
-    this.groupsApi.listActive().subscribe((groups) => this.groups.set(groups));
+    this.groupsApi
+      .listActive()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((groups) => this.groups.set(groups));
   }
 
   setLanguage(lang: Lang): void {
@@ -209,15 +222,18 @@ export class Register implements OnInit {
     }
 
     this.submitting.set(true);
-    this.auth.register(this.form.getRawValue()).subscribe({
-      next: (response) => {
-        this.submitting.set(false);
-        this.success.set(response.message);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.submitting.set(false);
-        this.error.set(httpErrorMessage(err));
-      },
-    });
+    this.auth
+      .register(this.form.getRawValue())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.submitting.set(false);
+          this.success.set(response.message);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.submitting.set(false);
+          this.error.set(httpErrorMessage(err));
+        },
+      });
   }
 }

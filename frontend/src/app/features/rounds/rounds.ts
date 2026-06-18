@@ -1,5 +1,14 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { RoundStatus } from '../../core/models/enums';
@@ -11,6 +20,7 @@ import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { Countdown } from '../../shared/components/countdown/countdown';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-rounds',
   imports: [RouterLink, DatePipe, TranslatePipe, Loading, EmptyState, Countdown],
   templateUrl: './rounds.html',
@@ -18,6 +28,7 @@ import { Countdown } from '../../shared/components/countdown/countdown';
 export class Rounds implements OnInit {
   private readonly roundsApi = inject(RoundsService);
   protected readonly group = inject(GroupContextService);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly RoundStatus = RoundStatus;
 
   statusKey(status: RoundStatus): string {
@@ -54,12 +65,15 @@ export class Rounds implements OnInit {
 
   load(): void {
     this.loading.set(true);
-    this.roundsApi.getAll().subscribe({
-      next: (list) => {
-        this.rounds.set(list);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    this.roundsApi
+      .getAll()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (list) => {
+          this.rounds.set(list);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 }

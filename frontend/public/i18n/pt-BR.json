@@ -31,7 +31,8 @@
     "reload": "Recarregar",
     "empty": "Nada por aqui ainda.",
     "you": "Você",
-    "optional": "(opcional)"
+    "optional": "(opcional)",
+    "close": "Fechar"
   },
   "login": {
     "title": "Entrar",
@@ -91,7 +92,8 @@
     "ExtraUncommon": "Extra-incomum"
   },
   "countdown": {
-    "ended": "Encerrado"
+    "ended": "Encerrado",
+    "timeRemaining": "Tempo restante"
   },
   "confirm": {
     "title": "Confirmar",
@@ -305,6 +307,7 @@
     "selectAll": "Selecionar todos",
     "clear": "Limpar seleção",
     "allCompetitions": "Todas as competições",
+    "filterByCompetition": "Filtrar por competição",
     "searchTeam": "Buscar time...",
     "classic": "Clássico",
     "alreadyAdded": "Já adicionado",

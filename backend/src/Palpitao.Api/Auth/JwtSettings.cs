@@ -9,4 +9,7 @@ public class JwtSettings
 
     /// <summary>Access token lifetime, in hours.</summary>
     public int ExpiresHours { get; set; } = 12;
+
+    /// <summary>Refresh token lifetime, in days. Rotated on every use.</summary>
+    public int RefreshTokenDays { get; set; } = 30;
 }

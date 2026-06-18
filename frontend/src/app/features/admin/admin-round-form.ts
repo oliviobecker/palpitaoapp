@@ -1,4 +1,11 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -18,6 +25,7 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
 import { ordinalRoundName } from '../../shared/utils/round-name.util';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-round-form',
   imports: [ReactiveFormsModule, RouterLink, TranslatePipe, FixtureSelection],
   template: `
@@ -146,6 +154,7 @@ export class AdminRoundForm implements OnInit {
   private readonly translate = inject(TranslateService);
   private readonly language = inject(LanguageService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly seasons = signal<Season[]>([]);
   private readonly rounds = signal<RoundSummary[]>([]);
@@ -191,8 +200,9 @@ export class AdminRoundForm implements OnInit {
   }
 
   ngOnInit(): void {
-    forkJoin({ seasons: this.seasonsApi.list(), rounds: this.roundsApi.getAll() }).subscribe(
-      ({ seasons, rounds }) => {
+    forkJoin({ seasons: this.seasonsApi.list(), rounds: this.roundsApi.getAll() })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(({ seasons, rounds }) => {
         this.seasons.set(seasons);
         this.rounds.set(Array.isArray(rounds) ? rounds : []);
         const active = seasons.find((s) => s.isActive);
@@ -202,8 +212,7 @@ export class AdminRoundForm implements OnInit {
         } else {
           this.applyNextNumber('');
         }
-      },
-    );
+      });
     // Pre-search the default window (today → +10) so suggestions are ready.
     this.preSearch();
   }
@@ -235,6 +244,7 @@ export class AdminRoundForm implements OnInit {
         { startDate: `${startDate}T00:00:00`, endDate: `${endDate}T23:59:59` },
         { silent: true },
       )
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
           if ((res.fixtures?.length ?? 0) > 0) {
@@ -266,6 +276,7 @@ export class AdminRoundForm implements OnInit {
     this.searching.set(true);
     this.adminApi
       .searchFixtures({ startDate: `${startDate}T00:00:00`, endDate: `${endDate}T23:59:59` })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
           this.fixtures.set(res.fixtures);
@@ -298,6 +309,7 @@ export class AdminRoundForm implements OnInit {
         startDate: `${startDate}T00:00:00`,
         endDate: `${endDate}T23:59:59`,
       })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (round) => {
           if (state.items.length === 0) {
@@ -311,6 +323,7 @@ export class AdminRoundForm implements OnInit {
               fixtures: state.items.map(toImportItem),
               leagueOneJustification: state.leagueOneJustification,
             })
+            .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
               next: (res) => {
                 this.toast.success(

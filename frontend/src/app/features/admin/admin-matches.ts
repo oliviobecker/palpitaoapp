@@ -1,4 +1,14 @@
-import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -19,27 +29,18 @@ import { AdminService } from '../../core/services/admin.service';
 import { MatchesService } from '../../core/services/matches.service';
 import { RoundsService } from '../../core/services/rounds.service';
 import { TeamsService } from '../../core/services/teams.service';
-import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
 import {
   FixtureSelection,
   FixtureSelectionState,
 } from '../../shared/components/fixture-selection/fixture-selection';
 import { Loading } from '../../shared/components/loading/loading';
-import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
-import { computeMultiplier, isClassic, isLeagueOne } from '../../shared/utils/match.util';
+import { MatchList } from '../../shared/components/match-list/match-list';
 import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-matches',
-  imports: [
-    ReactiveFormsModule,
-    RouterLink,
-    TranslatePipe,
-    CompetitionBadge,
-    FixtureSelection,
-    Loading,
-    MultiplierBadge,
-  ],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, FixtureSelection, Loading, MatchList],
   template: `
     <div class="mb-3">
       <div class="page-trail">
@@ -239,43 +240,12 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
         {{ 'adminMatches.games' | translate }}
         <span class="badge text-bg-light ms-1">{{ r.matches.length }}</span>
       </h2>
-      <div class="vstack gap-2">
-        @for (m of r.matches; track m.id) {
-          <div
-            class="card"
-            [class.border-primary]="classic(m)"
-            [class.border-warning]="leagueOne(m)"
-          >
-            <div class="card-body py-3 px-3">
-              <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-                <app-competition-badge [competition]="m.competition" />
-                <app-multiplier-badge [multiplier]="multiplier(m)" />
-                @if (classic(m)) {
-                  <span class="badge text-bg-primary">{{ 'predictions.classic' | translate }}</span>
-                }
-                @if (leagueOne(m)) {
-                  <span class="badge text-bg-warning">{{
-                    'predictions.leagueOne' | translate
-                  }}</span>
-                }
-              </div>
-              <div class="d-flex justify-content-between align-items-center gap-2">
-                <span class="fw-semibold">{{ m.homeTeamName }} × {{ m.awayTeamName }}</span>
-                @if (editable()) {
-                  <span class="d-flex gap-1 flex-none">
-                    <button class="btn btn-sm btn-outline-secondary" (click)="edit(m)">
-                      ✏️ {{ 'common.edit' | translate }}
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger" (click)="remove(m)">
-                      🗑️ {{ 'common.remove' | translate }}
-                    </button>
-                  </span>
-                }
-              </div>
-            </div>
-          </div>
-        }
-      </div>
+      <app-match-list
+        [matches]="r.matches"
+        [editable]="editable()"
+        (edit)="edit($event)"
+        (remove)="remove($event)"
+      />
     }
   `,
   styles: [
@@ -308,10 +278,7 @@ export class AdminMatches implements OnInit {
   private readonly confirm = inject(ConfirmService);
   private readonly translate = inject(TranslateService);
   private readonly fb = inject(FormBuilder);
-
-  protected readonly multiplier = computeMultiplier;
-  protected readonly classic = isClassic;
-  protected readonly leagueOne = isLeagueOne;
+  private readonly destroyRef = inject(DestroyRef);
 
   private static readonly COMPETITION_LABELS: Record<Competition, string> = {
     [Competition.PremierLeague]: 'Premier League',
@@ -421,24 +388,26 @@ export class AdminMatches implements OnInit {
     forkJoin({
       round: this.roundsApi.getById(this.roundId),
       teams: this.teamsApi.list(),
-    }).subscribe({
-      next: ({ round, teams }) => {
-        this.round.set(round);
-        this.teams.set(teams);
-        // Apply season-type-aware defaults to the (empty) add form.
-        this.resetForm();
-        // Default the fixture-search window to the round's own period when set,
-        // otherwise to the next 8 days, and run a pre-search so the list is ready.
-        const start = round.startDate?.slice(0, 10) ?? isoDateFromToday(0);
-        const end = round.endDate?.slice(0, 10) ?? isoDateFromToday(8);
-        this.searchForm.patchValue({ startDate: start, endDate: end });
-        this.loading.set(false);
-        if (this.editableStatus(round)) {
-          this.preSearch();
-        }
-      },
-      error: () => this.loading.set(false),
-    });
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ round, teams }) => {
+          this.round.set(round);
+          this.teams.set(teams);
+          // Apply season-type-aware defaults to the (empty) add form.
+          this.resetForm();
+          // Default the fixture-search window to the round's own period when set,
+          // otherwise to the next 8 days, and run a pre-search so the list is ready.
+          const start = round.startDate?.slice(0, 10) ?? isoDateFromToday(0);
+          const end = round.endDate?.slice(0, 10) ?? isoDateFromToday(8);
+          this.searchForm.patchValue({ startDate: start, endDate: end });
+          this.loading.set(false);
+          if (this.editableStatus(round)) {
+            this.preSearch();
+          }
+        },
+        error: () => this.loading.set(false),
+      });
   }
 
   private editableStatus(round: Round): boolean {
@@ -462,6 +431,7 @@ export class AdminMatches implements OnInit {
         },
         { silent: true },
       )
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
           if ((res.fixtures?.length ?? 0) > 0) {
@@ -476,7 +446,10 @@ export class AdminMatches implements OnInit {
   }
 
   reload(): void {
-    this.roundsApi.getById(this.roundId).subscribe((r) => this.round.set(r));
+    this.roundsApi
+      .getById(this.roundId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((r) => this.round.set(r));
   }
 
   // --- External fixture import -------------------------------------------
@@ -500,6 +473,7 @@ export class AdminMatches implements OnInit {
         endDate: `${endDate}T23:59:59`,
         roundId: this.roundId,
       })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
           this.fixtures.set(res.fixtures);
@@ -524,6 +498,7 @@ export class AdminMatches implements OnInit {
         fixtures: state.items.map(toImportItem),
         leagueOneJustification: state.leagueOneJustification,
       })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
           this.toast.success(
@@ -597,7 +572,7 @@ export class AdminMatches implements OnInit {
     const request$ = id
       ? this.matchesApi.update(id, body)
       : this.roundsApi.addMatch(this.roundId, body);
-    request$.subscribe({
+    request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.success(this.translate.instant('adminMatches.saved'));
         this.saving.set(false);
@@ -621,12 +596,15 @@ export class AdminMatches implements OnInit {
       },
     );
     if (ok) {
-      this.matchesApi.remove(m.id).subscribe({
-        next: () => {
-          this.toast.success(this.translate.instant('adminMatches.removed'));
-          this.reload();
-        },
-      });
+      this.matchesApi
+        .remove(m.id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            this.toast.success(this.translate.instant('adminMatches.removed'));
+            this.reload();
+          },
+        });
     }
   }
 }

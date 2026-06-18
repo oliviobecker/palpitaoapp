@@ -33,7 +33,7 @@ public class AuditService : IAuditService
     public async Task<IReadOnlyList<AuditLogDto>> QueryAsync(
         Guid? userId, string? entityName, DateTime? from, DateTime? to, CancellationToken ct, Guid? groupId = null)
     {
-        var query = _db.AuditLogs.AsQueryable();
+        var query = _db.AuditLogs.AsNoTracking();
 
         if (groupId is not null)
         {

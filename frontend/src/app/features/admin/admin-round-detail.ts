@@ -1,9 +1,16 @@
-import { DatePipe } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { forkJoin } from 'rxjs';
+import { forkJoin, switchMap } from 'rxjs';
 import { RoundStatus } from '../../core/models/enums';
 import { Round } from '../../core/models/models';
 import { ConfirmService } from '../../core/notifications/confirm.service';
@@ -13,26 +20,24 @@ import { GroupContextService } from '../../core/services/group-context.service';
 import { RoundsService } from '../../core/services/rounds.service';
 import { StandingsService } from '../../core/services/standings.service';
 import { RefreshResultsResponse } from '../../core/models/models';
-import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
 import { Loading } from '../../shared/components/loading/loading';
-import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
+import { MatchList } from '../../shared/components/match-list/match-list';
 import { RoundStatusBadge } from '../../shared/components/round-status-badge/round-status-badge';
-import { copyToClipboard } from '../../shared/utils/clipboard.util';
-import { computeMultiplier, isClassic, isLeagueOne } from '../../shared/utils/match.util';
 import { buildRoundMessage } from '../../shared/utils/round-message.util';
 import { buildClosingMessage } from '../../shared/utils/closing-message.util';
+import { AdminRoundMessages } from './admin-round-messages';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-round-detail',
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    DatePipe,
     TranslatePipe,
-    CompetitionBadge,
     Loading,
-    MultiplierBadge,
+    MatchList,
     RoundStatusBadge,
+    AdminRoundMessages,
   ],
   template: `
     <div class="mb-3">
@@ -235,76 +240,17 @@ import { buildClosingMessage } from '../../shared/utils/closing-message.util';
         </div>
       }
 
-      <!-- Closing message (copy-ready, once the round is finalized) -->
-      @if (r.status === RoundStatus.Scored && closing()) {
-        <div class="card mb-3 border-success">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <h2 class="h6 fw-bold mb-0">🏁 {{ 'roundDetail.closingMessage' | translate }}</h2>
-              <button class="btn btn-sm btn-success" type="button" (click)="copyClosing()">
-                📋 {{ 'roundDetail.copy' | translate }}
-              </button>
-            </div>
-            <pre
-              class="small mb-0 p-2 bg-light rounded border"
-              style="white-space: pre-wrap; word-break: break-word"
-              >{{ closing() }}</pre
-            >
-          </div>
-        </div>
-      }
-
-      <!-- Group message (copy-ready) -->
-      @if (r.matches.length > 0) {
-        <div class="card mb-3">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <h2 class="h6 fw-bold mb-0">{{ 'roundDetail.groupMessage' | translate }}</h2>
-              <button class="btn btn-sm btn-primary" type="button" (click)="copyMessage(r)">
-                📋 {{ 'roundDetail.copy' | translate }}
-              </button>
-            </div>
-            <pre
-              class="small mb-0 p-2 bg-light rounded border"
-              style="white-space: pre-wrap; word-break: break-word"
-              >{{ message(r) }}</pre
-            >
-          </div>
-        </div>
-      }
+      <!-- Copy-ready closing + group messages -->
+      <app-admin-round-messages
+        [closingMessage]="closing()"
+        [groupMessage]="r.matches.length > 0 ? message(r) : ''"
+      />
 
       <!-- Matches -->
       <h2 class="h6 fw-bold mb-2">
         {{ 'roundDetail.games' | translate }} ({{ r.matches.length }})
       </h2>
-      <div class="vstack gap-2">
-        @for (m of r.matches; track m.id) {
-          <div
-            class="card"
-            [class.border-primary]="classic(m)"
-            [class.border-warning]="leagueOne(m)"
-          >
-            <div class="card-body py-2 px-3">
-              <div class="d-flex flex-wrap gap-2 align-items-center mb-1">
-                <app-competition-badge [competition]="m.competition" />
-                <app-multiplier-badge [multiplier]="multiplier(m)" />
-                @if (classic(m)) {
-                  <span class="badge text-bg-primary">{{ 'predictions.classic' | translate }}</span>
-                }
-                @if (leagueOne(m)) {
-                  <span class="badge text-bg-warning">{{
-                    'predictions.leagueOne' | translate
-                  }}</span>
-                }
-                <small class="text-muted ms-auto">{{ m.startsAt | date: 'dd/MM HH:mm' }}</small>
-              </div>
-              <div class="fw-semibold">
-                {{ m.homeTeamName }} <span class="text-muted">x</span> {{ m.awayTeamName }}
-              </div>
-            </div>
-          </div>
-        }
-      </div>
+      <app-match-list [matches]="r.matches" />
     }
   `,
 })
@@ -318,11 +264,9 @@ export class AdminRoundDetail implements OnInit {
   private readonly confirm = inject(ConfirmService);
   private readonly translate = inject(TranslateService);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly RoundStatus = RoundStatus;
-  protected readonly multiplier = computeMultiplier;
-  protected readonly classic = isClassic;
-  protected readonly leagueOne = isLeagueOne;
 
   protected readonly loading = signal(true);
   protected readonly finalizing = signal(false);
@@ -344,15 +288,18 @@ export class AdminRoundDetail implements OnInit {
 
   load(): void {
     this.loading.set(true);
-    this.api.getById(this.id).subscribe({
-      next: (r) => {
-        this.round.set(r);
-        this.form.setValue({ number: r.number, title: r.title ?? '' });
-        this.loading.set(false);
-        this.loadClosing(r);
-      },
-      error: () => this.loading.set(false),
-    });
+    this.api
+      .getById(this.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (r) => {
+          this.round.set(r);
+          this.form.setValue({ number: r.number, title: r.title ?? '' });
+          this.loading.set(false);
+          this.loadClosing(r);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 
   /** Once finalized, assemble the copy-ready closing message from results + standings. */
@@ -364,29 +311,40 @@ export class AdminRoundDetail implements OnInit {
     forkJoin({
       results: this.api.getResults(round.id),
       standings: this.standingsApi.getStandings(round.seasonId),
-    }).subscribe({
-      next: ({ results, standings }) =>
-        this.closing.set(
-          buildClosingMessage(round.number, results, standings, this.group.groupName() ?? ''),
-        ),
-      error: () => this.closing.set(''),
-    });
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ results, standings }) =>
+          this.closing.set(
+            buildClosingMessage(round.number, results, standings, this.group.groupName() ?? ''),
+          ),
+        error: () => this.closing.set(''),
+      });
   }
 
   saveMeta(): void {
     if (this.form.invalid) return;
     const { number, title } = this.form.getRawValue();
-    this.api.update(this.id, { number, title: title || null }).subscribe({
-      next: () => this.after('roundDetail.updated'),
-    });
+    this.api
+      .update(this.id, { number, title: title || null })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => this.after('roundDetail.updated'),
+      });
   }
 
   publish(r: Round): void {
-    this.api.publish(r.id).subscribe({ next: () => this.after('roundDetail.published') });
+    this.api
+      .publish(r.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: () => this.after('roundDetail.published') });
   }
 
   lock(r: Round): void {
-    this.api.lock(r.id).subscribe({ next: () => this.after('roundDetail.locked') });
+    this.api
+      .lock(r.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: () => this.after('roundDetail.locked') });
   }
 
   score(r: Round): void {
@@ -399,14 +357,11 @@ export class AdminRoundDetail implements OnInit {
     };
     const onError = () => this.finalizing.set(false);
 
-    if (r.status === RoundStatus.Published) {
-      this.api.lock(r.id).subscribe({
-        next: () => this.api.score(r.id).subscribe({ next: finish, error: onError }),
-        error: onError,
-      });
-    } else {
-      this.api.score(r.id).subscribe({ next: finish, error: onError });
-    }
+    const score$ =
+      r.status === RoundStatus.Published
+        ? this.api.lock(r.id).pipe(switchMap(() => this.api.score(r.id)))
+        : this.api.score(r.id);
+    score$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: finish, error: onError });
   }
 
   async cancel(r: Round): Promise<void> {
@@ -416,39 +371,31 @@ export class AdminRoundDetail implements OnInit {
       danger: true,
     });
     if (ok) {
-      this.api.cancel(r.id).subscribe({ next: () => this.after('roundDetail.cancelled') });
+      this.api
+        .cancel(r.id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({ next: () => this.after('roundDetail.cancelled') });
     }
   }
 
   refreshResults(round: Round): void {
     this.refreshing.set(true);
-    this.adminApi.refreshResults(round.id).subscribe({
-      next: (summary) => {
-        this.refreshSummary.set(summary);
-        this.toast.success(summary.message);
-        this.refreshing.set(false);
-        this.load();
-      },
-      error: () => this.refreshing.set(false),
-    });
+    this.adminApi
+      .refreshResults(round.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (summary) => {
+          this.refreshSummary.set(summary);
+          this.toast.success(summary.message);
+          this.refreshing.set(false);
+          this.load();
+        },
+        error: () => this.refreshing.set(false),
+      });
   }
 
   message(round: Round): string {
     return buildRoundMessage(round, this.group.groupName() ?? '');
-  }
-
-  async copyMessage(round: Round): Promise<void> {
-    const ok = await copyToClipboard(buildRoundMessage(round, this.group.groupName() ?? ''));
-    this.toast.success(
-      this.translate.instant(ok ? 'roundDetail.copied' : 'roundDetail.copyFailed'),
-    );
-  }
-
-  async copyClosing(): Promise<void> {
-    const ok = await copyToClipboard(this.closing());
-    this.toast.success(
-      this.translate.instant(ok ? 'roundDetail.copied' : 'roundDetail.copyFailed'),
-    );
   }
 
   private after(key: string): void {

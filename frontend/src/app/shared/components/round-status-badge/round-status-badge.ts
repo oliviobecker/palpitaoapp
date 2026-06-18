@@ -1,8 +1,9 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { RoundStatus } from '../../../core/models/enums';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-round-status-badge',
   imports: [TranslatePipe],
   template: `<span class="badge {{ cls() }}">{{ 'status.' + status() | translate }}</span>`,

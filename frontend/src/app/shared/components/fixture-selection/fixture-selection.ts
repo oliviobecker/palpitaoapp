@@ -1,5 +1,14 @@
 import { DatePipe } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, Output, computed, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  EventEmitter,
+  Input,
+  OnChanges,
+  Output,
+  computed,
+  signal,
+} from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Competition } from '../../../core/models/enums';
 import { FixtureCandidate } from '../../../core/models/models';
@@ -24,6 +33,7 @@ export interface FixtureSelectionState {
  * import into an existing round).
  */
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-fixture-selection',
   imports: [TranslatePipe, DatePipe],
   template: `
@@ -52,6 +62,7 @@ export interface FixtureSelectionState {
         <div class="col-6">
           <select
             class="form-select form-select-sm"
+            [attr.aria-label]="'fixtures.filterByCompetition' | translate"
             [value]="filterCompetition()"
             (change)="setCompetitionFilter($event)"
           >
@@ -65,6 +76,7 @@ export interface FixtureSelectionState {
           <input
             class="form-control form-control-sm"
             [placeholder]="'fixtures.searchTeam' | translate"
+            [attr.aria-label]="'fixtures.searchTeam' | translate"
             [value]="filterTeam()"
             (input)="setTeamFilter($event)"
           />

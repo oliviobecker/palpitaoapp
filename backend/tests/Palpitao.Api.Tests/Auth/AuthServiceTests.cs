@@ -32,7 +32,11 @@ public class AuthServiceTests
         return db;
     }
 
-    private static AuthService Service(AppDbContext db) => new(db, new FakeJwt(), new AuditService(db));
+    private static RefreshTokenService RefreshTokens(AppDbContext db) =>
+        new(db, Microsoft.Extensions.Options.Options.Create(new JwtSettings()));
+
+    private static AuthService Service(AppDbContext db) =>
+        new(db, new FakeJwt(), RefreshTokens(db), new AuditService(db));
 
     private static RegisterRequest Reg(string email = "novo@x.com", string password = "Senha123", string? confirm = null, Guid? groupId = null) => new()
     {
@@ -269,5 +273,51 @@ public class AuthServiceTests
         Assert.False(outcome.InvalidCredentials);
         Assert.Equal(expectedKey, outcome.FailureKey);
         Assert.Contains(await db.AuditLogs.ToListAsync(Ct), a => a.Action == "LoginBlocked");
+    }
+
+    // --- Refresh tokens -----------------------------------------------------
+
+    [Fact]
+    public async Task Login_issues_a_refresh_token()
+    {
+        using var db = CreateContext();
+        SeedUser(db, UserStatus.Approved, active: true, email: "ok@x.com");
+
+        var outcome = await Service(db).LoginAsync(new LoginRequest { Email = "ok@x.com", Password = "Senha123" }, Ct);
+
+        Assert.True(outcome.Success);
+        Assert.False(string.IsNullOrWhiteSpace(outcome.Response!.RefreshToken));
+        Assert.True(outcome.Response.RefreshTokenExpiresAtUtc > DateTime.UtcNow);
+        Assert.Equal(1, await db.RefreshTokens.CountAsync(Ct));
+    }
+
+    [Fact]
+    public async Task Refresh_exchanges_a_valid_token_for_a_new_session()
+    {
+        using var db = CreateContext();
+        SeedUser(db, UserStatus.Approved, active: true, email: "ok@x.com");
+        var service = Service(db);
+        var login = await service.LoginAsync(new LoginRequest { Email = "ok@x.com", Password = "Senha123" }, Ct);
+
+        var refreshed = await service.RefreshAsync(login.Response!.RefreshToken, Ct);
+
+        Assert.True(refreshed.Success);
+        Assert.False(string.IsNullOrWhiteSpace(refreshed.Response!.Token));
+        Assert.NotEqual(login.Response.RefreshToken, refreshed.Response.RefreshToken);
+    }
+
+    [Fact]
+    public async Task Refresh_fails_after_logout()
+    {
+        using var db = CreateContext();
+        SeedUser(db, UserStatus.Approved, active: true, email: "ok@x.com");
+        var service = Service(db);
+        var login = await service.LoginAsync(new LoginRequest { Email = "ok@x.com", Password = "Senha123" }, Ct);
+
+        await service.LogoutAsync(login.Response!.RefreshToken, Ct);
+        var refreshed = await service.RefreshAsync(login.Response.RefreshToken, Ct);
+
+        Assert.False(refreshed.Success);
+        Assert.True(refreshed.InvalidCredentials);
     }
 }

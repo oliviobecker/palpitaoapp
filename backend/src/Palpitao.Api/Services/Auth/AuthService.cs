@@ -15,12 +15,14 @@ public partial class AuthService : IAuthService
 {
     private readonly AppDbContext _db;
     private readonly IJwtTokenService _jwt;
+    private readonly IRefreshTokenService _refreshTokens;
     private readonly IAuditService _audit;
 
-    public AuthService(AppDbContext db, IJwtTokenService jwt, IAuditService audit)
+    public AuthService(AppDbContext db, IJwtTokenService jwt, IRefreshTokenService refreshTokens, IAuditService audit)
     {
         _db = db;
         _jwt = jwt;
+        _refreshTokens = refreshTokens;
         _audit = audit;
     }
 
@@ -249,20 +251,53 @@ public partial class AuthService : IAuthService
             return LoginOutcome.Blocked(blockedKey);
         }
 
-        var (token, expiresAt) = _jwt.GenerateToken(user);
+        return LoginOutcome.Ok(await BuildSessionAsync(user, ct));
+    }
 
+    public async Task<LoginOutcome> RefreshAsync(string refreshToken, CancellationToken ct)
+    {
+        var rotation = await _refreshTokens.RotateAsync(refreshToken, ct);
+        if (!rotation.Success || rotation.User is null)
+        {
+            return LoginOutcome.Invalid();
+        }
+
+        var (token, expiresAt) = _jwt.GenerateToken(rotation.User);
         return LoginOutcome.Ok(new LoginResponse
         {
             Token = token,
             ExpiresAtUtc = expiresAt,
-            User = new UserDto
-            {
-                Id = user.Id,
-                Name = user.Name,
-                Email = user.Email,
-                Role = user.Role,
-                IsActive = user.IsActive,
-            },
+            RefreshToken = rotation.RawToken!,
+            RefreshTokenExpiresAtUtc = rotation.ExpiresAtUtc,
+            User = ToDto(rotation.User),
         });
     }
+
+    public Task LogoutAsync(string refreshToken, CancellationToken ct)
+        => _refreshTokens.RevokeAsync(refreshToken, ct);
+
+    /// <summary>Mints an access token and a fresh refresh token for an authenticated user.</summary>
+    private async Task<LoginResponse> BuildSessionAsync(User user, CancellationToken ct)
+    {
+        var (token, expiresAt) = _jwt.GenerateToken(user);
+        var (refreshToken, refreshExpiresAt) = await _refreshTokens.IssueAsync(user.Id, ct);
+
+        return new LoginResponse
+        {
+            Token = token,
+            ExpiresAtUtc = expiresAt,
+            RefreshToken = refreshToken,
+            RefreshTokenExpiresAtUtc = refreshExpiresAt,
+            User = ToDto(user),
+        };
+    }
+
+    private static UserDto ToDto(User user) => new()
+    {
+        Id = user.Id,
+        Name = user.Name,
+        Email = user.Email,
+        Role = user.Role,
+        IsActive = user.IsActive,
+    };
 }

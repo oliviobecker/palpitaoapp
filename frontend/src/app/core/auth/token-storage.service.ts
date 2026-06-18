@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { User } from '../models/models';
 
 const TOKEN_KEY = 'palpitao.token';
+const REFRESH_TOKEN_KEY = 'palpitao.refreshToken';
 const USER_KEY = 'palpitao.user';
 
 @Injectable({ providedIn: 'root' })
@@ -12,6 +13,14 @@ export class TokenStorageService {
 
   setToken(token: string): void {
     localStorage.setItem(TOKEN_KEY, token);
+  }
+
+  getRefreshToken(): string | null {
+    return localStorage.getItem(REFRESH_TOKEN_KEY);
+  }
+
+  setRefreshToken(token: string): void {
+    localStorage.setItem(REFRESH_TOKEN_KEY, token);
   }
 
   getUser(): User | null {
@@ -25,6 +34,7 @@ export class TokenStorageService {
 
   clear(): void {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
   }
 }

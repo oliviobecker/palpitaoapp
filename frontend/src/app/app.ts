@@ -1,10 +1,11 @@
-import { Component, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { LanguageService } from './core/i18n/language.service';
 import { ConfirmDialog } from './shared/components/confirm-dialog/confirm-dialog';
 import { ToastContainer } from './shared/components/toast-container/toast-container';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-root',
   imports: [RouterOutlet, ToastContainer, ConfirmDialog],
   // Toast + confirm live at the root so they are visible on every page (incl. login).

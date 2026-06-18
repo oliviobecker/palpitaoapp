@@ -100,6 +100,7 @@ export async function seedAuth(page: Page, lang?: 'pt-BR' | 'en-US'): Promise<vo
   await page.addInitScript(
     ({ user, group, lng }) => {
       localStorage.setItem('palpitao.token', 'e2e-fake-jwt');
+      localStorage.setItem('palpitao.refreshToken', 'e2e-fake-refresh');
       localStorage.setItem('palpitao.user', JSON.stringify(user));
       localStorage.setItem('palpitao.groupId', group.groupId);
       localStorage.setItem('palpitao.groupName', group.groupName);

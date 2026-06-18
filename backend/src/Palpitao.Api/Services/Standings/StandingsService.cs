@@ -27,39 +27,50 @@ public class StandingsService : IStandingsService
             .Select(s => s.GroupId)
             .FirstAsync(ct);
 
-        var results = await _db.RoundParticipantResults
+        // Aggregate per participant in the database: one row per user instead of
+        // loading every per-round result into memory (scales with participants, not
+        // participants × rounds). Conditional sums translate to SQL CASE expressions.
+        var aggregates = await _db.RoundParticipantResults
+            .AsNoTracking()
             .Where(r => r.SeasonId == seasonId)
+            .GroupBy(r => r.UserId)
+            .Select(g => new
+            {
+                UserId = g.Key,
+                FinalPoints = g.Sum(r => r.FinalPoints),
+                PenaltyPoints = g.Sum(r => r.PenaltyPoints),
+                PlayedRounds = g.Sum(r => r.WasAbsent ? 0 : 1),
+                AbsenceCount = g.Sum(r => r.WasAbsent ? 1 : 0),
+            })
             .ToListAsync(ct);
 
-        // Exact-score counts per participant (across the season's scored rounds).
-        var roundIds = await _db.Rounds.Where(r => r.SeasonId == seasonId).Select(r => r.Id).ToListAsync(ct);
+        // Exact-score counts per participant across the season's scored rounds.
         var exactCounts = await _db.PredictionScores
-            .Where(p => roundIds.Contains(p.RoundId) && p.IsExactScore)
+            .AsNoTracking()
+            .Where(p => p.IsExactScore
+                && _db.Rounds.Any(r => r.Id == p.RoundId && r.SeasonId == seasonId))
             .GroupBy(p => p.UserId)
             .Select(g => new { UserId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.UserId, x => x.Count, ct);
 
-        var userIds = results.Select(r => r.UserId).Distinct().ToList();
-        var users = await _db.Users
+        var userIds = aggregates.Select(a => a.UserId).ToList();
+        var names = await _db.Users
+            .AsNoTracking()
             .Where(u => userIds.Contains(u.Id))
-            .ToDictionaryAsync(u => u.Id, ct);
+            .ToDictionaryAsync(u => u.Id, u => u.Name, ct);
 
-        var rows = results
-            .GroupBy(r => r.UserId)
-            .Select(g =>
+        // Final ordering is in memory: the name tie-break uses an ordinal-ignore-case
+        // comparison that has no faithful SQL translation.
+        var rows = aggregates
+            .Select(a => new
             {
-                var name = users.TryGetValue(g.Key, out var u) ? u.Name : string.Empty;
-                var penalty = g.Sum(r => r.PenaltyPoints);
-                return new
-                {
-                    UserId = g.Key,
-                    Name = name,
-                    TotalPoints = g.Sum(r => r.FinalPoints) - penalty,
-                    PlayedRounds = g.Count(r => !r.WasAbsent),
-                    AbsenceCount = g.Count(r => r.WasAbsent),
-                    PenaltyPoints = penalty,
-                    ExactCount = exactCounts.TryGetValue(g.Key, out var c) ? c : 0,
-                };
+                a.UserId,
+                Name = names.GetValueOrDefault(a.UserId, string.Empty),
+                TotalPoints = a.FinalPoints - a.PenaltyPoints,
+                a.PlayedRounds,
+                a.AbsenceCount,
+                a.PenaltyPoints,
+                ExactCount = exactCounts.GetValueOrDefault(a.UserId),
             })
             .OrderByDescending(r => r.TotalPoints)
             .ThenBy(r => r.AbsenceCount)
@@ -102,7 +113,16 @@ public class StandingsService : IStandingsService
             throw new NotFoundException("notFound.season");
         }
 
-        return await _db.Standings
+        // Eliminated members of this group, loaded once into a set rather than a
+        // correlated subquery evaluated per standing row.
+        var eliminated = (await _db.GroupUsers
+            .AsNoTracking()
+            .Where(gu => gu.GroupId == groupId && gu.IsEliminated)
+            .Select(gu => gu.UserId)
+            .ToListAsync(ct)).ToHashSet();
+
+        var rows = await _db.Standings
+            .AsNoTracking()
             .Where(s => s.SeasonId == seasonId)
             .OrderBy(s => s.Position)
             .Join(_db.Users, s => s.UserId, u => u.Id, (s, u) => new StandingDto
@@ -114,9 +134,15 @@ public class StandingsService : IStandingsService
                 PlayedRounds = s.PlayedRounds,
                 AbsenceCount = s.AbsenceCount,
                 PenaltyPoints = s.PenaltyPoints,
-                // Elimination is per-group (on the membership of this season's group).
-                IsEliminated = _db.GroupUsers.Any(gu => gu.GroupId == groupId && gu.UserId == s.UserId && gu.IsEliminated),
             })
             .ToListAsync(ct);
+
+        foreach (var row in rows)
+        {
+            // Elimination is per-group (on the membership of this season's group).
+            row.IsEliminated = eliminated.Contains(row.UserId);
+        }
+
+        return rows;
     }
 }

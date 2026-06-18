@@ -71,6 +71,13 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
+// Keyboard focus on the dark navbar needs a light ring to stay visible.
+.app-nav__link:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  color: var(--navbar-ink);
+}
+
 .app-nav__link.is-active {
   color: #fff;
   background: rgba(255, 255, 255, 0.14);

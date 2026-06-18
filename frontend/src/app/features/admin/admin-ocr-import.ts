@@ -1,4 +1,12 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -10,6 +18,7 @@ import { RoundsService } from '../../core/services/rounds.service';
 import { Loading } from '../../shared/components/loading/loading';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-ocr-import',
   imports: [FormsModule, RouterLink, TranslatePipe, Loading],
   template: `
@@ -272,6 +281,7 @@ export class AdminOcrImport implements OnInit {
   private readonly adminApi = inject(AdminService);
   private readonly toast = inject(ToastService);
   private readonly translate = inject(TranslateService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
   protected readonly processing = signal(false);
@@ -289,14 +299,16 @@ export class AdminOcrImport implements OnInit {
     forkJoin({
       round: this.roundsApi.getById(this.roundId),
       participants: this.adminApi.listParticipants(),
-    }).subscribe({
-      next: ({ round, participants }) => {
-        this.round.set(round);
-        this.participants.set(participants);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ round, participants }) => {
+          this.round.set(round);
+          this.participants.set(participants);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 
   onFile(event: Event): void {
@@ -340,13 +352,16 @@ export class AdminOcrImport implements OnInit {
       return;
     }
     this.processing.set(true);
-    this.adminApi.importImage(this.roundId, f, this.language).subscribe({
-      next: (b) => {
-        this.batch.set(b);
-        this.processing.set(false);
-      },
-      error: () => this.processing.set(false),
-    });
+    this.adminApi
+      .importImage(this.roundId, f, this.language)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (b) => {
+          this.batch.set(b);
+          this.processing.set(false);
+        },
+        error: () => this.processing.set(false),
+      });
   }
 
   saveCandidate(c: OcrCandidate): void {
@@ -360,6 +375,7 @@ export class AdminOcrImport implements OnInit {
         predictedAwayScore: c.predictedAwayScore ?? null,
         reviewNotes: c.reviewNotes ?? null,
       })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ next: (updated) => this.batch.set(updated) });
   }
 
@@ -368,17 +384,21 @@ export class AdminOcrImport implements OnInit {
     if (!b) return;
     this.adminApi
       .confirmOcr(b.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ next: () => this.toast.success(this.translate.instant('ocr.confirmed')) });
   }
 
   cancel(): void {
     const b = this.batch();
     if (!b) return;
-    this.adminApi.cancelOcr(b.id).subscribe({
-      next: () => {
-        this.batch.set(null);
-        this.toast.success(this.translate.instant('ocr.cancelled'));
-      },
-    });
+    this.adminApi
+      .cancelOcr(b.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.batch.set(null);
+          this.toast.success(this.translate.instant('ocr.cancelled'));
+        },
+      });
   }
 }

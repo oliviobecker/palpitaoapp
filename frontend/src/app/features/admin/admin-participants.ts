@@ -1,4 +1,12 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -10,6 +18,7 @@ import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { Loading } from '../../shared/components/loading/loading';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-participants',
   imports: [ReactiveFormsModule, RouterLink, TranslatePipe, EmptyState, Loading],
   template: `
@@ -167,6 +176,7 @@ export class AdminParticipants implements OnInit {
   private readonly confirm = inject(ConfirmService);
   private readonly translate = inject(TranslateService);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -186,13 +196,16 @@ export class AdminParticipants implements OnInit {
 
   load(): void {
     this.loading.set(true);
-    this.api.listParticipants().subscribe({
-      next: (list) => {
-        this.participants.set(list);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    this.api
+      .listParticipants()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (list) => {
+          this.participants.set(list);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 
   edit(p: Participant): void {
@@ -219,7 +232,7 @@ export class AdminParticipants implements OnInit {
     const request$ = id
       ? this.api.updateParticipant(id, { name, email })
       : this.api.createParticipant({ name, email, password });
-    request$.subscribe({
+    request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.success(this.translate.instant('adminParticipants.saved'));
         this.saving.set(false);
@@ -232,7 +245,7 @@ export class AdminParticipants implements OnInit {
 
   setActive(p: Participant, active: boolean): void {
     const call = active ? this.api.activateParticipant(p.id) : this.api.deactivateParticipant(p.id);
-    call.subscribe({
+    call.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () =>
         this.afterAction(
           active ? 'adminParticipants.activatedMsg' : 'adminParticipants.deactivatedMsg',
@@ -258,6 +271,7 @@ export class AdminParticipants implements OnInit {
     }
     this.api
       .eliminateParticipant(p.id, justification)
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ next: () => this.afterAction('adminParticipants.eliminatedMsg') });
   }
 
@@ -270,6 +284,7 @@ export class AdminParticipants implements OnInit {
     }
     this.api
       .reactivate(p.id, justification)
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ next: () => this.afterAction('adminParticipants.reactivatedMsg') });
   }
 
@@ -281,9 +296,12 @@ export class AdminParticipants implements OnInit {
       this.absences.set(copy);
       return;
     }
-    this.api.getUserAbsences(p.id).subscribe({
-      next: (list) => this.absences.set({ ...this.absences(), [p.id]: list }),
-    });
+    this.api
+      .getUserAbsences(p.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (list) => this.absences.set({ ...this.absences(), [p.id]: list }),
+      });
   }
 
   private afterAction(key: string): void {

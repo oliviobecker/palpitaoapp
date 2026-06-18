@@ -31,7 +31,8 @@
     "reload": "Reload",
     "empty": "Nothing here yet.",
     "you": "You",
-    "optional": "(optional)"
+    "optional": "(optional)",
+    "close": "Close"
   },
   "login": {
     "title": "Sign in",
@@ -91,7 +92,8 @@
     "ExtraUncommon": "Extra-uncommon"
   },
   "countdown": {
-    "ended": "Closed"
+    "ended": "Closed",
+    "timeRemaining": "Time remaining"
   },
   "confirm": {
     "title": "Confirm",
@@ -305,6 +307,7 @@
     "selectAll": "Select all",
     "clear": "Clear selection",
     "allCompetitions": "All competitions",
+    "filterByCompetition": "Filter by competition",
     "searchTeam": "Search team...",
     "classic": "Classic",
     "alreadyAdded": "Already added",

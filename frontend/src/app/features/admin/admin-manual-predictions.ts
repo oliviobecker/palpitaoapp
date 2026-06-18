@@ -1,5 +1,13 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -12,6 +20,7 @@ import { CompetitionBadge } from '../../shared/components/competition-badge/comp
 import { Loading } from '../../shared/components/loading/loading';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-manual-predictions',
   imports: [ReactiveFormsModule, FormsModule, RouterLink, TranslatePipe, CompetitionBadge, Loading],
   template: `
@@ -161,6 +170,7 @@ export class AdminManualPredictions implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly translate = inject(TranslateService);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -195,26 +205,28 @@ export class AdminManualPredictions implements OnInit {
     forkJoin({
       round: this.roundsApi.getById(this.roundId),
       participants: this.adminApi.listParticipants(),
-    }).subscribe({
-      next: ({ round, participants }) => {
-        const sorted = [...round.matches].sort(
-          (a, b) => a.order - b.order || a.startsAt.localeCompare(b.startsAt),
-        );
-        this.round.set(round);
-        this.matches.set(sorted);
-        this.participants.set(participants);
-        for (const _ of sorted) {
-          this.form.push(
-            this.fb.group({
-              home: [0, [Validators.required, Validators.min(0)]],
-              away: [0, [Validators.required, Validators.min(0)]],
-            }),
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ round, participants }) => {
+          const sorted = [...round.matches].sort(
+            (a, b) => a.order - b.order || a.startsAt.localeCompare(b.startsAt),
           );
-        }
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+          this.round.set(round);
+          this.matches.set(sorted);
+          this.participants.set(participants);
+          for (const _ of sorted) {
+            this.form.push(
+              this.fb.group({
+                home: [0, [Validators.required, Validators.min(0)]],
+                away: [0, [Validators.required, Validators.min(0)]],
+              }),
+            );
+          }
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 
   group(i: number): FormGroup {
@@ -232,21 +244,24 @@ export class AdminManualPredictions implements OnInit {
     }
 
     this.loadingExisting.set(true);
-    this.adminApi.getParticipantPredictions(this.roundId, userId).subscribe({
-      next: (data) => {
-        this.existing.set(data);
-        this.overwrite = data.hasPredictions;
-        const matches = this.matches();
-        for (const p of data.predictions) {
-          const i = matches.findIndex((m) => m.id === p.roundMatchId);
-          if (i >= 0) {
-            this.group(i).patchValue({ home: p.predictedHomeScore, away: p.predictedAwayScore });
+    this.adminApi
+      .getParticipantPredictions(this.roundId, userId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => {
+          this.existing.set(data);
+          this.overwrite = data.hasPredictions;
+          const matches = this.matches();
+          for (const p of data.predictions) {
+            const i = matches.findIndex((m) => m.id === p.roundMatchId);
+            if (i >= 0) {
+              this.group(i).patchValue({ home: p.predictedHomeScore, away: p.predictedAwayScore });
+            }
           }
-        }
-        this.loadingExisting.set(false);
-      },
-      error: () => this.loadingExisting.set(false),
-    });
+          this.loadingExisting.set(false);
+        },
+        error: () => this.loadingExisting.set(false),
+      });
   }
 
   private resetScores(): void {
@@ -275,6 +290,7 @@ export class AdminManualPredictions implements OnInit {
         justification: this.justification || undefined,
         allowAfterDeadline: this.overwrite && !!this.justification,
       })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.saving.set(false);

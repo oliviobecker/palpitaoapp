@@ -30,6 +30,7 @@ public class AppDbContext : DbContext
     public DbSet<OcrImportBatch> OcrImportBatches => Set<OcrImportBatch>();
     public DbSet<OcrPredictionCandidate> OcrPredictionCandidates => Set<OcrPredictionCandidate>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -310,12 +311,30 @@ public class AppDbContext : DbContext
             e.Property(x => x.EntityName).HasMaxLength(120).IsRequired();
             e.Property(x => x.EntityId).HasMaxLength(80);
             e.Property(x => x.Details).HasColumnType("jsonb");
-            e.HasIndex(x => x.GroupId);
+            // The admin audit list filters by group and orders by CreatedAt desc;
+            // a composite index serves both (its GroupId prefix also covers
+            // group-only lookups). EntityName supports the entity filter.
+            e.HasIndex(x => new { x.GroupId, x.CreatedAt });
+            e.HasIndex(x => x.EntityName);
 
             e.HasOne(x => x.User)
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<RefreshToken>(e =>
+        {
+            e.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
+            // Looked up by hash on every refresh; one row per token.
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.HasIndex(x => x.UserId);
+            e.Ignore(x => x.IsActive);
+
+            e.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 

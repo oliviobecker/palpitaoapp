@@ -1,13 +1,18 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, throwError } from 'rxjs';
+import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { httpErrorMessage } from '../notifications/http-error';
 import { ToastService } from '../notifications/toast.service';
-import { SKIP_ERROR_TOAST } from './http-context';
+import { SKIP_AUTH_REFRESH, SKIP_ERROR_TOAST } from './http-context';
 
-/** Surfaces API errors as toasts and logs out when an authenticated session expires. */
+/**
+ * On a 401 for an authenticated request, transparently refreshes the access token
+ * and retries once; if the refresh fails the session is ended (logout + redirect).
+ * Other errors surface as toasts. The auth endpoints opt out via SKIP_AUTH_REFRESH
+ * so a failing refresh can't loop.
+ */
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   const toast = inject(ToastService);
   const auth = inject(AuthService);
@@ -15,12 +20,30 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
-      // A 401 only means "session expired" for an already-authenticated user.
-      // For the login request itself, let the component surface the error.
-      if (error.status === 401 && auth.isAuthenticated()) {
-        auth.logout();
-        router.navigate(['/login']);
-      } else if (!req.context.get(SKIP_ERROR_TOAST)) {
+      const canRefresh =
+        error.status === 401 && auth.isAuthenticated() && !req.context.get(SKIP_AUTH_REFRESH);
+
+      if (canRefresh) {
+        return auth.refreshToken().pipe(
+          // Retry the original request once with the fresh token. Marking it
+          // SKIP_AUTH_REFRESH means a second 401 ends the session instead of looping.
+          switchMap((newToken) =>
+            next(
+              req.clone({
+                setHeaders: { Authorization: `Bearer ${newToken}` },
+                context: req.context.set(SKIP_AUTH_REFRESH, true),
+              }),
+            ),
+          ),
+          catchError(() => {
+            auth.logout();
+            router.navigate(['/login']);
+            return throwError(() => error);
+          }),
+        );
+      }
+
+      if (!req.context.get(SKIP_ERROR_TOAST)) {
         toast.error(httpErrorMessage(error));
       }
       return throwError(() => error);

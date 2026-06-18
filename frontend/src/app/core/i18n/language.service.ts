@@ -1,5 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
+import { take } from 'rxjs';
 
 export const LANG_STORAGE_KEY = 'palpitao.lang';
 export type Lang = 'pt-BR' | 'en-US';
@@ -46,10 +47,13 @@ export class LanguageService {
     document.documentElement.lang = lang;
     // Keep the document title on the product name in the active language
     // (Palpitão in pt-BR, FanPicks in en-US). Resolves once translations load.
-    this.translate.get('app.name').subscribe((name: string) => {
-      if (name && name !== 'app.name') {
-        document.title = name;
-      }
-    });
+    this.translate
+      .get('app.name')
+      .pipe(take(1))
+      .subscribe((name: string) => {
+        if (name && name !== 'app.name') {
+          document.title = name;
+        }
+      });
   }
 }

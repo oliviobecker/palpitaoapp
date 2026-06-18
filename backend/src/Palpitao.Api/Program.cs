@@ -63,6 +63,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
 
+// Fail fast on security-critical misconfiguration: an empty/weak signing key, the
+// dev placeholder key outside Development, or a missing connection string. Better to
+// crash loudly at startup than to boot accepting forgeable tokens.
+StartupValidation.Validate(jwtSettings.Key, connectionString, builder.Environment.IsDevelopment());
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -86,6 +91,7 @@ builder.Services.AddSingleton<IScoringService, ScoringService>();
 builder.Services.AddScoped<IRoundScoringService, RoundScoringService>();
 builder.Services.AddScoped<IStandingsService, StandingsService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICurrentGroupService, CurrentGroupService>();
 builder.Services.AddScoped<IGroupService, GroupService>();
@@ -158,14 +164,27 @@ builder.Services.Configure<ResultsRefreshOptions>(
     builder.Configuration.GetSection(ResultsRefreshOptions.SectionName));
 builder.Services.AddHostedService<ResultsRefreshBackgroundService>();
 
-// Permissive CORS for local development (Angular dev server).
+// CORS. Development allows the Angular dev server; other environments allow the
+// trusted origins configured under "Cors:AllowedOrigins" (e.g. the deployed
+// frontend URL), so the API can serve a cross-origin SPA without being open.
 const string DevCorsPolicy = "AllowFrontendDev";
+const string ProdCorsPolicy = "AllowConfiguredOrigins";
+var corsAllowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? Array.Empty<string>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(DevCorsPolicy, policy =>
         policy.WithOrigins("http://localhost:4200")
               .AllowAnyHeader()
               .AllowAnyMethod());
+
+    if (corsAllowedOrigins.Length > 0)
+    {
+        options.AddPolicy(ProdCorsPolicy, policy =>
+            policy.WithOrigins(corsAllowedOrigins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod());
+    }
 });
 
 var app = builder.Build();
@@ -189,6 +208,15 @@ using (var scope = app.Services.CreateScope())
     catch (Exception ex)
     {
         logger.LogError(ex, "Falha ao aplicar migrations no startup.");
+
+        // In Development we keep the API up (so /health is reachable while you fix the
+        // DB locally). Outside Development a migration/schema failure must not be masked:
+        // fail fast so the deploy is rolled back / the host restarts instead of serving a
+        // drifted schema.
+        if (!app.Environment.IsDevelopment())
+        {
+            throw;
+        }
     }
 }
 
@@ -200,6 +228,11 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.UseCors(DevCorsPolicy);
     app.UseHttpsRedirection();
+}
+else if (corsAllowedOrigins.Length > 0)
+{
+    // CORS must run before auth so preflight (OPTIONS) responses carry the headers.
+    app.UseCors(ProdCorsPolicy);
 }
 
 app.UseAuthentication();

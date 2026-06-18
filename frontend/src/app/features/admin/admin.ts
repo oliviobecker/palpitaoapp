@@ -1,4 +1,13 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
@@ -10,6 +19,7 @@ import { SeasonsService } from '../../core/services/seasons.service';
 import { Loading } from '../../shared/components/loading/loading';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin',
   imports: [RouterLink, TranslatePipe, Loading],
   template: `
@@ -104,6 +114,7 @@ export class Admin implements OnInit {
   private readonly seasonsApi = inject(SeasonsService);
   private readonly roundsApi = inject(RoundsService);
   private readonly adminApi = inject(AdminService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
   protected readonly activeSeason = signal<Season | null>(null);
@@ -183,17 +194,19 @@ export class Admin implements OnInit {
 
   ngOnInit(): void {
     forkJoin({
-      season: this.seasonsApi.getActive().pipe(),
+      season: this.seasonsApi.getActive(),
       rounds: this.roundsApi.getAll(),
       participants: this.adminApi.listParticipants(),
-    }).subscribe({
-      next: ({ season, rounds, participants }) => {
-        this.activeSeason.set(season);
-        this.rounds.set(rounds);
-        this.participants.set(participants);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ season, rounds, participants }) => {
+          this.activeSeason.set(season);
+          this.rounds.set(rounds);
+          this.participants.set(participants);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 }

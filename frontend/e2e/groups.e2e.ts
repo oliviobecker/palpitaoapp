@@ -4,6 +4,8 @@ import { adminUser, installApi, path } from './support';
 const loginResponse = {
   token: 'e2e-fake-jwt',
   expiresAtUtc: '2999-01-01T00:00:00Z',
+  refreshToken: 'e2e-fake-refresh',
+  refreshTokenExpiresAtUtc: '2999-01-01T00:00:00Z',
   user: adminUser,
 };
 

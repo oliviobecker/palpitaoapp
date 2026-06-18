@@ -1,6 +1,15 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
@@ -21,6 +30,7 @@ import {
 } from '../../shared/utils/match.util';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-predictions',
   imports: [
     ReactiveFormsModule,
@@ -74,6 +84,7 @@ export class Predictions implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly translate = inject(TranslateService);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly multiplier = computeMultiplier;
   protected readonly classic = isClassic;
@@ -143,45 +154,47 @@ export class Predictions implements OnInit {
     forkJoin({
       round: this.roundsApi.getById(this.roundId),
       mine: this.predictionsApi.getMine(this.roundId),
-    }).subscribe({
-      next: ({ round, mine }) => {
-        const sorted = [...round.matches].sort(
-          (a, b) => a.order - b.order || a.startsAt.localeCompare(b.startsAt),
-        );
-        this.round.set(round);
-        this.matches.set(sorted);
-
-        const open = round.status === RoundStatus.Published;
-        const beforeDeadline = round.firstMatchStartsAt
-          ? new Date(round.firstMatchStartsAt).getTime() > Date.now()
-          : false;
-        // In admin-only mode the form is read-only — predictions come from the admin.
-        this.editable.set(open && beforeDeadline && !this.adminOnly());
-        this.isEdit = mine.predictions.length > 0;
-        this.saved.set(this.isEdit);
-
-        for (const match of sorted) {
-          const existing = mine.predictions.find((p) => p.roundMatchId === match.id);
-          this.form.push(
-            this.fb.group({
-              home: [
-                existing?.predictedHomeScore ?? null,
-                [Validators.required, Validators.min(0), Validators.pattern(/^\d+$/)],
-              ],
-              away: [
-                existing?.predictedAwayScore ?? null,
-                [Validators.required, Validators.min(0), Validators.pattern(/^\d+$/)],
-              ],
-            }),
+    })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ round, mine }) => {
+          const sorted = [...round.matches].sort(
+            (a, b) => a.order - b.order || a.startsAt.localeCompare(b.startsAt),
           );
-        }
-        if (!this.editable()) {
-          this.form.disable();
-        }
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+          this.round.set(round);
+          this.matches.set(sorted);
+
+          const open = round.status === RoundStatus.Published;
+          const beforeDeadline = round.firstMatchStartsAt
+            ? new Date(round.firstMatchStartsAt).getTime() > Date.now()
+            : false;
+          // In admin-only mode the form is read-only — predictions come from the admin.
+          this.editable.set(open && beforeDeadline && !this.adminOnly());
+          this.isEdit = mine.predictions.length > 0;
+          this.saved.set(this.isEdit);
+
+          for (const match of sorted) {
+            const existing = mine.predictions.find((p) => p.roundMatchId === match.id);
+            this.form.push(
+              this.fb.group({
+                home: [
+                  existing?.predictedHomeScore ?? null,
+                  [Validators.required, Validators.min(0), Validators.pattern(/^\d+$/)],
+                ],
+                away: [
+                  existing?.predictedAwayScore ?? null,
+                  [Validators.required, Validators.min(0), Validators.pattern(/^\d+$/)],
+                ],
+              }),
+            );
+          }
+          if (!this.editable()) {
+            this.form.disable();
+          }
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 
   group(i: number): FormGroup {
@@ -210,7 +223,7 @@ export class Predictions implements OnInit {
       ? this.predictionsApi.update(this.roundId, items)
       : this.predictionsApi.save(this.roundId, items);
 
-    request$.subscribe({
+    request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.isEdit = true;
         this.saving.set(false);

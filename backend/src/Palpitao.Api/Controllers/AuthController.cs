@@ -78,4 +78,26 @@ public class AuthController : ControllerBase
         SentrySdk.AddBreadcrumb("Login blocked by account status.", "auth", level: BreadcrumbLevel.Warning);
         return StatusCode(StatusCodes.Status403Forbidden, new { message });
     }
+
+    /// <summary>Exchanges a refresh token for a new access token and a rotated refresh token.</summary>
+    [HttpPost("refresh")]
+    public async Task<ActionResult<LoginResponse>> Refresh(RefreshRequest request, CancellationToken ct)
+    {
+        var outcome = await _auth.RefreshAsync(request.RefreshToken, ct);
+        if (outcome.Success)
+        {
+            return Ok(outcome.Response);
+        }
+
+        SentrySdk.AddBreadcrumb("Refresh token rejected.", "auth", level: BreadcrumbLevel.Warning);
+        return Unauthorized(new { message = _localizer.Get(outcome.FailureKey!) });
+    }
+
+    /// <summary>Revokes a refresh token (logout). Idempotent for unknown/expired tokens.</summary>
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(LogoutRequest request, CancellationToken ct)
+    {
+        await _auth.LogoutAsync(request.RefreshToken, ct);
+        return NoContent();
+    }
 }

@@ -1,5 +1,14 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
@@ -9,6 +18,7 @@ import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { Loading } from '../../shared/components/loading/loading';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-temporary-standings',
   imports: [RouterLink, TranslatePipe, DatePipe, EmptyState, Loading],
   template: `
@@ -79,6 +89,7 @@ export class TemporaryStandingsView implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly roundsApi = inject(RoundsService);
   private readonly auth = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
   protected readonly data = signal<TemporaryStandings | null>(null);
@@ -86,13 +97,16 @@ export class TemporaryStandingsView implements OnInit {
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
-    this.roundsApi.getTemporaryStandings(id).subscribe({
-      next: (d) => {
-        this.data.set(d);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    this.roundsApi
+      .getTemporaryStandings(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (d) => {
+          this.data.set(d);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 
   isMe(userId: string): boolean {
