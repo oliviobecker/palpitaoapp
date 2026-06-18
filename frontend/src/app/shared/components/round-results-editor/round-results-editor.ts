@@ -16,6 +16,7 @@ import { RoundMatch } from '../../../core/models/models';
 import { ToastService } from '../../../core/notifications/toast.service';
 import { MatchesService } from '../../../core/services/matches.service';
 import { CompetitionBadge } from '../competition-badge/competition-badge';
+import { Icon } from '../icon/icon';
 
 /**
  * Reusable match-score entry form. Renders one home×away input pair per match and
@@ -26,7 +27,7 @@ import { CompetitionBadge } from '../competition-badge/competition-badge';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-round-results-editor',
-  imports: [ReactiveFormsModule, TranslatePipe, CompetitionBadge],
+  imports: [ReactiveFormsModule, TranslatePipe, CompetitionBadge, Icon],
   template: `
     <form>
       <div class="vstack gap-2">
@@ -36,7 +37,9 @@ import { CompetitionBadge } from '../competition-badge/competition-badge';
               <div class="d-flex align-items-center gap-2 mb-3">
                 <app-competition-badge [competition]="m.competition" />
                 @if (m.isFinished) {
-                  <span class="badge text-bg-success">{{ 'adminResults.finished' | translate }}</span>
+                  <span class="badge text-bg-success">{{
+                    'adminResults.finished' | translate
+                  }}</span>
                 }
               </div>
               <div class="d-flex align-items-center gap-2">
@@ -44,9 +47,19 @@ import { CompetitionBadge } from '../competition-badge/competition-badge';
                   abbr(m.homeTeamName)
                 }}</span>
                 <span class="fw-semibold team-name">{{ m.homeTeamName }}</span>
-                <input type="number" min="0" class="form-control score-box" formControlName="home" />
+                <input
+                  type="number"
+                  min="0"
+                  class="form-control score-box"
+                  formControlName="home"
+                />
                 <span class="text-muted">×</span>
-                <input type="number" min="0" class="form-control score-box" formControlName="away" />
+                <input
+                  type="number"
+                  min="0"
+                  class="form-control score-box"
+                  formControlName="away"
+                />
                 <span class="fw-semibold team-name text-end">{{ m.awayTeamName }}</span>
                 <span class="team-badge" [style.background]="teamColor(m.awayTeamName)">{{
                   abbr(m.awayTeamName)
@@ -67,7 +80,7 @@ import { CompetitionBadge } from '../competition-badge/competition-badge';
           @if (saving()) {
             <span class="spinner-border spinner-border-sm me-2"></span>
           }
-          💾 {{ 'adminResults.saveResults' | translate }}
+          <app-icon name="save" [size]="16" /> {{ 'adminResults.saveResults' | translate }}
         </button>
       </div>
     </form>

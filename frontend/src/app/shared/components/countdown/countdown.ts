@@ -9,11 +9,12 @@ import {
   signal,
 } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
+import { Icon } from '../icon/icon';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-countdown',
-  imports: [],
+  imports: [Icon],
   template: `
     @if (target()) {
       <span
@@ -23,7 +24,7 @@ import { TranslateService } from '@ngx-translate/core';
         [class.text-bg-secondary]="!urgent()"
         [attr.aria-label]="ariaLabel()"
       >
-        <span aria-hidden="true">⏱ {{ label() }}</span>
+        <span aria-hidden="true"><app-icon name="timer" [size]="12" /> {{ label() }}</span>
       </span>
     }
   `,

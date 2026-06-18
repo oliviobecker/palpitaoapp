@@ -21,8 +21,10 @@ import { RoundsService } from '../../core/services/rounds.service';
 import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
 import { Countdown } from '../../shared/components/countdown/countdown';
 import { ErrorState } from '../../shared/components/error-state/error-state';
+import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
 import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
+import { PageHeader } from '../../shared/components/page-header/page-header';
 import {
   computeMultiplier,
   isClassic,
@@ -41,8 +43,10 @@ import {
     CompetitionBadge,
     Countdown,
     ErrorState,
+    Icon,
     Loading,
     MultiplierBadge,
+    PageHeader,
   ],
   templateUrl: './predictions.html',
   styles: [
@@ -75,6 +79,28 @@ import {
         font-size: 1.4rem;
         font-weight: 700;
         border-radius: 12px;
+      }
+      .predictions-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-top: 1rem;
+        padding: 0.7rem 0.9rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+      }
+      .predictions-bar__status {
+        font-size: 0.88rem;
+        min-width: 0;
+      }
+      @media (min-width: 768px) {
+        .predictions-bar {
+          position: sticky;
+          bottom: 1rem;
+        }
       }
     `,
   ],
@@ -114,6 +140,14 @@ export class Predictions implements OnInit {
   protected readonly error = signal(false);
   protected readonly saving = signal(false);
   protected readonly saved = signal(false);
+  /** True when an unsaved local draft was restored on load. */
+  protected readonly draftRestored = signal(false);
+  /** Count of fully-filled (valid) match rows, for the status bar. */
+  protected readonly filled = signal(0);
+  protected readonly remaining = computed(() => Math.max(0, this.matches().length - this.filled()));
+  protected readonly allFilled = computed(
+    () => this.matches().length > 0 && this.filled() === this.matches().length,
+  );
   private isEdit = false;
   protected roundId = '';
 
@@ -202,7 +236,16 @@ export class Predictions implements OnInit {
           }
           if (!this.editable()) {
             this.form.disable();
+          } else {
+            // Restore any unsaved local draft over the loaded server values.
+            const draft = this.readDraft();
+            if (draft) {
+              this.applyDraft(draft);
+              this.saved.set(false);
+              this.draftRestored.set(true);
+            }
           }
+          this.recountFilled();
           this.loading.set(false);
         },
         error: () => {
@@ -218,6 +261,8 @@ export class Predictions implements OnInit {
 
   onInput(): void {
     this.saved.set(false);
+    this.recountFilled();
+    this.persistDraft();
   }
 
   save(): void {
@@ -243,9 +288,65 @@ export class Predictions implements OnInit {
         this.isEdit = true;
         this.saving.set(false);
         this.saved.set(true);
+        this.draftRestored.set(false);
+        this.clearDraft();
         this.toast.success(this.translate.instant('predictions.savedToast'));
       },
       error: () => this.saving.set(false),
     });
+  }
+
+  // --- Local draft (no backend): keeps in-progress edits across navigations ---
+  private draftKey(): string {
+    return `palpitao.predraft.${this.roundId}`;
+  }
+
+  /** Recounts fully-valid rows so the status bar can show progress. */
+  private recountFilled(): void {
+    let n = 0;
+    for (let i = 0; i < this.form.length; i++) {
+      if (this.group(i).valid) n++;
+    }
+    this.filled.set(n);
+  }
+
+  private persistDraft(): void {
+    if (!this.editable()) return;
+    const draft: Record<string, { home: number | null; away: number | null }> = {};
+    this.matches().forEach((m, i) => {
+      const v = this.group(i).value as { home: number | null; away: number | null };
+      draft[m.id] = { home: v.home ?? null, away: v.away ?? null };
+    });
+    try {
+      localStorage.setItem(this.draftKey(), JSON.stringify(draft));
+    } catch {
+      /* storage unavailable — drafts are best-effort */
+    }
+  }
+
+  private readDraft(): Record<string, { home: number | null; away: number | null }> | null {
+    try {
+      const raw = localStorage.getItem(this.draftKey());
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private applyDraft(draft: Record<string, { home: number | null; away: number | null }>): void {
+    this.matches().forEach((m, i) => {
+      const d = draft[m.id];
+      if (d) {
+        this.group(i).patchValue({ home: d.home, away: d.away }, { emitEvent: false });
+      }
+    });
+  }
+
+  private clearDraft(): void {
+    try {
+      localStorage.removeItem(this.draftKey());
+    } catch {
+      /* noop */
+    }
   }
 }

@@ -15,6 +15,7 @@ import { MyGroup } from '../../core/models/models';
 import { ToastService } from '../../core/notifications/toast.service';
 import { GroupContextService } from '../../core/services/group-context.service';
 import { GroupsService } from '../../core/services/groups.service';
+import { Icon } from '../../shared/components/icon/icon';
 
 /**
  * Shown after login when the account is valid but has no approved group yet. Lists
@@ -24,11 +25,11 @@ import { GroupsService } from '../../core/services/groups.service';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-awaiting-approval',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, Icon],
   template: `
     <div class="container py-4" style="max-width: 560px;">
       <div class="text-center mb-4">
-        <div class="auth-logo">⏳</div>
+        <div class="auth-logo"><app-icon name="hourglass" [size]="26" class="text-white" /></div>
         <h1 class="h4 fw-bold mb-1">{{ 'awaitingApproval.title' | translate }}</h1>
         <p class="text-muted small mb-0">{{ 'awaitingApproval.intro' | translate }}</p>
       </div>
@@ -67,12 +68,7 @@ import { GroupsService } from '../../core/services/groups.service';
       }
 
       <div class="d-grid gap-2 mt-4">
-        <button
-          type="button"
-          class="btn btn-primary"
-          (click)="recheck()"
-          [disabled]="rechecking()"
-        >
+        <button type="button" class="btn btn-primary" (click)="recheck()" [disabled]="rechecking()">
           @if (rechecking()) {
             <span class="spinner-border spinner-border-sm me-2"></span>
           }

@@ -24,6 +24,7 @@ import { PredictionsService } from '../../core/services/predictions.service';
 import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { ErrorState } from '../../shared/components/error-state/error-state';
+import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
 import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
 
@@ -36,6 +37,7 @@ import { MultiplierBadge } from '../../shared/components/multiplier-badge/multip
     CompetitionBadge,
     EmptyState,
     ErrorState,
+    Icon,
     Loading,
     MultiplierBadge,
   ],

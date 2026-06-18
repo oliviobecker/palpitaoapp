@@ -28,12 +28,14 @@ import { RoundsService } from '../../core/services/rounds.service';
 import { SeasonsService } from '../../core/services/seasons.service';
 import { StandingsService } from '../../core/services/standings.service';
 import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
-import { Loading } from '../../shared/components/loading/loading';
+import { ErrorState } from '../../shared/components/error-state/error-state';
+import { Icon } from '../../shared/components/icon/icon';
+import { Skeleton } from '../../shared/components/skeleton/skeleton';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-dashboard',
-  imports: [RouterLink, DatePipe, TranslatePipe, Loading, CompetitionBadge],
+  imports: [RouterLink, DatePipe, TranslatePipe, CompetitionBadge, ErrorState, Skeleton, Icon],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })

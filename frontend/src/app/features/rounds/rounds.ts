@@ -15,15 +15,27 @@ import { RoundStatus } from '../../core/models/enums';
 import { RoundSummary } from '../../core/models/models';
 import { RoundsService } from '../../core/services/rounds.service';
 import { GroupContextService } from '../../core/services/group-context.service';
-import { Loading } from '../../shared/components/loading/loading';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Countdown } from '../../shared/components/countdown/countdown';
+import { Icon } from '../../shared/components/icon/icon';
+import { PageHeader } from '../../shared/components/page-header/page-header';
+import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-rounds',
-  imports: [RouterLink, DatePipe, TranslatePipe, Loading, EmptyState, ErrorState, Countdown],
+  imports: [
+    RouterLink,
+    DatePipe,
+    TranslatePipe,
+    EmptyState,
+    ErrorState,
+    Countdown,
+    PageHeader,
+    SkeletonList,
+    Icon,
+  ],
   templateUrl: './rounds.html',
 })
 export class Rounds implements OnInit {

@@ -1,16 +1,14 @@
-<div class="mb-3">
-  <h1 class="h4 fw-bold mb-0">🏆 {{ 'standings.title' | translate }}</h1>
-</div>
+<app-page-header [title]="'standings.title' | translate" />
 
 @if (loading()) {
-  <app-loading />
+  <app-skeleton-list />
 } @else if (error()) {
   <app-error-state (retry)="load()" />
 } @else if (standings().length === 0) {
   <app-empty-state [message]="'standings.empty' | translate" />
 } @else {
   <!-- Mobile: cards -->
-  <div class="vstack gap-2 d-md-none">
+  <div class="vstack gap-2 d-md-none fade-in-up">
     @for (s of standings(); track s.userId) {
       <div
         class="card"

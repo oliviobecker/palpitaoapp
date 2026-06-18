@@ -16,12 +16,13 @@ import { SeasonsService } from '../../core/services/seasons.service';
 import { StandingsService } from '../../core/services/standings.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { ErrorState } from '../../shared/components/error-state/error-state';
-import { Loading } from '../../shared/components/loading/loading';
+import { PageHeader } from '../../shared/components/page-header/page-header';
+import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-standings',
-  imports: [TranslatePipe, EmptyState, ErrorState, Loading],
+  imports: [TranslatePipe, EmptyState, ErrorState, PageHeader, SkeletonList],
   templateUrl: './standings.html',
 })
 export class Standings implements OnInit {
@@ -48,9 +49,7 @@ export class Standings implements OnInit {
     this.seasonsApi
       .getActive()
       .pipe(
-        switchMap((season) =>
-          season ? this.standingsApi.getStandings(season.id) : of(null),
-        ),
+        switchMap((season) => (season ? this.standingsApi.getStandings(season.id) : of(null))),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({

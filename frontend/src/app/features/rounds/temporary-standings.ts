@@ -16,12 +16,13 @@ import { TemporaryStandings } from '../../core/models/models';
 import { RoundsService } from '../../core/services/rounds.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { ErrorState } from '../../shared/components/error-state/error-state';
+import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-temporary-standings',
-  imports: [RouterLink, TranslatePipe, DatePipe, EmptyState, ErrorState, Loading],
+  imports: [RouterLink, TranslatePipe, DatePipe, EmptyState, ErrorState, Icon, Loading],
   template: `
     <div class="mb-3">
       <div class="page-trail">
@@ -36,7 +37,9 @@ import { Loading } from '../../shared/components/loading/loading';
     } @else if (error()) {
       <app-error-state (retry)="load()" />
     } @else if (data(); as d) {
-      <div class="alert alert-warning py-2">⏱️ {{ 'temporaryStandings.notice' | translate }}</div>
+      <div class="alert alert-warning py-2">
+        <app-icon name="timer" [size]="15" /> {{ 'temporaryStandings.notice' | translate }}
+      </div>
 
       <div class="d-flex flex-wrap gap-3 small text-muted mb-3">
         <span>{{ 'temporaryStandings.computed' | translate }}: {{ d.computedMatches }}</span>

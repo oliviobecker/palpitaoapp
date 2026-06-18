@@ -10,10 +10,10 @@
 } @else if (error()) {
   <app-error-state (retry)="load()" />
 } @else if (!scored()) {
-  <app-empty-state icon="⏳" [message]="'results.notScored' | translate" />
+  <app-empty-state icon="hourglass" [message]="'results.notScored' | translate" />
   <div class="d-grid mt-3">
     <a class="btn btn-outline-primary" [routerLink]="['/rounds', roundId(), 'temporary-standings']">
-      📊 {{ 'temporaryStandings.title' | translate }}
+      <app-icon name="chart-column" [size]="16" /> {{ 'temporaryStandings.title' | translate }}
     </a>
   </div>
 } @else {

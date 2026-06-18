@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
+import { Icon } from '../icon/icon';
 
 /**
  * Page-level error state: shown when an initial data fetch fails, so the screen
@@ -9,10 +10,10 @@ import { TranslatePipe } from '@ngx-translate/core';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-error-state',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, Icon],
   template: `
     <div class="text-center text-muted py-5" role="alert">
-      <div class="display-6 mb-2" aria-hidden="true">⚠️</div>
+      <app-icon name="triangle-alert" [size]="44" class="text-warning mb-2" />
       <p class="mb-3">{{ message() | translate }}</p>
       <button type="button" class="btn btn-outline-primary" (click)="retry.emit()">
         {{ 'common.reload' | translate }}

@@ -1,15 +1,13 @@
-<div class="mb-3">
-  <h1 class="h4 fw-bold mb-0">{{ 'rounds.title' | translate }}</h1>
-</div>
+<app-page-header [title]="'rounds.title' | translate" />
 
 @if (loading()) {
-  <app-loading />
+  <app-skeleton-list />
 } @else if (error()) {
   <app-error-state (retry)="load()" />
 } @else if (visible().length === 0) {
   <app-empty-state [message]="'rounds.empty' | translate" />
 } @else {
-  <div class="vstack gap-2">
+  <div class="vstack gap-2 fade-in-up">
     @for (round of visible(); track round.id) {
       <div class="card round-accent r--{{ statusKey(round.status) }}">
         <div class="card-body">
@@ -26,7 +24,8 @@
                 }
               </div>
               <small class="text-muted"
-                >🕐 {{ round.matchCount }} {{ 'rounds.games' | translate }}</small
+                ><app-icon name="clock" [size]="13" /> {{ round.matchCount }}
+                {{ 'rounds.games' | translate }}</small
               >
             </div>
             <span class="round-pill">{{ 'status.' + round.status | translate }}</span>

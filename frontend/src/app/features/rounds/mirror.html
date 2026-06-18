@@ -9,9 +9,9 @@
 @if (loading()) {
   <app-loading />
 } @else if (forbidden()) {
-  <app-empty-state icon="🔒" [message]="'predictionsMirror.notAllowed' | translate" />
+  <app-empty-state icon="lock" [message]="'predictionsMirror.notAllowed' | translate" />
 } @else if (blocked()) {
-  <app-empty-state icon="🔒" [message]="'predictionsMirror.availableAfterLock' | translate" />
+  <app-empty-state icon="lock" [message]="'predictionsMirror.availableAfterLock' | translate" />
 } @else if (mirror(); as data) {
   <!-- Filters -->
   <div class="row g-2 mb-3">

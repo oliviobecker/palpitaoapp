@@ -1,25 +1,71 @@
 <div class="d-flex justify-content-between align-items-start gap-2 mb-3 flex-wrap">
   <div>
-    <div class="page-trail">{{ 'dashboard.welcome' | translate }} 🏆</div>
+    <div class="page-trail">
+      {{ 'dashboard.welcome' | translate }} <app-icon name="trophy" [size]="14" />
+    </div>
     <h1 class="h3 fw-bold mb-0">{{ auth.currentUser()?.name }}</h1>
   </div>
   @if (seasonName(); as sn) {
     <div class="season-pill">
-      <span class="season-pill__label">🏆 {{ 'dashboard.season' | translate }}</span>
+      <span class="season-pill__label"
+        ><app-icon name="trophy" [size]="13" /> {{ 'dashboard.season' | translate }}</span
+      >
       <span class="season-pill__name">{{ sn }}</span>
     </div>
   }
 </div>
 
 @if (loading()) {
-  <app-loading />
+  <div class="row g-3" aria-hidden="true">
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-body">
+          <app-skeleton width="7rem" height="1.4rem" radius="999px" />
+          <span class="d-block mt-3"><app-skeleton width="55%" height="1.5rem" /></span>
+          <div class="d-flex gap-2 mt-3">
+            <app-skeleton width="3.5rem" height="3.5rem" />
+            <app-skeleton width="3.5rem" height="3.5rem" />
+            <app-skeleton width="3.5rem" height="3.5rem" />
+            <app-skeleton width="3.5rem" height="3.5rem" />
+          </div>
+          <span class="d-block mt-3"><app-skeleton height="0.9rem" /></span>
+          <span class="d-block mt-3"><app-skeleton height="3rem" radius="var(--radius)" /></span>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <div class="card">
+            <div class="card-body">
+              <app-skeleton width="2.5rem" height="2.5rem" radius="12px" />
+              <span class="d-block mt-2"><app-skeleton width="50%" height="1.4rem" /></span>
+            </div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="card">
+            <div class="card-body">
+              <app-skeleton width="2.5rem" height="2.5rem" radius="12px" />
+              <span class="d-block mt-2"><app-skeleton width="50%" height="1.4rem" /></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body vstack gap-2">
+          <app-skeleton width="40%" height="1rem" />
+          <app-skeleton height="1.6rem" />
+          <app-skeleton height="1.6rem" />
+          <app-skeleton height="1.6rem" />
+        </div>
+      </div>
+    </div>
+  </div>
 } @else if (error()) {
-  <div class="alert alert-danger">{{ 'dashboard.loadError' | translate }}</div>
-  <button class="btn btn-outline-primary" (click)="load()">
-    {{ 'common.reload' | translate }}
-  </button>
+  <app-error-state message="dashboard.loadError" (retry)="load()" />
 } @else {
-  <div class="row g-3">
+  <div class="row g-3 fade-in-up">
     <!-- Left: open round hero -->
     <div class="col-lg-7">
       @if (openRound(); as round) {
@@ -53,12 +99,16 @@
 
           @if (deadline(); as d) {
             <div class="hero-meta">
-              ⏰ {{ 'dashboard.closesAt' | translate }} {{ d | date: 'EEE, dd/MM · HH:mm' }}
+              <app-icon name="clock" [size]="15" /> {{ 'dashboard.closesAt' | translate }}
+              {{ d | date: 'EEE, dd/MM · HH:mm' }}
             </div>
           }
 
           <div class="hero-progress-row">
-            <span>📝 {{ 'dashboard.predictionsSent' | translate }}</span>
+            <span
+              ><app-icon name="file-pen" [size]="15" />
+              {{ 'dashboard.predictionsSent' | translate }}</span
+            >
             <span>{{ predictionsDone() }}/{{ matchCount() }}</span>
           </div>
           <div class="hero-progress">
@@ -66,12 +116,12 @@
           </div>
 
           <a class="hero-cta" [routerLink]="['/rounds', round.id, 'predictions']">
-            ✏️
+            <app-icon name="pencil" [size]="18" />
             {{ (allPredicted() ? 'dashboard.editPredictions' : 'dashboard.continue') | translate }}
           </a>
           @if (round.allowParticipantsToViewOthersPredictions) {
             <a class="hero-link mt-2" [routerLink]="['/rounds', round.id, 'mirror']">
-              👁 {{ 'predictionsMirror.view' | translate }}
+              <app-icon name="eye" [size]="16" /> {{ 'predictionsMirror.view' | translate }}
             </a>
           }
         </div>
@@ -101,7 +151,9 @@
         <div class="col-6">
           <div class="card stat-card h-100">
             <div class="card-body">
-              <span class="icon-tile icon-tile--amber mb-2">⭐</span>
+              <span class="icon-tile icon-tile--amber mb-2"
+                ><app-icon name="star" [size]="20"
+              /></span>
               <div class="stat-card__value">{{ myStanding()?.totalPoints ?? '—' }}</div>
               <div class="stat-card__label">{{ 'dashboard.points' | translate }}</div>
             </div>
@@ -110,7 +162,9 @@
         <div class="col-6">
           <div class="card stat-card h-100">
             <div class="card-body">
-              <span class="icon-tile icon-tile--violet mb-2">🏆</span>
+              <span class="icon-tile icon-tile--violet mb-2"
+                ><app-icon name="trophy" [size]="20"
+              /></span>
               <div class="stat-card__value">
                 {{ myStanding() ? '#' + myStanding()!.position : '—' }}
               </div>
@@ -123,7 +177,9 @@
       <div class="card">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <h2 class="h6 fw-bold mb-0">🏆 {{ 'nav.standings' | translate }}</h2>
+            <h2 class="h6 fw-bold mb-0">
+              <app-icon name="trophy" [size]="18" /> {{ 'nav.standings' | translate }}
+            </h2>
             <a class="small text-decoration-none" routerLink="/standings">{{
               'dashboard.viewAll' | translate
             }}</a>
@@ -166,7 +222,10 @@
             <div class="card-body py-3 px-3">
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <app-competition-badge [competition]="m.competition" />
-                <small class="text-muted">🕐 {{ m.startsAt | date: 'EEE, dd/MM HH:mm' }}</small>
+                <small class="text-muted"
+                  ><app-icon name="clock" [size]="13" />
+                  {{ m.startsAt | date: 'EEE, dd/MM HH:mm' }}</small
+                >
               </div>
               <div class="fw-semibold">
                 {{ m.homeTeamName }} <span class="text-muted">×</span> {{ m.awayTeamName }}
@@ -174,12 +233,14 @@
               <hr class="my-2" />
               @if (predictionFor(m.id); as p) {
                 <small class="text-success"
-                  >✓ {{ 'dashboard.yourPrediction' | translate }}: {{ p.predictedHomeScore }} ×
+                  ><app-icon name="check" [size]="14" />
+                  {{ 'dashboard.yourPrediction' | translate }}: {{ p.predictedHomeScore }} ×
                   {{ p.predictedAwayScore }}</small
                 >
               } @else {
                 <small class="text-warning-emphasis"
-                  >⚠ {{ 'dashboard.missingYours' | translate }}</small
+                  ><app-icon name="triangle-alert" [size]="14" />
+                  {{ 'dashboard.missingYours' | translate }}</small
                 >
               }
             </div>

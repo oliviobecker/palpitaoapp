@@ -4,6 +4,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { RoundMatch } from '../../../core/models/models';
 import { computeMultiplier, isClassic, isLeagueOne } from '../../utils/match.util';
 import { CompetitionBadge } from '../competition-badge/competition-badge';
+import { Icon } from '../icon/icon';
 import { MultiplierBadge } from '../multiplier-badge/multiplier-badge';
 
 /**
@@ -14,7 +15,7 @@ import { MultiplierBadge } from '../multiplier-badge/multiplier-badge';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-match-list',
-  imports: [DatePipe, TranslatePipe, CompetitionBadge, MultiplierBadge],
+  imports: [DatePipe, TranslatePipe, CompetitionBadge, Icon, MultiplierBadge],
   template: `
     <div class="vstack gap-2">
       @for (m of matches(); track m.id) {
@@ -38,10 +39,10 @@ import { MultiplierBadge } from '../multiplier-badge/multiplier-badge';
               @if (editable()) {
                 <span class="d-flex gap-1" style="flex: none">
                   <button class="btn btn-sm btn-outline-secondary" (click)="edit.emit(m)">
-                    ✏️ {{ 'common.edit' | translate }}
+                    <app-icon name="pencil" [size]="14" /> {{ 'common.edit' | translate }}
                   </button>
                   <button class="btn btn-sm btn-outline-danger" (click)="remove.emit(m)">
-                    🗑️ {{ 'common.remove' | translate }}
+                    <app-icon name="trash-2" [size]="14" /> {{ 'common.remove' | translate }}
                   </button>
                 </span>
               }
