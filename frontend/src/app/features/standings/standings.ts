@@ -12,7 +12,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { of, switchMap } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { Standing } from '../../core/models/models';
-import { RoundsService } from '../../core/services/rounds.service';
+import { SeasonsService } from '../../core/services/seasons.service';
 import { StandingsService } from '../../core/services/standings.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { Loading } from '../../shared/components/loading/loading';
@@ -24,7 +24,7 @@ import { Loading } from '../../shared/components/loading/loading';
   templateUrl: './standings.html',
 })
 export class Standings implements OnInit {
-  private readonly roundsApi = inject(RoundsService);
+  private readonly seasonsApi = inject(SeasonsService);
   private readonly standingsApi = inject(StandingsService);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
@@ -34,14 +34,15 @@ export class Standings implements OnInit {
   protected readonly myId = computed(() => this.auth.currentUser()?.id);
 
   ngOnInit(): void {
-    // The active season is derived from the existing rounds.
-    this.roundsApi
-      .getAll()
+    // Standings belong to the group's active season (certame). Deriving the
+    // season from rounds[0] picked the wrong certame whenever a group had more
+    // than one, leaving the table empty for the certame actually being scored.
+    this.seasonsApi
+      .getActive()
       .pipe(
-        switchMap((rounds) => {
-          const seasonId = rounds[0]?.seasonId;
-          return seasonId ? this.standingsApi.getStandings(seasonId) : of(null);
-        }),
+        switchMap((season) =>
+          season ? this.standingsApi.getStandings(season.id) : of(null),
+        ),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({

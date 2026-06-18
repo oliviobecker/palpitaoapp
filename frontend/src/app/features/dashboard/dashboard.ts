@@ -141,14 +141,19 @@ export class Dashboard implements OnInit, OnDestroy {
         switchMap((list) => {
           const open = list.find((r) => r.status === RoundStatus.Published);
           this.lockedRound.set(list.find((r) => r.status === RoundStatus.Locked) ?? null);
-          const seasonId = list[0]?.seasonId;
 
-          return forkJoin({
-            detail: open ? this.roundsApi.getById(open.id) : of(null),
-            mine: open ? this.predictionsApi.getMine(open.id) : of(null),
-            standings: seasonId ? this.standingsApi.getStandings(seasonId) : of([]),
-            season: this.seasonsApi.getActive(),
-          });
+          // Standings belong to the group's active season (certame); deriving it
+          // from rounds[0] picked the wrong certame when a group had more than one.
+          return this.seasonsApi.getActive().pipe(
+            switchMap((season) =>
+              forkJoin({
+                detail: open ? this.roundsApi.getById(open.id) : of(null),
+                mine: open ? this.predictionsApi.getMine(open.id) : of(null),
+                standings: season ? this.standingsApi.getStandings(season.id) : of([]),
+                season: of(season),
+              }),
+            ),
+          );
         }),
         takeUntilDestroyed(this.destroyRef),
       )
