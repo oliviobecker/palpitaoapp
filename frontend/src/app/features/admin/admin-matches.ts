@@ -33,28 +33,42 @@ import {
   FixtureSelection,
   FixtureSelectionState,
 } from '../../shared/components/fixture-selection/fixture-selection';
+import { ErrorState } from '../../shared/components/error-state/error-state';
+import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
 import { MatchList } from '../../shared/components/match-list/match-list';
+import { PageHeader } from '../../shared/components/page-header/page-header';
 import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-matches',
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, FixtureSelection, Loading, MatchList],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    TranslatePipe,
+    FixtureSelection,
+    ErrorState,
+    Icon,
+    Loading,
+    MatchList,
+    PageHeader,
+  ],
   template: `
-    <div class="mb-3">
-      <div class="page-trail">
+    <app-page-header [title]="'adminMatches.title' | translate">
+      <div trail class="page-trail">
         <a routerLink="/admin/rounds">{{ 'nav.rounds' | translate }}</a> ·
         <a [routerLink]="['/admin/rounds', roundId]"
           >{{ 'dashboard.round' | translate }} {{ round()?.number }}</a
         >
         · {{ 'adminMatches.games' | translate }}
       </div>
-      <h1 class="h4 fw-bold mb-0">{{ 'adminMatches.title' | translate }}</h1>
-    </div>
+    </app-page-header>
 
     @if (loading()) {
       <app-loading />
+    } @else if (error()) {
+      <app-error-state (retry)="load()" />
     } @else if (round(); as r) {
       @if (!editable()) {
         <div class="alert alert-warning py-2">{{ 'adminMatches.notEditable' | translate }}</div>
@@ -63,7 +77,7 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
         <div class="card mb-3">
           <div class="card-body p-4">
             <div class="d-flex align-items-center gap-2 mb-3">
-              <span class="icon-tile icon-tile--blue">➕</span>
+              <span class="icon-tile icon-tile--blue"><app-icon name="plus" [size]="20" /></span>
               <h2 class="h6 fw-bold mb-0">
                 {{ (editingId() ? 'adminMatches.editGame' : 'adminMatches.addGame') | translate }}
               </h2>
@@ -72,7 +86,7 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
               <div>
                 <label class="form-label">{{ 'adminMatches.competition' | translate }}</label>
                 <div class="input-group input-group-lg">
-                  <span class="input-group-text">🏆</span>
+                  <span class="input-group-text"><app-icon name="trophy" [size]="16" /></span>
                   <select class="form-select" formControlName="competition">
                     @for (c of competitions(); track c.value) {
                       <option [value]="c.value">{{ c.label }}</option>
@@ -84,7 +98,7 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
               <div>
                 <label class="form-label">{{ 'adminMatches.phase' | translate }}</label>
                 <div class="input-group input-group-lg">
-                  <span class="input-group-text">🔀</span>
+                  <span class="input-group-text"><app-icon name="shuffle" [size]="16" /></span>
                   <select class="form-select" formControlName="phase">
                     @for (p of phases(); track p) {
                       <option [value]="p">{{ 'phase.' + p | translate }}</option>
@@ -95,7 +109,7 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
 
               <div class="d-flex align-items-center gap-2">
                 <div class="input-group input-group-lg flex-grow-1">
-                  <span class="input-group-text">🏠</span>
+                  <span class="input-group-text"><app-icon name="house" [size]="16" /></span>
                   <select class="form-select" formControlName="homeTeamId">
                     <option value="">{{ 'adminMatches.home' | translate }}</option>
                     @for (t of filteredTeams(); track t.id) {
@@ -105,7 +119,7 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
                 </div>
                 <span class="vs-badge">×</span>
                 <div class="input-group input-group-lg flex-grow-1">
-                  <span class="input-group-text">✈️</span>
+                  <span class="input-group-text"><app-icon name="plane" [size]="16" /></span>
                   <select class="form-select" formControlName="awayTeamId">
                     <option value="">{{ 'adminMatches.away' | translate }}</option>
                     @for (t of filteredTeams(); track t.id) {
@@ -119,7 +133,9 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
                 <div class="col-md-6">
                   <label class="form-label">{{ 'adminMatches.datetime' | translate }}</label>
                   <div class="input-group input-group-lg">
-                    <span class="input-group-text">📅</span>
+                    <span class="input-group-text"
+                      ><app-icon name="calendar-days" [size]="16"
+                    /></span>
                     <input type="datetime-local" class="form-control" formControlName="startsAt" />
                   </div>
                 </div>
@@ -128,7 +144,7 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
                     'adminMatches.manualMultiplier' | translate
                   }}</label>
                   <div class="input-group input-group-lg">
-                    <span class="input-group-text">✖️</span>
+                    <span class="input-group-text"><app-icon name="x" [size]="16" /></span>
                     <input
                       type="number"
                       min="1"
@@ -166,7 +182,8 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
                   class="btn btn-primary btn-lg flex-fill"
                   [disabled]="form.invalid || saving() || justificationMissing()"
                 >
-                  ➕ {{ (editingId() ? 'adminMatches.save' : 'adminMatches.addGame') | translate }}
+                  <app-icon name="plus" [size]="16" />
+                  {{ (editingId() ? 'adminMatches.save' : 'adminMatches.addGame') | translate }}
                 </button>
                 @if (editingId()) {
                   <button
@@ -186,7 +203,9 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
         <div class="card mb-3">
           <div class="card-body p-4">
             <div class="d-flex align-items-center gap-2 mb-3">
-              <span class="icon-tile icon-tile--amber">📅</span>
+              <span class="icon-tile icon-tile--amber"
+                ><app-icon name="calendar-days" [size]="20"
+              /></span>
               <h2 class="h6 fw-bold mb-0">{{ 'fixtures.importTitle' | translate }}</h2>
             </div>
             <form [formGroup]="searchForm" class="vstack gap-3">
@@ -194,14 +213,18 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
                 <div class="col-6">
                   <label class="form-label">{{ 'roundForm.startDate' | translate }}</label>
                   <div class="input-group input-group-lg">
-                    <span class="input-group-text">📅</span>
+                    <span class="input-group-text"
+                      ><app-icon name="calendar-days" [size]="16"
+                    /></span>
                     <input type="date" class="form-control" formControlName="startDate" />
                   </div>
                 </div>
                 <div class="col-6">
                   <label class="form-label">{{ 'roundForm.endDate' | translate }}</label>
                   <div class="input-group input-group-lg">
-                    <span class="input-group-text">🗓️</span>
+                    <span class="input-group-text"
+                      ><app-icon name="calendar-days" [size]="16"
+                    /></span>
                     <input type="date" class="form-control" formControlName="endDate" />
                   </div>
                 </div>
@@ -218,7 +241,7 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
                 @if (searching()) {
                   <span class="spinner-border spinner-border-sm me-2"></span>
                 }
-                🔍 {{ 'fixtures.searchButton' | translate }}
+                <app-icon name="search" [size]="16" /> {{ 'fixtures.searchButton' | translate }}
               </button>
             </form>
 
@@ -313,6 +336,7 @@ export class AdminMatches implements OnInit {
   }
 
   protected readonly loading = signal(true);
+  protected readonly error = signal(false);
   protected readonly saving = signal(false);
   protected readonly round = signal<Round | null>(null);
   protected readonly teams = signal<Team[]>([]);
@@ -399,6 +423,12 @@ export class AdminMatches implements OnInit {
 
   ngOnInit(): void {
     this.roundId = this.route.snapshot.paramMap.get('id') ?? '';
+    this.load();
+  }
+
+  load(): void {
+    this.loading.set(true);
+    this.error.set(false);
     forkJoin({
       round: this.roundsApi.getById(this.roundId),
       teams: this.teamsApi.list(),
@@ -420,7 +450,10 @@ export class AdminMatches implements OnInit {
             this.preSearch();
           }
         },
-        error: () => this.loading.set(false),
+        error: () => {
+          this.error.set(true);
+          this.loading.set(false);
+        },
       });
   }
 

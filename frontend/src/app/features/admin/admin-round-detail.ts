@@ -21,6 +21,7 @@ import { GroupContextService } from '../../core/services/group-context.service';
 import { RoundsService } from '../../core/services/rounds.service';
 import { StandingsService } from '../../core/services/standings.service';
 import { RefreshResultsResponse } from '../../core/models/models';
+import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
 import { MatchList } from '../../shared/components/match-list/match-list';
 import { RoundResultsEditor } from '../../shared/components/round-results-editor/round-results-editor';
@@ -37,6 +38,7 @@ import { RoundStepper } from './round-stepper';
     ReactiveFormsModule,
     RouterLink,
     TranslatePipe,
+    Icon,
     Loading,
     MatchList,
     RoundStatusBadge,
@@ -106,9 +108,9 @@ import { RoundStepper } from './round-stepper';
           <div class="row g-2">
             <div class="col-12 col-md-6">
               <a class="action-card h-100" [routerLink]="['/admin/rounds', r.id, 'matches']">
-                <span class="icon-tile icon-tile--blue">⚽</span>
+                <span class="icon-tile icon-tile--blue"><app-icon name="goal" [size]="20" /></span>
                 <div class="action-card__title">{{ 'roundDetail.manageGames' | translate }}</div>
-                <span class="action-card__arrow">→</span>
+                <span class="action-card__arrow"><app-icon name="arrow-right" [size]="18" /></span>
               </a>
             </div>
             <div class="col-12 col-md-6">
@@ -116,11 +118,13 @@ import { RoundStepper } from './round-stepper';
                 class="action-card h-100"
                 [routerLink]="['/admin/rounds', r.id, 'manual-predictions']"
               >
-                <span class="icon-tile icon-tile--violet">✍️</span>
+                <span class="icon-tile icon-tile--violet"
+                  ><app-icon name="pencil" [size]="20"
+                /></span>
                 <div class="action-card__title">
                   {{ 'roundDetail.registerPredictions' | translate }}
                 </div>
-                <span class="action-card__arrow">→</span>
+                <span class="action-card__arrow"><app-icon name="arrow-right" [size]="18" /></span>
               </a>
             </div>
             <div class="col-12 col-md-6">
@@ -128,16 +132,20 @@ import { RoundStepper } from './round-stepper';
                 class="action-card h-100"
                 [routerLink]="['/admin/rounds', r.id, 'import-predictions']"
               >
-                <span class="icon-tile icon-tile--amber">🖼️</span>
+                <span class="icon-tile icon-tile--amber"
+                  ><app-icon name="image" [size]="20"
+                /></span>
                 <div class="action-card__title">{{ 'roundDetail.importImage' | translate }}</div>
-                <span class="action-card__arrow">→</span>
+                <span class="action-card__arrow"><app-icon name="arrow-right" [size]="18" /></span>
               </a>
             </div>
             <div class="col-12 col-md-6">
               <a class="action-card h-100" [routerLink]="['/admin/rounds', r.id, 'scout']">
-                <span class="icon-tile icon-tile--teal">🔎</span>
+                <span class="icon-tile icon-tile--teal"
+                  ><app-icon name="search" [size]="20"
+                /></span>
                 <div class="action-card__title">{{ 'scout.title' | translate }}</div>
-                <span class="action-card__arrow">→</span>
+                <span class="action-card__arrow"><app-icon name="arrow-right" [size]="18" /></span>
               </a>
             </div>
 
@@ -153,11 +161,13 @@ import { RoundStepper } from './round-stepper';
                     @if (refreshing()) {
                       <span class="spinner-border spinner-border-sm"></span>
                     } @else {
-                      🔄
+                      <app-icon name="refresh-cw" [size]="20" />
                     }
                   </span>
                   <div class="action-card__title">{{ 'results.refresh' | translate }}</div>
-                  <span class="action-card__arrow">→</span>
+                  <span class="action-card__arrow"
+                    ><app-icon name="arrow-right" [size]="18"
+                  /></span>
                 </button>
               </div>
               <div class="col-12 col-md-6">
@@ -165,11 +175,15 @@ import { RoundStepper } from './round-stepper';
                   class="action-card h-100"
                   [routerLink]="['/rounds', r.id, 'temporary-standings']"
                 >
-                  <span class="icon-tile icon-tile--green">📊</span>
+                  <span class="icon-tile icon-tile--green"
+                    ><app-icon name="chart-column" [size]="20"
+                  /></span>
                   <div class="action-card__title">
                     {{ 'temporaryStandings.title' | translate }}
                   </div>
-                  <span class="action-card__arrow">→</span>
+                  <span class="action-card__arrow"
+                    ><app-icon name="arrow-right" [size]="18"
+                  /></span>
                 </a>
               </div>
             }
@@ -203,7 +217,7 @@ import { RoundStepper } from './round-stepper';
           @if (r.status === RoundStatus.Published) {
             <div class="d-grid gap-2">
               <button class="btn btn-warning btn-lg" (click)="lock(r)">
-                🔒 {{ 'roundDetail.lock' | translate }}
+                <app-icon name="lock" [size]="18" /> {{ 'roundDetail.lock' | translate }}
               </button>
               <p class="text-muted small mb-0">{{ 'roundDetail.lockHint' | translate }}</p>
             </div>
@@ -239,7 +253,7 @@ import { RoundStepper } from './round-stepper';
               </button>
               @if (r.status === RoundStatus.Scored) {
                 <button class="btn btn-outline-warning" (click)="reopen(r)">
-                  ↩️ {{ 'roundDetail.reopen' | translate }}
+                  <app-icon name="undo-2" [size]="16" /> {{ 'roundDetail.reopen' | translate }}
                 </button>
               }
             </div>
@@ -262,16 +276,20 @@ import { RoundStepper } from './round-stepper';
           <div class="card-body py-2">
             <div class="d-flex flex-wrap gap-3 small">
               <span
-                >✅ {{ 'results.finished' | translate }}: <b>{{ rs.finishedMatches }}</b></span
+                ><app-icon name="circle-check" [size]="14" /> {{ 'results.finished' | translate }}:
+                <b>{{ rs.finishedMatches }}</b></span
               >
               <span
-                >▶️ {{ 'results.inProgress' | translate }}: <b>{{ rs.inProgressMatches }}</b></span
+                ><app-icon name="play" [size]="14" /> {{ 'results.inProgress' | translate }}:
+                <b>{{ rs.inProgressMatches }}</b></span
               >
               <span
-                >⏳ {{ 'results.notStarted' | translate }}: <b>{{ rs.notStartedMatches }}</b></span
+                ><app-icon name="hourglass" [size]="14" /> {{ 'results.notStarted' | translate }}:
+                <b>{{ rs.notStartedMatches }}</b></span
               >
               <span
-                >🔄 {{ 'results.updated' | translate }}: <b>{{ rs.updatedMatches }}</b></span
+                ><app-icon name="refresh-cw" [size]="14" /> {{ 'results.updated' | translate }}:
+                <b>{{ rs.updatedMatches }}</b></span
               >
             </div>
           </div>
@@ -418,7 +436,9 @@ export class AdminRoundDetail implements OnInit {
         recalculating ? 'roundDetail.confirmRecalculate' : 'roundDetail.confirmFinalize',
       ),
       {
-        title: this.translate.instant(recalculating ? 'roundDetail.recalculate' : 'roundDetail.finalize'),
+        title: this.translate.instant(
+          recalculating ? 'roundDetail.recalculate' : 'roundDetail.finalize',
+        ),
         confirmText: this.translate.instant(
           recalculating ? 'roundDetail.recalculate' : 'roundDetail.finalize',
         ),

@@ -15,24 +15,37 @@ import { Season } from '../../core/models/models';
 import { ToastService } from '../../core/notifications/toast.service';
 import { SeasonsService } from '../../core/services/seasons.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
+import { ErrorState } from '../../shared/components/error-state/error-state';
+import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
+import { PageHeader } from '../../shared/components/page-header/page-header';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-seasons',
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, EmptyState, Loading],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    TranslatePipe,
+    EmptyState,
+    ErrorState,
+    Icon,
+    Loading,
+    PageHeader,
+  ],
   template: `
-    <div class="mb-3">
-      <div class="page-trail">
+    <app-page-header [title]="'adminSeasons.title' | translate">
+      <div trail class="page-trail">
         <a routerLink="/admin">Admin</a> · {{ 'adminSeasons.title' | translate }}
       </div>
-      <h1 class="h4 fw-bold mb-0">{{ 'adminSeasons.title' | translate }}</h1>
-    </div>
+    </app-page-header>
 
     <div class="card mb-3">
       <div class="card-body p-4">
         <div class="d-flex align-items-center gap-2 mb-3">
-          <span class="icon-tile icon-tile--violet">📅</span>
+          <span class="icon-tile icon-tile--violet"
+            ><app-icon name="calendar-days" [size]="20"
+          /></span>
           <h2 class="h6 fw-bold mb-0">
             {{ (editingId() ? 'adminSeasons.edit' : 'adminSeasons.new') | translate }}
           </h2>
@@ -41,7 +54,7 @@ import { Loading } from '../../shared/components/loading/loading';
           <div>
             <label class="form-label">{{ 'adminSeasons.name' | translate }}</label>
             <div class="input-group input-group-lg">
-              <span class="input-group-text">🏷️</span>
+              <span class="input-group-text"><app-icon name="tag" [size]="16" /></span>
               <input
                 class="form-control"
                 [placeholder]="'adminSeasons.name' | translate"
@@ -53,14 +66,14 @@ import { Loading } from '../../shared/components/loading/loading';
             <div class="col-6">
               <label class="form-label">{{ 'adminSeasons.start' | translate }}</label>
               <div class="input-group input-group-lg">
-                <span class="input-group-text">📅</span>
+                <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
                 <input type="date" class="form-control" formControlName="startDate" />
               </div>
             </div>
             <div class="col-6">
               <label class="form-label">{{ 'adminSeasons.end' | translate }}</label>
               <div class="input-group input-group-lg">
-                <span class="input-group-text">🗓️</span>
+                <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
                 <input type="date" class="form-control" formControlName="endDate" />
               </div>
             </div>
@@ -176,6 +189,8 @@ import { Loading } from '../../shared/components/loading/loading';
 
     @if (loading()) {
       <app-loading />
+    } @else if (error()) {
+      <app-error-state (retry)="load()" />
     } @else if (seasons().length === 0) {
       <app-empty-state [message]="'adminSeasons.empty' | translate" />
     } @else {
@@ -222,6 +237,7 @@ export class AdminSeasons implements OnInit {
   protected readonly TournamentType = TournamentType;
 
   protected readonly loading = signal(true);
+  protected readonly error = signal(false);
   protected readonly saving = signal(false);
   protected readonly seasons = signal<Season[]>([]);
   protected readonly editingId = signal<string | null>(null);
@@ -252,6 +268,7 @@ export class AdminSeasons implements OnInit {
 
   load(): void {
     this.loading.set(true);
+    this.error.set(false);
     this.api
       .list()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -260,7 +277,10 @@ export class AdminSeasons implements OnInit {
           this.seasons.set(list);
           this.loading.set(false);
         },
-        error: () => this.loading.set(false),
+        error: () => {
+          this.error.set(true);
+          this.loading.set(false);
+        },
       });
   }
 

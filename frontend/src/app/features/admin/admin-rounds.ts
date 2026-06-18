@@ -14,7 +14,10 @@ import { RoundStatus } from '../../core/models/enums';
 import { RoundSummary } from '../../core/models/models';
 import { RoundsService } from '../../core/services/rounds.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { Loading } from '../../shared/components/loading/loading';
+import { ErrorState } from '../../shared/components/error-state/error-state';
+import { Icon } from '../../shared/components/icon/icon';
+import { PageHeader } from '../../shared/components/page-header/page-header';
+import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
 
 type Filter = 'all' | RoundStatus;
 
@@ -29,20 +32,21 @@ const STATUS_ORDER: RoundStatus[] = [
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-rounds',
-  imports: [RouterLink, TranslatePipe, EmptyState, Loading],
+  imports: [RouterLink, TranslatePipe, EmptyState, ErrorState, Icon, PageHeader, SkeletonList],
   template: `
-    <div class="d-flex justify-content-between align-items-start gap-2 mb-3 flex-wrap">
-      <div>
-        <div class="page-trail">Admin · {{ 'adminRounds.title' | translate }}</div>
-        <h1 class="h4 fw-bold mb-0">{{ 'adminRounds.title' | translate }}</h1>
-      </div>
+    <app-page-header
+      [trail]="'Admin · ' + ('adminRounds.title' | translate)"
+      [title]="'adminRounds.title' | translate"
+    >
       <a class="btn btn-success" routerLink="/admin/rounds/new"
-        >➕ {{ 'adminRounds.new' | translate }}</a
+        ><app-icon name="plus" [size]="16" /> {{ 'adminRounds.new' | translate }}</a
       >
-    </div>
+    </app-page-header>
 
     @if (loading()) {
-      <app-loading />
+      <app-skeleton-list />
+    } @else if (error()) {
+      <app-error-state (retry)="load()" />
     } @else if (rounds().length === 0) {
       <app-empty-state [message]="'adminRounds.empty' | translate" />
     } @else {
@@ -77,7 +81,8 @@ const STATUS_ORDER: RoundStatus[] = [
                 }
               </div>
               <small class="text-muted"
-                >🕐 {{ r.matchCount }} {{ 'adminRounds.games' | translate }}</small
+                ><app-icon name="clock" [size]="13" /> {{ r.matchCount }}
+                {{ 'adminRounds.games' | translate }}</small
               >
             </div>
             <span class="round-pill">{{ 'status.' + r.status | translate }}</span>
@@ -148,6 +153,7 @@ export class AdminRounds implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
+  protected readonly error = signal(false);
   protected readonly rounds = signal<RoundSummary[]>([]);
   protected readonly filter = signal<Filter>('all');
 
@@ -178,6 +184,12 @@ export class AdminRounds implements OnInit {
   }
 
   ngOnInit(): void {
+    this.load();
+  }
+
+  load(): void {
+    this.loading.set(true);
+    this.error.set(false);
     this.api
       .getAll()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -186,7 +198,10 @@ export class AdminRounds implements OnInit {
           this.rounds.set(list);
           this.loading.set(false);
         },
-        error: () => this.loading.set(false),
+        error: () => {
+          this.error.set(true);
+          this.loading.set(false);
+        },
       });
   }
 }

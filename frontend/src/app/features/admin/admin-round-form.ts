@@ -21,13 +21,14 @@ import {
   FixtureSelection,
   FixtureSelectionState,
 } from '../../shared/components/fixture-selection/fixture-selection';
+import { Icon } from '../../shared/components/icon/icon';
 import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util';
 import { ordinalRoundName } from '../../shared/utils/round-name.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-round-form',
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, FixtureSelection],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, FixtureSelection, Icon],
   template: `
     <div class="mb-3">
       <div class="page-trail">
@@ -45,7 +46,7 @@ import { ordinalRoundName } from '../../shared/utils/round-name.util';
           <div>
             <label class="form-label">{{ 'roundForm.season' | translate }}</label>
             <div class="input-group input-group-lg">
-              <span class="input-group-text">🏆</span>
+              <span class="input-group-text"><app-icon name="trophy" [size]="16" /></span>
               <select class="form-select" formControlName="seasonId">
                 <option value="">{{ 'roundForm.select' | translate }}</option>
                 @for (s of seasons(); track s.id) {
@@ -68,7 +69,7 @@ import { ordinalRoundName } from '../../shared/utils/round-name.util';
               >{{ 'roundForm.name' | translate }} {{ 'common.optional' | translate }}</label
             >
             <div class="input-group input-group-lg">
-              <span class="input-group-text">🏷️</span>
+              <span class="input-group-text"><app-icon name="tag" [size]="16" /></span>
               <input
                 class="form-control"
                 formControlName="title"
@@ -81,14 +82,14 @@ import { ordinalRoundName } from '../../shared/utils/round-name.util';
             <div class="col-6">
               <label class="form-label">{{ 'roundForm.startDate' | translate }}</label>
               <div class="input-group input-group-lg">
-                <span class="input-group-text">📅</span>
+                <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
                 <input type="date" class="form-control" formControlName="startDate" />
               </div>
             </div>
             <div class="col-6">
               <label class="form-label">{{ 'roundForm.endDate' | translate }}</label>
               <div class="input-group input-group-lg">
-                <span class="input-group-text">🗓️</span>
+                <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
                 <input type="date" class="form-control" formControlName="endDate" />
               </div>
             </div>
@@ -108,7 +109,7 @@ import { ordinalRoundName } from '../../shared/utils/round-name.util';
             @if (searching()) {
               <span class="spinner-border spinner-border-sm me-2"></span>
             }
-            🔍 {{ 'fixtures.searchButton' | translate }}
+            <app-icon name="search" [size]="16" /> {{ 'fixtures.searchButton' | translate }}
           </button>
         </form>
       </div>

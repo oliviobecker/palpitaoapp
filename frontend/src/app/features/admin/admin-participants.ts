@@ -15,31 +15,42 @@ import { ConfirmService } from '../../core/notifications/confirm.service';
 import { ToastService } from '../../core/notifications/toast.service';
 import { AdminService } from '../../core/services/admin.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
+import { ErrorState } from '../../shared/components/error-state/error-state';
+import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
+import { PageHeader } from '../../shared/components/page-header/page-header';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-participants',
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, EmptyState, Loading],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    TranslatePipe,
+    EmptyState,
+    ErrorState,
+    Icon,
+    Loading,
+    PageHeader,
+  ],
   template: `
-    <div class="mb-3">
-      <div class="page-trail">
+    <app-page-header [title]="'adminParticipants.title' | translate">
+      <div trail class="page-trail">
         <a routerLink="/admin">Admin</a> · {{ 'adminParticipants.title' | translate }}
       </div>
-      <h1 class="h4 fw-bold mb-0">{{ 'adminParticipants.title' | translate }}</h1>
-    </div>
+    </app-page-header>
 
     <div class="card mb-3">
       <div class="card-body p-4">
         <div class="d-flex align-items-center gap-2 mb-3">
-          <span class="icon-tile icon-tile--teal">👥</span>
+          <span class="icon-tile icon-tile--teal"><app-icon name="users" [size]="20" /></span>
           <h2 class="h6 fw-bold mb-0">
             {{ (editingId() ? 'adminParticipants.edit' : 'adminParticipants.new') | translate }}
           </h2>
         </div>
         <form [formGroup]="form" (ngSubmit)="save()" class="vstack gap-3">
           <div class="input-group input-group-lg">
-            <span class="input-group-text">👤</span>
+            <span class="input-group-text"><app-icon name="user" [size]="16" /></span>
             <input
               class="form-control"
               [placeholder]="'adminParticipants.name' | translate"
@@ -47,7 +58,7 @@ import { Loading } from '../../shared/components/loading/loading';
             />
           </div>
           <div class="input-group input-group-lg">
-            <span class="input-group-text">✉️</span>
+            <span class="input-group-text"><app-icon name="mail" [size]="16" /></span>
             <input
               class="form-control"
               [placeholder]="'adminParticipants.email' | translate"
@@ -56,7 +67,7 @@ import { Loading } from '../../shared/components/loading/loading';
           </div>
           @if (!editingId()) {
             <div class="input-group input-group-lg">
-              <span class="input-group-text">🔒</span>
+              <span class="input-group-text"><app-icon name="lock" [size]="16" /></span>
               <input
                 type="password"
                 class="form-control"
@@ -85,6 +96,8 @@ import { Loading } from '../../shared/components/loading/loading';
 
     @if (loading()) {
       <app-loading />
+    } @else if (error()) {
+      <app-error-state (retry)="load()" />
     } @else if (participants().length === 0) {
       <app-empty-state [message]="'adminParticipants.empty' | translate" />
     } @else {
@@ -179,6 +192,7 @@ export class AdminParticipants implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
+  protected readonly error = signal(false);
   protected readonly saving = signal(false);
   protected readonly participants = signal<Participant[]>([]);
   protected readonly editingId = signal<string | null>(null);
@@ -196,6 +210,7 @@ export class AdminParticipants implements OnInit {
 
   load(): void {
     this.loading.set(true);
+    this.error.set(false);
     this.api
       .listParticipants()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -204,7 +219,10 @@ export class AdminParticipants implements OnInit {
           this.participants.set(list);
           this.loading.set(false);
         },
-        error: () => this.loading.set(false),
+        error: () => {
+          this.error.set(true);
+          this.loading.set(false);
+        },
       });
   }
 

@@ -17,12 +17,21 @@ import { ToastService } from '../../core/notifications/toast.service';
 import { AdminParticipantPredictions, AdminService } from '../../core/services/admin.service';
 import { RoundsService } from '../../core/services/rounds.service';
 import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
+import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-manual-predictions',
-  imports: [ReactiveFormsModule, FormsModule, RouterLink, TranslatePipe, CompetitionBadge, Loading],
+  imports: [
+    ReactiveFormsModule,
+    FormsModule,
+    RouterLink,
+    TranslatePipe,
+    CompetitionBadge,
+    Icon,
+    Loading,
+  ],
   template: `
     <div class="mb-3">
       <div class="page-trail">
@@ -42,7 +51,7 @@ import { Loading } from '../../shared/components/loading/loading';
         <div class="card-body p-4">
           <label class="form-label">{{ 'manual.participant' | translate }}</label>
           <div class="input-group input-group-lg">
-            <span class="input-group-text">👤</span>
+            <span class="input-group-text"><app-icon name="user" [size]="16" /></span>
             <select
               class="form-select"
               [ngModel]="userId"
@@ -123,7 +132,7 @@ import { Loading } from '../../shared/components/loading/loading';
             (click)="save()"
             [disabled]="saving() || !userId"
           >
-            💾 {{ 'manual.save' | translate }}
+            <app-icon name="save" [size]="16" /> {{ 'manual.save' | translate }}
           </button>
         </div>
       </div>

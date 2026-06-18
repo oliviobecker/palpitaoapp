@@ -16,22 +16,36 @@ import { ConfirmService } from '../../core/notifications/confirm.service';
 import { ToastService } from '../../core/notifications/toast.service';
 import { AdminService } from '../../core/services/admin.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
+import { ErrorState } from '../../shared/components/error-state/error-state';
+import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
+import { PageHeader } from '../../shared/components/page-header/page-header';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-registration-requests',
-  imports: [FormsModule, DatePipe, RouterLink, TranslatePipe, EmptyState, Loading],
+  imports: [
+    FormsModule,
+    DatePipe,
+    RouterLink,
+    TranslatePipe,
+    EmptyState,
+    ErrorState,
+    Icon,
+    Loading,
+    PageHeader,
+  ],
   template: `
-    <div class="mb-3">
-      <div class="page-trail">
+    <app-page-header [title]="'adminRegistrations.title' | translate">
+      <div trail class="page-trail">
         <a routerLink="/admin">Admin</a> · {{ 'adminRegistrations.title' | translate }}
       </div>
-      <h1 class="h4 fw-bold mb-0">{{ 'adminRegistrations.title' | translate }}</h1>
-    </div>
+    </app-page-header>
 
     @if (loading()) {
       <app-loading />
+    } @else if (error()) {
+      <app-error-state (retry)="load()" />
     } @else if (requests().length === 0) {
       <app-empty-state [message]="'adminRegistrations.empty' | translate" />
     } @else {
@@ -76,14 +90,15 @@ import { Loading } from '../../shared/components/loading/loading';
                     [disabled]="busyId() === r.id"
                     (click)="approve(r)"
                   >
-                    ✓ {{ 'adminRegistrations.approve' | translate }}
+                    <app-icon name="check" [size]="16" />
+                    {{ 'adminRegistrations.approve' | translate }}
                   </button>
                   <button
                     class="btn btn-outline-danger flex-fill btn-lg"
                     [disabled]="busyId() === r.id"
                     (click)="startReject(r)"
                   >
-                    ✕ {{ 'adminRegistrations.reject' | translate }}
+                    <app-icon name="x" [size]="16" /> {{ 'adminRegistrations.reject' | translate }}
                   </button>
                 </div>
               }
@@ -102,6 +117,7 @@ export class AdminRegistrationRequests implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
+  protected readonly error = signal(false);
   protected readonly requests = signal<RegistrationRequest[]>([]);
   protected readonly busyId = signal<string | null>(null);
   protected readonly rejectingId = signal<string | null>(null);
@@ -113,6 +129,7 @@ export class AdminRegistrationRequests implements OnInit {
 
   load(): void {
     this.loading.set(true);
+    this.error.set(false);
     this.api
       .listRegistrationRequests()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -121,7 +138,10 @@ export class AdminRegistrationRequests implements OnInit {
           this.requests.set(list);
           this.loading.set(false);
         },
-        error: () => this.loading.set(false),
+        error: () => {
+          this.error.set(true);
+          this.loading.set(false);
+        },
       });
   }
 

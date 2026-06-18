@@ -15,12 +15,13 @@ import { OcrBatch, OcrCandidate, Participant, Round } from '../../core/models/mo
 import { ToastService } from '../../core/notifications/toast.service';
 import { AdminService } from '../../core/services/admin.service';
 import { RoundsService } from '../../core/services/rounds.service';
+import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-ocr-import',
-  imports: [FormsModule, RouterLink, TranslatePipe, Loading],
+  imports: [FormsModule, RouterLink, TranslatePipe, Icon, Loading],
   template: `
     <div class="mb-3">
       <div class="page-trail">
@@ -43,7 +44,7 @@ import { Loading } from '../../shared/components/loading/loading';
           <div>
             <label class="form-label">{{ 'ocr.language' | translate }}</label>
             <div class="input-group input-group-lg">
-              <span class="input-group-text">🔤</span>
+              <span class="input-group-text"><app-icon name="languages" [size]="16" /></span>
               <select class="form-select" [(ngModel)]="language">
                 <option value="por">{{ 'ocr.langPor' | translate }}</option>
                 <option value="eng">{{ 'ocr.langEng' | translate }}</option>
@@ -61,7 +62,7 @@ import { Loading } from '../../shared/components/loading/loading';
               (dragleave)="onDragLeave($event)"
               (drop)="onDrop($event)"
             >
-              <span class="icon-tile icon-tile--blue">🖼️</span>
+              <span class="icon-tile icon-tile--blue"><app-icon name="image" [size]="20" /></span>
               <div class="ocr-drop__text">
                 <span class="ocr-drop__cta">{{ 'ocr.dropClick' | translate }}</span>
                 {{ 'ocr.dropRest' | translate }}
@@ -78,7 +79,7 @@ import { Loading } from '../../shared/components/loading/loading';
 
           @if (file(); as f) {
             <div class="file-chip">
-              <span class="file-chip__icon">🖼️</span>
+              <span class="file-chip__icon"><app-icon name="image" [size]="16" /></span>
               <div class="flex-grow-1 min-w-0">
                 <div class="fw-semibold text-truncate">{{ f.name }}</div>
                 <small class="text-muted"
@@ -99,10 +100,12 @@ import { Loading } from '../../shared/components/loading/loading';
             @if (processing()) {
               <span class="spinner-border spinner-border-sm me-2"></span>
             }
-            🧾 {{ 'ocr.process' | translate }}
+            <app-icon name="receipt" [size]="16" /> {{ 'ocr.process' | translate }}
           </button>
 
-          <div class="tip-box">💡 {{ 'ocr.tip' | translate }}</div>
+          <div class="tip-box">
+            <app-icon name="lightbulb" [size]="14" /> {{ 'ocr.tip' | translate }}
+          </div>
         </div>
       </div>
 

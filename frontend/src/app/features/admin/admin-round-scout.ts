@@ -15,6 +15,7 @@ import { RoundScout } from '../../core/models/models';
 import { ToastService } from '../../core/notifications/toast.service';
 import { AdminService } from '../../core/services/admin.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
+import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
 import { copyToClipboard } from '../../shared/utils/clipboard.util';
 import { buildMatchScoutMessage } from '../../shared/utils/scout-message.util';
@@ -22,7 +23,7 @@ import { buildMatchScoutMessage } from '../../shared/utils/scout-message.util';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-round-scout',
-  imports: [RouterLink, FormsModule, TranslatePipe, EmptyState, Loading],
+  imports: [RouterLink, FormsModule, TranslatePipe, EmptyState, Icon, Loading],
   template: `
     <div class="mb-3">
       <div class="page-trail">
@@ -41,7 +42,7 @@ import { buildMatchScoutMessage } from '../../shared/utils/scout-message.util';
         <div class="mb-3">
           <label class="form-label">{{ 'scout.match' | translate }}</label>
           <div class="input-group input-group-lg">
-            <span class="input-group-text">⚽</span>
+            <span class="input-group-text"><app-icon name="goal" [size]="16" /></span>
             <select class="form-select" [(ngModel)]="selectedMatchId">
               @for (m of matches(); track m.roundMatchId) {
                 <option [value]="m.roundMatchId">
@@ -57,7 +58,7 @@ import { buildMatchScoutMessage } from '../../shared/utils/scout-message.util';
             <div class="d-flex justify-content-between align-items-center mb-2">
               <h2 class="h6 fw-bold mb-0">{{ 'scout.groupMessage' | translate }}</h2>
               <button class="btn btn-sm btn-primary" type="button" (click)="copy()">
-                📋 {{ 'roundDetail.copy' | translate }}
+                <app-icon name="copy" [size]="14" /> {{ 'roundDetail.copy' | translate }}
               </button>
             </div>
             <pre

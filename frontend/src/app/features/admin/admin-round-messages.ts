@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ToastService } from '../../core/notifications/toast.service';
 import { copyToClipboard } from '../../shared/utils/clipboard.util';
+import { Icon } from '../../shared/components/icon/icon';
 
 /**
  * Presentational copy-ready message cards for a round: the post-finalize closing
@@ -10,15 +11,17 @@ import { copyToClipboard } from '../../shared/utils/clipboard.util';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-round-messages',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, Icon],
   template: `
     @if (closingMessage()) {
       <div class="card mb-3 border-success">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <h2 class="h6 fw-bold mb-0">🏁 {{ 'roundDetail.closingMessage' | translate }}</h2>
+            <h2 class="h6 fw-bold mb-0">
+              <app-icon name="flag" [size]="16" /> {{ 'roundDetail.closingMessage' | translate }}
+            </h2>
             <button class="btn btn-sm btn-success" type="button" (click)="copy(closingMessage())">
-              📋 {{ 'roundDetail.copy' | translate }}
+              <app-icon name="copy" [size]="14" /> {{ 'roundDetail.copy' | translate }}
             </button>
           </div>
           <pre
@@ -36,7 +39,7 @@ import { copyToClipboard } from '../../shared/utils/clipboard.util';
           <div class="d-flex justify-content-between align-items-center mb-2">
             <h2 class="h6 fw-bold mb-0">{{ 'roundDetail.groupMessage' | translate }}</h2>
             <button class="btn btn-sm btn-primary" type="button" (click)="copy(groupMessage())">
-              📋 {{ 'roundDetail.copy' | translate }}
+              <app-icon name="copy" [size]="14" /> {{ 'roundDetail.copy' | translate }}
             </button>
           </div>
           <pre

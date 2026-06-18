@@ -14,24 +14,36 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { AuditLog } from '../../core/models/models';
 import { AdminService, AuditFilter } from '../../core/services/admin.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
+import { ErrorState } from '../../shared/components/error-state/error-state';
+import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
+import { PageHeader } from '../../shared/components/page-header/page-header';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-audit',
-  imports: [FormsModule, DatePipe, RouterLink, TranslatePipe, EmptyState, Loading],
+  imports: [
+    FormsModule,
+    DatePipe,
+    RouterLink,
+    TranslatePipe,
+    EmptyState,
+    ErrorState,
+    Icon,
+    Loading,
+    PageHeader,
+  ],
   template: `
-    <div class="mb-3">
-      <div class="page-trail">
+    <app-page-header [title]="'adminAudit.title' | translate">
+      <div trail class="page-trail">
         <a routerLink="/admin">Admin</a> · {{ 'adminAudit.title' | translate }}
       </div>
-      <h1 class="h4 fw-bold mb-0">{{ 'adminAudit.title' | translate }}</h1>
-    </div>
+    </app-page-header>
 
     <div class="card mb-3">
       <div class="card-body p-4 vstack gap-3">
         <div class="input-group input-group-lg">
-          <span class="input-group-text">🗂️</span>
+          <span class="input-group-text"><app-icon name="folder" [size]="16" /></span>
           <select class="form-select" [(ngModel)]="entityName">
             <option value="">{{ 'adminAudit.allEntities' | translate }}</option>
             @for (e of entities; track e) {
@@ -43,26 +55,28 @@ import { Loading } from '../../shared/components/loading/loading';
           <div class="col-6">
             <label class="form-label">{{ 'adminAudit.from' | translate }}</label>
             <div class="input-group input-group-lg">
-              <span class="input-group-text">📅</span>
+              <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
               <input type="date" class="form-control" [(ngModel)]="from" />
             </div>
           </div>
           <div class="col-6">
             <label class="form-label">{{ 'adminAudit.to' | translate }}</label>
             <div class="input-group input-group-lg">
-              <span class="input-group-text">🗓️</span>
+              <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
               <input type="date" class="form-control" [(ngModel)]="to" />
             </div>
           </div>
         </div>
         <button class="btn btn-primary btn-lg w-100" (click)="apply()">
-          🔎 {{ 'adminAudit.filter' | translate }}
+          <app-icon name="search" [size]="16" /> {{ 'adminAudit.filter' | translate }}
         </button>
       </div>
     </div>
 
     @if (loading()) {
       <app-loading />
+    } @else if (error()) {
+      <app-error-state (retry)="apply()" />
     } @else if (logs().length === 0) {
       <app-empty-state [message]="'adminAudit.empty' | translate" />
     } @else {
@@ -98,6 +112,7 @@ export class AdminAudit implements OnInit {
 
   protected readonly entities = ['Round', 'RoundMatch', 'Prediction', 'User', 'Season'];
   protected readonly loading = signal(true);
+  protected readonly error = signal(false);
   protected readonly logs = signal<AuditLog[]>([]);
 
   protected entityName = '';
@@ -115,6 +130,7 @@ export class AdminAudit implements OnInit {
     if (this.from) filter.from = `${this.from}T00:00:00`;
     if (this.to) filter.to = `${this.to}T23:59:59`;
 
+    this.error.set(false);
     this.api
       .getAuditLogs(filter)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -123,7 +139,10 @@ export class AdminAudit implements OnInit {
           this.logs.set(list);
           this.loading.set(false);
         },
-        error: () => this.loading.set(false),
+        error: () => {
+          this.error.set(true);
+          this.loading.set(false);
+        },
       });
   }
 }

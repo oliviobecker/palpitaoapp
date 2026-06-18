@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, computed, input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { RoundStatus } from '../../core/models/enums';
+import { Icon } from '../../shared/components/icon/icon';
 
 type StepState = 'done' | 'current' | 'upcoming';
 interface Step {
@@ -17,7 +18,7 @@ interface Step {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-round-stepper',
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, Icon],
   template: `
     @if (status() === RoundStatus.Cancelled) {
       <div class="alert alert-danger py-2 mb-0">
@@ -29,7 +30,7 @@ interface Step {
           <li class="round-stepper__step" [attr.data-state]="step.state">
             <span class="round-stepper__dot">
               @if (step.state === 'done') {
-                ✓
+                <app-icon name="check" [size]="16" />
               } @else {
                 {{ $index + 1 }}
               }
