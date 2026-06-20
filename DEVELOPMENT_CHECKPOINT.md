@@ -109,6 +109,16 @@ overall standings update.
 - `AdminSentryController` (diagnostics) still uses the global role.
 - Real secrets must be configured via env/user-secrets/GitHub Secrets; rotate the 3 once-public secrets.
 
+**Deferred from the security/performance hardening (intentional, with rationale):**
+
+- **H5 — refresh token to HttpOnly cookie**: still in `localStorage`; the cookie migration depends on
+  same-site vs cross-origin deployment topology (+ CSRF handling) and changes the auth flow + e2e.
+- **Full RFC 7807 ProblemDetails**: error body keeps the `{ status, message, traceId }` shape; switching
+  to `problem+json` would break the frontend `body.message` parser and e2e error mocks (marginal gain).
+- **API versioning** (`/v1`): premature for a single first-party SPA (adds a dependency + routing).
+- **`tessdata/*.traineddata` → Git LFS** (~38 MB): requires rewriting the squashed history + force-push.
+- **Temp-standings cache (M2)** and **list pagination (M4)**: optimizations, low urgency at current scale.
+
 ## 5. Key technical decisions
 
 - **Certame type lives on `Season`** (`TournamentType`), not the group; immutable after creation
@@ -118,6 +128,15 @@ overall standings update.
   catalogue (clubs + national teams). `CurrentGroupService` is the single access chokepoint.
 - **Per-group `IsActive`/`IsEliminated`** on `GroupUser` (roster/scoring use these); `User.IsActive` is
   the account-level login gate only.
+- **Defence-in-depth tenant isolation (hardening):** in addition to `CurrentGroupService`, an EF Core
+  **global query filter** (driven by the DB-free `IRequestGroupContext`, via the `IGroupOwned` marker)
+  scopes tenant roots to the request group, and `AppDbContext.SaveChanges` **stamps** the current group
+  on inserts with an unset `GroupId`. Both are **inert** when there is no HTTP context (background
+  results refresh, EF seeding, design-time, unit tests), preserving cross-group/system operations.
+- **Auth abuse protection:** per-IP rate limiting on the unauthenticated auth endpoints
+  (`Program.cs`, `RateLimiting:Auth`). **Scoring** runs in a DB transaction; the **background results
+  refresh** is single-runner across instances via a Postgres advisory lock; external fixture/results
+  HTTP clients use a **transient-retry** `DelegatingHandler` (`Common/TransientHttpRetryHandler`).
 - **Scoring is idempotent:** re-scoring a round clears its `PredictionScores`/`RoundParticipantResults`
   and recomputes standings; reopening just flips status (no data wiped).
 - **Active season:** one per group; frontend resolves it via `GET /api/seasons/active` (not `rounds[0]`).
@@ -172,14 +191,14 @@ Seed dev admin: `admin@palpitao.local` / `Admin@123`.
 
 ## 8. Recommended next steps
 
-1. **Review & merge [PR #9](https://github.com/oliviobecker/palpitaoapp/pull/9)** (UI modernization pack).
-2. Manual end-to-end pass (needs DB + API + ng serve up): toggle **dark/light** across screens; confirm
-   **skeletons** on load and **error states** (incl. admin) with retry; verify the **predictions draft**
-   restores on return and clears on save.
-3. Pick the next roadmap item (§4): **server-side autosave** of predictions (highest value) or the
-   smaller polish items.
-4. Optional: redirect to `/pending` on a `group.membershipInactive` 403 (mid-session deactivation);
-   add a `.gitattributes` (`* text=auto eol=lf`) to silence the Windows LF→CRLF warnings.
+1. **Open a PR for `feat/security-hardening-phase1`** (security & performance hardening, committed as
+   `d9de501`) and merge after review. All checks green (§0).
+2. Manual smoke test with DB + API + `ng serve` up: confirm **login still works** with rate limiting on;
+   exercise an admin scoring/recalc (transaction) and a results refresh; spot-check the extracted admin
+   screens (matches / round-detail / OCR import) render and submit correctly.
+3. Decide the **deferred hardening items** (§4): H5 token-cookie migration (needs deployment topology),
+   `tessdata` → Git LFS, then the optional perf items (temp-standings cache, list pagination).
+4. Resume the product roadmap (§4): **server-side autosave** of predictions (highest value).
 
 ## 9. Files changed this session (highlights)
 

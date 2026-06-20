@@ -521,13 +521,13 @@ That endpoint returns 404 outside `Development` and requires admin.
 ## 22. How to run the tests
 
 ```bash
-# Backend (362 tests — xUnit + SQLite in-memory)
+# Backend (383 tests — xUnit + SQLite in-memory)
 cd backend && dotnet test
 
-# Frontend (Vitest — 34 unit tests)
+# Frontend (Vitest — 43 unit tests)
 cd frontend && npm test -- --watch=false   # run once
 
-# Frontend e2e (Playwright — 25 tests; starts ng serve and mocks the API)
+# Frontend e2e (Playwright — 34 tests; starts ng serve and mocks the API)
 cd frontend && npm run e2e
 ```
 
@@ -963,6 +963,28 @@ This repository is public: **never** commit real secrets. The versioned files
 
 Before going public (or when reviewing secrets), see
 [PUBLIC_RELEASE_CHECKLIST.md](PUBLIC_RELEASE_CHECKLIST.md).
+
+### Security & operational hardening
+
+Beyond secret hygiene, the backend applies defence-in-depth controls:
+
+- **Auth rate limiting** — `login` / `register` / `create-group` / `refresh` are throttled per client
+  IP (`RateLimiting:Auth`, default 20/min) to blunt brute-force / credential stuffing. Behind a reverse
+  proxy, forward the real client IP so the limiter doesn't bucket everyone under the proxy.
+- **Defence-in-depth multi-tenant isolation** — besides `CurrentGroupService` (the access chokepoint),
+  an EF Core **global query filter** scopes tenant roots (Season/Round/Standing/RoundParticipantResult)
+  to the request group, and `SaveChanges` **stamps** the current group on inserts that left `GroupId`
+  unset — so a forgotten filter or assignment can't leak/misplace another group's data. Inert outside an
+  HTTP request (background refresh, seeding, tests).
+- **Unified password policy** — 8+ chars with at least one letter and one digit, enforced on public
+  registration, public create-group **and** admin-created participants (`Common/PasswordPolicy`).
+- **Atomic scoring** — round scoring / season recalculation run inside a DB transaction.
+- **Single-runner background refresh** — when scaled out, only the instance holding a Postgres advisory
+  lock refreshes results each cycle (no duplicate external calls / write races).
+- **Resilient external calls** — fixture/results HTTP clients retry transient failures (5xx/408/429,
+  connection errors) with bounded backoff.
+- **Consistent errors** — all error responses carry a `traceId` for log/Sentry correlation; health
+  endpoints don't leak exception types or migration names.
 
 ## 30. Continuous integration and deployment
 
