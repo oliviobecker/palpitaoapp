@@ -4,7 +4,7 @@ namespace Palpitao.Api.Entities;
 /// Accumulated standing of a participant within a season (updated when rounds
 /// are scored).
 /// </summary>
-public class Standing
+public class Standing : IGroupOwned
 {
     public Guid Id { get; set; }
 

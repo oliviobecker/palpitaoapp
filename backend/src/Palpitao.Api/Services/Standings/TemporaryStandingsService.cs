@@ -25,7 +25,9 @@ public class TemporaryStandingsService : ITemporaryStandingsService
     public async Task<TemporaryStandingsDto> GetTemporaryStandingsAsync(Guid roundId, CancellationToken ct)
     {
         var groupId = await _current.GetGroupIdAsync(ct);
+        // Read-only projection to a DTO: no tracking needed (cheaper, less memory).
         var round = await _db.Rounds
+            .AsNoTracking()
             .Include(r => r.Matches).ThenInclude(m => m.HomeTeam)
             .Include(r => r.Matches).ThenInclude(m => m.AwayTeam)
             .FirstOrDefaultAsync(r => r.Id == roundId && r.GroupId == groupId, ct)
@@ -58,6 +60,7 @@ public class TemporaryStandingsService : ITemporaryStandingsService
         }
 
         var predictions = await _db.Predictions
+            .AsNoTracking()
             .Where(p => p.RoundId == roundId)
             .ToListAsync(ct);
 

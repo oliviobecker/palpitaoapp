@@ -40,18 +40,22 @@ export const routes: Routes = [
       },
       {
         path: 'rounds/:id/predictions',
+        canActivate: [participantGuard],
         loadComponent: () => import('./features/rounds/predictions').then((m) => m.Predictions),
       },
       {
         path: 'rounds/:id/mirror',
+        canActivate: [participantGuard],
         loadComponent: () => import('./features/rounds/mirror').then((m) => m.Mirror),
       },
       {
         path: 'rounds/:id/results',
+        canActivate: [participantGuard],
         loadComponent: () => import('./features/rounds/results').then((m) => m.Results),
       },
       {
         path: 'rounds/:id/temporary-standings',
+        canActivate: [participantGuard],
         loadComponent: () =>
           import('./features/rounds/temporary-standings').then((m) => m.TemporaryStandingsView),
       },

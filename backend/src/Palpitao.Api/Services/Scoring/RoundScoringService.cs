@@ -73,9 +73,34 @@ public class RoundScoringService : IRoundScoringService
     }
 
     public Task<RoundResultsDto> ScoreRoundAsync(Guid roundId, Guid actingUserId, CancellationToken ct)
-        => ScoreRoundInternalAsync(roundId, actingUserId, updateStandings: true, ct);
+        => InTransactionAsync(() => ScoreRoundInternalAsync(roundId, actingUserId, updateStandings: true, ct), ct);
 
-    public async Task RecalculateSeasonAsync(Guid seasonId, Guid actingUserId, CancellationToken ct)
+    public Task RecalculateSeasonAsync(Guid seasonId, Guid actingUserId, CancellationToken ct)
+        => InTransactionAsync(async () =>
+        {
+            await RecalculateSeasonCoreAsync(seasonId, actingUserId, ct);
+            return true;
+        }, ct);
+
+    /// <summary>
+    /// Runs a multi-step scoring mutation atomically: the delete-then-recompute spans
+    /// several SaveChanges, so a failure mid-way must not leave a round/season partially
+    /// scored. No-op transaction wrapper for non-relational providers (in-memory tests).
+    /// </summary>
+    private async Task<T> InTransactionAsync<T>(Func<Task<T>> action, CancellationToken ct)
+    {
+        if (!_db.Database.IsRelational() || _db.Database.CurrentTransaction is not null)
+        {
+            return await action();
+        }
+
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        var result = await action();
+        await tx.CommitAsync(ct);
+        return result;
+    }
+
+    private async Task RecalculateSeasonCoreAsync(Guid seasonId, Guid actingUserId, CancellationToken ct)
     {
         var groupId = await _current.GetGroupIdAsync(ct);
         var seasonExists = await _db.Seasons.AnyAsync(s => s.Id == seasonId && s.GroupId == groupId, ct);
@@ -271,17 +296,21 @@ public class RoundScoringService : IRoundScoringService
     public async Task<RoundResultsDto> GetRoundResultsAsync(Guid roundId, CancellationToken ct)
     {
         var groupId = await _current.GetGroupIdAsync(ct);
+        // Read-only results view: no change tracking needed for any of these loads.
         var round = await _db.Rounds
+            .AsNoTracking()
             .Include(r => r.Matches).ThenInclude(m => m.HomeTeam)
             .Include(r => r.Matches).ThenInclude(m => m.AwayTeam)
             .FirstOrDefaultAsync(r => r.Id == roundId && r.GroupId == groupId, ct)
             ?? throw new NotFoundException("notFound.round");
 
         var results = await _db.RoundParticipantResults
+            .AsNoTracking()
             .Where(r => r.RoundId == roundId)
             .ToListAsync(ct);
 
         var scores = await _db.PredictionScores
+            .AsNoTracking()
             .Where(p => p.RoundId == roundId)
             .ToListAsync(ct);
 

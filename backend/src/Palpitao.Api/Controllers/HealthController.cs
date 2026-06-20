@@ -51,8 +51,10 @@ public class HealthController : ControllerBase
                 var pending = (await _db.Database.GetPendingMigrationsAsync(cancellationToken)).ToList();
                 if (pending.Count > 0)
                 {
+                    // Log the specifics for operators; don't expose schema/migration
+                    // names on this anonymous endpoint.
                     _logger.LogError("Migrations pendentes: {Pending}", string.Join(", ", pending));
-                    return StatusCode(503, new { status = "migrations-pending", database = "postgres", pendingMigrations = pending });
+                    return StatusCode(503, new { status = "migrations-pending", database = "postgres" });
                 }
             }
 
@@ -60,8 +62,9 @@ public class HealthController : ControllerBase
         }
         catch (Exception ex)
         {
+            // The exception detail goes to the logs only, not the anonymous response body.
             _logger.LogError(ex, "Health check do banco falhou.");
-            return StatusCode(503, new { status = "unavailable", database = "postgres", reason = ex.GetType().Name });
+            return StatusCode(503, new { status = "unavailable", database = "postgres" });
         }
     }
 }

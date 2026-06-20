@@ -1,11 +1,14 @@
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Palpitao.Api.Auth;
+using Palpitao.Api.Common;
 using Palpitao.Api.Validation;
 using Palpitao.Api.Data;
 using Palpitao.Api.Middlewares;
@@ -84,8 +87,57 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
+// --- Rate limiting (abuse protection on auth endpoints) ---------------------
+// Throttles the unauthenticated auth endpoints (login/register/create-group/
+// refresh) per client IP so BCrypt's per-guess cost can't be brute-forced by
+// volume. Tunable via "RateLimiting:Auth". NOTE: behind a reverse proxy, configure
+// forwarded headers at the proxy so RemoteIpAddress is the real client, not the proxy.
+const string AuthRateLimitPolicy = "auth";
+var authRateLimitPermit = builder.Configuration.GetValue<int?>("RateLimiting:Auth:PermitLimit") ?? 20;
+var authRateLimitWindowSeconds = builder.Configuration.GetValue<int?>("RateLimiting:Auth:WindowSeconds") ?? 60;
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(AuthRateLimitPolicy, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = authRateLimitPermit,
+                Window = TimeSpan.FromSeconds(authRateLimitWindowSeconds),
+                QueueLimit = 0,
+            }));
+
+    // Consistent JSON body with the rest of the API ({ status, message }), localized.
+    options.OnRejected = async (context, ct) =>
+    {
+        var response = context.HttpContext.Response;
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
+        }
+
+        if (!response.HasStarted)
+        {
+            response.StatusCode = StatusCodes.Status429TooManyRequests;
+            response.ContentType = "application/json; charset=utf-8";
+            var localizer = context.HttpContext.RequestServices.GetRequiredService<ILocalizationService>();
+            var payload = JsonSerializer.Serialize(new
+            {
+                status = 429,
+                message = localizer.Get("error.tooManyRequests"),
+                traceId = context.HttpContext.TraceIdentifier,
+            });
+            await response.WriteAsync(payload, ct);
+        }
+    };
+});
+
 // --- Application / domain services ------------------------------------------
 builder.Services.AddHttpContextAccessor();
+// DB-free per-request group accessor consumed by AppDbContext for the multi-tenant
+// query filter + insert-stamping (defence-in-depth, separate from access validation).
+builder.Services.AddScoped<IRequestGroupContext, RequestGroupContext>();
 builder.Services.AddScoped<ILocalizationService, LocalizationService>();
 builder.Services.AddSingleton<IScoringService, ScoringService>();
 builder.Services.AddScoped<IRoundScoringService, RoundScoringService>();
@@ -110,30 +162,24 @@ builder.Services.AddSingleton<IOcrEngine, TesseractOcrEngine>();
 
 // --- External fixtures (round-by-period import) -----------------------------
 builder.Services.Configure<FixtureOptions>(builder.Configuration.GetSection(FixtureOptions.SectionName));
-// Isolated provider with its own HttpClient (timeout + key/user-agent set in ctor).
-// Selected by Fixtures:Provider — change config (or this block) to swap the source.
+// Transient-fault retry handler shared by the external fixture/results HTTP clients.
+builder.Services.AddTransient<TransientHttpRetryHandler>();
+// Isolated provider with its own HttpClient (timeout + key/user-agent set in ctor),
+// wrapped in transient-fault retry. Selected by Fixtures:Provider:
+//   fixturedownload — free, no key, Premier League + Championship only
+//   apifootball     — all four competitions, but the free tier lacks the current season
+//   thesportsdb     — free, but the public test key returns only sample data
+//   (default)       — OneFootball web-experience API: free, covers all four competitions
 var fixtureOptions = builder.Configuration.GetSection(FixtureOptions.SectionName).Get<FixtureOptions>()
     ?? new FixtureOptions();
-switch (fixtureOptions.Provider?.ToLowerInvariant())
+IHttpClientBuilder fixtureClient = fixtureOptions.Provider?.ToLowerInvariant() switch
 {
-    case "fixturedownload":
-        // Free, no key, but only Premier League + Championship.
-        builder.Services.AddHttpClient<IFixtureProvider, FixtureDownloadFixtureProvider>();
-        break;
-    case "apifootball":
-        // All four competitions, but the free tier lacks the current season (paid).
-        builder.Services.AddHttpClient<IFixtureProvider, ApiFootballFixtureProvider>();
-        break;
-    case "thesportsdb":
-        // Free, but the public test key only returns sample data.
-        builder.Services.AddHttpClient<IFixtureProvider, TheSportsDbFixtureProvider>();
-        break;
-    default:
-        // Default: OneFootball web-experience API — free and covers all four tracked
-        // competitions (Premier League, Championship, League One, FA Cup).
-        builder.Services.AddHttpClient<IFixtureProvider, OneFootballFixtureProvider>();
-        break;
-}
+    "fixturedownload" => builder.Services.AddHttpClient<IFixtureProvider, FixtureDownloadFixtureProvider>(),
+    "apifootball" => builder.Services.AddHttpClient<IFixtureProvider, ApiFootballFixtureProvider>(),
+    "thesportsdb" => builder.Services.AddHttpClient<IFixtureProvider, TheSportsDbFixtureProvider>(),
+    _ => builder.Services.AddHttpClient<IFixtureProvider, OneFootballFixtureProvider>(),
+};
+fixtureClient.AddHttpMessageHandler<TransientHttpRetryHandler>();
 builder.Services.AddScoped<IFixtureImportService, FixtureImportService>();
 
 // --- Match results (refresh + temporary standings) --------------------------
@@ -144,11 +190,13 @@ var resultsOptions = builder.Configuration.GetSection(ResultsProviderOptions.Sec
 if (string.Equals(resultsOptions.Provider, "OneFootball", StringComparison.OrdinalIgnoreCase))
 {
     // Real source: same OneFootball web-experience API used for fixture import.
-    builder.Services.AddHttpClient<IResultsProvider, OneFootballResultsProvider>();
+    builder.Services.AddHttpClient<IResultsProvider, OneFootballResultsProvider>()
+        .AddHttpMessageHandler<TransientHttpRetryHandler>();
 }
 else if (string.Equals(resultsOptions.Provider, "ConfiguredWebsite", StringComparison.OrdinalIgnoreCase))
 {
-    builder.Services.AddHttpClient<IResultsProvider, ConfiguredWebsiteResultsProvider>();
+    builder.Services.AddHttpClient<IResultsProvider, ConfiguredWebsiteResultsProvider>()
+        .AddHttpMessageHandler<TransientHttpRetryHandler>();
 }
 else
 {
@@ -238,6 +286,7 @@ else if (corsAllowedOrigins.Length > 0)
 app.UseAuthentication();
 app.UseMiddleware<SentryUserContextMiddleware>();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapControllers();
 

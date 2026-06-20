@@ -130,7 +130,9 @@ public class OcrService : IOcrService
     public async Task<OcrBatchDto> GetBatchAsync(Guid batchId, CancellationToken ct)
     {
         await EnsureBatchInGroupAsync(batchId, ct);
+        // Read-only projection to a DTO: no tracking needed.
         var batch = await _db.OcrImportBatches
+            .AsNoTracking()
             .Include(b => b.Candidates)
             .FirstOrDefaultAsync(b => b.Id == batchId, ct)
             ?? throw new NotFoundException("notFound.ocrBatch");

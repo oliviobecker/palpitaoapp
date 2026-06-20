@@ -26,10 +26,6 @@ public partial class AuthService : IAuthService
         _audit = audit;
     }
 
-    // At least 8 chars, with at least one letter and one digit.
-    [GeneratedRegex(@"^(?=.*[A-Za-z])(?=.*\d).{8,}$")]
-    private static partial Regex StrongPassword();
-
     public async Task RegisterAsync(RegisterRequest request, CancellationToken ct)
     {
         var name = (request.Name ?? string.Empty).Trim();
@@ -45,10 +41,7 @@ public partial class AuthService : IAuthService
             throw new BusinessRuleException("auth.passwordMismatch");
         }
 
-        if (string.IsNullOrEmpty(request.Password) || !StrongPassword().IsMatch(request.Password))
-        {
-            throw new BusinessRuleException("auth.weakPassword");
-        }
+        PasswordPolicy.Validate(request.Password);
 
         if (request.GroupId == Guid.Empty)
         {
@@ -122,10 +115,7 @@ public partial class AuthService : IAuthService
             throw new BusinessRuleException("auth.passwordMismatch");
         }
 
-        if (string.IsNullOrEmpty(request.Password) || !StrongPassword().IsMatch(request.Password))
-        {
-            throw new BusinessRuleException("auth.weakPassword");
-        }
+        PasswordPolicy.Validate(request.Password);
 
         if (await _db.Users.AnyAsync(u => u.Email == email, ct))
         {

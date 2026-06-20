@@ -201,7 +201,8 @@ export class AdminParticipants implements OnInit {
   protected readonly form = this.fb.nonNullable.group({
     name: ['', Validators.required],
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]],
+    // Same strength rule as self-registration and the backend: 8+ chars, letter + digit.
+    password: ['', [Validators.required, Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d).{8,}$/)]],
   });
 
   ngOnInit(): void {
@@ -235,7 +236,10 @@ export class AdminParticipants implements OnInit {
 
   resetForm(): void {
     this.editingId.set(null);
-    this.form.controls.password.setValidators([Validators.required, Validators.minLength(6)]);
+    this.form.controls.password.setValidators([
+      Validators.required,
+      Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d).{8,}$/),
+    ]);
     this.form.reset({ name: '', email: '', password: '' });
   }
 

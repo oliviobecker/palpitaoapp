@@ -2,7 +2,7 @@ using Palpitao.Api.Enums;
 
 namespace Palpitao.Api.Entities;
 
-public class Season
+public class Season : IGroupOwned
 {
     public Guid Id { get; set; }
 

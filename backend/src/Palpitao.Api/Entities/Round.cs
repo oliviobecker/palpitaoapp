@@ -2,7 +2,7 @@ using Palpitao.Api.Enums;
 
 namespace Palpitao.Api.Entities;
 
-public class Round
+public class Round : IGroupOwned
 {
     public Guid Id { get; set; }
 

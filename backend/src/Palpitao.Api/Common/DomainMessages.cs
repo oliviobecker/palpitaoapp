@@ -15,6 +15,9 @@ public static class DomainMessages
             ["error.unexpected"] = ("Ocorreu um erro inesperado. Tente novamente.", "An unexpected error occurred. Please try again."),
             ["error.notFound"] = ("Recurso não encontrado.", "Resource not found."),
             ["error.unauthorized"] = ("Não autorizado.", "Unauthorized."),
+            ["error.tooManyRequests"] = (
+                "Muitas tentativas em pouco tempo. Aguarde um momento e tente novamente.",
+                "Too many attempts in a short time. Please wait a moment and try again."),
             ["auth.invalidCredentials"] = ("E-mail ou senha inválidos.", "Invalid e-mail or password."),
             ["auth.inactiveUser"] = ("Usuário inativo. Procure o administrador.", "Inactive user. Contact the administrator."),
             ["auth.registrationSubmitted"] = (

@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
+using Palpitao.Api.Services.Groups;
 
 namespace Palpitao.Api.Data;
 
@@ -9,10 +11,22 @@ namespace Palpitao.Api.Data;
 /// </summary>
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options)
+    private readonly IRequestGroupContext? _groupContext;
+
+    /// <param name="groupContext">
+    /// Optional per-request group accessor. When supplied (HTTP requests), tenant-root
+    /// entities are filtered to the current group and new rows are auto-stamped with it.
+    /// When omitted (background services, seeding, design-time, unit tests) the filter and
+    /// stamping are inert, so those paths still see/write across groups as before.
+    /// </param>
+    public AppDbContext(DbContextOptions<AppDbContext> options, IRequestGroupContext? groupContext = null)
         : base(options)
     {
+        _groupContext = groupContext;
     }
+
+    /// <summary>The current request's group, or null outside an HTTP request.</summary>
+    private Guid? CurrentGroupId => _groupContext?.CurrentGroupId;
 
     public DbSet<User> Users => Set<User>();
     public DbSet<Group> Groups => Set<Group>();
@@ -40,6 +54,68 @@ public class AppDbContext : DbContext
         SeedData(modelBuilder);
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+        ConfigureTenantQueryFilters(modelBuilder);
+    }
+
+    /// <summary>
+    /// Defence-in-depth multi-tenant isolation: every read of a tenant-root entity is
+    /// transparently scoped to the current request's group, so a query that forgets its
+    /// explicit <c>GroupId</c> filter still cannot return another tenant's rows. Inert when
+    /// there is no request group (background/seed/tests) — see <see cref="CurrentGroupId"/>.
+    /// </summary>
+    private void ConfigureTenantQueryFilters(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Season>().HasQueryFilter(e => CurrentGroupId == null || e.GroupId == CurrentGroupId);
+        modelBuilder.Entity<Round>().HasQueryFilter(e => CurrentGroupId == null || e.GroupId == CurrentGroupId);
+        modelBuilder.Entity<Standing>().HasQueryFilter(e => CurrentGroupId == null || e.GroupId == CurrentGroupId);
+        modelBuilder.Entity<RoundParticipantResult>().HasQueryFilter(e => CurrentGroupId == null || e.GroupId == CurrentGroupId);
+    }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+
+        // The tenant query filter lives on the roots (Season/Round/Standing/
+        // RoundParticipantResult); their per-round children (Prediction, RoundMatch, …) are
+        // always reached through a filtered root, so EF's required-navigation warning about
+        // the asymmetry is expected here and would otherwise be noise.
+        optionsBuilder.ConfigureWarnings(w =>
+            w.Ignore(CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning));
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        StampCurrentGroup();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        StampCurrentGroup();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    /// <summary>
+    /// Stamps the current request's group on newly added tenant roots whose <c>GroupId</c>
+    /// was left unset, so a forgotten assignment lands in the acting group instead of
+    /// silently defaulting to the seeded default group. Inert outside an HTTP request, and
+    /// never overwrites a group that was set explicitly (e.g. cross-group admin writes).
+    /// </summary>
+    private void StampCurrentGroup()
+    {
+        if (CurrentGroupId is not Guid groupId)
+        {
+            return;
+        }
+
+        foreach (var entry in ChangeTracker.Entries<IGroupOwned>())
+        {
+            if (entry.State == EntityState.Added && entry.Entity.GroupId == Guid.Empty)
+            {
+                entry.Entity.GroupId = groupId;
+            }
+        }
     }
 
     private static void ConfigureModel(ModelBuilder modelBuilder)

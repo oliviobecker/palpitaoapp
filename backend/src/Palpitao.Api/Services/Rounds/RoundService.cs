@@ -57,7 +57,9 @@ public class RoundService : IRoundService
     public async Task<RoundDto> GetByIdAsync(Guid roundId, CancellationToken ct)
     {
         var groupId = await _current.GetGroupIdAsync(ct);
+        // Read-only DTO mapping: no change tracking needed.
         var round = await _db.Rounds
+            .AsNoTracking()
             .Include(r => r.Matches).ThenInclude(m => m.HomeTeam)
             .Include(r => r.Matches).ThenInclude(m => m.AwayTeam)
             .FirstOrDefaultAsync(r => r.Id == roundId && r.GroupId == groupId, ct)

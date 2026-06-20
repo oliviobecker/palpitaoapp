@@ -7,15 +7,22 @@ _Last updated: 2026-06-18 (UI modernization pack — committed on `feat/ui-moder
 | Check | Result |
 |---|---|
 | Backend build (`dotnet build`) | ✅ 0 errors (1 pre-existing xUnit2012 analyzer warning) |
-| Backend tests (`dotnet test`) | ✅ **362** passed, 0 failed |
+| Backend tests (`dotnet test`) | ✅ **383** passed, 0 failed |
 | Frontend build (`ng build` prod) | ✅ success |
 | Frontend lint (`ng lint`) | ✅ 0 errors (24 pre-existing `label-has-associated-control` warnings) |
-| Frontend unit tests (Vitest) | ✅ **34** passed (10 files) |
+| Frontend unit tests (Vitest) | ✅ **43** passed (11 files) |
+| Frontend e2e (Playwright) | ✅ **34** passed |
 | Frontend prod budgets | ✅ within budget (no warnings) |
-| i18n parity | ✅ 508 = 508 (`en-US` / `pt-BR`) |
-| Working tree | Clean. Work committed in 6 logical commits on `feat/ui-modernization-pack`; [PR #9](https://github.com/oliviobecker/palpitaoapp/pull/9) open. `main` untouched. |
+| i18n parity | ✅ 509 = 509 (`en-US` / `pt-BR`) |
+| Working tree | Security & performance hardening implemented on `feat/security-hardening-phase1` (pending commit). `main` untouched. |
 
-> The UI modernization pack is frontend-only; the backend is untouched (still **362** tests green).
+> **Security & performance hardening (current branch):** auth-endpoint rate limiting;
+> defence-in-depth multi-tenant isolation (EF global query filter + insert-stamping on
+> tenant roots); atomic scoring transactions; single-runner background results refresh
+> (Postgres advisory lock); unified password policy; health-endpoint info-disclosure fix;
+> `AsNoTracking` on hot read paths; transient-retry on external providers; client route
+> guards + guard unit tests; large admin component templates extracted to `.html`;
+> `traceId` on all error responses. See sections 5–6 for the rules these touch.
 
 ## 1. Project overview
 

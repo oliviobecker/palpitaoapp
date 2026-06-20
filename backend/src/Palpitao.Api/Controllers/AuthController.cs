@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Palpitao.Api.Auth;
 using Palpitao.Api.DTOs.Auth;
 using Palpitao.Api.DTOs.Groups;
@@ -30,6 +31,7 @@ public class AuthController : ControllerBase
 
     /// <summary>Public self-registration into a group. Creates a pending membership; does not authenticate.</summary>
     [HttpPost("register")]
+    [EnableRateLimiting("auth")]
     public async Task<ActionResult<MessageResponse>> Register(RegisterRequest request, CancellationToken ct)
     {
         await _auth.RegisterAsync(request, ct);
@@ -40,6 +42,7 @@ public class AuthController : ControllerBase
 
     /// <summary>Public create-group flow: creates the group and its admin account. Does not authenticate.</summary>
     [HttpPost("create-group")]
+    [EnableRateLimiting("auth")]
     public async Task<ActionResult<MessageResponse>> CreateGroup(CreateGroupRequest request, CancellationToken ct)
     {
         await _auth.CreateGroupAsync(request, ct);
@@ -62,6 +65,7 @@ public class AuthController : ControllerBase
 
     /// <summary>Authenticates a user and returns a JWT access token.</summary>
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     public async Task<ActionResult<LoginResponse>> Login(LoginRequest request, CancellationToken ct)
     {
         _logger.LogInformation("Tentativa de login para {Email}", request.Email);
@@ -87,6 +91,7 @@ public class AuthController : ControllerBase
 
     /// <summary>Exchanges a refresh token for a new access token and a rotated refresh token.</summary>
     [HttpPost("refresh")]
+    [EnableRateLimiting("auth")]
     public async Task<ActionResult<LoginResponse>> Refresh(RefreshRequest request, CancellationToken ct)
     {
         var outcome = await _auth.RefreshAsync(request.RefreshToken, ct);

@@ -4,7 +4,7 @@ namespace Palpitao.Api.Entities;
 /// Per-round result of a participant (gross points, penalties, final points and
 /// status flags). Populated when a round is scored / processed.
 /// </summary>
-public class RoundParticipantResult
+public class RoundParticipantResult : IGroupOwned
 {
     public Guid Id { get; set; }
 

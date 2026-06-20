@@ -76,6 +76,9 @@ public class UserAdminService : IUserAdminService
     {
         var groupId = await _current.GetGroupIdAsync(ct);
 
+        // Admin-created accounts must meet the same strength rule as self-registration.
+        PasswordPolicy.Validate(request.Password);
+
         var emailTaken = await _db.Users.AnyAsync(u => u.Email == request.Email, ct);
         if (emailTaken)
         {

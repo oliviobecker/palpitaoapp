@@ -53,15 +53,14 @@ public class ExceptionHandlingMiddleware
             await WriteProblem(
                 context,
                 StatusCodes.Status500InternalServerError,
-                localizer.Get("error.unexpected"),
-                context.TraceIdentifier);
+                localizer.Get("error.unexpected"));
         }
     }
 
     private static string Localize(HttpContext context, string key)
         => context.RequestServices.GetRequiredService<ILocalizationService>().Get(key);
 
-    private static async Task WriteProblem(HttpContext context, int statusCode, string message, string? traceId = null)
+    private static async Task WriteProblem(HttpContext context, int statusCode, string message)
     {
         if (context.Response.HasStarted)
         {
@@ -72,12 +71,14 @@ public class ExceptionHandlingMiddleware
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/json; charset=utf-8";
 
+        // Always surface the trace id so any error (not just 500s) can be correlated
+        // with the server logs / Sentry event when a user reports a problem.
         var payload = JsonSerializer.Serialize(
             new
             {
                 status = statusCode,
                 message,
-                traceId,
+                traceId = context.TraceIdentifier,
             },
             new JsonSerializerOptions
             {
