@@ -1,0 +1,114 @@
+# ===========================================================================
+# Palpitão / FanPicks — .claudeignore
+# Files Claude Code should skip when reading/searching the repo.
+# Keep this focused on generated, large, binary, vendored, or secret content
+# so context stays on actual source. (Mirrors .gitignore where it makes sense.)
+# ===========================================================================
+
+# --- Dependencies (vendored, huge, never edited by hand) -------------------
+node_modules/
+**/node_modules/
+
+# --- Lock files (large, noisy, machine-generated) --------------------------
+package-lock.json
+**/package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ===========================================================================
+# Build / generated output
+# ===========================================================================
+# .NET
+[Bb]in/
+[Oo]bj/
+**/bin/
+**/obj/
+artifacts/
+.vs/
+*.user
+*.suo
+
+# Angular / frontend
+dist/
+**/dist/
+out-tsc/
+.angular/
+.nx/
+tmp/
+out/
+
+# Generated at build time (frontend version stamp)
+frontend/src/version.ts
+
+# ===========================================================================
+# Test / coverage / e2e artifacts
+# ===========================================================================
+coverage/
+**/coverage/
+test-results/
+playwright-report/
+playwright/.cache/
+__screenshots__/
+TestResults/
+
+# ===========================================================================
+# Large binaries / models / media
+# ===========================================================================
+# OCR — Tesseract language models (tens of MB each)
+backend/tessdata/*.traineddata
+backend/test_ocr_sample.*
+# Local uploads / generated files
+uploads/
+**/wwwroot/uploads/
+temp/
+# Binary assets Claude can't meaningfully read
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.woff
+*.woff2
+*.ttf
+*.eot
+*.pdf
+
+# ===========================================================================
+# Secrets / local config (never load into context)
+# ===========================================================================
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+**/appsettings.Production.json
+**/appsettings.*.local.json
+.claude/settings.local.json
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# ===========================================================================
+# Logs
+# ===========================================================================
+*.log
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ===========================================================================
+# Editors / OS noise
+# ===========================================================================
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ===========================================================================
+# VCS internals
+# ===========================================================================
+.git/

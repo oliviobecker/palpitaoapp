@@ -62,9 +62,14 @@ Three patterns to understand before touching backend logic:
    `Standing`, `RoundParticipantResult`, `AuditLog`, `GroupUser`); per-round entities
    (`Prediction`, `RoundMatch`, `Absence`, `Ocr*`…) derive their group from the parent. The frontend
    sends an `X-Group-Id` header on every authenticated call (`group.interceptor`); the backend
-   **always revalidates** it in `CurrentGroupService` (the single access chokepoint — requires an
+   **always revalidates** it in `CurrentGroupService` (the primary access chokepoint — requires an
    `Approved` + active `GroupUser`), guarded by `[RequireGroupAdmin]`/`[RequireGroupParticipant]`.
    Never trust the client's group claim. `Team` is the one **global** (non-tenant) catalogue.
+   *Defence in depth:* tenant roots implement `IGroupOwned`, so `AppDbContext` adds an EF Core
+   **global query filter** (driven by the DB-free `IRequestGroupContext` / `RequestGroupContext`)
+   that scopes reads to the request group, and `SaveChanges` **stamps** the group on inserts with an
+   unset `GroupId`. Both are **inert when there is no HTTP context** (background refresh, EF seeding,
+   design-time, unit tests) — so a test or background job sees all groups; don't rely on the filter there.
 
 2. **Two access gates, don't conflate them.** `User.IsActive` + `UserStatus.Approved` = the global
    account *login* gate. `GroupUser.IsActive` + `GroupUser.Status = Approved` = the per-group *access*
@@ -83,7 +88,15 @@ reopened to Locked without wiping scores.
 
 External integrations are isolated behind interfaces with no domain/DB access — `IFixtureProvider`
 (OneFootball default; selectable via `Fixtures:Provider`) and `IResultsProvider`. Swapping a provider
-is one config line; tests stub the `HttpMessageHandler` so nothing touches the network.
+is one config line; tests stub the `HttpMessageHandler` so nothing touches the network. Both provider
+HTTP clients wrap a transient-retry `DelegatingHandler` (`Common/TransientHttpRetryHandler`).
+
+Resilience / abuse-protection invariants (keep these intact when touching the relevant paths):
+unauthenticated auth endpoints are **per-IP rate limited** (`Program.cs`, tunable via
+`RateLimiting:Auth`; configure the real client IP behind a proxy); **scoring runs in a DB
+transaction**; the **background results refresh is single-runner across instances** via a Postgres
+advisory lock (`Services/Results/ResultsRefreshBackgroundService`). Passwords go through the shared
+`Common/PasswordPolicy`. Error responses carry a `traceId`.
 
 Dates/times are stored in **UTC**, displayed in pt-BR locale. Backend messages are localized via the
 `Accept-Language` header (`LocalizationService` / `DomainMessages`).
