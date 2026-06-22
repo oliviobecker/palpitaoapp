@@ -36,7 +36,7 @@
         <app-icon [name]="theme.current() === 'dark' ? 'sun' : 'moon'" [size]="16" />
       </button>
 
-      <a routerLink="/login" class="btn btn-sm btn-outline-secondary rounded-pill">{{
+      <a routerLink="/login" class="btn btn-sm btn-outline-secondary">{{
         'landing.signIn' | translate
       }}</a>
       <a routerLink="/create-group" class="btn btn-sm cta-primary d-none d-sm-inline-flex">{{
@@ -48,17 +48,17 @@
 
 <!-- Hero -->
 <section class="hero">
-  <div class="container py-5 text-center fade-in-up">
-    <span class="hero__badge mb-3">
-      <span class="live-dot"></span> {{ 'landing.heroBadge' | translate }}
+  <div class="container hero__inner text-center fade-in-up">
+    <span class="hero__badge mb-4">
+      <span class="badge-dot"></span> {{ 'landing.heroBadge' | translate }}
     </span>
     <h1 class="hero__title mx-auto mb-3">{{ 'landing.heroTitle' | translate }}</h1>
     <p class="hero__subtitle mx-auto mb-4">{{ 'landing.heroSubtitle' | translate }}</p>
     <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
-      <a routerLink="/create-group" class="btn btn-lg cta-primary">
-        <app-icon name="plus" [size]="18" class="me-1" /> {{ 'landing.heroCtaPrimary' | translate }}
-      </a>
-      <a routerLink="/login" class="btn btn-outline-secondary btn-lg rounded-pill">{{
+      <a routerLink="/create-group" class="btn btn-lg cta-primary">{{
+        'landing.heroCtaPrimary' | translate
+      }}</a>
+      <a routerLink="/login" class="btn btn-outline-secondary btn-lg">{{
         'landing.heroCtaSecondary' | translate
       }}</a>
     </div>
@@ -78,7 +78,7 @@
     <div class="col-12 col-sm-6 col-lg-4">
       <div class="card feature-card">
         <div class="card-body">
-          <span class="icon-tile icon-tile--green mb-3"><app-icon name="users" [size]="20" /></span>
+          <span class="feat-icon mb-3"><app-icon name="users" [size]="20" /></span>
           <h3 class="h6 fw-bold mb-1">{{ 'landing.featureGroupsTitle' | translate }}</h3>
           <p class="text-muted small mb-0">{{ 'landing.featureGroupsDesc' | translate }}</p>
         </div>
@@ -88,7 +88,7 @@
     <div class="col-12 col-sm-6 col-lg-4">
       <div class="card feature-card">
         <div class="card-body">
-          <span class="icon-tile icon-tile--blue mb-3"><app-icon name="target" [size]="20" /></span>
+          <span class="feat-icon mb-3"><app-icon name="target" [size]="20" /></span>
           <h3 class="h6 fw-bold mb-1">{{ 'landing.featurePredictionsTitle' | translate }}</h3>
           <p class="text-muted small mb-0">{{ 'landing.featurePredictionsDesc' | translate }}</p>
         </div>
@@ -98,7 +98,7 @@
     <div class="col-12 col-sm-6 col-lg-4">
       <div class="card feature-card">
         <div class="card-body">
-          <span class="icon-tile icon-tile--amber mb-3"><app-icon name="star" [size]="20" /></span>
+          <span class="feat-icon mb-3"><app-icon name="star" [size]="20" /></span>
           <h3 class="h6 fw-bold mb-1">{{ 'landing.featureScoringTitle' | translate }}</h3>
           <p class="text-muted small mb-0">{{ 'landing.featureScoringDesc' | translate }}</p>
         </div>
@@ -108,9 +108,7 @@
     <div class="col-12 col-sm-6 col-lg-4">
       <div class="card feature-card">
         <div class="card-body">
-          <span class="icon-tile icon-tile--violet mb-3"
-            ><app-icon name="trophy" [size]="20"
-          /></span>
+          <span class="feat-icon mb-3"><app-icon name="trophy" [size]="20" /></span>
           <h3 class="h6 fw-bold mb-1">{{ 'landing.featureStandingsTitle' | translate }}</h3>
           <p class="text-muted small mb-0">{{ 'landing.featureStandingsDesc' | translate }}</p>
         </div>
@@ -120,9 +118,7 @@
     <div class="col-12 col-sm-6 col-lg-4">
       <div class="card feature-card">
         <div class="card-body">
-          <span class="icon-tile icon-tile--teal mb-3"
-            ><app-icon name="refresh-cw" [size]="20"
-          /></span>
+          <span class="feat-icon mb-3"><app-icon name="refresh-cw" [size]="20" /></span>
           <h3 class="h6 fw-bold mb-1">{{ 'landing.featureResultsTitle' | translate }}</h3>
           <p class="text-muted small mb-0">{{ 'landing.featureResultsDesc' | translate }}</p>
         </div>
@@ -132,7 +128,7 @@
     <div class="col-12 col-sm-6 col-lg-4">
       <div class="card feature-card">
         <div class="card-body">
-          <span class="icon-tile icon-tile--red mb-3"><app-icon name="image" [size]="20" /></span>
+          <span class="feat-icon mb-3"><app-icon name="image" [size]="20" /></span>
           <h3 class="h6 fw-bold mb-1">{{ 'landing.featureImportTitle' | translate }}</h3>
           <p class="text-muted small mb-0">{{ 'landing.featureImportDesc' | translate }}</p>
         </div>
@@ -177,7 +173,7 @@
     <div class="col-12 col-md-6 col-lg-5">
       <div class="card h-100">
         <div class="card-body d-flex align-items-center gap-3">
-          <span class="icon-tile icon-tile--blue"><app-icon name="goal" [size]="20" /></span>
+          <span class="feat-icon"><app-icon name="goal" [size]="20" /></span>
           <div>
             <div class="fw-bold">{{ 'landing.tournamentEnglandTitle' | translate }}</div>
             <div class="text-muted small">{{ 'landing.tournamentEnglandDesc' | translate }}</div>
@@ -188,7 +184,7 @@
     <div class="col-12 col-md-6 col-lg-5">
       <div class="card h-100">
         <div class="card-body d-flex align-items-center gap-3">
-          <span class="icon-tile icon-tile--amber"><app-icon name="trophy" [size]="20" /></span>
+          <span class="feat-icon"><app-icon name="trophy" [size]="20" /></span>
           <div>
             <div class="fw-bold">{{ 'landing.tournamentWorldCupTitle' | translate }}</div>
             <div class="text-muted small">{{ 'landing.tournamentWorldCupDesc' | translate }}</div>
@@ -202,9 +198,9 @@
 <!-- Final CTA -->
 <section class="container py-5">
   <div class="cta-band text-center p-4 p-md-5">
-    <h2 class="fw-bold mb-2">{{ 'landing.ctaTitle' | translate }}</h2>
-    <p class="mb-4 opacity-75">{{ 'landing.ctaSubtitle' | translate }}</p>
-    <a routerLink="/create-group" class="btn btn-light btn-lg rounded-pill fw-bold">{{
+    <h2 class="section-title mb-2">{{ 'landing.ctaTitle' | translate }}</h2>
+    <p class="text-muted mb-4">{{ 'landing.ctaSubtitle' | translate }}</p>
+    <a routerLink="/create-group" class="btn btn-lg cta-primary">{{
       'landing.ctaButton' | translate
     }}</a>
     <div class="mt-3">
