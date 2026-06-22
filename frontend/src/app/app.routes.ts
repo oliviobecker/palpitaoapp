@@ -2,6 +2,11 @@ import { Routes } from '@angular/router';
 import { adminGuard, authGuard, participantGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
+  {
+    path: '',
+    pathMatch: 'full',
+    loadComponent: () => import('./features/landing/landing').then((m) => m.Landing),
+  },
   { path: 'login', loadComponent: () => import('./features/auth/login').then((m) => m.Login) },
   {
     path: 'register',

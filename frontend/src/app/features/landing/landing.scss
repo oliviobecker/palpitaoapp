@@ -1,0 +1,131 @@
+/* Public landing page. Leans on the global design tokens + Bootstrap utilities
+   in styles.scss; only landing-specific chrome lives here (kept within budget). */
+:host {
+  display: block;
+}
+
+// --- Header ----------------------------------------------------------------
+.lh {
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.lh__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-decoration: none;
+}
+.lh__logo {
+  font-size: 1.35rem;
+}
+
+.lang-switch {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.lang-switch__btn {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+}
+.lang-switch__btn.is-active {
+  background: var(--brand);
+  color: #fff;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.icon-btn:hover {
+  background: var(--surface-2);
+}
+
+// --- Hero ------------------------------------------------------------------
+.hero {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(1100px 520px at 12% -20%, rgba(22, 163, 74, 0.16), transparent 60%),
+    radial-gradient(820px 460px at 108% 0%, rgba(37, 99, 235, 0.14), transparent 55%);
+}
+.hero__title {
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  max-width: 18ch;
+}
+.hero__subtitle {
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+  max-width: 44rem;
+}
+.hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--brand-700);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+// --- Steps -----------------------------------------------------------------
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+.step-desc {
+  max-width: 30ch;
+}
+
+// --- Final CTA band --------------------------------------------------------
+.cta-band {
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-700) 100%);
+  color: #fff;
+  box-shadow: 0 16px 40px rgba(22, 163, 74, 0.28);
+}
+.cta-band__link {
+  color: #fff;
+  text-decoration: underline;
+}
+
+// --- Footer ----------------------------------------------------------------
+.landing-footer {
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+}
