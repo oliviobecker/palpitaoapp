@@ -1,0 +1,25 @@
+{
+  "name": "FanPicks",
+  "short_name": "FanPicks",
+  "description": "FanPicks — football predictions with friends.",
+  "lang": "en",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#0d6efd",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "favicon.ico",
+      "type": "image/x-icon",
+      "sizes": "48x48"
+    }
+  ]
+}

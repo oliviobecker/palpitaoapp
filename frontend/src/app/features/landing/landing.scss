@@ -1,0 +1,200 @@
+/* Public landing page — Clean & premium. Leans on the global design tokens +
+   Bootstrap utilities in styles.scss; only landing-specific chrome lives here. */
+:host {
+  display: block;
+}
+
+// --- Header ----------------------------------------------------------------
+.lh {
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.lh__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-decoration: none;
+}
+.lh__logo {
+  font-size: 1.35rem;
+}
+
+.lang-switch {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.lang-switch__btn {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+}
+.lang-switch__btn.is-active {
+  background: var(--brand);
+  color: #fff;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.icon-btn:hover {
+  background: var(--surface-2);
+}
+
+// Solid, restrained primary action (single brand accent, moderate radius).
+.cta-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--brand);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.22);
+  transition:
+    filter 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+}
+.cta-primary:hover,
+.cta-primary:focus {
+  color: #fff;
+  filter: brightness(1.05);
+  box-shadow: 0 12px 26px rgba(22, 163, 74, 0.28);
+}
+
+// Brand-tinted section eyebrow (reuses the global .section-label shape).
+.section-label {
+  color: var(--brand);
+}
+
+// --- Hero ------------------------------------------------------------------
+// Large and confident, but quiet: a single faint accent wash and lots of room.
+.hero {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(1000px 520px at 50% -30%, rgba(22, 163, 74, 0.1), transparent 65%);
+}
+.hero__inner {
+  padding-block: 4.5rem;
+}
+.hero__title {
+  font-size: clamp(2.4rem, 6vw, 4.25rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  max-width: 18ch;
+}
+.hero__subtitle {
+  font-size: 1.08rem;
+  color: var(--ink-soft);
+  max-width: 42rem;
+}
+.hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.badge-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+// --- Section heading -------------------------------------------------------
+.section-title {
+  font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+// --- Features --------------------------------------------------------------
+// One restrained accent for every icon, generous card padding.
+.feat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
+  color: var(--brand);
+  flex: none;
+}
+.feature-card .card-body {
+  padding: 1.5rem;
+}
+
+// --- Steps -----------------------------------------------------------------
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
+  color: var(--brand);
+  border: 1.5px solid color-mix(in srgb, var(--brand) 30%, transparent);
+  font-weight: 800;
+  font-size: 1rem;
+}
+.step-desc {
+  max-width: 30ch;
+}
+
+// --- Final CTA panel -------------------------------------------------------
+// A quiet bordered surface rather than a loud band.
+.cta-band {
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+}
+.cta-band__link {
+  color: var(--muted);
+  text-decoration: underline;
+}
+.cta-band__link:hover {
+  color: var(--ink-soft);
+}
+
+// --- Footer ----------------------------------------------------------------
+.landing-footer {
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+}

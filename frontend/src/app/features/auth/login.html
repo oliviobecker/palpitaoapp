@@ -1,0 +1,61 @@
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="text-center mb-4">
+      <a routerLink="/" class="text-reset text-decoration-none d-inline-block">
+        <div class="auth-logo">⚽</div>
+        <h1 class="h4 fw-bold mb-1">{{ 'app.name' | translate }}</h1>
+      </a>
+      <p class="text-muted small mb-0">{{ 'app.signInToContinue' | translate }}</p>
+    </div>
+
+    @if (error()) {
+      <div class="alert alert-danger py-2" role="alert">{{ error() }}</div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="mb-3">
+        <label for="email" class="form-label">{{ 'login.email' | translate }}</label>
+        <input
+          id="email"
+          type="email"
+          class="form-control form-control-lg"
+          formControlName="email"
+          autocomplete="username"
+          [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid"
+        />
+        @if (form.controls.email.touched && form.controls.email.invalid) {
+          <div class="invalid-feedback">{{ 'login.emailInvalid' | translate }}</div>
+        }
+      </div>
+
+      <div class="mb-4">
+        <label for="password" class="form-label">{{ 'login.password' | translate }}</label>
+        <input
+          id="password"
+          type="password"
+          class="form-control form-control-lg"
+          formControlName="password"
+          autocomplete="current-password"
+          [class.is-invalid]="form.controls.password.touched && form.controls.password.invalid"
+        />
+        @if (form.controls.password.touched && form.controls.password.invalid) {
+          <div class="invalid-feedback">{{ 'login.passwordRequired' | translate }}</div>
+        }
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="submitting()">
+        @if (submitting()) {
+          <span class="spinner-border spinner-border-sm me-2"></span>
+        }
+        {{ 'login.submit' | translate }}
+      </button>
+    </form>
+
+    <p class="text-center small text-muted mt-4 mb-1">
+      <a routerLink="/register">{{ 'login.noAccount' | translate }}</a>
+    </p>
+    <p class="text-center small text-muted mb-0">
+      <a routerLink="/create-group">{{ 'login.createGroup' | translate }}</a>
+    </p>
+  </div>
+</div>

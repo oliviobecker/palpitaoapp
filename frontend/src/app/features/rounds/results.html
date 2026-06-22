@@ -1,0 +1,65 @@
+<div class="mb-3">
+  <div class="page-trail">
+    <a routerLink="/rounds">{{ 'nav.rounds' | translate }}</a> · {{ 'results.title' | translate }}
+  </div>
+  <h1 class="h4 fw-bold mb-0">{{ 'results.title' | translate }}</h1>
+</div>
+
+@if (loading()) {
+  <app-loading />
+} @else if (error()) {
+  <app-error-state (retry)="load()" />
+} @else if (!scored()) {
+  <app-empty-state icon="hourglass" [message]="'results.notScored' | translate" />
+  <div class="d-grid mt-3">
+    <a class="btn btn-outline-primary" [routerLink]="['/rounds', roundId(), 'temporary-standings']">
+      <app-icon name="chart-column" [size]="16" /> {{ 'temporaryStandings.title' | translate }}
+    </a>
+  </div>
+} @else {
+  <!-- Round total -->
+  <div class="card mb-3 text-center">
+    <div class="card-body py-3">
+      <div class="text-muted small">{{ 'results.roundTotal' | translate }}</div>
+      <div class="h3 fw-bold mb-0">{{ me()?.finalPoints ?? 0 }}</div>
+      @if (me()?.wasAbsent) {
+        <span class="badge text-bg-secondary mt-1">{{ 'results.absent' | translate }}</span>
+      }
+      @if (me()?.flavioRuleApplied) {
+        <span class="badge text-bg-warning mt-1">{{ 'results.flavioApplied' | translate }}</span>
+      }
+    </div>
+  </div>
+
+  <div class="vstack gap-2">
+    @for (m of matches(); track m.roundMatchId) {
+      <div class="card">
+        <div class="card-body py-2 px-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <app-competition-badge [competition]="m.competition" />
+            <span class="badge text-bg-dark">{{ m.homeScore }} - {{ m.awayScore }}</span>
+          </div>
+          <div class="fw-semibold mb-1">
+            {{ m.homeTeamName }} <span class="text-muted">x</span> {{ m.awayTeamName }}
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center small text-muted">
+            <span
+              >{{ 'results.yourPrediction' | translate }}:
+              <strong class="text-body">{{ prediction(m.roundMatchId) }}</strong></span
+            >
+            <span>
+              @if (score(m.roundMatchId); as s) {
+                {{ categoryKey(s.scoreCategory) | translate }}
+                <app-multiplier-badge [multiplier]="s.multiplier" />
+                <span class="badge text-bg-success ms-1">+{{ s.finalPoints }}</span>
+              } @else {
+                <span class="badge text-bg-light border">0</span>
+              }
+            </span>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
