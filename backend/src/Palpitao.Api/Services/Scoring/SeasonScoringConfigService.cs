@@ -14,10 +14,11 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
     private const int MaxRuleScore = 20;
 
     // Categories that can be assigned to an exact score (ExtraUncommon is the implicit
-    // catch-all; None/ColumnOnly are not exact-score difficulty categories).
+    // catch-all; only None is not a real points category).
     private static readonly HashSet<ScoreCategory> AssignableCategories = new()
     {
-        ScoreCategory.Traditional, ScoreCategory.Medium, ScoreCategory.Uncommon, ScoreCategory.ExtraUncommon,
+        ScoreCategory.ColumnOnly, ScoreCategory.Traditional, ScoreCategory.Medium,
+        ScoreCategory.Uncommon, ScoreCategory.ExtraUncommon,
     };
 
     private readonly AppDbContext _db;

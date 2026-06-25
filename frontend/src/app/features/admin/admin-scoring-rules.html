@@ -1,14 +1,20 @@
-<app-page-header
-  [trail]="('adminDash.panel' | translate) + ' · Admin'"
-  [title]="'scoringRules.title' | translate"
-/>
+<!-- Header -->
+<div class="sr-header mb-3">
+  <div class="sr-header__main">
+    <button type="button" class="sr-back" (click)="back()">
+      <app-icon name="arrow-left" [size]="16" /> {{ 'scoringRules.back' | translate }}
+    </button>
+    <div class="sr-trail">{{ 'adminDash.panel' | translate }} · Admin</div>
+    <h1 class="sr-title">{{ 'scoringRules.title' | translate }}</h1>
+    <p class="sr-sub">{{ 'scoringRules.subtitle' | translate }}</p>
+  </div>
 
-<!-- Season selector -->
-<div class="card mb-3">
-  <div class="card-body py-2">
-    <label class="form-label small mb-1">{{ 'scoringRules.season' | translate }}</label>
+  <div class="season-box">
+    <div class="season-box__label">
+      <span class="dot"></span> {{ 'scoringRules.season' | translate }}
+    </div>
     <select
-      class="form-select"
+      class="form-select form-select-sm"
       [value]="seasonId()"
       (change)="onSeasonChange($any($event.target).value)"
     >
@@ -23,7 +29,7 @@
   <app-loading />
 } @else if (error()) {
   <app-error-state (retry)="loadSeasons()" />
-} @else if (config(); as cfg) {
+} @else if (config()) {
   @if (hasScoredRounds()) {
     <div class="alert alert-warning d-flex align-items-start gap-2 py-2">
       <app-icon name="triangle-alert" [size]="18" />
@@ -48,167 +54,173 @@
   }
 
   <!-- Base points -->
-  <div class="card mb-3">
+  <section class="card sr-card mb-3">
     <div class="card-body">
-      <h2 class="h6 fw-bold mb-1">{{ 'scoringRules.basePointsTitle' | translate }}</h2>
-      <p class="text-muted small mb-3">{{ 'scoringRules.basePointsHelp' | translate }}</p>
-      <div class="row g-2">
-        <div class="col-6 col-md-4">
-          <label class="form-label small mb-0">{{ 'category.ColumnOnly' | translate }}</label>
-          <input
-            type="number"
-            min="0"
-            class="form-control"
-            [value]="basePoints().columnOnly"
-            (input)="setBasePoint('columnOnly', $any($event.target).value)"
-          />
-        </div>
-        <div class="col-6 col-md-4">
-          <label class="form-label small mb-0">{{ 'category.Traditional' | translate }}</label>
-          <input
-            type="number"
-            min="0"
-            class="form-control"
-            [value]="basePoints().traditional"
-            (input)="setBasePoint('traditional', $any($event.target).value)"
-          />
-        </div>
-        <div class="col-6 col-md-4">
-          <label class="form-label small mb-0">{{ 'category.Medium' | translate }}</label>
-          <input
-            type="number"
-            min="0"
-            class="form-control"
-            [value]="basePoints().medium"
-            (input)="setBasePoint('medium', $any($event.target).value)"
-          />
-        </div>
-        <div class="col-6 col-md-4">
-          <label class="form-label small mb-0">{{ 'category.Uncommon' | translate }}</label>
-          <input
-            type="number"
-            min="0"
-            class="form-control"
-            [value]="basePoints().uncommon"
-            (input)="setBasePoint('uncommon', $any($event.target).value)"
-          />
-        </div>
-        <div class="col-6 col-md-4">
-          <label class="form-label small mb-0">{{ 'category.ExtraUncommon' | translate }}</label>
-          <input
-            type="number"
-            min="0"
-            class="form-control"
-            [value]="basePoints().extraUncommon"
-            (input)="setBasePoint('extraUncommon', $any($event.target).value)"
-          />
-        </div>
+      <div class="sr-section-title">
+        <span class="bar"></span>{{ 'scoringRules.basePointsTitle' | translate }}
       </div>
-    </div>
-  </div>
-
-  <!-- Score categories (what counts as "incomum") -->
-  <div class="card mb-3">
-    <div class="card-body">
-      <h2 class="h6 fw-bold mb-1">{{ 'scoringRules.categoriesTitle' | translate }}</h2>
-      <p class="text-muted small mb-3">{{ 'scoringRules.categoriesHelp' | translate }}</p>
-      <div class="row g-2">
-        @for (c of scoreGrid(); track c.key) {
-          <div class="col-6 col-md-3">
-            <label class="form-label small mb-0 font-monospace">{{ c.low }} × {{ c.high }}</label>
-            <select
-              class="form-select form-select-sm"
-              [value]="category(c.key)"
-              (change)="setCategory(c.key, $any($event.target).value)"
-            >
-              @for (cat of assignable; track cat) {
-                <option [value]="cat">{{ 'category.' + cat | translate }}</option>
-              }
-            </select>
+      <p class="text-muted small mb-3">{{ 'scoringRules.basePointsHelp' | translate }}</p>
+      <div class="base-grid">
+        @for (c of categories; track c.cat) {
+          <div class="base-card" [style.borderColor]="fill(c.cat)">
+            <div class="base-card__head">
+              <span class="dot" [style.background]="border(c.cat)"></span>
+              {{ 'category.' + c.cat | translate }}
+            </div>
+            <div class="stepper">
+              <button type="button" class="step" (click)="stepBase(c.field, -1)">−</button>
+              <span class="step-val">{{ basePointsFor(c.cat) }}</span>
+              <button type="button" class="step" (click)="stepBase(c.field, 1)">+</button>
+            </div>
           </div>
         }
       </div>
     </div>
-  </div>
+  </section>
+
+  <!-- Score categories (paint grid) -->
+  <section class="card sr-card mb-3">
+    <div class="card-body">
+      <div class="sr-section-title">
+        <span class="bar"></span>{{ 'scoringRules.categoriesTitle' | translate }}
+      </div>
+      <p class="text-muted small mb-2">{{ 'scoringRules.categoriesHelp' | translate }}</p>
+
+      <div class="palette">
+        <span class="palette__label">{{ 'scoringRules.brush' | translate }}</span>
+        @for (c of categories; track c.cat) {
+          <button
+            type="button"
+            class="cat-pill"
+            [class.active]="activeCategory() === c.cat"
+            [style.--cat]="border(c.cat)"
+            (click)="activeCategory.set(c.cat)"
+          >
+            <span class="dot" [style.background]="border(c.cat)"></span>
+            {{ 'category.' + c.cat | translate }}
+            <span class="pt">{{ basePointsFor(c.cat) }}pt</span>
+            <span class="cnt">· {{ categoryCount(c.cat) }}</span>
+          </button>
+        }
+      </div>
+
+      <div class="score-grid">
+        <div class="corner"></div>
+        @for (a of range; track a) {
+          <div class="axis">{{ a }}</div>
+        }
+        @for (h of range; track h) {
+          <div class="axis">{{ h }}</div>
+          @for (a of range; track a) {
+            <button
+              type="button"
+              class="cell"
+              [style.borderColor]="border(categoryAt(key(h, a)))"
+              [style.background]="fill(categoryAt(key(h, a)))"
+              (click)="paint(h, a)"
+            >
+              {{ h }}×{{ a }}
+            </button>
+          }
+        }
+      </div>
+    </div>
+  </section>
 
   <!-- Multipliers -->
-  <div class="card mb-3">
+  <section class="card sr-card mb-3">
     <div class="card-body">
-      <h2 class="h6 fw-bold mb-1">{{ 'scoringRules.multipliersTitle' | translate }}</h2>
-      <p class="text-muted small mb-3">{{ 'scoringRules.multipliersHelp' | translate }}</p>
-      <div class="vstack gap-2">
-        @for (r of multiplierRules(); track $index) {
-          <div class="d-flex flex-wrap align-items-center gap-2 border-top pt-2">
-            <span class="d-flex align-items-center gap-1 flex-grow-1">
-              <app-competition-badge [competition]="r.competition" />
-              @if (phaseLabel(r.phase); as ph) {
-                <span class="small text-muted">{{ ph }}</span>
-              }
-            </span>
-            <div class="d-flex align-items-center gap-1">
-              <label class="form-label small mb-0">{{ 'scoringRules.normal' | translate }}</label>
-              <input
-                type="number"
-                min="1"
-                class="form-control form-control-sm"
-                style="width: 4.5rem"
-                [value]="r.multiplier"
-                (input)="setMultiplier($index, $any($event.target).value)"
-              />
-            </div>
-            <div class="d-flex align-items-center gap-1">
-              <label class="form-label small mb-0">{{ 'scoringRules.classic' | translate }}</label>
-              <input
-                type="number"
-                min="1"
-                class="form-control form-control-sm"
-                style="width: 4.5rem"
-                [value]="r.classicMultiplier"
-                (input)="setClassicMultiplier($index, $any($event.target).value)"
-              />
-            </div>
-          </div>
-        }
+      <div class="sr-section-title">
+        <span class="bar"></span>{{ 'scoringRules.multipliersTitle' | translate }}
       </div>
+      <p class="text-muted small mb-2">{{ 'scoringRules.multipliersHelp' | translate }}</p>
+
+      <div class="mult-row mult-head">
+        <span></span>
+        <span>{{ 'scoringRules.normal' | translate }}</span>
+        <span>{{ 'scoringRules.classic' | translate }}</span>
+      </div>
+
+      @for (g of multiplierGroups(); track g.competition) {
+        <div class="mult-group">
+          <app-competition-badge [competition]="g.competition" />
+          @for (row of g.rows; track row.index) {
+            <div class="mult-row">
+              <span class="phase">{{
+                phaseLabel(row.rule.phase) || ('scoringRules.general' | translate)
+              }}</span>
+              <div class="stepper">
+                <button type="button" class="step" (click)="stepMultiplier(row.index, -1)">
+                  −
+                </button>
+                <span class="step-val">{{ row.rule.multiplier }}</span>
+                <button type="button" class="step" (click)="stepMultiplier(row.index, 1)">+</button>
+              </div>
+              <div class="stepper">
+                <button type="button" class="step" (click)="stepClassic(row.index, -1)">−</button>
+                <span class="step-val">{{ row.rule.classicMultiplier }}</span>
+                <button type="button" class="step" (click)="stepClassic(row.index, 1)">+</button>
+              </div>
+            </div>
+          }
+        </div>
+      }
     </div>
-  </div>
+  </section>
 
   <!-- Classic teams -->
-  <div class="card mb-3">
+  <section class="card sr-card mb-3">
     <div class="card-body">
-      <h2 class="h6 fw-bold mb-1">{{ 'scoringRules.classicTeamsTitle' | translate }}</h2>
-      <p class="text-muted small mb-2">
-        {{ 'scoringRules.classicTeamsHelp' | translate }}
-        <span class="badge text-bg-secondary ms-1">{{ selectedTeamCount() }}</span>
-      </p>
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="sr-section-title">
+          <span class="bar"></span>{{ 'scoringRules.classicTeamsTitle' | translate }}
+        </div>
+        <span class="badge text-bg-secondary">
+          {{ selectedTeams().length }} {{ 'scoringRules.selected' | translate }}
+        </span>
+      </div>
+      <p class="text-muted small mb-2">{{ 'scoringRules.classicTeamsHelp' | translate }}</p>
+
+      @if (selectedTeams().length > 0) {
+        <div class="chips mb-2">
+          @for (t of selectedTeams(); track t.teamId) {
+            <span class="chip">
+              {{ t.name }}
+              <button type="button" class="chip__x" (click)="setTeam(t.teamId, false)">
+                <app-icon name="x" [size]="12" />
+              </button>
+            </span>
+          }
+        </div>
+      }
+
       <input
         class="form-control form-control-sm mb-2"
         [value]="teamFilter()"
         (input)="teamFilter.set($any($event.target).value)"
         [placeholder]="'scoringRules.searchTeams' | translate"
       />
-      <div class="row g-1" style="max-height: 18rem; overflow-y: auto">
-        @for (t of filteredTeams(); track t.teamId) {
-          <div class="col-12 col-md-6">
-            <div class="form-check">
-              <input
-                class="form-check-input"
-                type="checkbox"
-                [id]="'team-' + t.teamId"
-                [checked]="t.isClassic"
-                (change)="toggleTeam(t.teamId)"
-              />
-              <label class="form-check-label small" [for]="'team-' + t.teamId">{{ t.name }}</label>
-            </div>
+
+      <div class="add-list">
+        @for (t of addableTeams(); track t.teamId) {
+          <div class="add-row">
+            <span>{{ t.name }}</span>
+            <button type="button" class="add-btn" (click)="setTeam(t.teamId, true)">
+              + {{ 'scoringRules.add' | translate }}
+            </button>
           </div>
         }
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Save -->
-  <div class="d-grid gap-2 mb-4">
-    <button class="btn btn-primary btn-lg" (click)="save()" [disabled]="saving()">
+  <!-- Save bar -->
+  <div class="save-bar">
+    <span class="save-status">
+      <span class="dot" [class.dirty]="dirty()"></span>
+      {{ (dirty() ? 'scoringRules.unsaved' : 'scoringRules.allSaved') | translate }}
+    </span>
+    <button class="btn btn-primary" (click)="save()" [disabled]="saving()">
       @if (saving()) {
         <span class="spinner-border spinner-border-sm me-2"></span>
       }
