@@ -343,6 +343,10 @@ export interface RoundResultMatch {
   awayScore?: number | null;
   isFinished: boolean;
   multiplier: number;
+  /** Both teams are classic-eligible (drives the audit "classic" badge). */
+  isClassic: boolean;
+  /** An admin manual override set the multiplier. */
+  isManualMultiplier: boolean;
 }
 
 export interface RoundResults {
@@ -378,4 +382,54 @@ export interface Mirror {
     startsAt: string;
   }[];
   participants: MirrorParticipant[];
+}
+
+// --- Scoring configuration (per-season, admin-editable ruleset) ------------
+
+export interface ScoringBasePoints {
+  columnOnly: number;
+  traditional: number;
+  medium: number;
+  uncommon: number;
+  extraUncommon: number;
+}
+
+export interface ScoringScoreEntry {
+  low: number;
+  high: number;
+  category: ScoreCategory;
+}
+
+export interface ScoringMultiplierRule {
+  competition: Competition;
+  phase: MatchPhase;
+  multiplier: number;
+  classicMultiplier: number;
+}
+
+export interface ScoringConfigTeam {
+  teamId: string;
+  name: string;
+  shortName: string;
+  isClassic: boolean;
+}
+
+export interface ScoringConfig {
+  seasonId: string;
+  seasonName: string;
+  tournamentType: TournamentType;
+  /** True when the season already has scored rounds — edits need a recalculate to take effect. */
+  hasScoredRounds: boolean;
+  basePoints: ScoringBasePoints;
+  scoreEntries: ScoringScoreEntry[];
+  multiplierRules: ScoringMultiplierRule[];
+  /** Candidate classic teams for the season's tournament type, with selection. */
+  teams: ScoringConfigTeam[];
+}
+
+export interface ScoringConfigRequest {
+  basePoints: ScoringBasePoints;
+  scoreEntries: ScoringScoreEntry[];
+  multiplierRules: ScoringMultiplierRule[];
+  classicTeamIds: string[];
 }

@@ -13,12 +13,14 @@ public class TemporaryStandingsService : ITemporaryStandingsService
 {
     private readonly AppDbContext _db;
     private readonly IScoringService _scoring;
+    private readonly ISeasonScoringConfigService _config;
     private readonly ICurrentGroupService _current;
 
-    public TemporaryStandingsService(AppDbContext db, IScoringService scoring, ICurrentGroupService current)
+    public TemporaryStandingsService(AppDbContext db, IScoringService scoring, ISeasonScoringConfigService config, ICurrentGroupService current)
     {
         _db = db;
         _scoring = scoring;
+        _config = config;
         _current = current;
     }
 
@@ -59,6 +61,8 @@ public class TemporaryStandingsService : ITemporaryStandingsService
             return dto;
         }
 
+        var ruleSet = await _config.GetRuleSetAsync(round.SeasonId, ct);
+
         var predictions = await _db.Predictions
             .AsNoTracking()
             .Where(p => p.RoundId == roundId)
@@ -91,14 +95,13 @@ public class TemporaryStandingsService : ITemporaryStandingsService
                 }
 
                 var category = _scoring.GetCategory(
-                    prediction.PredictedHomeScore, prediction.PredictedAwayScore,
+                    ruleSet, prediction.PredictedHomeScore, prediction.PredictedAwayScore,
                     match.HomeScore!.Value, match.AwayScore!.Value);
-                var basePoints = _scoring.GetBasePoints(category);
+                var basePoints = _scoring.GetBasePoints(ruleSet, category);
                 // Same multiplier rule as the official scoring (manual override wins).
                 var multiplier = match.ManualMultiplierOverride ?? _scoring.GetMultiplier(
-                    match.Competition, match.Phase,
-                    match.HomeTeam!.IsBigSevenClub, match.AwayTeam!.IsBigSevenClub,
-                    match.HomeTeam!.IsWorldChampion, match.AwayTeam!.IsWorldChampion);
+                    ruleSet, match.Competition, match.Phase,
+                    ruleSet.IsClassicTeam(match.HomeTeamId), ruleSet.IsClassicTeam(match.AwayTeamId));
                 points += basePoints * multiplier;
             }
 

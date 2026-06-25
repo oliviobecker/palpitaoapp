@@ -58,8 +58,9 @@ public class RoundScoringServiceTests
         var audit = new AuditService(db);
         var current = new FakeCurrentGroupService();
         var standings = new StandingsService(db, current);
+        var scoringConfig = new SeasonScoringConfigService(db, audit, current);
         var scoring = new RoundScoringService(
-            db, new ScoringService(), new AbsenceService(db, audit, current), new FlavioRuleService(db), standings, audit, current);
+            db, new ScoringService(), scoringConfig, new AbsenceService(db, audit, current), new FlavioRuleService(db), standings, audit, current);
         return new Kit(scoring, new RoundService(db, audit, current), new PredictionsService(db, audit, current), standings);
     }
 
@@ -200,6 +201,26 @@ public class RoundScoringServiceTests
         var p = results.Participants.Single(x => x.UserId == user);
         Assert.Equal(2, p.MatchScores[0].Multiplier);
         Assert.Equal(6, p.FinalPoints);
+    }
+
+    [Fact]
+    public async Task Round_results_expose_audit_flags_for_a_classic()
+    {
+        using var db = CreateContext();
+        var kit = Build(db);
+        var user = CreateParticipant(db);
+        // Arsenal x Chelsea — both Big Seven, so a classic with multiplier x2.
+        var round = await PublishedRound(kit, 1, (Competition.PremierLeague, MatchPhase.Regular));
+        await SavePredictions(kit, round, user, (2, 1));
+        await kit.Rounds.LockAsync(round.Id, Admin, Ct);
+        await SetResults(kit, round, (2, 1));
+
+        var results = await kit.Scoring.ScoreRoundAsync(round.Id, Admin, Ct);
+
+        var match = results.Matches.Single();
+        Assert.True(match.IsClassic);
+        Assert.False(match.IsManualMultiplier);
+        Assert.Equal(2, match.Multiplier);
     }
 
     [Fact]

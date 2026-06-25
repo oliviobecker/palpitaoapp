@@ -18,12 +18,18 @@ public class SeasonsController : ControllerBase
     private readonly IStandingsService _standings;
     private readonly IRoundScoringService _scoring;
     private readonly ISeasonService _seasons;
+    private readonly ISeasonScoringConfigService _scoringConfig;
 
-    public SeasonsController(IStandingsService standings, IRoundScoringService scoring, ISeasonService seasons)
+    public SeasonsController(
+        IStandingsService standings,
+        IRoundScoringService scoring,
+        ISeasonService seasons,
+        ISeasonScoringConfigService scoringConfig)
     {
         _standings = standings;
         _scoring = scoring;
         _seasons = seasons;
+        _scoringConfig = scoringConfig;
     }
 
     [HttpGet]
@@ -63,4 +69,14 @@ public class SeasonsController : ControllerBase
         await _scoring.RecalculateSeasonAsync(seasonId, User.GetUserId(), ct);
         return NoContent();
     }
+
+    [HttpGet("{seasonId:guid}/scoring-config")]
+    public async Task<ActionResult<ScoringConfigDto>> ScoringConfig(Guid seasonId, CancellationToken ct)
+        => Ok(await _scoringConfig.GetConfigAsync(seasonId, ct));
+
+    [HttpPut("{seasonId:guid}/scoring-config")]
+    [RequireGroupAdmin]
+    public async Task<ActionResult<ScoringConfigDto>> UpdateScoringConfig(
+        Guid seasonId, ScoringConfigRequest request, CancellationToken ct)
+        => Ok(await _scoringConfig.UpdateAsync(seasonId, request, User.GetUserId(), ct));
 }

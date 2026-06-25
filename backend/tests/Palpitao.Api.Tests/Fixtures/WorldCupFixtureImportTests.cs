@@ -53,8 +53,13 @@ public class WorldCupFixtureImportTests
     }
 
     private static FixtureImportService CreateService(AppDbContext db)
-        => new(db, new FakeFixtureProvider(), new ScoringService(), new AuditService(db),
-            new FakeCurrentGroupService(WcGroup), Options.Create(new FixtureOptions { EnableExternalFixtureImport = true }));
+    {
+        var audit = new AuditService(db);
+        var current = new FakeCurrentGroupService(WcGroup);
+        var scoringConfig = new SeasonScoringConfigService(db, audit, current);
+        return new(db, new FakeFixtureProvider(), new ScoringService(), scoringConfig, audit, current,
+            Options.Create(new FixtureOptions { EnableExternalFixtureImport = true }));
+    }
 
     private static Guid CreateDraftRound(AppDbContext db)
     {

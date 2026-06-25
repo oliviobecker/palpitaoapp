@@ -140,6 +140,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IRequestGroupContext, RequestGroupContext>();
 builder.Services.AddScoped<ILocalizationService, LocalizationService>();
 builder.Services.AddSingleton<IScoringService, ScoringService>();
+builder.Services.AddScoped<ISeasonScoringConfigService, SeasonScoringConfigService>();
 builder.Services.AddScoped<IRoundScoringService, RoundScoringService>();
 builder.Services.AddScoped<IStandingsService, StandingsService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();

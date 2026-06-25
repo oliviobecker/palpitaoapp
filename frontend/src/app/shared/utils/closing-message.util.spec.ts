@@ -14,6 +14,8 @@ function match(partial: Partial<RoundResults['matches'][number]>) {
     awayScore: 0,
     isFinished: true,
     multiplier: 1,
+    isClassic: false,
+    isManualMultiplier: false,
     ...partial,
   };
 }

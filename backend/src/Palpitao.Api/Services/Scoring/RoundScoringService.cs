@@ -17,6 +17,7 @@ public class RoundScoringService : IRoundScoringService
 {
     private readonly AppDbContext _db;
     private readonly IScoringService _scoring;
+    private readonly ISeasonScoringConfigService _config;
     private readonly IAbsenceService _absences;
     private readonly IFlavioRuleService _flavio;
     private readonly IStandingsService _standings;
@@ -26,6 +27,7 @@ public class RoundScoringService : IRoundScoringService
     public RoundScoringService(
         AppDbContext db,
         IScoringService scoring,
+        ISeasonScoringConfigService config,
         IAbsenceService absences,
         IFlavioRuleService flavio,
         IStandingsService standings,
@@ -34,6 +36,7 @@ public class RoundScoringService : IRoundScoringService
     {
         _db = db;
         _scoring = scoring;
+        _config = config;
         _absences = absences;
         _flavio = flavio;
         _standings = standings;
@@ -175,6 +178,8 @@ public class RoundScoringService : IRoundScoringService
         _db.RoundParticipantResults.RemoveRange(_db.RoundParticipantResults.Where(r => r.RoundId == roundId));
         await _db.SaveChangesAsync(ct);
 
+        var ruleSet = await _config.GetRuleSetAsync(round.SeasonId, ct);
+
         var participants = await GroupQueries.ActiveParticipants(_db, round.GroupId)
             .ToListAsync(ct);
 
@@ -213,12 +218,11 @@ public class RoundScoringService : IRoundScoringService
                 var actualHome = match.HomeScore!.Value;
                 var actualAway = match.AwayScore!.Value;
 
-                var category = _scoring.GetCategory(prediction.PredictedHomeScore, prediction.PredictedAwayScore, actualHome, actualAway);
-                var basePoints = _scoring.GetBasePoints(category);
+                var category = _scoring.GetCategory(ruleSet, prediction.PredictedHomeScore, prediction.PredictedAwayScore, actualHome, actualAway);
+                var basePoints = _scoring.GetBasePoints(ruleSet, category);
                 var multiplier = match.ManualMultiplierOverride ?? _scoring.GetMultiplier(
-                    match.Competition, match.Phase,
-                    match.HomeTeam!.IsBigSevenClub, match.AwayTeam!.IsBigSevenClub,
-                    match.HomeTeam!.IsWorldChampion, match.AwayTeam!.IsWorldChampion);
+                    ruleSet, match.Competition, match.Phase,
+                    ruleSet.IsClassicTeam(match.HomeTeamId), ruleSet.IsClassicTeam(match.AwayTeamId));
                 var finalPoints = basePoints * multiplier;
 
                 _db.PredictionScores.Add(new PredictionScore
@@ -319,6 +323,8 @@ public class RoundScoringService : IRoundScoringService
             .Where(u => userIds.Contains(u.Id))
             .ToDictionaryAsync(u => u.Id, u => u.Name, ct);
 
+        var ruleSet = await _config.GetRuleSetAsync(round.SeasonId, ct);
+
         var dto = new RoundResultsDto
         {
             RoundId = round.Id,
@@ -326,22 +332,25 @@ public class RoundScoringService : IRoundScoringService
             Matches = round.Matches
                 .OrderBy(m => m.Order)
                 .ThenBy(m => m.StartsAt)
-                .Select(m => new RoundResultMatchDto
+                .Select(m =>
                 {
-                    RoundMatchId = m.Id,
-                    Competition = m.Competition,
-                    Phase = m.Phase,
-                    HomeTeamName = m.HomeTeam?.Name ?? string.Empty,
-                    AwayTeamName = m.AwayTeam?.Name ?? string.Empty,
-                    HomeScore = m.HomeScore,
-                    AwayScore = m.AwayScore,
-                    IsFinished = m.IsFinished,
-                    Multiplier = m.ManualMultiplierOverride ?? _scoring.GetMultiplier(
-                        m.Competition, m.Phase,
-                        m.HomeTeam?.IsBigSevenClub ?? false,
-                        m.AwayTeam?.IsBigSevenClub ?? false,
-                        m.HomeTeam?.IsWorldChampion ?? false,
-                        m.AwayTeam?.IsWorldChampion ?? false),
+                    var isClassic = ruleSet.IsClassicTeam(m.HomeTeamId) && ruleSet.IsClassicTeam(m.AwayTeamId);
+                    return new RoundResultMatchDto
+                    {
+                        RoundMatchId = m.Id,
+                        Competition = m.Competition,
+                        Phase = m.Phase,
+                        HomeTeamName = m.HomeTeam?.Name ?? string.Empty,
+                        AwayTeamName = m.AwayTeam?.Name ?? string.Empty,
+                        HomeScore = m.HomeScore,
+                        AwayScore = m.AwayScore,
+                        IsFinished = m.IsFinished,
+                        IsClassic = isClassic,
+                        IsManualMultiplier = m.ManualMultiplierOverride is not null,
+                        Multiplier = m.ManualMultiplierOverride ?? _scoring.GetMultiplier(
+                            ruleSet, m.Competition, m.Phase,
+                            ruleSet.IsClassicTeam(m.HomeTeamId), ruleSet.IsClassicTeam(m.AwayTeamId)),
+                    };
                 })
                 .ToList(),
         };

@@ -242,6 +242,26 @@ public static class DomainMessages
 
             // Seasons.
             ["season.endBeforeStart"] = ("A data final não pode ser anterior à data inicial.", "The end date cannot be earlier than the start date."),
+
+            // Scoring configuration (admin-editable ruleset).
+            ["scoring.basePointsNegative"] = (
+                "A pontuação base não pode ser negativa.",
+                "Base points cannot be negative."),
+            ["scoring.multiplierMin"] = (
+                "O multiplicador deve ser no mínimo 1.",
+                "The multiplier must be at least 1."),
+            ["scoring.scoreOutOfRange"] = (
+                "Os placares da regra devem estar entre 0 e 20.",
+                "Rule scores must be between 0 and 20."),
+            ["scoring.duplicateScore"] = (
+                "Há placares repetidos na configuração de categorias.",
+                "There are duplicate scores in the category configuration."),
+            ["scoring.invalidCategory"] = (
+                "Categoria inválida para um placar exato.",
+                "Invalid category for an exact score."),
+            ["scoring.unknownTeam"] = (
+                "Um dos times selecionados como clássico não existe.",
+                "One of the teams selected as a classic does not exist."),
         };
 
     /// <summary>Resolves a key to the given language ("pt"/"en"); falls back to the key itself.</summary>

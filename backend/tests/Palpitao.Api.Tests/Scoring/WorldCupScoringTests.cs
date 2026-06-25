@@ -12,6 +12,10 @@ public class WorldCupScoringTests
 {
     private readonly ScoringService _s = new();
 
+    // Default World Cup ruleset — proves the defaults reproduce the historical numbers.
+    private static readonly ScoringRuleSet Rules =
+        ScoringDefaults.ForTournamentType(TournamentType.FifaWorldCup, new HashSet<Guid>());
+
     // --- Phase multipliers (no classic) ------------------------------------
 
     [Theory]
@@ -23,33 +27,33 @@ public class WorldCupScoringTests
     [InlineData(MatchPhase.WorldCupThirdPlace, 3)]
     [InlineData(MatchPhase.WorldCupFinal, 3)]
     public void Phase_multipliers(MatchPhase phase, int expected)
-        => Assert.Equal(expected, _s.GetMultiplier(Competition.FifaWorldCup, phase, false, false, false, false));
+        => Assert.Equal(expected, _s.GetMultiplier(Rules, Competition.FifaWorldCup, phase, false, false));
 
     // --- Classics (both world champions) double in the knockout -------------
 
     [Fact]
     public void Brazil_vs_Germany_group_stage_is_not_doubled()
-        => Assert.Equal(1, _s.GetMultiplier(Competition.FifaWorldCup, MatchPhase.WorldCupGroupStage, false, false, true, true));
+        => Assert.Equal(1, _s.GetMultiplier(Rules, Competition.FifaWorldCup, MatchPhase.WorldCupGroupStage, true, true));
 
     [Fact]
     public void Brazil_vs_Germany_round_of_32_is_x4()
-        => Assert.Equal(4, _s.GetMultiplier(Competition.FifaWorldCup, MatchPhase.WorldCupRoundOf32, false, false, true, true));
+        => Assert.Equal(4, _s.GetMultiplier(Rules, Competition.FifaWorldCup, MatchPhase.WorldCupRoundOf32, true, true));
 
     [Fact]
     public void Argentina_vs_France_round_of_16_is_x4()
-        => Assert.Equal(4, _s.GetMultiplier(Competition.FifaWorldCup, MatchPhase.WorldCupRoundOf16, false, false, true, true));
+        => Assert.Equal(4, _s.GetMultiplier(Rules, Competition.FifaWorldCup, MatchPhase.WorldCupRoundOf16, true, true));
 
     [Fact]
     public void Brazil_vs_England_quarter_final_is_x6()
-        => Assert.Equal(6, _s.GetMultiplier(Competition.FifaWorldCup, MatchPhase.WorldCupQuarterFinal, false, false, true, true));
+        => Assert.Equal(6, _s.GetMultiplier(Rules, Competition.FifaWorldCup, MatchPhase.WorldCupQuarterFinal, true, true));
 
     [Fact]
     public void Spain_vs_Uruguay_final_is_x6()
-        => Assert.Equal(6, _s.GetMultiplier(Competition.FifaWorldCup, MatchPhase.WorldCupFinal, false, false, true, true));
+        => Assert.Equal(6, _s.GetMultiplier(Rules, Competition.FifaWorldCup, MatchPhase.WorldCupFinal, true, true));
 
     [Fact]
     public void Brazil_vs_Japan_quarter_final_is_x3_because_japan_is_not_a_champion()
-        => Assert.Equal(3, _s.GetMultiplier(Competition.FifaWorldCup, MatchPhase.WorldCupQuarterFinal, false, false, true, false));
+        => Assert.Equal(3, _s.GetMultiplier(Rules, Competition.FifaWorldCup, MatchPhase.WorldCupQuarterFinal, true, false));
 
     // --- Full points = base * multiplier (categories identical to England) --
 
@@ -86,5 +90,5 @@ public class WorldCupScoringTests
         => Assert.Equal(9, Final(1, 0, 1, 0, MatchPhase.WorldCupFinal)); // Traditional(3) x3
 
     private int Final(int ph, int pa, int ah, int aa, MatchPhase phase)
-        => _s.ScorePrediction(ph, pa, ah, aa, Competition.FifaWorldCup, phase, false, false).FinalPoints;
+        => _s.ScorePrediction(Rules, ph, pa, ah, aa, Competition.FifaWorldCup, phase, false, false).FinalPoints;
 }

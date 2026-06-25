@@ -1,0 +1,218 @@
+<app-page-header
+  [trail]="('adminDash.panel' | translate) + ' · Admin'"
+  [title]="'scoringRules.title' | translate"
+/>
+
+<!-- Season selector -->
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <label class="form-label small mb-1">{{ 'scoringRules.season' | translate }}</label>
+    <select
+      class="form-select"
+      [value]="seasonId()"
+      (change)="onSeasonChange($any($event.target).value)"
+    >
+      @for (s of seasons(); track s.id) {
+        <option [value]="s.id">{{ s.name }}{{ s.isActive ? ' ★' : '' }}</option>
+      }
+    </select>
+  </div>
+</div>
+
+@if (loading()) {
+  <app-loading />
+} @else if (error()) {
+  <app-error-state (retry)="loadSeasons()" />
+} @else if (config(); as cfg) {
+  @if (hasScoredRounds()) {
+    <div class="alert alert-warning d-flex align-items-start gap-2 py-2">
+      <app-icon name="triangle-alert" [size]="18" />
+      <div class="flex-grow-1 small">
+        {{ 'scoringRules.recalcWarning' | translate }}
+        <div class="mt-2">
+          <button
+            class="btn btn-sm btn-outline-warning"
+            (click)="recalculate()"
+            [disabled]="recalculating()"
+          >
+            @if (recalculating()) {
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            } @else {
+              <app-icon name="refresh-cw" [size]="14" />
+            }
+            {{ 'scoringRules.recalculate' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Base points -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <h2 class="h6 fw-bold mb-1">{{ 'scoringRules.basePointsTitle' | translate }}</h2>
+      <p class="text-muted small mb-3">{{ 'scoringRules.basePointsHelp' | translate }}</p>
+      <div class="row g-2">
+        <div class="col-6 col-md-4">
+          <label class="form-label small mb-0">{{ 'category.ColumnOnly' | translate }}</label>
+          <input
+            type="number"
+            min="0"
+            class="form-control"
+            [value]="basePoints().columnOnly"
+            (input)="setBasePoint('columnOnly', $any($event.target).value)"
+          />
+        </div>
+        <div class="col-6 col-md-4">
+          <label class="form-label small mb-0">{{ 'category.Traditional' | translate }}</label>
+          <input
+            type="number"
+            min="0"
+            class="form-control"
+            [value]="basePoints().traditional"
+            (input)="setBasePoint('traditional', $any($event.target).value)"
+          />
+        </div>
+        <div class="col-6 col-md-4">
+          <label class="form-label small mb-0">{{ 'category.Medium' | translate }}</label>
+          <input
+            type="number"
+            min="0"
+            class="form-control"
+            [value]="basePoints().medium"
+            (input)="setBasePoint('medium', $any($event.target).value)"
+          />
+        </div>
+        <div class="col-6 col-md-4">
+          <label class="form-label small mb-0">{{ 'category.Uncommon' | translate }}</label>
+          <input
+            type="number"
+            min="0"
+            class="form-control"
+            [value]="basePoints().uncommon"
+            (input)="setBasePoint('uncommon', $any($event.target).value)"
+          />
+        </div>
+        <div class="col-6 col-md-4">
+          <label class="form-label small mb-0">{{ 'category.ExtraUncommon' | translate }}</label>
+          <input
+            type="number"
+            min="0"
+            class="form-control"
+            [value]="basePoints().extraUncommon"
+            (input)="setBasePoint('extraUncommon', $any($event.target).value)"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Score categories (what counts as "incomum") -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <h2 class="h6 fw-bold mb-1">{{ 'scoringRules.categoriesTitle' | translate }}</h2>
+      <p class="text-muted small mb-3">{{ 'scoringRules.categoriesHelp' | translate }}</p>
+      <div class="row g-2">
+        @for (c of scoreGrid(); track c.key) {
+          <div class="col-6 col-md-3">
+            <label class="form-label small mb-0 font-monospace">{{ c.low }} × {{ c.high }}</label>
+            <select
+              class="form-select form-select-sm"
+              [value]="category(c.key)"
+              (change)="setCategory(c.key, $any($event.target).value)"
+            >
+              @for (cat of assignable; track cat) {
+                <option [value]="cat">{{ 'category.' + cat | translate }}</option>
+              }
+            </select>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Multipliers -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <h2 class="h6 fw-bold mb-1">{{ 'scoringRules.multipliersTitle' | translate }}</h2>
+      <p class="text-muted small mb-3">{{ 'scoringRules.multipliersHelp' | translate }}</p>
+      <div class="vstack gap-2">
+        @for (r of multiplierRules(); track $index) {
+          <div class="d-flex flex-wrap align-items-center gap-2 border-top pt-2">
+            <span class="d-flex align-items-center gap-1 flex-grow-1">
+              <app-competition-badge [competition]="r.competition" />
+              @if (phaseLabel(r.phase); as ph) {
+                <span class="small text-muted">{{ ph }}</span>
+              }
+            </span>
+            <div class="d-flex align-items-center gap-1">
+              <label class="form-label small mb-0">{{ 'scoringRules.normal' | translate }}</label>
+              <input
+                type="number"
+                min="1"
+                class="form-control form-control-sm"
+                style="width: 4.5rem"
+                [value]="r.multiplier"
+                (input)="setMultiplier($index, $any($event.target).value)"
+              />
+            </div>
+            <div class="d-flex align-items-center gap-1">
+              <label class="form-label small mb-0">{{ 'scoringRules.classic' | translate }}</label>
+              <input
+                type="number"
+                min="1"
+                class="form-control form-control-sm"
+                style="width: 4.5rem"
+                [value]="r.classicMultiplier"
+                (input)="setClassicMultiplier($index, $any($event.target).value)"
+              />
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Classic teams -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <h2 class="h6 fw-bold mb-1">{{ 'scoringRules.classicTeamsTitle' | translate }}</h2>
+      <p class="text-muted small mb-2">
+        {{ 'scoringRules.classicTeamsHelp' | translate }}
+        <span class="badge text-bg-secondary ms-1">{{ selectedTeamCount() }}</span>
+      </p>
+      <input
+        class="form-control form-control-sm mb-2"
+        [value]="teamFilter()"
+        (input)="teamFilter.set($any($event.target).value)"
+        [placeholder]="'scoringRules.searchTeams' | translate"
+      />
+      <div class="row g-1" style="max-height: 18rem; overflow-y: auto">
+        @for (t of filteredTeams(); track t.teamId) {
+          <div class="col-12 col-md-6">
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                [id]="'team-' + t.teamId"
+                [checked]="t.isClassic"
+                (change)="toggleTeam(t.teamId)"
+              />
+              <label class="form-check-label small" [for]="'team-' + t.teamId">{{ t.name }}</label>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Save -->
+  <div class="d-grid gap-2 mb-4">
+    <button class="btn btn-primary btn-lg" (click)="save()" [disabled]="saving()">
+      @if (saving()) {
+        <span class="spinner-border spinner-border-sm me-2"></span>
+      }
+      {{ 'scoringRules.save' | translate }}
+    </button>
+  </div>
+}

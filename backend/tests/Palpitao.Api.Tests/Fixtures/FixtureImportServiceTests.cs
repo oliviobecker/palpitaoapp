@@ -67,7 +67,10 @@ public class FixtureImportServiceTests
         AppDbContext db, FakeFixtureProvider provider, bool enabled = true)
     {
         var options = Options.Create(new FixtureOptions { EnableExternalFixtureImport = enabled });
-        return new FixtureImportService(db, provider, new ScoringService(), new AuditService(db), new FakeCurrentGroupService(), options);
+        var audit = new AuditService(db);
+        var current = new FakeCurrentGroupService();
+        var scoringConfig = new SeasonScoringConfigService(db, audit, current);
+        return new FixtureImportService(db, provider, new ScoringService(), scoringConfig, audit, current, options);
     }
 
     private static Guid CreateDraftRound(AppDbContext db, int number = 1)

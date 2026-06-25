@@ -239,6 +239,7 @@
     "yourPrediction": "Your prediction",
     "absent": "Absent",
     "flavioApplied": "Flávio Rule applied",
+    "manualMultiplier": "Manual multiplier",
     "refresh": "Refresh results",
     "refreshed": "Results refreshed successfully",
     "error": "Error refreshing results",
@@ -283,6 +284,8 @@
     "seasonsSub": "Manage competitions",
     "participants": "Participants",
     "participantsSub": "Season players",
+    "scoringRules": "Scoring rules",
+    "scoringRulesSub": "Multipliers and categories",
     "registrationRequests": "Registration requests",
     "registrationRequestsSub": "Approve new players",
     "standings": "Standings",
@@ -291,6 +294,29 @@
     "auditSub": "Action history",
     "groupSettings": "Group settings",
     "groupSettingsSub": "Prediction visibility and more"
+  },
+  "audit": {
+    "scoringTitle": "Points audit"
+  },
+  "scoringRules": {
+    "title": "Scoring rules",
+    "season": "Season",
+    "recalcWarning": "This season already has scored rounds. Changes only take effect after you recalculate the season.",
+    "recalculate": "Recalculate season",
+    "recalculated": "Season recalculated successfully",
+    "basePointsTitle": "Base points",
+    "basePointsHelp": "Points for each category before the multiplier.",
+    "categoriesTitle": "Score categories",
+    "categoriesHelp": "Define what counts as traditional, medium or uncommon. Scores not listed are extra-uncommon.",
+    "multipliersTitle": "Multipliers",
+    "multipliersHelp": "Set the normal and classic multipliers (1x, 2x, 3x...) per competition and phase.",
+    "normal": "Normal",
+    "classic": "Classic",
+    "classicTeamsTitle": "Classic teams",
+    "classicTeamsHelp": "Teams that trigger the classic multiplier when they face each other.",
+    "searchTeams": "Search team...",
+    "save": "Save rules",
+    "saved": "Rules saved successfully"
   },
   "settings": {
     "allowParticipantsToViewOthersPredictions": "Allow participants to view other predictions",

@@ -21,6 +21,7 @@ import {
 } from '../../core/models/models';
 import { RoundsService } from '../../core/services/rounds.service';
 import { PredictionsService } from '../../core/services/predictions.service';
+import { phaseLabel } from '../../shared/utils/match.util';
 import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { ErrorState } from '../../shared/components/error-state/error-state';
@@ -62,6 +63,7 @@ export class Results implements OnInit {
       this.results()?.participants.find((p) => p.userId === this.auth.currentUser()?.id) ?? null,
   );
   protected readonly matches = computed<RoundResultMatch[]>(() => this.results()?.matches ?? []);
+  protected readonly phaseLabel = phaseLabel;
 
   ngOnInit(): void {
     this.roundId.set(this.route.snapshot.paramMap.get('id') ?? '');

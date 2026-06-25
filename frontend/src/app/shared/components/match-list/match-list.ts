@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
-import { RoundMatch } from '../../../core/models/models';
+import { RoundMatch, ScoringConfig } from '../../../core/models/models';
 import { computeMultiplier, isClassic, isLeagueOne } from '../../utils/match.util';
 import { CompetitionBadge } from '../competition-badge/competition-badge';
 import { Icon } from '../icon/icon';
@@ -56,10 +56,12 @@ import { MultiplierBadge } from '../multiplier-badge/multiplier-badge';
 export class MatchList {
   readonly matches = input<RoundMatch[]>([]);
   readonly editable = input(false);
+  /** Optional season ruleset so badges reflect a custom config (defaults when absent). */
+  readonly config = input<ScoringConfig | null>(null);
   readonly edit = output<RoundMatch>();
   readonly remove = output<RoundMatch>();
 
-  protected readonly multiplier = computeMultiplier;
-  protected readonly classic = isClassic;
+  protected readonly multiplier = (m: RoundMatch) => computeMultiplier(m, this.config());
+  protected readonly classic = (m: RoundMatch) => isClassic(m, this.config());
   protected readonly leagueOne = isLeagueOne;
 }

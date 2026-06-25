@@ -99,6 +99,11 @@ export const routes: Routes = [
               import('./features/admin/admin-matches').then((m) => m.AdminMatches),
           },
           {
+            path: 'rounds/:id/audit',
+            loadComponent: () =>
+              import('./features/admin/admin-round-audit').then((m) => m.AdminRoundAudit),
+          },
+          {
             path: 'rounds/:id/scout',
             loadComponent: () =>
               import('./features/admin/admin-round-scout').then((m) => m.AdminRoundScout),
@@ -114,6 +119,11 @@ export const routes: Routes = [
             path: 'rounds/:id/import-predictions',
             loadComponent: () =>
               import('./features/admin/admin-ocr-import').then((m) => m.AdminOcrImport),
+          },
+          {
+            path: 'scoring',
+            loadComponent: () =>
+              import('./features/admin/admin-scoring-rules').then((m) => m.AdminScoringRules),
           },
           {
             path: 'participants',

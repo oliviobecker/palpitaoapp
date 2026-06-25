@@ -14,10 +14,11 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { RoundStatus, TournamentType, WORLD_CUP_FLAVIO_PHASES } from '../../core/models/enums';
-import { Round, RoundMatch } from '../../core/models/models';
+import { Round, RoundMatch, ScoringConfig } from '../../core/models/models';
 import { ToastService } from '../../core/notifications/toast.service';
 import { PredictionsService } from '../../core/services/predictions.service';
 import { RoundsService } from '../../core/services/rounds.service';
+import { ScoringConfigService } from '../../core/services/scoring-config.service';
 import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
 import { Countdown } from '../../shared/components/countdown/countdown';
 import { ErrorState } from '../../shared/components/error-state/error-state';
@@ -109,19 +110,22 @@ export class Predictions implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly roundsApi = inject(RoundsService);
   private readonly predictionsApi = inject(PredictionsService);
+  private readonly scoringConfigApi = inject(ScoringConfigService);
   private readonly toast = inject(ToastService);
   private readonly translate = inject(TranslateService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly multiplier = computeMultiplier;
-  protected readonly classic = isClassic;
+  // Multiplier/classic mirror the backend rules, using the season's config when loaded.
+  protected readonly multiplier = (m: RoundMatch) => computeMultiplier(m, this.scoringConfig());
+  protected readonly classic = (m: RoundMatch) => isClassic(m, this.scoringConfig());
   protected readonly leagueOne = isLeagueOne;
   protected readonly phaseLabel = phaseLabel;
 
   protected readonly loading = signal(true);
   protected readonly round = signal<Round | null>(null);
   protected readonly matches = signal<RoundMatch[]>([]);
+  protected readonly scoringConfig = signal<ScoringConfig | null>(null);
 
   /** Admin-only submission mode (from the round's season): participants can't submit. */
   protected readonly adminOnly = computed(
@@ -209,6 +213,13 @@ export class Predictions implements OnInit {
           );
           this.round.set(round);
           this.matches.set(sorted);
+
+          // Load the season ruleset so the pre-scoring multiplier badges reflect a
+          // custom config (best-effort: falls back to the defaults if it fails).
+          this.scoringConfigApi
+            .get(round.seasonId)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({ next: (cfg) => this.scoringConfig.set(cfg), error: () => {} });
 
           const open = round.status === RoundStatus.Published;
           const beforeDeadline = round.firstMatchStartsAt

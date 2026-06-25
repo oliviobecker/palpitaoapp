@@ -1,5 +1,5 @@
 import { Competition, MatchPhase } from '../../core/models/enums';
-import { RoundMatch } from '../../core/models/models';
+import { RoundMatch, ScoringConfig } from '../../core/models/models';
 
 /** Big Seven clubs of the season (used to mirror the backend multiplier rules). */
 export const BIG_SEVEN = new Set<string>([
@@ -64,12 +64,17 @@ function worldCupPhaseMultiplier(phase: MatchPhase): number {
 }
 
 /**
- * Effective multiplier of a match, mirroring the backend ScoringService rules
- * (the MatchDto does not carry the computed multiplier before scoring).
+ * Effective multiplier of a match, mirroring the backend scoring rules (match DTOs do
+ * not carry the computed multiplier before scoring). When a season `config` is supplied
+ * the per-season ruleset is used; otherwise it falls back to the historical defaults.
  */
-export function computeMultiplier(match: RoundMatch): number {
+export function computeMultiplier(match: RoundMatch, config?: ScoringConfig | null): number {
   if (match.manualMultiplierOverride != null) {
     return match.manualMultiplierOverride;
+  }
+
+  if (isUsableConfig(config)) {
+    return multiplierFromConfig(match, config);
   }
 
   const derby = isBigSeven(match.homeTeamName) && isBigSeven(match.awayTeamName);
@@ -97,7 +102,32 @@ export function computeMultiplier(match: RoundMatch): number {
   }
 }
 
-export function isClassic(match: RoundMatch): boolean {
+/** A config is usable only when it actually carries a multiplier table (guards empty/partial payloads). */
+function isUsableConfig(config?: ScoringConfig | null): config is ScoringConfig {
+  return !!config && Array.isArray(config.multiplierRules) && config.multiplierRules.length > 0;
+}
+
+/** Multiplier from a per-season config: (competition, phase) row, falling back to Regular. */
+function multiplierFromConfig(match: RoundMatch, config: ScoringConfig): number {
+  const classic = isClassicFromConfig(match, config);
+  const rules = config.multiplierRules ?? [];
+  const rule =
+    rules.find((r) => r.competition === match.competition && r.phase === match.phase) ??
+    rules.find((r) => r.competition === match.competition && r.phase === MatchPhase.Regular);
+  if (!rule) return 1;
+  return classic ? rule.classicMultiplier : rule.multiplier;
+}
+
+/** Both teams are classic-eligible per the season config (matches the backend by team id). */
+function isClassicFromConfig(match: RoundMatch, config: ScoringConfig): boolean {
+  const classicIds = new Set((config.teams ?? []).filter((t) => t.isClassic).map((t) => t.teamId));
+  return classicIds.has(match.homeTeamId) && classicIds.has(match.awayTeamId);
+}
+
+export function isClassic(match: RoundMatch, config?: ScoringConfig | null): boolean {
+  if (isUsableConfig(config)) {
+    return isClassicFromConfig(match, config);
+  }
   if (match.competition === Competition.PremierLeague) {
     return isBigSeven(match.homeTeamName) && isBigSeven(match.awayTeamName);
   }

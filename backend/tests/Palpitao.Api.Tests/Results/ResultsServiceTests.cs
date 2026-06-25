@@ -88,12 +88,13 @@ public class ResultsServiceTests
         var audit = new AuditService(db);
         var current = new FakeCurrentGroupService();
         var scoring = new ScoringService();
+        var scoringConfig = new SeasonScoringConfigService(db, audit, current);
         var standings = new StandingsService(db, current);
         var provider = new FakeResultsProvider { IsEnabled = providerEnabled };
         return new Kit(
             new ResultsUpdateService(db, provider, audit, current),
-            new TemporaryStandingsService(db, scoring, current),
-            new RoundScoringService(db, scoring, new AbsenceService(db, audit, current), new FlavioRuleService(db), standings, audit, current),
+            new TemporaryStandingsService(db, scoring, scoringConfig, current),
+            new RoundScoringService(db, scoring, scoringConfig, new AbsenceService(db, audit, current), new FlavioRuleService(db), standings, audit, current),
             new RoundService(db, audit, current),
             new PredictionsService(db, audit, current),
             provider);

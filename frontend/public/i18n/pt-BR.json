@@ -239,6 +239,7 @@
     "yourPrediction": "Seu palpite",
     "absent": "Ausente",
     "flavioApplied": "Regra Flávio aplicada",
+    "manualMultiplier": "Multiplicador manual",
     "refresh": "Atualizar resultados",
     "refreshed": "Resultados atualizados com sucesso",
     "error": "Erro ao atualizar resultados",
@@ -283,6 +284,8 @@
     "seasonsSub": "Gerir campeonatos",
     "participants": "Participantes",
     "participantsSub": "Jogadores da temporada",
+    "scoringRules": "Regras de pontuação",
+    "scoringRulesSub": "Multiplicadores e categorias",
     "registrationRequests": "Solicitações de cadastro",
     "registrationRequestsSub": "Aprovar novos jogadores",
     "standings": "Classificação",
@@ -291,6 +294,29 @@
     "auditSub": "Histórico de ações",
     "groupSettings": "Configurações do grupo",
     "groupSettingsSub": "Visibilidade de palpites e mais"
+  },
+  "audit": {
+    "scoringTitle": "Auditoria de pontos"
+  },
+  "scoringRules": {
+    "title": "Regras de pontuação",
+    "season": "Temporada",
+    "recalcWarning": "Esta temporada já tem rodadas pontuadas. As alterações só passam a valer após recalcular a temporada.",
+    "recalculate": "Recalcular temporada",
+    "recalculated": "Temporada recalculada com sucesso",
+    "basePointsTitle": "Pontuação base",
+    "basePointsHelp": "Pontos de cada categoria antes do multiplicador.",
+    "categoriesTitle": "Categorias dos placares",
+    "categoriesHelp": "Defina o que é tradicional, mediano ou incomum. Placares não listados são extra-incomum.",
+    "multipliersTitle": "Multiplicadores",
+    "multipliersHelp": "Defina o multiplicador normal e o de clássico (1x, 2x, 3x...) por competição e fase.",
+    "normal": "Normal",
+    "classic": "Clássico",
+    "classicTeamsTitle": "Times de clássico",
+    "classicTeamsHelp": "Times que valem o multiplicador de clássico quando se enfrentam.",
+    "searchTeams": "Buscar time...",
+    "save": "Salvar regras",
+    "saved": "Regras salvas com sucesso"
   },
   "settings": {
     "allowParticipantsToViewOthersPredictions": "Permitir que participantes vejam palpites dos demais",

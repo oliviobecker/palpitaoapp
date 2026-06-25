@@ -182,6 +182,9 @@
             }}
           </button>
           @if (r.status === RoundStatus.Scored) {
+            <a class="btn btn-outline-secondary" [routerLink]="['/admin/rounds', r.id, 'audit']">
+              <app-icon name="list" [size]="16" /> {{ 'audit.scoringTitle' | translate }}
+            </a>
             <button class="btn btn-outline-warning" (click)="reopen(r)">
               <app-icon name="undo-2" [size]="16" /> {{ 'roundDetail.reopen' | translate }}
             </button>

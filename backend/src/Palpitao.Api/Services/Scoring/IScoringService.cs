@@ -3,8 +3,10 @@ using Palpitao.Api.Enums;
 namespace Palpitao.Api.Services.Scoring;
 
 /// <summary>
-/// Domain service that implements the Palpitão scoring rules: columns, exact
-/// score categories, base points and per-match multipliers.
+/// Domain service that applies the Palpitão scoring rules: columns, exact-score
+/// categories, base points and per-match multipliers. The rule-driven methods take a
+/// resolved <see cref="ScoringRuleSet"/> (per-season config or tournament-type defaults),
+/// so the engine itself stays stateless and the rules are configurable per season.
 /// </summary>
 public interface IScoringService
 {
@@ -19,43 +21,35 @@ public interface IScoringService
 
     /// <summary>
     /// Difficulty category of an exact score (Traditional / Medium / Uncommon /
-    /// ExtraUncommon). Assumes the score is treated as an exact hit.
+    /// ExtraUncommon), per the ruleset. Assumes the score is treated as an exact hit.
     /// </summary>
-    ScoreCategory GetExactScoreCategory(int homeScore, int awayScore);
+    ScoreCategory GetExactScoreCategory(ScoringRuleSet ruleSet, int homeScore, int awayScore);
 
     /// <summary>
     /// Resulting category of a prediction: an exact-score difficulty category,
     /// <see cref="ScoreCategory.ColumnOnly"/> or <see cref="ScoreCategory.None"/>.
     /// </summary>
-    ScoreCategory GetCategory(int predictedHome, int predictedAway, int actualHome, int actualAway);
+    ScoreCategory GetCategory(ScoringRuleSet ruleSet, int predictedHome, int predictedAway, int actualHome, int actualAway);
 
-    /// <summary>Base points awarded for a given category (before multiplier).</summary>
-    int GetBasePoints(ScoreCategory category);
+    /// <summary>Base points awarded for a given category (before the multiplier).</summary>
+    int GetBasePoints(ScoringRuleSet ruleSet, ScoreCategory category);
 
     /// <summary>
-    /// Multiplier of a match based on competition, phase and special-match rules
-    /// (Big Seven derbies for England; phase + champion-vs-champion classics for the
-    /// FIFA World Cup). The <paramref name="homeIsWorldChampion"/>/<paramref name="awayIsWorldChampion"/>
-    /// flags only matter for World Cup matches.
+    /// Multiplier of a match: the ruleset's value for the (competition, phase), using the
+    /// classic value when both teams are classic-eligible (a Big Seven derby for England /
+    /// a knockout between two world champions for the World Cup).
     /// </summary>
-    int GetMultiplier(
-        Competition competition,
-        MatchPhase phase,
-        bool homeIsBigSeven,
-        bool awayIsBigSeven,
-        bool homeIsWorldChampion = false,
-        bool awayIsWorldChampion = false);
+    int GetMultiplier(ScoringRuleSet ruleSet, Competition competition, MatchPhase phase, bool homeIsClassic, bool awayIsClassic);
 
     /// <summary>Full scoring breakdown of a prediction against the real result.</summary>
     PredictionScoreResult ScorePrediction(
+        ScoringRuleSet ruleSet,
         int predictedHome,
         int predictedAway,
         int actualHome,
         int actualAway,
         Competition competition,
         MatchPhase phase,
-        bool homeIsBigSeven,
-        bool awayIsBigSeven,
-        bool homeIsWorldChampion = false,
-        bool awayIsWorldChampion = false);
+        bool homeIsClassic,
+        bool awayIsClassic);
 }

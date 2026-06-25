@@ -41,6 +41,10 @@ public class AppDbContext : DbContext
     public DbSet<AbsenceOverride> AbsenceOverrides => Set<AbsenceOverride>();
     public DbSet<RoundParticipantResult> RoundParticipantResults => Set<RoundParticipantResult>();
     public DbSet<PredictionScore> PredictionScores => Set<PredictionScore>();
+    public DbSet<SeasonScoringConfig> SeasonScoringConfigs => Set<SeasonScoringConfig>();
+    public DbSet<ScoringScoreEntry> ScoringScoreEntries => Set<ScoringScoreEntry>();
+    public DbSet<ScoringMultiplierRule> ScoringMultiplierRules => Set<ScoringMultiplierRule>();
+    public DbSet<ScoringClassicTeam> ScoringClassicTeams => Set<ScoringClassicTeam>();
     public DbSet<OcrImportBatch> OcrImportBatches => Set<OcrImportBatch>();
     public DbSet<OcrPredictionCandidate> OcrPredictionCandidates => Set<OcrPredictionCandidate>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
@@ -70,6 +74,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Round>().HasQueryFilter(e => CurrentGroupId == null || e.GroupId == CurrentGroupId);
         modelBuilder.Entity<Standing>().HasQueryFilter(e => CurrentGroupId == null || e.GroupId == CurrentGroupId);
         modelBuilder.Entity<RoundParticipantResult>().HasQueryFilter(e => CurrentGroupId == null || e.GroupId == CurrentGroupId);
+        modelBuilder.Entity<SeasonScoringConfig>().HasQueryFilter(e => CurrentGroupId == null || e.GroupId == CurrentGroupId);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -352,6 +357,56 @@ public class AppDbContext : DbContext
             e.HasOne(x => x.User)
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SeasonScoringConfig>(e =>
+        {
+            // One editable ruleset per season; a tenant root (carries GroupId).
+            e.HasIndex(x => x.SeasonId).IsUnique();
+            ConfigureGroupOwnership<SeasonScoringConfig>(e);
+
+            e.HasOne(x => x.Season)
+                .WithOne()
+                .HasForeignKey<SeasonScoringConfig>(x => x.SeasonId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasMany(x => x.ScoreEntries)
+                .WithOne(x => x.Config)
+                .HasForeignKey(x => x.ConfigId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasMany(x => x.MultiplierRules)
+                .WithOne(x => x.Config)
+                .HasForeignKey(x => x.ConfigId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasMany(x => x.ClassicTeams)
+                .WithOne(x => x.Config)
+                .HasForeignKey(x => x.ConfigId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ScoringScoreEntry>(e =>
+        {
+            e.Property(x => x.Category).HasConversion<string>().HasMaxLength(40);
+            e.HasIndex(x => new { x.ConfigId, x.Low, x.High }).IsUnique();
+        });
+
+        modelBuilder.Entity<ScoringMultiplierRule>(e =>
+        {
+            e.Property(x => x.Competition).HasConversion<string>().HasMaxLength(40);
+            e.Property(x => x.Phase).HasConversion<string>().HasMaxLength(40);
+            e.HasIndex(x => new { x.ConfigId, x.Competition, x.Phase }).IsUnique();
+        });
+
+        modelBuilder.Entity<ScoringClassicTeam>(e =>
+        {
+            e.HasIndex(x => new { x.ConfigId, x.TeamId }).IsUnique();
+
+            e.HasOne(x => x.Team)
+                .WithMany()
+                .HasForeignKey(x => x.TeamId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 

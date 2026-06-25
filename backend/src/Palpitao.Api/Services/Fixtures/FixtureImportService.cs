@@ -14,9 +14,12 @@ namespace Palpitao.Api.Services.Fixtures;
 
 public class FixtureImportService : IFixtureImportService
 {
+    private static readonly IReadOnlySet<Guid> NoClassicTeams = new HashSet<Guid>();
+
     private readonly AppDbContext _db;
     private readonly IFixtureProvider _provider;
     private readonly IScoringService _scoring;
+    private readonly ISeasonScoringConfigService _config;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
     private readonly FixtureOptions _options;
@@ -25,6 +28,7 @@ public class FixtureImportService : IFixtureImportService
         AppDbContext db,
         IFixtureProvider provider,
         IScoringService scoring,
+        ISeasonScoringConfigService config,
         IAuditService audit,
         ICurrentGroupService current,
         IOptions<FixtureOptions> options)
@@ -32,6 +36,7 @@ public class FixtureImportService : IFixtureImportService
         _db = db;
         _provider = provider;
         _scoring = scoring;
+        _config = config;
         _audit = audit;
         _current = current;
         _options = options.Value;
@@ -94,12 +99,23 @@ public class FixtureImportService : IFixtureImportService
             }
         }
 
+        // Suggested multiplier: use the target round's season ruleset when known (so a
+        // custom config is reflected); otherwise the tournament-type defaults inferred from
+        // the candidate's competition. Classic detection uses the team names (the candidate
+        // teams may not exist in the catalogue yet), so the values come from the table.
+        var roundRuleSet = request.RoundId is Guid ruleRoundId
+            ? await _config.GetRuleSetForRoundAsync(ruleRoundId, ct)
+            : null;
+
         foreach (var c in candidates.OfType<FixtureCandidateDto>())
         {
             var homeBig = FootballReference.IsBigSeven(c.HomeTeamName);
             var awayBig = FootballReference.IsBigSeven(c.AwayTeamName);
             c.IsBigSevenMatch = homeBig && awayBig;
-            c.SuggestedMultiplier = _scoring.GetMultiplier(c.Competition, c.Phase, homeBig, awayBig);
+            var ruleSet = roundRuleSet ?? ScoringDefaults.ForTournamentType(
+                c.Competition == Competition.FifaWorldCup ? TournamentType.FifaWorldCup : TournamentType.PalpitaoEngland,
+                NoClassicTeams);
+            c.SuggestedMultiplier = _scoring.GetMultiplier(ruleSet, c.Competition, c.Phase, homeBig, awayBig);
             c.Source = string.IsNullOrWhiteSpace(c.Source) ? _provider.SourceName : c.Source;
             c.IsAlreadyAddedToRound = existingKeys.Contains(MatchKey(c.HomeTeamName, c.AwayTeamName, c.StartsAt));
         }
