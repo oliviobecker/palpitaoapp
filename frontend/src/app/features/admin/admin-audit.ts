@@ -53,17 +53,17 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
         </div>
         <div class="row g-3">
           <div class="col-6">
-            <label class="form-label">{{ 'adminAudit.from' | translate }}</label>
+            <label for="audit-from" class="form-label">{{ 'adminAudit.from' | translate }}</label>
             <div class="input-group input-group-lg">
               <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
-              <input type="date" class="form-control" [(ngModel)]="from" />
+              <input id="audit-from" type="date" class="form-control" [(ngModel)]="from" />
             </div>
           </div>
           <div class="col-6">
-            <label class="form-label">{{ 'adminAudit.to' | translate }}</label>
+            <label for="audit-to" class="form-label">{{ 'adminAudit.to' | translate }}</label>
             <div class="input-group input-group-lg">
               <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
-              <input type="date" class="form-control" [(ngModel)]="to" />
+              <input id="audit-to" type="date" class="form-control" [(ngModel)]="to" />
             </div>
           </div>
         </div>

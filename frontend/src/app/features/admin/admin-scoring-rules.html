@@ -1,20 +1,13 @@
 <!-- Header -->
-<div class="sr-header mb-3">
-  <div class="sr-header__main">
-    <button type="button" class="sr-back" (click)="back()">
-      <app-icon name="arrow-left" [size]="16" /> {{ 'scoringRules.back' | translate }}
-    </button>
-    <div class="sr-trail">{{ 'adminDash.panel' | translate }} · Admin</div>
-    <h1 class="sr-title">{{ 'scoringRules.title' | translate }}</h1>
-    <p class="sr-sub">{{ 'scoringRules.subtitle' | translate }}</p>
-  </div>
-
+<app-page-header [title]="'scoringRules.title' | translate">
+  <div trail class="page-trail">{{ 'adminDash.panel' | translate }} · Admin</div>
   <div class="season-box">
     <div class="season-box__label">
       <span class="dot"></span> {{ 'scoringRules.season' | translate }}
     </div>
     <select
       class="form-select form-select-sm"
+      [attr.aria-label]="'scoringRules.season' | translate"
       [value]="seasonId()"
       (change)="onSeasonChange($any($event.target).value)"
     >
@@ -23,7 +16,8 @@
       }
     </select>
   </div>
-</div>
+</app-page-header>
+<p class="text-muted small mb-3">{{ 'scoringRules.subtitle' | translate }}</p>
 
 @if (loading()) {
   <app-loading />
@@ -68,9 +62,21 @@
               {{ 'category.' + c.cat | translate }}
             </div>
             <div class="stepper">
-              <button type="button" class="step" (click)="stepBase(c.field, -1)">−</button>
-              <span class="step-val">{{ basePointsFor(c.cat) }}</span>
-              <button type="button" class="step" (click)="stepBase(c.field, 1)">+</button>
+              <button type="button" class="step" (click)="stepBase(c.field, -1)" aria-label="−">
+                −
+              </button>
+              <input
+                type="number"
+                inputmode="numeric"
+                min="0"
+                class="step-val"
+                [value]="basePointsFor(c.cat)"
+                (input)="setBaseValue(c.field, $any($event.target).value)"
+                [attr.aria-label]="'category.' + c.cat | translate"
+              />
+              <button type="button" class="step" (click)="stepBase(c.field, 1)" aria-label="+">
+                +
+              </button>
             </div>
           </div>
         }
@@ -112,15 +118,23 @@
         @for (h of range; track h) {
           <div class="axis">{{ h }}</div>
           @for (a of range; track a) {
-            <button
-              type="button"
-              class="cell"
-              [style.borderColor]="border(categoryAt(key(h, a)))"
-              [style.background]="fill(categoryAt(key(h, a)))"
-              (click)="paint(h, a)"
-            >
-              {{ h }}×{{ a }}
-            </button>
+            @if (a >= h) {
+              <button
+                type="button"
+                class="cell"
+                [style.borderColor]="border(categoryAt(key(h, a)))"
+                [style.background]="fill(categoryAt(key(h, a)))"
+                [title]="'category.' + categoryAt(key(h, a)) | translate"
+                [attr.aria-label]="
+                  h + '×' + a + ' — ' + ('category.' + categoryAt(key(h, a)) | translate)
+                "
+                (click)="paint(h, a)"
+              >
+                {{ h }}×{{ a }}
+              </button>
+            } @else {
+              <span class="cell-empty" aria-hidden="true"></span>
+            }
           }
         }
       </div>
@@ -150,16 +164,58 @@
                 phaseLabel(row.rule.phase) || ('scoringRules.general' | translate)
               }}</span>
               <div class="stepper">
-                <button type="button" class="step" (click)="stepMultiplier(row.index, -1)">
+                <button
+                  type="button"
+                  class="step"
+                  (click)="stepMultiplier(row.index, -1)"
+                  aria-label="−"
+                >
                   −
                 </button>
-                <span class="step-val">{{ row.rule.multiplier }}</span>
-                <button type="button" class="step" (click)="stepMultiplier(row.index, 1)">+</button>
+                <input
+                  type="number"
+                  inputmode="numeric"
+                  min="1"
+                  class="step-val"
+                  [value]="row.rule.multiplier"
+                  (input)="setMultiplierValue(row.index, $any($event.target).value)"
+                  [attr.aria-label]="'scoringRules.normal' | translate"
+                />
+                <button
+                  type="button"
+                  class="step"
+                  (click)="stepMultiplier(row.index, 1)"
+                  aria-label="+"
+                >
+                  +
+                </button>
               </div>
               <div class="stepper">
-                <button type="button" class="step" (click)="stepClassic(row.index, -1)">−</button>
-                <span class="step-val">{{ row.rule.classicMultiplier }}</span>
-                <button type="button" class="step" (click)="stepClassic(row.index, 1)">+</button>
+                <button
+                  type="button"
+                  class="step"
+                  (click)="stepClassic(row.index, -1)"
+                  aria-label="−"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  inputmode="numeric"
+                  min="1"
+                  class="step-val"
+                  [value]="row.rule.classicMultiplier"
+                  (input)="setClassicValue(row.index, $any($event.target).value)"
+                  [attr.aria-label]="'scoringRules.classic' | translate"
+                />
+                <button
+                  type="button"
+                  class="step"
+                  (click)="stepClassic(row.index, 1)"
+                  aria-label="+"
+                >
+                  +
+                </button>
               </div>
             </div>
           }
@@ -186,7 +242,12 @@
           @for (t of selectedTeams(); track t.teamId) {
             <span class="chip">
               {{ t.name }}
-              <button type="button" class="chip__x" (click)="setTeam(t.teamId, false)">
+              <button
+                type="button"
+                class="chip__x"
+                [attr.aria-label]="('common.remove' | translate) + ' ' + t.name"
+                (click)="setTeam(t.teamId, false)"
+              >
                 <app-icon name="x" [size]="12" />
               </button>
             </span>
@@ -199,6 +260,7 @@
         [value]="teamFilter()"
         (input)="teamFilter.set($any($event.target).value)"
         [placeholder]="'scoringRules.searchTeams' | translate"
+        [attr.aria-label]="'scoringRules.searchTeams' | translate"
       />
 
       <div class="add-list">

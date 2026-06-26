@@ -9,7 +9,10 @@
       {{ 'dashboard.round' | translate }} {{ r.number }}
     </div>
     @if (editable()) {
-      <span class="badge text-bg-light border"
+      <span
+        class="badge border"
+        [class.text-bg-light]="!deadlineUrgent()"
+        [class.text-bg-danger]="deadlineUrgent()"
         >{{ 'predictions.closesIn' | translate }}
         <app-countdown [target]="r.firstMatchStartsAt ?? null"
       /></span>
@@ -41,6 +44,23 @@
   @if (draftRestored()) {
     <div class="alert alert-info py-2 small" role="status">
       <app-icon name="pencil" [size]="14" /> {{ 'predictions.draftRestored' | translate }}
+    </div>
+  }
+
+  @if (editable()) {
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <div
+        class="progress flex-grow-1"
+        role="progressbar"
+        [attr.aria-label]="'predictions.progress' | translate"
+        [attr.aria-valuenow]="progressPct()"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        style="height: 6px"
+      >
+        <div class="progress-bar" [style.width.%]="progressPct()"></div>
+      </div>
+      <small class="text-muted">{{ filled() }}/{{ matches().length }}</small>
     </div>
   }
 

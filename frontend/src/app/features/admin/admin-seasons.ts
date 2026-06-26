@@ -52,10 +52,11 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
         </div>
         <form [formGroup]="form" (ngSubmit)="save()" class="vstack gap-3">
           <div>
-            <label class="form-label">{{ 'adminSeasons.name' | translate }}</label>
+            <label for="s-name" class="form-label">{{ 'adminSeasons.name' | translate }}</label>
             <div class="input-group input-group-lg">
               <span class="input-group-text"><app-icon name="tag" [size]="16" /></span>
               <input
+                id="s-name"
                 class="form-control"
                 [placeholder]="'adminSeasons.name' | translate"
                 formControlName="name"
@@ -64,17 +65,24 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
           </div>
           <div class="row g-3">
             <div class="col-6">
-              <label class="form-label">{{ 'adminSeasons.start' | translate }}</label>
+              <label for="s-startDate" class="form-label">{{
+                'adminSeasons.start' | translate
+              }}</label>
               <div class="input-group input-group-lg">
                 <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
-                <input type="date" class="form-control" formControlName="startDate" />
+                <input
+                  id="s-startDate"
+                  type="date"
+                  class="form-control"
+                  formControlName="startDate"
+                />
               </div>
             </div>
             <div class="col-6">
-              <label class="form-label">{{ 'adminSeasons.end' | translate }}</label>
+              <label for="s-endDate" class="form-label">{{ 'adminSeasons.end' | translate }}</label>
               <div class="input-group input-group-lg">
                 <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
-                <input type="date" class="form-control" formControlName="endDate" />
+                <input id="s-endDate" type="date" class="form-control" formControlName="endDate" />
               </div>
             </div>
           </div>
@@ -91,7 +99,7 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
           </div>
 
           <div>
-            <label class="form-label d-block">{{ 'tournamentType.label' | translate }}</label>
+            <div class="form-label d-block">{{ 'tournamentType.label' | translate }}</div>
             <div class="row g-2">
               <div class="col-12 col-sm-6">
                 <button

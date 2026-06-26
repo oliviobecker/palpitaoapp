@@ -39,12 +39,22 @@
       @if (r.status === RoundStatus.Draft || r.status === RoundStatus.Published) {
         <form [formGroup]="form" (ngSubmit)="saveMeta()" class="row g-2 align-items-end mb-2">
           <div class="col-12 col-sm-4">
-            <label class="form-label small mb-0">{{ 'roundDetail.number' | translate }}</label>
-            <input type="number" min="1" class="form-control" formControlName="number" />
+            <label for="rd-number" class="form-label small mb-0">{{
+              'roundDetail.number' | translate
+            }}</label>
+            <input
+              id="rd-number"
+              type="number"
+              min="1"
+              class="form-control"
+              formControlName="number"
+            />
           </div>
           <div class="col-12 col-sm-5">
-            <label class="form-label small mb-0">{{ 'roundDetail.name' | translate }}</label>
-            <input class="form-control" formControlName="title" />
+            <label for="rd-title" class="form-label small mb-0">{{
+              'roundDetail.name' | translate
+            }}</label>
+            <input id="rd-title" class="form-control" formControlName="title" />
           </div>
           <div class="col-12 col-sm-3">
             <button class="btn btn-outline-secondary w-100" [disabled]="form.invalid">

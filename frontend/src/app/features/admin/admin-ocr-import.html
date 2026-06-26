@@ -17,10 +17,10 @@
   <div class="card mb-3">
     <div class="card-body p-4 vstack gap-3">
       <div>
-        <label class="form-label">{{ 'ocr.language' | translate }}</label>
+        <label for="ocr-lang" class="form-label">{{ 'ocr.language' | translate }}</label>
         <div class="input-group input-group-lg">
           <span class="input-group-text"><app-icon name="languages" [size]="16" /></span>
-          <select class="form-select" [(ngModel)]="language">
+          <select id="ocr-lang" class="form-select" [(ngModel)]="language">
             <option value="por">{{ 'ocr.langPor' | translate }}</option>
             <option value="eng">{{ 'ocr.langEng' | translate }}</option>
             <option value="por+eng">{{ 'ocr.langBoth' | translate }}</option>
@@ -29,7 +29,7 @@
       </div>
 
       <div>
-        <label class="form-label">{{ 'ocr.imageLabel' | translate }}</label>
+        <div class="form-label">{{ 'ocr.imageLabel' | translate }}</div>
         <label
           class="ocr-drop"
           [class.is-drag]="dragOver()"

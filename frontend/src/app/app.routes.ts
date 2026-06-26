@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { adminGuard, authGuard, participantGuard } from './core/auth/auth.guard';
+import { unsavedChangesGuard } from './core/guards/unsaved-changes.guard';
 
 export const routes: Routes = [
   {
@@ -122,6 +123,7 @@ export const routes: Routes = [
           },
           {
             path: 'scoring',
+            canDeactivate: [unsavedChangesGuard],
             loadComponent: () =>
               import('./features/admin/admin-scoring-rules').then((m) => m.AdminScoringRules),
           },

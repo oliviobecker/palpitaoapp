@@ -5,7 +5,11 @@
 } @else if (error()) {
   <app-error-state (retry)="load()" />
 } @else if (standings().length === 0) {
-  <app-empty-state [message]="'standings.empty' | translate" />
+  <app-empty-state icon="trophy" [message]="'standings.empty' | translate">
+    <a class="btn btn-outline-primary btn-sm mt-1" routerLink="/rounds">
+      {{ 'standings.goPredict' | translate }}
+    </a>
+  </app-empty-state>
 } @else {
   <!-- Mobile: cards -->
   <div class="vstack gap-2 d-md-none fade-in-up">

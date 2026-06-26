@@ -49,10 +49,13 @@ import { Loading } from '../../shared/components/loading/loading';
     } @else if (round(); as r) {
       <div class="card mb-3">
         <div class="card-body p-4">
-          <label class="form-label">{{ 'manual.participant' | translate }}</label>
+          <label for="mp-participant" class="form-label">{{
+            'manual.participant' | translate
+          }}</label>
           <div class="input-group input-group-lg">
             <span class="input-group-text"><app-icon name="user" [size]="16" /></span>
             <select
+              id="mp-participant"
               class="form-select"
               [ngModel]="userId"
               (ngModelChange)="onParticipantChange($event)"

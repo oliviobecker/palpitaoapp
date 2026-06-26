@@ -84,6 +84,9 @@
     "save": "Save",
     "cancel": "Cancel",
     "confirm": "Confirm",
+    "leave": "Leave without saving",
+    "unsavedTitle": "Unsaved changes",
+    "unsavedConfirm": "You have unsaved changes. Leave anyway?",
     "edit": "Edit",
     "remove": "Remove",
     "loading": "Loading...",
@@ -205,6 +208,7 @@
   "predictions": {
     "round": "Round",
     "closesIn": "Closes in",
+    "progress": "Predictions progress",
     "blockedDraft": "This round is not open for predictions yet.",
     "blockedLocked": "The round is locked. Predictions are closed.",
     "blockedScored": "The round has already been scored.",
@@ -251,6 +255,7 @@
   "standings": {
     "title": "Standings",
     "empty": "The standings have not been calculated yet.",
+    "goPredict": "Make predictions",
     "name": "Name",
     "points": "Points",
     "rounds": "Rounds",
@@ -306,6 +311,7 @@
     "recalcWarning": "This season already has scored rounds. Changes only take effect after you recalculate the season.",
     "recalculate": "Recalculate season",
     "recalculated": "Season recalculated successfully",
+    "confirmRecalculate": "Recalculating will re-score every finished round of this season. Continue?",
     "basePointsTitle": "Base points",
     "basePointsHelp": "Points for each category before the multiplier. These colours repeat in the grid below.",
     "categoriesTitle": "Score categories",

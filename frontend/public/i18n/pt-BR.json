@@ -84,6 +84,9 @@
     "save": "Salvar",
     "cancel": "Cancelar",
     "confirm": "Confirmar",
+    "leave": "Sair sem salvar",
+    "unsavedTitle": "Alterações não salvas",
+    "unsavedConfirm": "Você tem alterações não salvas. Deseja sair mesmo assim?",
     "edit": "Editar",
     "remove": "Remover",
     "loading": "Carregando...",
@@ -205,6 +208,7 @@
   "predictions": {
     "round": "Rodada",
     "closesIn": "Fecha em",
+    "progress": "Progresso dos palpites",
     "blockedDraft": "Esta rodada ainda não está aberta para palpites.",
     "blockedLocked": "A rodada está bloqueada. Não é mais possível palpitar.",
     "blockedScored": "A rodada já foi pontuada.",
@@ -251,6 +255,7 @@
   "standings": {
     "title": "Classificação",
     "empty": "A classificação ainda não foi calculada.",
+    "goPredict": "Fazer palpites",
     "name": "Nome",
     "points": "Pontos",
     "rounds": "Rodadas",
@@ -306,6 +311,7 @@
     "recalcWarning": "Esta temporada já tem rodadas pontuadas. As alterações só passam a valer após recalcular a temporada.",
     "recalculate": "Recalcular temporada",
     "recalculated": "Temporada recalculada com sucesso",
+    "confirmRecalculate": "Recalcular vai repontuar todas as rodadas finalizadas desta temporada. Continuar?",
     "basePointsTitle": "Pontuação base",
     "basePointsHelp": "Pontos de cada categoria antes do multiplicador. Estas cores se repetem na grade abaixo.",
     "categoriesTitle": "Categorias dos placares",

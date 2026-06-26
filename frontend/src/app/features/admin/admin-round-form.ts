@@ -44,10 +44,10 @@ import { ordinalRoundName } from '../../shared/utils/round-name.util';
       <div class="card-body p-4">
         <form [formGroup]="form" class="vstack gap-3">
           <div>
-            <label class="form-label">{{ 'roundForm.season' | translate }}</label>
+            <label for="rf-season" class="form-label">{{ 'roundForm.season' | translate }}</label>
             <div class="input-group input-group-lg">
               <span class="input-group-text"><app-icon name="trophy" [size]="16" /></span>
-              <select class="form-select" formControlName="seasonId">
+              <select id="rf-season" class="form-select" formControlName="seasonId">
                 <option value="">{{ 'roundForm.select' | translate }}</option>
                 @for (s of seasons(); track s.id) {
                   <option [value]="s.id">{{ s.name }}{{ s.isActive ? ' ✓' : '' }}</option>
@@ -57,20 +57,27 @@ import { ordinalRoundName } from '../../shared/utils/round-name.util';
           </div>
 
           <div>
-            <label class="form-label">{{ 'roundForm.number' | translate }}</label>
+            <label for="rf-number" class="form-label">{{ 'roundForm.number' | translate }}</label>
             <div class="input-group input-group-lg">
               <span class="input-group-text">#</span>
-              <input type="number" min="1" class="form-control" formControlName="number" />
+              <input
+                id="rf-number"
+                type="number"
+                min="1"
+                class="form-control"
+                formControlName="number"
+              />
             </div>
           </div>
 
           <div>
-            <label class="form-label"
+            <label for="rf-title" class="form-label"
               >{{ 'roundForm.name' | translate }} {{ 'common.optional' | translate }}</label
             >
             <div class="input-group input-group-lg">
               <span class="input-group-text"><app-icon name="tag" [size]="16" /></span>
               <input
+                id="rf-title"
                 class="form-control"
                 formControlName="title"
                 [placeholder]="'roundForm.namePlaceholder' | translate"
@@ -80,17 +87,26 @@ import { ordinalRoundName } from '../../shared/utils/round-name.util';
 
           <div class="row g-3">
             <div class="col-6">
-              <label class="form-label">{{ 'roundForm.startDate' | translate }}</label>
+              <label for="rf-startDate" class="form-label">{{
+                'roundForm.startDate' | translate
+              }}</label>
               <div class="input-group input-group-lg">
                 <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
-                <input type="date" class="form-control" formControlName="startDate" />
+                <input
+                  id="rf-startDate"
+                  type="date"
+                  class="form-control"
+                  formControlName="startDate"
+                />
               </div>
             </div>
             <div class="col-6">
-              <label class="form-label">{{ 'roundForm.endDate' | translate }}</label>
+              <label for="rf-endDate" class="form-label">{{
+                'roundForm.endDate' | translate
+              }}</label>
               <div class="input-group input-group-lg">
                 <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
-                <input type="date" class="form-control" formControlName="endDate" />
+                <input id="rf-endDate" type="date" class="form-control" formControlName="endDate" />
               </div>
             </div>
           </div>

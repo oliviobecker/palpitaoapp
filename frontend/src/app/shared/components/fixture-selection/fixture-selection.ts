@@ -133,10 +133,11 @@ export interface FixtureSelectionState {
       }
 
       @if (leagueOneConflict()) {
-        <label class="form-label small mb-0 mt-2 text-warning">{{
+        <label for="lo-justification" class="form-label small mb-0 mt-2 text-warning">{{
           'fixtures.leagueOneSingle' | translate
         }}</label>
         <input
+          id="lo-justification"
           class="form-control"
           [value]="leagueOneJustification()"
           (input)="setLeagueOneJustification($event)"

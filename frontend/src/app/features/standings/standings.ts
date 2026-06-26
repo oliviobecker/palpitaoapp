@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { of, switchMap } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
@@ -22,7 +23,7 @@ import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-standings',
-  imports: [TranslatePipe, EmptyState, ErrorState, PageHeader, SkeletonList],
+  imports: [RouterLink, TranslatePipe, EmptyState, ErrorState, PageHeader, SkeletonList],
   templateUrl: './standings.html',
 })
 export class Standings implements OnInit {

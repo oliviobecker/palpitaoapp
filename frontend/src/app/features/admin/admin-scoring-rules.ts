@@ -1,4 +1,3 @@
-import { Location } from '@angular/common';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -24,6 +23,7 @@ import {
   ScoringMultiplierRule,
   Season,
 } from '../../core/models/models';
+import { ConfirmService } from '../../core/notifications/confirm.service';
 import { ToastService } from '../../core/notifications/toast.service';
 import { ScoringConfigService } from '../../core/services/scoring-config.service';
 import { SeasonsService } from '../../core/services/seasons.service';
@@ -32,7 +32,9 @@ import { CompetitionBadge } from '../../shared/components/competition-badge/comp
 import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
+import { PageHeader } from '../../shared/components/page-header/page-header';
 import { phaseLabel } from '../../shared/utils/match.util';
+import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
 
 const MAX_GOALS = 6;
 
@@ -74,17 +76,17 @@ const PHASE_ORDER: MatchPhase[] = [...ENGLAND_PHASES, ...WORLD_CUP_PHASES];
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-scoring-rules',
-  imports: [TranslatePipe, CompetitionBadge, ErrorState, Icon, Loading],
+  imports: [TranslatePipe, CompetitionBadge, ErrorState, Icon, Loading, PageHeader],
   templateUrl: './admin-scoring-rules.html',
   styleUrl: './admin-scoring-rules.scss',
 })
-export class AdminScoringRules implements OnInit {
+export class AdminScoringRules implements OnInit, HasUnsavedChanges {
   private readonly seasonsApi = inject(SeasonsService);
   private readonly configApi = inject(ScoringConfigService);
   private readonly standingsApi = inject(StandingsService);
   private readonly toast = inject(ToastService);
   private readonly translate = inject(TranslateService);
-  private readonly location = inject(Location);
+  private readonly confirm = inject(ConfirmService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly categories = CATEGORIES;
@@ -190,6 +192,11 @@ export class AdminScoringRules implements OnInit {
     this.markDirty();
   }
 
+  setBaseValue(field: keyof BasePointsForm, value: string): void {
+    this.basePoints.update((bp) => ({ ...bp, [field]: this.clamp(value, 0) }));
+    this.markDirty();
+  }
+
   // --- Multipliers -------------------------------------------------------
   stepMultiplier(index: number, delta: number): void {
     this.multiplierRules.update((rules) =>
@@ -209,6 +216,26 @@ export class AdminScoringRules implements OnInit {
     this.markDirty();
   }
 
+  setMultiplierValue(index: number, value: string): void {
+    this.multiplierRules.update((rules) =>
+      rules.map((r, i) => (i === index ? { ...r, multiplier: this.clamp(value, 1) } : r)),
+    );
+    this.markDirty();
+  }
+
+  setClassicValue(index: number, value: string): void {
+    this.multiplierRules.update((rules) =>
+      rules.map((r, i) => (i === index ? { ...r, classicMultiplier: this.clamp(value, 1) } : r)),
+    );
+    this.markDirty();
+  }
+
+  /** Parses a numeric input value and clamps to an integer ≥ min. */
+  private clamp(value: string, min: number): number {
+    const n = Math.trunc(Number(value));
+    return Number.isFinite(n) ? Math.max(min, n) : min;
+  }
+
   // --- Classic teams -----------------------------------------------------
   setTeam(teamId: string, isClassic: boolean): void {
     this.teams.update((list) => list.map((t) => (t.teamId === teamId ? { ...t, isClassic } : t)));
@@ -220,8 +247,9 @@ export class AdminScoringRules implements OnInit {
     this.loadSeasons();
   }
 
-  back(): void {
-    this.location.back();
+  /** Used by the unsaved-changes route guard. */
+  hasUnsavedChanges(): boolean {
+    return this.dirty();
   }
 
   loadSeasons(): void {
@@ -315,7 +343,15 @@ export class AdminScoringRules implements OnInit {
       });
   }
 
-  recalculate(): void {
+  async recalculate(): Promise<void> {
+    const ok = await this.confirm.ask(this.translate.instant('scoringRules.confirmRecalculate'), {
+      title: this.translate.instant('scoringRules.recalculate'),
+      confirmText: this.translate.instant('scoringRules.recalculate'),
+      danger: true,
+    });
+    if (!ok) {
+      return;
+    }
     this.recalculating.set(true);
     this.standingsApi
       .recalculate(this.seasonId())

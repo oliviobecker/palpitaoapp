@@ -40,10 +40,10 @@ import { buildMatchScoutMessage } from '../../shared/utils/scout-message.util';
 
       @if (matches().length > 0) {
         <div class="mb-3">
-          <label class="form-label">{{ 'scout.match' | translate }}</label>
+          <label for="scout-match" class="form-label">{{ 'scout.match' | translate }}</label>
           <div class="input-group input-group-lg">
             <span class="input-group-text"><app-icon name="goal" [size]="16" /></span>
-            <select class="form-select" [(ngModel)]="selectedMatchId">
+            <select id="scout-match" class="form-select" [(ngModel)]="selectedMatchId">
               @for (m of matches(); track m.roundMatchId) {
                 <option [value]="m.roundMatchId">
                   {{ m.homeTeamName }} × {{ m.awayTeamName }}

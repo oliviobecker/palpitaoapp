@@ -3,6 +3,7 @@ import {
   Component,
   ChangeDetectionStrategy,
   DestroyRef,
+  OnDestroy,
   OnInit,
   computed,
   inject,
@@ -106,7 +107,7 @@ import {
     `,
   ],
 })
-export class Predictions implements OnInit {
+export class Predictions implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly roundsApi = inject(RoundsService);
   private readonly predictionsApi = inject(PredictionsService);
@@ -152,6 +153,20 @@ export class Predictions implements OnInit {
   protected readonly allFilled = computed(
     () => this.matches().length > 0 && this.filled() === this.matches().length,
   );
+  protected readonly progressPct = computed(() => {
+    const total = this.matches().length;
+    return total > 0 ? Math.round((this.filled() / total) * 100) : 0;
+  });
+
+  // Deadline urgency: turns the countdown badge red within the final hour.
+  private readonly now = signal(Date.now());
+  private timer?: ReturnType<typeof setInterval>;
+  protected readonly deadlineUrgent = computed(() => {
+    const d = this.round()?.firstMatchStartsAt;
+    if (!d || !this.editable()) return false;
+    const ms = new Date(d).getTime() - this.now();
+    return ms > 0 && ms < 3_600_000;
+  });
   private isEdit = false;
   protected roundId = '';
 
@@ -192,7 +207,14 @@ export class Predictions implements OnInit {
 
   ngOnInit(): void {
     this.roundId = this.route.snapshot.paramMap.get('id') ?? '';
+    this.timer = setInterval(() => this.now.set(Date.now()), 30_000);
     this.load();
+  }
+
+  ngOnDestroy(): void {
+    if (this.timer) {
+      clearInterval(this.timer);
+    }
   }
 
   load(): void {

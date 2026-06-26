@@ -27,10 +27,12 @@
         </div>
         <form [formGroup]="form" (ngSubmit)="save()" class="vstack gap-3">
           <div>
-            <label class="form-label">{{ 'adminMatches.competition' | translate }}</label>
+            <label for="m-competition" class="form-label">{{
+              'adminMatches.competition' | translate
+            }}</label>
             <div class="input-group input-group-lg">
               <span class="input-group-text"><app-icon name="trophy" [size]="16" /></span>
-              <select class="form-select" formControlName="competition">
+              <select id="m-competition" class="form-select" formControlName="competition">
                 @for (c of competitions(); track c.value) {
                   <option [value]="c.value">{{ c.label }}</option>
                 }
@@ -39,10 +41,10 @@
           </div>
 
           <div>
-            <label class="form-label">{{ 'adminMatches.phase' | translate }}</label>
+            <label for="m-phase" class="form-label">{{ 'adminMatches.phase' | translate }}</label>
             <div class="input-group input-group-lg">
               <span class="input-group-text"><app-icon name="shuffle" [size]="16" /></span>
-              <select class="form-select" formControlName="phase">
+              <select id="m-phase" class="form-select" formControlName="phase">
                 @for (p of phases(); track p) {
                   <option [value]="p">{{ 'phase.' + p | translate }}</option>
                 }
@@ -74,17 +76,27 @@
 
           <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label">{{ 'adminMatches.datetime' | translate }}</label>
+              <label for="m-startsAt" class="form-label">{{
+                'adminMatches.datetime' | translate
+              }}</label>
               <div class="input-group input-group-lg">
                 <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
-                <input type="datetime-local" class="form-control" formControlName="startsAt" />
+                <input
+                  id="m-startsAt"
+                  type="datetime-local"
+                  class="form-control"
+                  formControlName="startsAt"
+                />
               </div>
             </div>
             <div class="col-md-6">
-              <label class="form-label">{{ 'adminMatches.manualMultiplier' | translate }}</label>
+              <label for="m-mult" class="form-label">{{
+                'adminMatches.manualMultiplier' | translate
+              }}</label>
               <div class="input-group input-group-lg">
                 <span class="input-group-text"><app-icon name="x" [size]="16" /></span>
                 <input
+                  id="m-mult"
                   type="number"
                   min="1"
                   class="form-control"
@@ -146,17 +158,26 @@
         <form [formGroup]="searchForm" class="vstack gap-3">
           <div class="row g-3">
             <div class="col-6">
-              <label class="form-label">{{ 'roundForm.startDate' | translate }}</label>
+              <label for="m-startDate" class="form-label">{{
+                'roundForm.startDate' | translate
+              }}</label>
               <div class="input-group input-group-lg">
                 <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
-                <input type="date" class="form-control" formControlName="startDate" />
+                <input
+                  id="m-startDate"
+                  type="date"
+                  class="form-control"
+                  formControlName="startDate"
+                />
               </div>
             </div>
             <div class="col-6">
-              <label class="form-label">{{ 'roundForm.endDate' | translate }}</label>
+              <label for="m-endDate" class="form-label">{{
+                'roundForm.endDate' | translate
+              }}</label>
               <div class="input-group input-group-lg">
                 <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
-                <input type="date" class="form-control" formControlName="endDate" />
+                <input id="m-endDate" type="date" class="form-control" formControlName="endDate" />
               </div>
             </div>
           </div>
