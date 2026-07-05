@@ -103,7 +103,8 @@
                 <app-icon name="users" [size]="16" />
                 {{
                   'roundDetail.coverage'
-                    | translate: { complete: cov.completeParticipants, total: cov.totalParticipants }
+                    | translate
+                      : { complete: cov.completeParticipants, total: cov.totalParticipants }
                 }}
               </div>
               @if (cov.missing.length > 0) {
