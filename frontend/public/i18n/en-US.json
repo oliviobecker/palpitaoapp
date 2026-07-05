@@ -77,6 +77,7 @@
     "rejectedBadge": "Rejected",
     "deactivatedBadge": "Deactivated",
     "recheck": "Check again",
+    "autoHint": "This page checks automatically every 30 seconds — you'll be let in as soon as an admin approves you.",
     "stillPending": "Still awaiting approval.",
     "noMemberships": "You have no group requests. Sign up for a group or contact the administrator."
   },
@@ -230,7 +231,9 @@
     "draftRestored": "Unsaved draft restored.",
     "remaining": "{{count}} match(es) left",
     "allFilled": "All matches filled in",
-    "unsaved": "Unsaved"
+    "unsaved": "Unsaved",
+    "savedPanel": "Your predictions are saved. You can edit them until the deadline.",
+    "backHome": "Back to home"
   },
   "mirror": {
     "title": "Predictions mirror",
@@ -241,7 +244,8 @@
     "noPredictions": "No predictions.",
     "absent": "Absent",
     "eliminated": "Eliminated",
-    "flavio": "Flávio Rule"
+    "flavio": "Flávio Rule",
+    "clearFilters": "Clear filters"
   },
   "results": {
     "title": "Results",
@@ -556,6 +560,8 @@
     "password": "Password",
     "create": "Create",
     "empty": "No participants registered.",
+    "search": "Search by name or e-mail",
+    "noMatches": "No participants match your search.",
     "eliminated": "Eliminated",
     "inactive": "Inactive",
     "active": "Active",
@@ -587,11 +593,21 @@
     "to": "To",
     "filter": "Filter",
     "empty": "No audit records.",
+    "loadMore": "Load more",
     "system": "System"
   },
   "admin": {
     "registerPredictions": "Register predictions",
     "importPredictions": "Import predictions from image"
+  },
+  "adminNav": {
+    "panel": "Panel",
+    "seasons": "Seasons",
+    "rounds": "Rounds",
+    "scoring": "Scoring",
+    "participants": "Participants",
+    "requests": "Requests",
+    "audit": "Audit"
   },
   "manual": {
     "title": "Register predictions",
@@ -615,7 +631,7 @@
     "imageLabel": "Predictions image",
     "dropClick": "Click to upload",
     "dropRest": "or drag the image here",
-    "dropHint": "PNG, JPG or HEIC · up to 10 MB",
+    "dropHint": "PNG, JPG or WEBP · up to 10 MB",
     "fileReady": "ready to process",
     "tip": "Sharp, well-framed photos without glare greatly improve recognition accuracy. You can review the scores before saving.",
     "language": "OCR language",
@@ -635,6 +651,23 @@
     "confirm": "Confirm import",
     "cancel": "Cancel import",
     "noFile": "Select an image.",
+    "invalidFormat": "Use a PNG, JPG, JPEG or WEBP image.",
+    "tooLarge": "The image must be at most 10 MB.",
+    "processing": "Reading the image…",
+    "confidence": "Confidence",
+    "missingParticipant": "missing participant",
+    "missingMatch": "missing match",
+    "missingScore": "missing score",
+    "needsReviewCount": "{{count}} to review",
+    "allResolved": "All reviewed",
+    "noCandidates": "No candidates left. Cancel the import and try another image.",
+    "saving": "saving…",
+    "saved": "saved",
+    "saveError": "save failed — retry",
+    "discard": "Discard",
+    "confirmDiscard": "Discard this candidate? It will not be imported.",
+    "discarded": "Candidate discarded.",
+    "confirmCancel": "Cancel this import? The extracted candidates will be lost.",
     "confirmed": "Import confirmed!",
     "cancelled": "Import cancelled."
   },

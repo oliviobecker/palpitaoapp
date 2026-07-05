@@ -175,6 +175,12 @@ export class AdminService {
     );
   }
 
+  deleteOcrCandidate(batchId: string, candidateId: string): Observable<OcrBatch> {
+    return this.http.delete<OcrBatch>(
+      `${this.base}/ocr-imports/${batchId}/candidates/${candidateId}`,
+    );
+  }
+
   confirmOcr(batchId: string): Observable<void> {
     return this.http.post<void>(`${this.base}/ocr-imports/${batchId}/confirm`, {});
   }
