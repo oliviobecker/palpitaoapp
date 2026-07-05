@@ -75,8 +75,6 @@ describe('FormField', () => {
     fixture.detectChanges();
 
     const el: HTMLElement = fixture.nativeElement;
-    expect(el.querySelector('.invalid-feedback')?.textContent).toContain(
-      'Passwords do not match.',
-    );
+    expect(el.querySelector('.invalid-feedback')?.textContent).toContain('Passwords do not match.');
   });
 });

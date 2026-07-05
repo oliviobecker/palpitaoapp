@@ -54,6 +54,11 @@ public class OcrImportsController : ControllerBase
         Guid batchId, Guid candidateId, UpdateOcrCandidateRequest request, CancellationToken ct)
         => Ok(await _ocr.UpdateCandidateAsync(batchId, candidateId, request, User.GetUserId(), ct));
 
+    [HttpDelete("ocr-imports/{batchId:guid}/candidates/{candidateId:guid}")]
+    public async Task<ActionResult<OcrBatchDto>> DeleteCandidate(
+        Guid batchId, Guid candidateId, CancellationToken ct)
+        => Ok(await _ocr.DeleteCandidateAsync(batchId, candidateId, User.GetUserId(), ct));
+
     [HttpPost("ocr-imports/{batchId:guid}/confirm")]
     public async Task<IActionResult> Confirm(Guid batchId, CancellationToken ct)
     {

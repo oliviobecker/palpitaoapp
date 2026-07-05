@@ -149,5 +149,25 @@
         {{ (saved() ? 'predictions.saved' : 'predictions.save') | translate }}
       </button>
     </div>
+
+    @if (justSaved()) {
+      <div
+        class="alert alert-success d-flex flex-wrap align-items-center gap-2 mt-3 mb-0"
+        role="status"
+      >
+        <app-icon name="circle-check" [size]="18" />
+        <span>{{ 'predictions.savedPanel' | translate }}</span>
+        <span class="ms-auto d-flex gap-2">
+          @if (r.allowParticipantsToViewOthersPredictions) {
+            <a class="btn btn-sm btn-outline-success" [routerLink]="['/rounds', r.id, 'mirror']">
+              <app-icon name="eye" [size]="14" /> {{ 'predictionsMirror.view' | translate }}
+            </a>
+          }
+          <a class="btn btn-sm btn-outline-secondary" routerLink="/dashboard">
+            <app-icon name="house" [size]="14" /> {{ 'predictions.backHome' | translate }}
+          </a>
+        </span>
+      </div>
+    }
   }
 }

@@ -77,6 +77,7 @@
     "rejectedBadge": "Rejeitado",
     "deactivatedBadge": "Desativado",
     "recheck": "Verificar de novo",
+    "autoHint": "Esta página verifica automaticamente a cada 30 segundos — você entrará assim que um administrador aprovar seu acesso.",
     "stillPending": "Ainda aguardando aprovação.",
     "noMemberships": "Você não tem solicitações de grupo. Cadastre-se em um grupo ou fale com o administrador."
   },
@@ -230,7 +231,9 @@
     "draftRestored": "Rascunho não salvo restaurado.",
     "remaining": "Faltam {{count}} jogo(s)",
     "allFilled": "Todos os jogos preenchidos",
-    "unsaved": "Não salvo"
+    "unsaved": "Não salvo",
+    "savedPanel": "Seus palpites estão salvos. Você pode editá-los até o prazo.",
+    "backHome": "Voltar ao início"
   },
   "mirror": {
     "title": "Espelho de palpites",
@@ -241,7 +244,8 @@
     "noPredictions": "Sem palpites.",
     "absent": "Ausente",
     "eliminated": "Eliminado",
-    "flavio": "Regra Flávio"
+    "flavio": "Regra Flávio",
+    "clearFilters": "Limpar filtros"
   },
   "results": {
     "title": "Resultados",
@@ -455,6 +459,7 @@
     "lifecycle": "Ciclo da rodada",
     "needMatchesToPublish": "Adicione ao menos uma partida antes de publicar.",
     "lockHint": "Travar encerra o envio de palpites. Depois, lance os resultados e calcule a pontuação.",
+    "coverage": "{{complete}} de {{total}} participantes com todos os palpites.",
     "resultsMissing": "Faltam {{count}} de {{total}} resultados.",
     "manageGames": "Gerir jogos",
     "registerPredictions": "Registrar palpites",
@@ -532,6 +537,9 @@
     "title": "Resultados",
     "finished": "Finalizado",
     "saveResults": "Salvar resultados",
+    "saveCount": "Salvar resultados ({{count}})",
+    "partialPair": "Preencha os dois placares ou deixe ambos vazios.",
+    "pendingHint": "Jogos sem os dois placares não são salvos ({{count}} restantes).",
     "saved": "Resultados salvos!"
   },
   "adminRegistrations": {
@@ -556,6 +564,8 @@
     "password": "Senha",
     "create": "Criar",
     "empty": "Nenhum participante cadastrado.",
+    "search": "Buscar por nome ou e-mail",
+    "noMatches": "Nenhum participante corresponde à busca.",
     "eliminated": "Eliminado",
     "inactive": "Inativo",
     "active": "Ativo",
@@ -587,11 +597,21 @@
     "to": "Até",
     "filter": "Filtrar",
     "empty": "Nenhum registro de auditoria.",
+    "loadMore": "Carregar mais",
     "system": "Sistema"
   },
   "admin": {
     "registerPredictions": "Registrar palpites",
     "importPredictions": "Importar palpites por imagem"
+  },
+  "adminNav": {
+    "panel": "Painel",
+    "seasons": "Temporadas",
+    "rounds": "Rodadas",
+    "scoring": "Pontuação",
+    "participants": "Participantes",
+    "requests": "Solicitações",
+    "audit": "Auditoria"
   },
   "manual": {
     "title": "Registrar palpites",
@@ -615,7 +635,7 @@
     "imageLabel": "Imagem dos palpites",
     "dropClick": "Clique para enviar",
     "dropRest": "ou arraste a imagem aqui",
-    "dropHint": "PNG, JPG ou HEIC · até 10 MB",
+    "dropHint": "PNG, JPG ou WEBP · até 10 MB",
     "fileReady": "pronto para processar",
     "tip": "Fotos nítidas e bem enquadradas, sem reflexo, melhoram bastante a precisão do reconhecimento. Você poderá revisar os placares antes de salvar.",
     "language": "Idioma do OCR",
@@ -635,6 +655,23 @@
     "confirm": "Confirmar importação",
     "cancel": "Cancelar importação",
     "noFile": "Selecione uma imagem.",
+    "invalidFormat": "Use uma imagem PNG, JPG, JPEG ou WEBP.",
+    "tooLarge": "A imagem deve ter no máximo 10 MB.",
+    "processing": "Lendo a imagem…",
+    "confidence": "Confiança",
+    "missingParticipant": "falta o participante",
+    "missingMatch": "falta o jogo",
+    "missingScore": "falta o placar",
+    "needsReviewCount": "{{count}} para revisar",
+    "allResolved": "Tudo revisado",
+    "noCandidates": "Nenhum candidato restante. Cancele a importação e tente outra imagem.",
+    "saving": "salvando…",
+    "saved": "salvo",
+    "saveError": "falha ao salvar — tentar de novo",
+    "discard": "Descartar",
+    "confirmDiscard": "Descartar este candidato? Ele não será importado.",
+    "discarded": "Candidato descartado.",
+    "confirmCancel": "Cancelar esta importação? Os candidatos extraídos serão perdidos.",
     "confirmed": "Importação confirmada!",
     "cancelled": "Importação cancelada."
   },

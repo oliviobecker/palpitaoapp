@@ -11,6 +11,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
+import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
 import { LanguageService } from '../../core/i18n/language.service';
 import { FixtureCandidate, RoundSummary, Season } from '../../core/models/models';
 import { ToastService } from '../../core/notifications/toast.service';
@@ -90,9 +91,7 @@ import { ordinalRoundName } from '../../shared/utils/round-name.util';
           </app-form-field>
 
           <app-form-field
-            [label]="
-              ('roundForm.name' | translate) + ' ' + ('common.optional' | translate)
-            "
+            [label]="('roundForm.name' | translate) + ' ' + ('common.optional' | translate)"
             forId="rf-title"
           >
             <div class="input-group input-group-lg">
@@ -202,7 +201,7 @@ import { ordinalRoundName } from '../../shared/utils/round-name.util';
     <p class="text-muted small mt-2 mb-0">{{ 'fixtures.manualHint' | translate }}</p>
   `,
 })
-export class AdminRoundForm implements OnInit {
+export class AdminRoundForm implements OnInit, HasUnsavedChanges {
   private readonly seasonsApi = inject(SeasonsService);
   private readonly roundsApi = inject(RoundsService);
   private readonly adminApi = inject(AdminService);
@@ -274,6 +273,12 @@ export class AdminRoundForm implements OnInit {
       });
     // Pre-search the default window (today → +10) so suggestions are ready.
     this.preSearch();
+  }
+
+  /** Used by the unsaved-changes route guard (fixtures picked or fields edited). */
+  hasUnsavedChanges(): boolean {
+    if (this.saving()) return false;
+    return this.form.dirty || this.selection().items.length > 0;
   }
 
   /** Next sequential number for a season = highest existing + 1 (or 1). */

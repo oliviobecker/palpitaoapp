@@ -18,13 +18,13 @@ import { RoundsService } from '../../core/services/rounds.service';
 import { SeasonsService } from '../../core/services/seasons.service';
 import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Icon } from '../../shared/components/icon/icon';
-import { Loading } from '../../shared/components/loading/loading';
 import { PageHeader } from '../../shared/components/page-header/page-header';
+import { Skeleton } from '../../shared/components/skeleton/skeleton';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin',
-  imports: [RouterLink, TranslatePipe, Loading, ErrorState, PageHeader, Icon],
+  imports: [RouterLink, TranslatePipe, ErrorState, PageHeader, Icon, Skeleton],
   template: `
     <app-page-header
       [trail]="('adminDash.panel' | translate) + ' · Admin'"
@@ -37,7 +37,20 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
     </app-page-header>
 
     @if (loading()) {
-      <app-loading />
+      <div class="section-label mb-2">{{ 'nav.rounds' | translate }}</div>
+      <div class="row g-2 mb-3" role="status" aria-busy="true">
+        @for (i of [0, 1, 2, 3, 4, 5]; track i) {
+          <div class="col-6" [class.col-lg-3]="i < 4" [class.col-lg-6]="i >= 4">
+            <div class="card stat-card h-100">
+              <div class="card-body">
+                <app-skeleton width="2.5rem" height="2.5rem" radius="12px" />
+                <span class="d-block mt-2"><app-skeleton width="40%" height="1.4rem" /></span>
+                <span class="d-block mt-2"><app-skeleton width="70%" height="0.7rem" /></span>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
     } @else if (error()) {
       <app-error-state (retry)="load()" />
     } @else {
@@ -107,7 +120,12 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
             <a class="action-card h-100" [routerLink]="a.link">
               <span class="icon-tile {{ a.tile }}"><app-icon [name]="a.icon" [size]="20" /></span>
               <div>
-                <div class="action-card__title">{{ a.title | translate }}</div>
+                <div class="action-card__title">
+                  {{ a.title | translate }}
+                  @if (a.badge && pendingRequests() > 0) {
+                    <span class="badge text-bg-danger ms-1">{{ pendingRequests() }}</span>
+                  }
+                </div>
                 <div class="action-card__sub">{{ a.sub | translate }}</div>
               </div>
               <span class="action-card__arrow"><app-icon name="arrow-right" [size]="18" /></span>
@@ -129,6 +147,7 @@ export class Admin implements OnInit {
   protected readonly activeSeason = signal<Season | null>(null);
   protected readonly rounds = signal<RoundSummary[]>([]);
   protected readonly participants = signal<Participant[]>([]);
+  protected readonly pendingRequests = signal(0);
 
   protected readonly openRound = computed(
     () => this.rounds().find((r) => r.status === RoundStatus.Published) ?? null,
@@ -166,7 +185,14 @@ export class Admin implements OnInit {
     ];
   });
 
-  protected readonly actionCards = [
+  protected readonly actionCards: {
+    icon: string;
+    tile: string;
+    title: string;
+    sub: string;
+    link: string;
+    badge?: boolean;
+  }[] = [
     {
       icon: 'plus',
       tile: 'icon-tile--green',
@@ -201,6 +227,7 @@ export class Admin implements OnInit {
       title: 'adminDash.registrationRequests',
       sub: 'adminDash.registrationRequestsSub',
       link: '/admin/registration-requests',
+      badge: true,
     },
     {
       icon: 'trophy',
@@ -229,13 +256,15 @@ export class Admin implements OnInit {
       season: this.seasonsApi.getActive(),
       rounds: this.roundsApi.getAll(),
       participants: this.adminApi.listParticipants(),
+      requests: this.adminApi.listRegistrationRequests(),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ season, rounds, participants }) => {
+        next: ({ season, rounds, participants, requests }) => {
           this.activeSeason.set(season);
           this.rounds.set(rounds);
           this.participants.set(participants);
+          this.pendingRequests.set(requests.length);
           this.loading.set(false);
         },
         error: () => {

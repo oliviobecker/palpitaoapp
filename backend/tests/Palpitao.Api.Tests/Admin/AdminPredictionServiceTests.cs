@@ -259,4 +259,49 @@ public class AdminPredictionServiceTests
         await Assert.ThrowsAsync<NotFoundException>(
             () => service.GetParticipantPredictionsAsync(round.Id, Guid.NewGuid(), Ct));
     }
+
+    [Fact]
+    public async Task GetCoverage_splits_complete_and_missing_participants()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var round = await PublishedRound(db); // 2 matches
+        var complete = CreateParticipant(db);
+        var missing = CreateParticipant(db);
+        var eliminated = CreateParticipant(db, eliminated: true); // must not count
+        await service.SaveManualAsync(round.Id, FullRequest(complete, round), Admin, Ct);
+        // "missing" predicted only the first match.
+        db.Predictions.Add(new Prediction
+        {
+            Id = Guid.NewGuid(),
+            RoundId = round.Id,
+            RoundMatchId = round.Matches[0].Id,
+            UserId = missing,
+            PredictedHomeScore = 1,
+            PredictedAwayScore = 1,
+            SubmittedAt = DateTime.UtcNow,
+            Source = PredictionSource.Participant,
+        });
+        db.SaveChanges();
+
+        var coverage = await service.GetCoverageAsync(round.Id, Ct);
+
+        Assert.Equal(2, coverage.MatchCount);
+        Assert.Equal(2, coverage.TotalParticipants); // eliminated excluded
+        Assert.Equal(1, coverage.CompleteParticipants);
+        var pending = Assert.Single(coverage.Missing);
+        Assert.Equal(missing, pending.UserId);
+        Assert.Equal(1, pending.PredictedCount);
+        Assert.DoesNotContain(coverage.Missing, p => p.UserId == eliminated);
+    }
+
+    [Fact]
+    public async Task GetCoverage_throws_for_unknown_round()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        CreateParticipant(db);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => service.GetCoverageAsync(Guid.NewGuid(), Ct));
+    }
 }

@@ -13,7 +13,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { RoundStatus } from '../../core/models/enums';
-import { Round, RoundMatch } from '../../core/models/models';
+import { PredictionCoverage, Round, RoundMatch } from '../../core/models/models';
 import { ConfirmService } from '../../core/notifications/confirm.service';
 import { ToastService } from '../../core/notifications/toast.service';
 import { AdminService } from '../../core/services/admin.service';
@@ -22,10 +22,11 @@ import { RoundsService } from '../../core/services/rounds.service';
 import { StandingsService } from '../../core/services/standings.service';
 import { RefreshResultsResponse } from '../../core/models/models';
 import { Icon } from '../../shared/components/icon/icon';
-import { Loading } from '../../shared/components/loading/loading';
 import { MatchList } from '../../shared/components/match-list/match-list';
+import { PageHeader } from '../../shared/components/page-header/page-header';
 import { RoundResultsEditor } from '../../shared/components/round-results-editor/round-results-editor';
 import { RoundStatusBadge } from '../../shared/components/round-status-badge/round-status-badge';
+import { Skeleton } from '../../shared/components/skeleton/skeleton';
 import { buildRoundMessage } from '../../shared/utils/round-message.util';
 import { buildClosingMessage } from '../../shared/utils/closing-message.util';
 import { AdminRoundMessages } from './admin-round-messages';
@@ -39,14 +40,40 @@ import { RoundStepper } from './round-stepper';
     RouterLink,
     TranslatePipe,
     Icon,
-    Loading,
     MatchList,
+    PageHeader,
     RoundStatusBadge,
+    Skeleton,
     AdminRoundMessages,
     RoundStepper,
     RoundResultsEditor,
   ],
   templateUrl: './admin-round-detail.html',
+  styles: [
+    `
+      .tools-card > summary {
+        cursor: pointer;
+        list-style: none;
+        color: var(--ink);
+      }
+      .tools-card > summary::-webkit-details-marker {
+        display: none;
+      }
+      .tools-card > summary::after {
+        content: '';
+        width: 0.5rem;
+        height: 0.5rem;
+        margin-left: auto;
+        border-right: 2px solid var(--muted);
+        border-bottom: 2px solid var(--muted);
+        transform: rotate(-45deg);
+        transition: transform 0.15s ease;
+      }
+      .tools-card[open] > summary::after {
+        transform: rotate(45deg);
+      }
+    `,
+  ],
 })
 export class AdminRoundDetail implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -70,6 +97,8 @@ export class AdminRoundDetail implements OnInit {
   /** Sorted matches (stable reference per load) — feeds the inline results editor. */
   protected readonly matches = signal<RoundMatch[]>([]);
   protected readonly closing = signal('');
+  /** Who has predicted everything vs. who is missing — shown while Published. */
+  protected readonly coverage = signal<PredictionCoverage | null>(null);
   private id = '';
 
   /** All matches have a result entered — gate for scoring (mirrors the backend rule). */
@@ -108,8 +137,24 @@ export class AdminRoundDetail implements OnInit {
           this.form.setValue({ number: r.number, title: r.title ?? '' });
           this.loading.set(false);
           this.loadClosing(r);
+          this.loadCoverage(r);
         },
         error: () => this.loading.set(false),
+      });
+  }
+
+  /** Prediction coverage helps decide when to chase stragglers before locking. */
+  private loadCoverage(round: Round): void {
+    if (round.status !== RoundStatus.Published) {
+      this.coverage.set(null);
+      return;
+    }
+    this.adminApi
+      .getPredictionCoverage(round.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (cov) => this.coverage.set(cov),
+        error: () => this.coverage.set(null),
       });
   }
 

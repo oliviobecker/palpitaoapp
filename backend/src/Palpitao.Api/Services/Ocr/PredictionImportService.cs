@@ -75,6 +75,16 @@ public class PredictionImportService : IPredictionImportService
             .FirstOrDefaultAsync(b => b.Id == batchId && b.Round!.GroupId == groupId, ct)
             ?? throw new NotFoundException("notFound.ocrBatch");
 
+        if (batch.Status == OcrBatchStatus.Confirmed)
+        {
+            throw new BusinessRuleException("ocr.batchAlreadyConfirmed");
+        }
+
+        if (batch.Status is not (OcrBatchStatus.Processed or OcrBatchStatus.Reviewed))
+        {
+            throw new BusinessRuleException("ocr.batchNotReviewable");
+        }
+
         var incomplete = batch.Candidates.Any(c =>
             c.UserId is null || c.RoundMatchId is null ||
             c.PredictedHomeScore is null || c.PredictedAwayScore is null ||
@@ -83,6 +93,17 @@ public class PredictionImportService : IPredictionImportService
         if (batch.Candidates.Count == 0 || incomplete)
         {
             throw new BusinessRuleException("ocr.incompleteCandidates");
+        }
+
+        // Two candidates for the same participant+match would silently race on the same
+        // Prediction row below (the second DB lookup cannot see the first pending insert).
+        var hasDuplicates = batch.Candidates
+            .GroupBy(c => (c.UserId, c.RoundMatchId))
+            .Any(g => g.Count() > 1);
+
+        if (hasDuplicates)
+        {
+            throw new BusinessRuleException("ocr.duplicateCandidates");
         }
 
         var now = DateTime.UtcNow;

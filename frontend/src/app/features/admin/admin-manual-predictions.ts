@@ -9,7 +9,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { Participant, Round, RoundMatch } from '../../core/models/models';
@@ -178,6 +178,7 @@ import { Loading } from '../../shared/components/loading/loading';
 })
 export class AdminManualPredictions implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly roundsApi = inject(RoundsService);
   private readonly adminApi = inject(AdminService);
   private readonly toast = inject(ToastService);
@@ -308,6 +309,8 @@ export class AdminManualPredictions implements OnInit {
         next: () => {
           this.saving.set(false);
           this.toast.success(this.translate.instant('manual.saved'));
+          // Back to the round detail, where the coverage panel reflects the new entry.
+          void this.router.navigate(['/admin/rounds', this.roundId]);
         },
         error: () => this.saving.set(false),
       });

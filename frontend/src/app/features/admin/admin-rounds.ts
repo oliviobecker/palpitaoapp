@@ -48,7 +48,11 @@ const STATUS_ORDER: RoundStatus[] = [
     } @else if (error()) {
       <app-error-state (retry)="load()" />
     } @else if (rounds().length === 0) {
-      <app-empty-state [message]="'adminRounds.empty' | translate" />
+      <app-empty-state icon="list" [message]="'adminRounds.empty' | translate">
+        <a class="btn btn-success btn-sm mt-1" routerLink="/admin/rounds/new">
+          <app-icon name="plus" [size]="16" /> {{ 'adminRounds.new' | translate }}
+        </a>
+      </app-empty-state>
     } @else {
       <div class="round-tabs mb-3">
         @for (t of tabs(); track t.key) {

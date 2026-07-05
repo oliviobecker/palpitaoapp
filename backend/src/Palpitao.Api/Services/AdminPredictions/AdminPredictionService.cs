@@ -128,6 +128,48 @@ public class AdminPredictionService : IAdminPredictionService
         };
     }
 
+    public async Task<PredictionCoverageDto> GetCoverageAsync(Guid roundId, CancellationToken ct)
+    {
+        var groupId = await _current.GetGroupIdAsync(ct);
+        var matchCount = await _db.RoundMatches
+            .Where(m => m.RoundId == roundId && m.Round!.GroupId == groupId)
+            .CountAsync(ct);
+        if (matchCount == 0 && !await _db.Rounds.AnyAsync(r => r.Id == roundId && r.GroupId == groupId, ct))
+        {
+            throw new NotFoundException("notFound.round");
+        }
+
+        var participants = await GroupQueries.ActiveParticipants(_db, groupId)
+            .OrderBy(u => u.Name)
+            .Select(u => new { u.Id, u.Name })
+            .ToListAsync(ct);
+
+        var predictedCounts = await _db.Predictions
+            .Where(p => p.RoundId == roundId)
+            .GroupBy(p => p.UserId)
+            .Select(g => new { UserId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.UserId, x => x.Count, ct);
+
+        var missing = participants
+            .Select(u => new PredictionCoverageParticipantDto
+            {
+                UserId = u.Id,
+                Name = u.Name,
+                PredictedCount = predictedCounts.GetValueOrDefault(u.Id),
+            })
+            .Where(p => matchCount == 0 || p.PredictedCount < matchCount)
+            .ToList();
+
+        return new PredictionCoverageDto
+        {
+            RoundId = roundId,
+            MatchCount = matchCount,
+            TotalParticipants = participants.Count,
+            CompleteParticipants = participants.Count - missing.Count,
+            Missing = missing,
+        };
+    }
+
     private static void EnsureRoundOpen(Round round, bool allowAfterDeadline, bool hasJustification)
     {
         var openOnTime = round.Status == RoundStatus.Published

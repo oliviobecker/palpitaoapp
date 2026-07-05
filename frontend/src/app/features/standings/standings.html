@@ -11,6 +11,27 @@
     </a>
   </app-empty-state>
 } @else {
+  <!-- Podium: top three at a glance -->
+  @if (podium().length === 3) {
+    <div class="podium mb-3 fade-in-up">
+      @for (p of podium(); track p.userId) {
+        <div
+          class="podium__slot podium__slot--{{ p.position }}"
+          [class.podium__slot--me]="p.userId === myId()"
+        >
+          <span class="podium__rank">{{ p.position }}</span>
+          <span class="podium__avatar" [style.background]="avatarColor(p.name)">{{
+            initials(p.name)
+          }}</span>
+          <div class="podium__name text-truncate">{{ p.name }}</div>
+          <div class="podium__pts">
+            {{ p.totalPoints }} <small>{{ 'dashboard.pts' | translate }}</small>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
   <!-- Mobile: cards -->
   <div class="vstack gap-2 d-md-none fade-in-up">
     @for (s of standings(); track s.userId) {
@@ -21,9 +42,12 @@
       >
         <div class="card-body py-2 px-3">
           <div class="d-flex justify-content-between align-items-center">
-            <div>
+            <div class="d-flex align-items-center gap-2" style="min-width: 0">
               <span class="fw-bold">#{{ s.position }}</span>
-              <span class="ms-2">{{ s.name }}</span>
+              <span class="rank-avatar" [style.background]="avatarColor(s.name)">{{
+                initials(s.name)
+              }}</span>
+              <span class="text-truncate">{{ s.name }}</span>
               @if (s.userId === myId()) {
                 <span class="badge text-bg-primary ms-1">{{ 'common.you' | translate }}</span>
               }
@@ -64,7 +88,12 @@
           <tr [class.table-primary]="s.userId === myId()" [class.table-danger]="s.isEliminated">
             <td class="fw-bold">{{ s.position }}</td>
             <td>
-              {{ s.name }}
+              <span class="d-inline-flex align-items-center gap-2">
+                <span class="rank-avatar" [style.background]="avatarColor(s.name)">{{
+                  initials(s.name)
+                }}</span>
+                {{ s.name }}
+              </span>
               @if (s.userId === myId()) {
                 <span class="badge text-bg-primary ms-1">{{ 'common.you' | translate }}</span>
               }

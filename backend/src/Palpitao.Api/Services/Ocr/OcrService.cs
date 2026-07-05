@@ -143,7 +143,7 @@ public class OcrService : IOcrService
     public async Task<OcrBatchDto> UpdateCandidateAsync(
         Guid batchId, Guid candidateId, UpdateOcrCandidateRequest request, Guid adminId, CancellationToken ct)
     {
-        await EnsureBatchInGroupAsync(batchId, ct);
+        var batch = await GetEditableBatchAsync(batchId, ct);
         var candidate = await _db.OcrPredictionCandidates
             .FirstOrDefaultAsync(c => c.Id == candidateId && c.OcrImportBatchId == batchId, ct)
             ?? throw new NotFoundException("notFound.ocrCandidate");
@@ -156,21 +156,61 @@ public class OcrService : IOcrService
         candidate.NeedsReview = request.UserId is null || request.RoundMatchId is null
             || request.PredictedHomeScore is null || request.PredictedAwayScore is null
             || request.PredictedHomeScore < 0 || request.PredictedAwayScore < 0;
+        candidate.Confidence = (request.UserId is not null ? 0.5 : 0.0)
+            + (request.RoundMatchId is not null ? 0.5 : 0.0);
         candidate.UpdatedAt = DateTime.UtcNow;
 
+        MarkReviewed(batch);
+        await _db.SaveChangesAsync(ct);
+        return await GetBatchAsync(batchId, ct);
+    }
+
+    public async Task<OcrBatchDto> DeleteCandidateAsync(
+        Guid batchId, Guid candidateId, Guid adminId, CancellationToken ct)
+    {
+        var batch = await GetEditableBatchAsync(batchId, ct);
+        var candidate = await _db.OcrPredictionCandidates
+            .FirstOrDefaultAsync(c => c.Id == candidateId && c.OcrImportBatchId == batchId, ct)
+            ?? throw new NotFoundException("notFound.ocrCandidate");
+
+        _db.OcrPredictionCandidates.Remove(candidate);
+        MarkReviewed(batch);
+        _audit.Add(adminId, "OcrCandidateDeleted", nameof(OcrImportBatch), batch.Id.ToString(),
+            new { candidateId, candidate.ParticipantNameRaw, candidate.MatchTextRaw });
         await _db.SaveChangesAsync(ct);
         return await GetBatchAsync(batchId, ct);
     }
 
     public async Task CancelAsync(Guid batchId, Guid adminId, CancellationToken ct)
     {
-        await EnsureBatchInGroupAsync(batchId, ct);
-        var batch = await _db.OcrImportBatches.FirstOrDefaultAsync(b => b.Id == batchId, ct)
-            ?? throw new NotFoundException("notFound.ocrBatch");
+        var batch = await GetEditableBatchAsync(batchId, ct);
 
         batch.Status = OcrBatchStatus.Failed;
         _audit.Add(adminId, "OcrImportCancelled", nameof(OcrImportBatch), batch.Id.ToString(), null);
         await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Loads a batch in the current group that can still be reviewed (not yet confirmed).</summary>
+    private async Task<OcrImportBatch> GetEditableBatchAsync(Guid batchId, CancellationToken ct)
+    {
+        await EnsureBatchInGroupAsync(batchId, ct);
+        var batch = await _db.OcrImportBatches.FirstOrDefaultAsync(b => b.Id == batchId, ct)
+            ?? throw new NotFoundException("notFound.ocrBatch");
+
+        if (batch.Status == OcrBatchStatus.Confirmed)
+        {
+            throw new BusinessRuleException("ocr.batchAlreadyConfirmed");
+        }
+
+        return batch;
+    }
+
+    private static void MarkReviewed(OcrImportBatch batch)
+    {
+        if (batch.Status == OcrBatchStatus.Processed)
+        {
+            batch.Status = OcrBatchStatus.Reviewed;
+        }
     }
 
     private static string NormalizeLanguage(string? language) => language switch

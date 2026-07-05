@@ -30,4 +30,8 @@ public class AdminPredictionsController : ControllerBase
     public async Task<ActionResult<AdminParticipantPredictionsDto>> Participant(
         Guid roundId, Guid userId, CancellationToken ct)
         => Ok(await _admin.GetParticipantPredictionsAsync(roundId, userId, ct));
+
+    [HttpGet("coverage")]
+    public async Task<ActionResult<PredictionCoverageDto>> Coverage(Guid roundId, CancellationToken ct)
+        => Ok(await _admin.GetCoverageAsync(roundId, ct));
 }

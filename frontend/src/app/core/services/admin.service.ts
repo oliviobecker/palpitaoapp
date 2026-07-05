@@ -9,6 +9,7 @@ import {
   ImportFixturesResponse,
   OcrBatch,
   Participant,
+  PredictionCoverage,
   RefreshResultsResponse,
   RegistrationRequest,
   RoundScout,
@@ -143,6 +144,14 @@ export class AdminService {
     );
   }
 
+  /** Passive round-detail panel: failures degrade silently instead of popping a toast. */
+  getPredictionCoverage(roundId: string): Observable<PredictionCoverage> {
+    return this.http.get<PredictionCoverage>(
+      `${this.base}/rounds/${roundId}/predictions/coverage`,
+      { context: new HttpContext().set(SKIP_ERROR_TOAST, true) },
+    );
+  }
+
   // --- OCR import ---------------------------------------------------------
   importImage(roundId: string, file: File, language: string): Observable<OcrBatch> {
     const form = new FormData();
@@ -172,6 +181,12 @@ export class AdminService {
     return this.http.put<OcrBatch>(
       `${this.base}/ocr-imports/${batchId}/candidates/${candidateId}`,
       body,
+    );
+  }
+
+  deleteOcrCandidate(batchId: string, candidateId: string): Observable<OcrBatch> {
+    return this.http.delete<OcrBatch>(
+      `${this.base}/ocr-imports/${batchId}/candidates/${candidateId}`,
     );
   }
 

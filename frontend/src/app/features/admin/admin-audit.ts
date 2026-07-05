@@ -4,6 +4,7 @@ import {
   ChangeDetectionStrategy,
   DestroyRef,
   OnInit,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -16,8 +17,8 @@ import { AdminService, AuditFilter } from '../../core/services/admin.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Icon } from '../../shared/components/icon/icon';
-import { Loading } from '../../shared/components/loading/loading';
 import { PageHeader } from '../../shared/components/page-header/page-header';
+import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -30,8 +31,8 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
     EmptyState,
     ErrorState,
     Icon,
-    Loading,
     PageHeader,
+    SkeletonList,
   ],
   template: `
     <app-page-header [title]="'adminAudit.title' | translate">
@@ -74,14 +75,14 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
     </div>
 
     @if (loading()) {
-      <app-loading />
+      <app-skeleton-list [count]="6" />
     } @else if (error()) {
       <app-error-state (retry)="apply()" />
     } @else if (logs().length === 0) {
       <app-empty-state [message]="'adminAudit.empty' | translate" />
     } @else {
       <div class="vstack gap-2">
-        @for (log of logs(); track log.id) {
+        @for (log of visibleLogs(); track log.id) {
           <div class="card">
             <div class="card-body py-2 px-3">
               <div class="d-flex justify-content-between">
@@ -103,6 +104,12 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
           </div>
         }
       </div>
+      @if (logs().length > visibleCount()) {
+        <button class="btn btn-outline-secondary w-100 mt-3" (click)="showMore()">
+          {{ 'adminAudit.loadMore' | translate }}
+          <span class="badge text-bg-light ms-1">{{ logs().length - visibleCount() }}</span>
+        </button>
+      }
     }
   `,
 })
@@ -110,10 +117,15 @@ export class AdminAudit implements OnInit {
   private readonly api = inject(AdminService);
   private readonly destroyRef = inject(DestroyRef);
 
+  /** How many rows to reveal per "load more" click. */
+  private static readonly PAGE = 20;
+
   protected readonly entities = ['Round', 'RoundMatch', 'Prediction', 'User', 'Season'];
   protected readonly loading = signal(true);
   protected readonly error = signal(false);
   protected readonly logs = signal<AuditLog[]>([]);
+  protected readonly visibleCount = signal(AdminAudit.PAGE);
+  protected readonly visibleLogs = computed(() => this.logs().slice(0, this.visibleCount()));
 
   protected entityName = '';
   protected from = '';
@@ -123,8 +135,13 @@ export class AdminAudit implements OnInit {
     this.apply();
   }
 
+  showMore(): void {
+    this.visibleCount.update((n) => n + AdminAudit.PAGE);
+  }
+
   apply(): void {
     this.loading.set(true);
+    this.visibleCount.set(AdminAudit.PAGE);
     const filter: AuditFilter = {};
     if (this.entityName) filter.entityName = this.entityName;
     if (this.from) filter.from = `${this.from}T00:00:00`;

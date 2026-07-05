@@ -15,12 +15,13 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { Mirror as MirrorView, MirrorParticipant } from '../../core/models/models';
 import { PredictionsService } from '../../core/services/predictions.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
+import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-mirror',
-  imports: [FormsModule, RouterLink, TranslatePipe, EmptyState, Loading],
+  imports: [FormsModule, RouterLink, TranslatePipe, EmptyState, Icon, Loading],
   templateUrl: './mirror.html',
 })
 export class Mirror implements OnInit {
@@ -35,6 +36,9 @@ export class Mirror implements OnInit {
   protected readonly mirror = signal<MirrorView | null>(null);
   protected readonly participantFilter = signal('');
   protected readonly matchFilter = signal('');
+  protected readonly hasFilters = computed(
+    () => !!this.participantFilter() || !!this.matchFilter(),
+  );
 
   protected readonly matchLabels = computed(() => {
     const map = new Map<string, string>();
@@ -71,6 +75,11 @@ export class Mirror implements OnInit {
           this.loading.set(false);
         },
       });
+  }
+
+  clearFilters(): void {
+    this.participantFilter.set('');
+    this.matchFilter.set('');
   }
 
   matchLabel(roundMatchId: string): string {

@@ -12,7 +12,7 @@
 
 @if (loading()) {
   <app-loading />
-} @else {
+} @else if (!batch()) {
   <!-- Upload -->
   <div class="card mb-3">
     <div class="card-body p-4 vstack gap-3">
@@ -61,6 +61,16 @@
           </div>
           <button type="button" class="file-chip__remove" (click)="removeFile()">×</button>
         </div>
+        @if (previewUrl(); as url) {
+          <button type="button" class="ocr-preview-btn" (click)="togglePreview()">
+            <img
+              [src]="url"
+              class="ocr-preview"
+              [class.ocr-preview--expanded]="previewExpanded()"
+              [alt]="'ocr.preview' | translate"
+            />
+          </button>
+        }
       }
 
       <hr class="my-1" />
@@ -72,8 +82,10 @@
       >
         @if (processing()) {
           <span class="spinner-border spinner-border-sm me-2"></span>
+          {{ 'ocr.processing' | translate }}
+        } @else {
+          <app-icon name="receipt" [size]="16" /> {{ 'ocr.process' | translate }}
         }
-        <app-icon name="receipt" [size]="16" /> {{ 'ocr.process' | translate }}
       </button>
 
       <div class="tip-box">
@@ -81,77 +93,170 @@
       </div>
     </div>
   </div>
-
-  @if (batch(); as b) {
-    <!-- Extracted text -->
-    <div class="card mb-3">
-      <div class="card-body">
-        <h2 class="h6 fw-bold mb-2">{{ 'ocr.extractedText' | translate }}</h2>
-        <pre class="small text-body-secondary mb-0" style="white-space: pre-wrap">{{
-          b.extractedText
-        }}</pre>
+} @else if (batch(); as b) {
+  <div class="row g-3">
+    <!-- Image + raw text, side by side with the candidates on desktop -->
+    <div class="col-12 col-lg-5">
+      <div class="ocr-sticky vstack gap-3">
+        @if (previewUrl(); as url) {
+          <div class="card">
+            <div class="card-body">
+              <h2 class="h6 fw-bold mb-2">{{ 'ocr.preview' | translate }}</h2>
+              <button type="button" class="ocr-preview-btn" (click)="togglePreview()">
+                <img
+                  [src]="url"
+                  class="ocr-preview"
+                  [class.ocr-preview--expanded]="previewExpanded()"
+                  [alt]="'ocr.preview' | translate"
+                />
+              </button>
+            </div>
+          </div>
+        }
+        <div class="card">
+          <div class="card-body">
+            <h2 class="h6 fw-bold mb-2">{{ 'ocr.extractedText' | translate }}</h2>
+            <pre class="small text-body-secondary mb-0" style="white-space: pre-wrap">{{
+              b.extractedText
+            }}</pre>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Candidates -->
-    <h2 class="h6 fw-bold mb-2">{{ 'ocr.candidates' | translate }} ({{ b.candidates.length }})</h2>
-    <div class="vstack gap-2">
-      @for (c of b.candidates; track c.id) {
-        <div class="card" [class.border-warning]="c.needsReview">
-          <div class="card-body py-2 px-3 vstack gap-2">
-            <div class="d-flex justify-content-between align-items-center">
-              <small class="text-muted">{{ c.matchTextRaw }} · {{ c.participantNameRaw }}</small>
+    <div class="col-12 col-lg-7">
+      <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+        <h2 class="h6 fw-bold mb-0">
+          {{ 'ocr.candidates' | translate }} ({{ b.candidates.length }})
+        </h2>
+        @if (needsReviewCount() > 0) {
+          <span class="badge text-bg-warning">
+            {{ 'ocr.needsReviewCount' | translate: { count: needsReviewCount() } }}
+          </span>
+        } @else {
+          <span class="badge text-bg-success">{{ 'ocr.allResolved' | translate }}</span>
+        }
+      </div>
+
+      <div class="vstack gap-2">
+        @for (c of b.candidates; track c.id) {
+          <div class="card" [class.border-warning]="c.needsReview">
+            <div class="card-body py-2 px-3 vstack gap-2">
+              <div class="d-flex justify-content-between align-items-center gap-2">
+                <small class="text-muted text-truncate">
+                  {{ c.matchTextRaw }} · {{ c.participantNameRaw }}
+                </small>
+                <div class="d-flex align-items-center gap-2" style="flex: none">
+                  @switch (saveStateOf(c.id)) {
+                    @case ('pending') {
+                      <small class="text-muted">{{ 'ocr.saving' | translate }}</small>
+                    }
+                    @case ('saving') {
+                      <small class="text-muted">{{ 'ocr.saving' | translate }}</small>
+                    }
+                    @case ('saved') {
+                      <small class="text-success">{{ 'ocr.saved' | translate }}</small>
+                    }
+                    @case ('error') {
+                      <button
+                        type="button"
+                        class="btn btn-link btn-sm p-0 text-danger"
+                        (click)="retrySave(c)"
+                      >
+                        {{ 'ocr.saveError' | translate }}
+                      </button>
+                    }
+                  }
+                  <span
+                    class="badge"
+                    [class.text-bg-warning]="c.needsReview"
+                    [class.text-bg-success]="!c.needsReview"
+                    [title]="'ocr.confidence' | translate"
+                  >
+                    {{ confidencePct(c) }}%
+                  </span>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger"
+                    (click)="discard(c)"
+                    [attr.aria-label]="'ocr.discard' | translate"
+                    [title]="'ocr.discard' | translate"
+                  >
+                    <app-icon name="trash-2" [size]="14" />
+                  </button>
+                </div>
+              </div>
+
               @if (c.needsReview) {
-                <span class="badge text-bg-warning">{{ 'ocr.needsReview' | translate }}</span>
+                <small class="text-warning-emphasis">
+                  {{ 'ocr.needsReview' | translate }}: {{ missingReasons(c) }}
+                </small>
               }
-            </div>
 
-            <select class="form-select form-select-sm" [(ngModel)]="c.userId">
-              <option [ngValue]="null">{{ 'ocr.noParticipant' | translate }}</option>
-              @for (p of participants(); track p.id) {
-                <option [ngValue]="p.id">{{ p.name }}</option>
-              }
-            </select>
+              <select
+                class="form-select form-select-sm"
+                [(ngModel)]="c.userId"
+                (ngModelChange)="scheduleSave(c)"
+              >
+                <option [ngValue]="null">{{ 'ocr.noParticipant' | translate }}</option>
+                @for (p of participants(); track p.id) {
+                  <option [ngValue]="p.id">{{ p.name }}</option>
+                }
+              </select>
 
-            <select class="form-select form-select-sm" [(ngModel)]="c.roundMatchId">
-              <option [ngValue]="null">{{ 'ocr.noMatch' | translate }}</option>
-              @for (m of round()?.matches ?? []; track m.id) {
-                <option [ngValue]="m.id">{{ m.homeTeamName }} x {{ m.awayTeamName }}</option>
-              }
-            </select>
+              <select
+                class="form-select form-select-sm"
+                [(ngModel)]="c.roundMatchId"
+                (ngModelChange)="scheduleSave(c)"
+              >
+                <option [ngValue]="null">{{ 'ocr.noMatch' | translate }}</option>
+                @for (m of round()?.matches ?? []; track m.id) {
+                  <option [ngValue]="m.id">{{ m.homeTeamName }} x {{ m.awayTeamName }}</option>
+                }
+              </select>
 
-            <div class="d-flex align-items-center gap-2">
-              <input
-                type="number"
-                min="0"
-                class="form-control form-control-sm text-center"
-                style="max-width: 4rem"
-                [(ngModel)]="c.predictedHomeScore"
-              />
-              <span class="text-muted">x</span>
-              <input
-                type="number"
-                min="0"
-                class="form-control form-control-sm text-center"
-                style="max-width: 4rem"
-                [(ngModel)]="c.predictedAwayScore"
-              />
-              <button class="btn btn-sm btn-outline-secondary ms-auto" (click)="saveCandidate(c)">
-                {{ 'common.save' | translate }}
-              </button>
+              <div class="d-flex align-items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  class="form-control form-control-sm text-center"
+                  style="max-width: 4rem"
+                  [(ngModel)]="c.predictedHomeScore"
+                  (ngModelChange)="scheduleSave(c)"
+                />
+                <span class="text-muted">x</span>
+                <input
+                  type="number"
+                  min="0"
+                  class="form-control form-control-sm text-center"
+                  style="max-width: 4rem"
+                  [(ngModel)]="c.predictedAwayScore"
+                  (ngModelChange)="scheduleSave(c)"
+                />
+              </div>
             </div>
           </div>
-        </div>
-      }
-    </div>
+        } @empty {
+          <p class="text-muted small mb-0">{{ 'ocr.noCandidates' | translate }}</p>
+        }
+      </div>
 
-    <div class="d-grid gap-2 mt-3">
-      <button class="btn btn-success btn-lg" (click)="confirm()">
-        {{ 'ocr.confirm' | translate }}
-      </button>
-      <button class="btn btn-outline-danger" (click)="cancel()">
-        {{ 'ocr.cancel' | translate }}
-      </button>
+      <div class="d-grid gap-2 mt-3">
+        <button
+          class="btn btn-success btn-lg"
+          (click)="confirm()"
+          [disabled]="confirming() || hasUnsavedEdits() || b.candidates.length === 0"
+        >
+          @if (confirming()) {
+            <span class="spinner-border spinner-border-sm me-2"></span>
+          }
+          {{ 'ocr.confirm' | translate }}
+        </button>
+        <button class="btn btn-outline-danger" (click)="cancel()">
+          {{ 'ocr.cancel' | translate }}
+        </button>
+      </div>
     </div>
-  }
+  </div>
 }

@@ -225,6 +225,11 @@ public static class DomainMessages
             ["ocr.emptyFile"] = ("Arquivo de imagem vazio.", "Empty image file."),
             ["ocr.tooLarge"] = ("A imagem deve ter no máximo 10 MB.", "The image must be at most 10 MB."),
             ["ocr.incompleteCandidates"] = ("Há candidatos incompletos. Revise antes de confirmar a importação.", "There are incomplete candidates. Review before confirming the import."),
+            ["ocr.duplicateCandidates"] = (
+                "Há candidatos duplicados (mesmo participante e jogo). Ajuste ou descarte antes de confirmar.",
+                "There are duplicate candidates (same participant and match). Adjust or discard them before confirming."),
+            ["ocr.batchAlreadyConfirmed"] = ("Esta importação já foi confirmada.", "This import has already been confirmed."),
+            ["ocr.batchNotReviewable"] = ("Esta importação não está disponível para confirmação.", "This import is not available for confirmation."),
             ["ocr.processFailed"] = (
                 "Não foi possível processar a imagem com OCR. Verifique os arquivos de idioma (tessdata).",
                 "Could not process the image with OCR. Check the language files (tessdata)."),

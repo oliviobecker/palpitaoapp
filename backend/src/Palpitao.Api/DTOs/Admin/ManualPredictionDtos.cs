@@ -39,3 +39,25 @@ public class AdminPredictionItemDto
     public PredictionSource Source { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }
+
+/// <summary>Who has already predicted the whole round — helps the admin decide when to
+/// chase stragglers (OCR/manual entry) before locking.</summary>
+public class PredictionCoverageDto
+{
+    public Guid RoundId { get; set; }
+    public int MatchCount { get; set; }
+    public int TotalParticipants { get; set; }
+
+    /// <summary>Participants with a prediction for every match of the round.</summary>
+    public int CompleteParticipants { get; set; }
+
+    /// <summary>Active participants still missing at least one prediction.</summary>
+    public List<PredictionCoverageParticipantDto> Missing { get; set; } = new();
+}
+
+public class PredictionCoverageParticipantDto
+{
+    public Guid UserId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int PredictedCount { get; set; }
+}

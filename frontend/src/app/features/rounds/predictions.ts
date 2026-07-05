@@ -14,6 +14,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
+import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
 import { RoundStatus, TournamentType, WORLD_CUP_FLAVIO_PHASES } from '../../core/models/enums';
 import { Round, RoundMatch, ScoringConfig } from '../../core/models/models';
 import { ToastService } from '../../core/notifications/toast.service';
@@ -107,7 +108,7 @@ import {
     `,
   ],
 })
-export class Predictions implements OnInit, OnDestroy {
+export class Predictions implements OnInit, OnDestroy, HasUnsavedChanges {
   private readonly route = inject(ActivatedRoute);
   private readonly roundsApi = inject(RoundsService);
   private readonly predictionsApi = inject(PredictionsService);
@@ -145,6 +146,10 @@ export class Predictions implements OnInit, OnDestroy {
   protected readonly error = signal(false);
   protected readonly saving = signal(false);
   protected readonly saved = signal(false);
+  /** True right after an explicit save in this session — drives the success panel. */
+  protected readonly justSaved = signal(false);
+  /** Edits made since the last server submit (drives the unsaved-changes guard). */
+  private readonly dirty = signal(false);
   /** True when an unsaved local draft was restored on load. */
   protected readonly draftRestored = signal(false);
   /** Count of fully-filled (valid) match rows, for the status bar. */
@@ -276,6 +281,7 @@ export class Predictions implements OnInit, OnDestroy {
               this.applyDraft(draft);
               this.saved.set(false);
               this.draftRestored.set(true);
+              this.dirty.set(true);
             }
           }
           this.recountFilled();
@@ -294,8 +300,15 @@ export class Predictions implements OnInit, OnDestroy {
 
   onInput(): void {
     this.saved.set(false);
+    this.justSaved.set(false);
+    this.dirty.set(true);
     this.recountFilled();
     this.persistDraft();
+  }
+
+  /** Used by the unsaved-changes route guard: warn only while editable with pending edits. */
+  hasUnsavedChanges(): boolean {
+    return this.editable() && this.dirty();
   }
 
   save(): void {
@@ -321,6 +334,8 @@ export class Predictions implements OnInit, OnDestroy {
         this.isEdit = true;
         this.saving.set(false);
         this.saved.set(true);
+        this.justSaved.set(true);
+        this.dirty.set(false);
         this.draftRestored.set(false);
         this.clearDraft();
         this.toast.success(this.translate.instant('predictions.savedToast'));
