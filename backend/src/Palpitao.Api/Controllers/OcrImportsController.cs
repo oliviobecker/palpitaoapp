@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Palpitao.Api.Auth;
 using Palpitao.Api.Common;
 using Palpitao.Api.DTOs.Admin;
@@ -24,7 +25,10 @@ public class OcrImportsController : ControllerBase
     }
 
     [HttpPost("rounds/{roundId:guid}/predictions/import-image")]
-    [RequestSizeLimit(12 * 1024 * 1024)]
+    // 2 MB of headroom over the 10 MB image limit for the multipart envelope, so an
+    // exactly-10MB file still reaches ValidateFile (which returns the localized error).
+    [RequestSizeLimit(OcrService.MaxImageBytes + 2 * 1024 * 1024)]
+    [EnableRateLimiting("ocr")]
     public async Task<ActionResult<OcrBatchDto>> Import(
         Guid roundId, [FromForm] IFormFile? file, [FromForm] string? language, CancellationToken ct)
     {

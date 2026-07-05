@@ -95,6 +95,11 @@ builder.Services.AddAuthorization();
 const string AuthRateLimitPolicy = "auth";
 var authRateLimitPermit = builder.Configuration.GetValue<int?>("RateLimiting:Auth:PermitLimit") ?? 20;
 var authRateLimitWindowSeconds = builder.Configuration.GetValue<int?>("RateLimiting:Auth:WindowSeconds") ?? 60;
+// OCR image processing is CPU-bound (Tesseract) with up-to-10MB uploads, so the
+// import endpoint gets its own per-admin throttle. Tunable via "RateLimiting:Ocr".
+const string OcrRateLimitPolicy = "ocr";
+var ocrRateLimitPermit = builder.Configuration.GetValue<int?>("RateLimiting:Ocr:PermitLimit") ?? 5;
+var ocrRateLimitWindowSeconds = builder.Configuration.GetValue<int?>("RateLimiting:Ocr:WindowSeconds") ?? 60;
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -105,6 +110,18 @@ builder.Services.AddRateLimiter(options =>
             {
                 PermitLimit = authRateLimitPermit,
                 Window = TimeSpan.FromSeconds(authRateLimitWindowSeconds),
+                QueueLimit = 0,
+            }));
+
+    // Authenticated endpoint: partition by user id (falls back to IP pre-auth).
+    options.AddPolicy(OcrRateLimitPolicy, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = ocrRateLimitPermit,
+                Window = TimeSpan.FromSeconds(ocrRateLimitWindowSeconds),
                 QueueLimit = 0,
             }));
 

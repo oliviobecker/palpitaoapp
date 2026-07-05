@@ -11,7 +11,8 @@ namespace Palpitao.Api.Services.Ocr;
 
 public class OcrService : IOcrService
 {
-    private const long MaxBytes = 10 * 1024 * 1024; // 10 MB
+    /// <summary>Validation limit for the uploaded image (the request-size limit adds multipart headroom).</summary>
+    public const long MaxImageBytes = 10 * 1024 * 1024; // 10 MB
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".png", ".jpg", ".jpeg", ".webp",
@@ -66,7 +67,7 @@ public class OcrService : IOcrService
             throw new BusinessRuleException("ocr.emptyFile");
         }
 
-        if (length > MaxBytes)
+        if (length > MaxImageBytes)
         {
             throw new BusinessRuleException("ocr.tooLarge");
         }
