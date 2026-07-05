@@ -13,5 +13,8 @@ public interface IOcrService
     Task<OcrBatchDto> UpdateCandidateAsync(
         Guid batchId, Guid candidateId, UpdateOcrCandidateRequest request, Guid adminId, CancellationToken ct);
 
+    /// <summary>Discards a candidate (e.g. OCR noise) so it no longer blocks confirmation.</summary>
+    Task<OcrBatchDto> DeleteCandidateAsync(Guid batchId, Guid candidateId, Guid adminId, CancellationToken ct);
+
     Task CancelAsync(Guid batchId, Guid adminId, CancellationToken ct);
 }

@@ -292,4 +292,44 @@ public class PredictionImportServiceTests
 
         await Assert.ThrowsAsync<BusinessRuleException>(() => service.ConfirmAsync(batchId, Admin, Ct));
     }
+
+    [Fact]
+    public async Task Confirm_fails_when_already_confirmed()
+    {
+        using var db = CreateContext();
+        var (roundId, matchId, userId) = SeedRound(db);
+        var batchId = SeedBatch(db, roundId, matchId, userId, 2, 1);
+        var service = new PredictionImportService(db, new AuditService(db), new FakeCurrentGroupService());
+        await service.ConfirmAsync(batchId, Admin, Ct);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => service.ConfirmAsync(batchId, Admin, Ct));
+        Assert.Equal("ocr.batchAlreadyConfirmed", ex.Key);
+    }
+
+    [Fact]
+    public async Task Confirm_fails_with_duplicate_candidates()
+    {
+        using var db = CreateContext();
+        var (roundId, matchId, userId) = SeedRound(db);
+        var batchId = SeedBatch(db, roundId, matchId, userId, 2, 1);
+        // A second candidate for the same participant+match (e.g. the same line OCRed twice).
+        db.OcrPredictionCandidates.Add(new OcrPredictionCandidate
+        {
+            Id = Guid.NewGuid(),
+            OcrImportBatchId = batchId,
+            RoundId = roundId,
+            UserId = userId,
+            RoundMatchId = matchId,
+            PredictedHomeScore = 0,
+            PredictedAwayScore = 0,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        });
+        db.SaveChanges();
+        var service = new PredictionImportService(db, new AuditService(db), new FakeCurrentGroupService());
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => service.ConfirmAsync(batchId, Admin, Ct));
+        Assert.Equal("ocr.duplicateCandidates", ex.Key);
+        Assert.Empty(await db.Predictions.ToListAsync());
+    }
 }
