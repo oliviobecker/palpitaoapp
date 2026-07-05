@@ -9,11 +9,12 @@ import { MyGroup } from '../../core/models/models';
 import { httpErrorMessage } from '../../core/notifications/http-error';
 import { GroupContextService } from '../../core/services/group-context.service';
 import { GroupsService } from '../../core/services/groups.service';
+import { FormField } from '../../shared/components/form-field/form-field';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-login',
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, FormField],
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })

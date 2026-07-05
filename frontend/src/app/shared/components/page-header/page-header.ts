@@ -21,6 +21,9 @@ import { Component, ChangeDetectionStrategy, input } from '@angular/core';
         }
         <ng-content select="[trail]" />
         <h1 class="h4 fw-bold mb-0">{{ title() }}</h1>
+        @if (subtitle()) {
+          <p class="text-muted small mb-0 mt-1">{{ subtitle() }}</p>
+        }
       </div>
       <ng-content />
     </div>
@@ -29,4 +32,5 @@ import { Component, ChangeDetectionStrategy, input } from '@angular/core';
 export class PageHeader {
   readonly title = input.required<string>();
   readonly trail = input<string>('');
+  readonly subtitle = input<string>('');
 }

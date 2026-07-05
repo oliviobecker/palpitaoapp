@@ -232,6 +232,19 @@ h6 {
   border-color: #2563eb;
 }
 
+// app-form-field marks itself .is-invalid while its error shows; colour the
+// projected field (and icon box) without per-input [class.is-invalid] bindings.
+app-form-field.is-invalid .form-control,
+app-form-field.is-invalid .form-select,
+app-form-field.is-invalid .input-group-text {
+  border-color: var(--bs-form-invalid-border-color);
+}
+app-form-field.is-invalid .form-control:focus,
+app-form-field.is-invalid .form-select:focus {
+  border-color: var(--bs-form-invalid-border-color);
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.14);
+}
+
 // Soft (tinted) button — quiet primary action like "Search fixtures".
 .btn-soft-primary {
   --bs-btn-color: #2563eb;

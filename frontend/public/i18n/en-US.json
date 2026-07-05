@@ -163,6 +163,13 @@
     "yes": "Confirm",
     "no": "Cancel"
   },
+  "validation": {
+    "required": "This field is required.",
+    "nameRequired": "Enter the name.",
+    "emailInvalid": "Enter a valid e-mail.",
+    "passwordWeak": "The password must be at least 8 characters long and include at least one letter and one number.",
+    "endBeforeStart": "The end date must be after the start date."
+  },
   "dashboard": {
     "title": "Home",
     "points": "Points",
@@ -564,9 +571,9 @@
     "round": "Round",
     "absenceLine": "absence #{{n}} (penalty: {{penalty}})",
     "confirmEliminate": "Eliminate {{name}} from the championship?",
+    "confirmReactivate": "Reactivate {{name}} in the championship?",
     "promptEliminate": "Elimination justification:",
     "promptReactivate": "Reactivation justification:",
-    "justificationRequired": "Justification is required.",
     "saved": "Participant saved!",
     "activatedMsg": "Participant activated.",
     "deactivatedMsg": "Participant deactivated.",

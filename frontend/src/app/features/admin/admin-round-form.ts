@@ -21,30 +21,45 @@ import {
   FixtureSelection,
   FixtureSelectionState,
 } from '../../shared/components/fixture-selection/fixture-selection';
+import { FormField } from '../../shared/components/form-field/form-field';
 import { Icon } from '../../shared/components/icon/icon';
+import { PageHeader } from '../../shared/components/page-header/page-header';
 import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util';
 import { ordinalRoundName } from '../../shared/utils/round-name.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-round-form',
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, FixtureSelection, Icon],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    TranslatePipe,
+    FixtureSelection,
+    FormField,
+    Icon,
+    PageHeader,
+  ],
   template: `
-    <div class="mb-3">
-      <div class="page-trail">
+    <app-page-header
+      [title]="'roundForm.title' | translate"
+      [subtitle]="'roundForm.subtitle' | translate"
+    >
+      <div trail class="page-trail">
         <a routerLink="/admin">Admin</a> ·
         <a routerLink="/admin/rounds">{{ 'nav.rounds' | translate }}</a> ·
         {{ 'adminRounds.new' | translate }}
       </div>
-      <h1 class="h4 fw-bold mb-1">{{ 'roundForm.title' | translate }}</h1>
-      <p class="text-muted small mb-0">{{ 'roundForm.subtitle' | translate }}</p>
-    </div>
+    </app-page-header>
 
     <div class="card mb-3">
       <div class="card-body p-4">
         <form [formGroup]="form" class="vstack gap-3">
-          <div>
-            <label for="rf-season" class="form-label">{{ 'roundForm.season' | translate }}</label>
+          <app-form-field
+            [label]="'roundForm.season' | translate"
+            forId="rf-season"
+            [control]="form.controls.seasonId"
+            [errors]="{ default: 'validation.required' | translate }"
+          >
             <div class="input-group input-group-lg">
               <span class="input-group-text"><app-icon name="trophy" [size]="16" /></span>
               <select id="rf-season" class="form-select" formControlName="seasonId">
@@ -54,10 +69,14 @@ import { ordinalRoundName } from '../../shared/utils/round-name.util';
                 }
               </select>
             </div>
-          </div>
+          </app-form-field>
 
-          <div>
-            <label for="rf-number" class="form-label">{{ 'roundForm.number' | translate }}</label>
+          <app-form-field
+            [label]="'roundForm.number' | translate"
+            forId="rf-number"
+            [control]="form.controls.number"
+            [errors]="{ default: 'validation.required' | translate }"
+          >
             <div class="input-group input-group-lg">
               <span class="input-group-text">#</span>
               <input
@@ -68,12 +87,14 @@ import { ordinalRoundName } from '../../shared/utils/round-name.util';
                 formControlName="number"
               />
             </div>
-          </div>
+          </app-form-field>
 
-          <div>
-            <label for="rf-title" class="form-label"
-              >{{ 'roundForm.name' | translate }} {{ 'common.optional' | translate }}</label
-            >
+          <app-form-field
+            [label]="
+              ('roundForm.name' | translate) + ' ' + ('common.optional' | translate)
+            "
+            forId="rf-title"
+          >
             <div class="input-group input-group-lg">
               <span class="input-group-text"><app-icon name="tag" [size]="16" /></span>
               <input
@@ -83,36 +104,51 @@ import { ordinalRoundName } from '../../shared/utils/round-name.util';
                 [placeholder]="'roundForm.namePlaceholder' | translate"
               />
             </div>
-          </div>
+          </app-form-field>
 
           <div class="row g-3">
             <div class="col-6">
-              <label for="rf-startDate" class="form-label">{{
-                'roundForm.startDate' | translate
-              }}</label>
-              <div class="input-group input-group-lg">
-                <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
-                <input
-                  id="rf-startDate"
-                  type="date"
-                  class="form-control"
-                  formControlName="startDate"
-                />
-              </div>
+              <app-form-field
+                [label]="'roundForm.startDate' | translate"
+                forId="rf-startDate"
+                [control]="form.controls.startDate"
+                [errors]="{ default: 'validation.required' | translate }"
+              >
+                <div class="input-group input-group-lg">
+                  <span class="input-group-text"
+                    ><app-icon name="calendar-days" [size]="16"
+                  /></span>
+                  <input
+                    id="rf-startDate"
+                    type="date"
+                    class="form-control"
+                    formControlName="startDate"
+                  />
+                </div>
+              </app-form-field>
             </div>
             <div class="col-6">
-              <label for="rf-endDate" class="form-label">{{
-                'roundForm.endDate' | translate
-              }}</label>
-              <div class="input-group input-group-lg">
-                <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
-                <input id="rf-endDate" type="date" class="form-control" formControlName="endDate" />
-              </div>
+              <app-form-field
+                [label]="'roundForm.endDate' | translate"
+                forId="rf-endDate"
+                [control]="form.controls.endDate"
+                [errors]="{ default: 'validation.required' | translate }"
+                [forceError]="dateRangeInvalid() ? ('fixtures.endBeforeStart' | translate) : ''"
+              >
+                <div class="input-group input-group-lg">
+                  <span class="input-group-text"
+                    ><app-icon name="calendar-days" [size]="16"
+                  /></span>
+                  <input
+                    id="rf-endDate"
+                    type="date"
+                    class="form-control"
+                    formControlName="endDate"
+                  />
+                </div>
+              </app-form-field>
             </div>
           </div>
-          @if (dateRangeInvalid()) {
-            <div class="text-danger small">{{ 'fixtures.endBeforeStart' | translate }}</div>
-          }
 
           <hr class="my-1" />
 

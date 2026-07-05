@@ -17,6 +17,7 @@ import { PublicGroup } from '../../core/models/models';
 import { httpErrorMessage } from '../../core/notifications/http-error';
 import { AuthService } from '../../core/auth/auth.service';
 import { GroupsService } from '../../core/services/groups.service';
+import { FormField } from '../../shared/components/form-field/form-field';
 
 /** Form-level validator: confirmPassword must equal password. */
 export function passwordsMatch(group: AbstractControl): ValidationErrors | null {
@@ -28,7 +29,7 @@ export function passwordsMatch(group: AbstractControl): ValidationErrors | null 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-register',
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, FormField],
   template: `
     <div class="auth-wrapper">
       <div class="auth-card">
@@ -71,97 +72,89 @@ export function passwordsMatch(group: AbstractControl): ValidationErrors | null 
             }
 
             <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-              <div class="mb-3">
-                <label for="groupId" class="form-label">{{ 'register.group' | translate }}</label>
-                <select
-                  id="groupId"
-                  class="form-select form-select-lg"
-                  formControlName="groupId"
-                  [class.is-invalid]="
-                    form.controls.groupId.touched && form.controls.groupId.invalid
-                  "
-                >
+              <app-form-field
+                class="mb-3"
+                [label]="'register.group' | translate"
+                forId="groupId"
+                [control]="form.controls.groupId"
+                [errors]="{ default: 'register.groupRequired' | translate }"
+              >
+                <select id="groupId" class="form-select form-select-lg" formControlName="groupId">
                   <option value="" disabled>{{ 'register.groupPlaceholder' | translate }}</option>
                   @for (g of groups(); track g.id) {
                     <option [value]="g.id">{{ g.name }}</option>
                   }
                 </select>
-                @if (form.controls.groupId.touched && form.controls.groupId.invalid) {
-                  <div class="invalid-feedback">{{ 'register.groupRequired' | translate }}</div>
-                }
-              </div>
+              </app-form-field>
 
-              <div class="mb-3">
-                <label for="name" class="form-label">{{ 'register.name' | translate }}</label>
+              <app-form-field
+                class="mb-3"
+                [label]="'register.name' | translate"
+                forId="name"
+                [control]="form.controls.name"
+                [errors]="{ default: 'register.nameRequired' | translate }"
+              >
                 <input
                   id="name"
                   type="text"
                   class="form-control form-control-lg"
                   formControlName="name"
                   autocomplete="name"
-                  [class.is-invalid]="form.controls.name.touched && form.controls.name.invalid"
                 />
-                @if (form.controls.name.touched && form.controls.name.invalid) {
-                  <div class="invalid-feedback">{{ 'register.nameRequired' | translate }}</div>
-                }
-              </div>
+              </app-form-field>
 
-              <div class="mb-3">
-                <label for="email" class="form-label">{{ 'register.email' | translate }}</label>
+              <app-form-field
+                class="mb-3"
+                [label]="'register.email' | translate"
+                forId="email"
+                [control]="form.controls.email"
+                [errors]="{ default: 'register.emailInvalid' | translate }"
+              >
                 <input
                   id="email"
                   type="email"
                   class="form-control form-control-lg"
                   formControlName="email"
                   autocomplete="username"
-                  [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid"
                 />
-                @if (form.controls.email.touched && form.controls.email.invalid) {
-                  <div class="invalid-feedback">{{ 'register.emailInvalid' | translate }}</div>
-                }
-              </div>
+              </app-form-field>
 
-              <div class="mb-3">
-                <label for="password" class="form-label">{{
-                  'register.password' | translate
-                }}</label>
+              <app-form-field
+                class="mb-3"
+                [label]="'register.password' | translate"
+                forId="password"
+                [control]="form.controls.password"
+                [errors]="{ default: 'register.passwordWeak' | translate }"
+                [hint]="'register.passwordHint' | translate"
+              >
                 <input
                   id="password"
                   type="password"
                   class="form-control form-control-lg"
                   formControlName="password"
                   autocomplete="new-password"
-                  [class.is-invalid]="
-                    form.controls.password.touched && form.controls.password.invalid
-                  "
                 />
-                @if (form.controls.password.touched && form.controls.password.invalid) {
-                  <div class="invalid-feedback">{{ 'register.passwordWeak' | translate }}</div>
-                }
-                <div class="form-text">{{ 'register.passwordHint' | translate }}</div>
-              </div>
+              </app-form-field>
 
-              <div class="mb-4">
-                <label for="confirmPassword" class="form-label">{{
-                  'register.confirmPassword' | translate
-                }}</label>
+              <app-form-field
+                class="mb-4"
+                [label]="'register.confirmPassword' | translate"
+                forId="confirmPassword"
+                [control]="form.controls.confirmPassword"
+                [forceError]="
+                  form.controls.confirmPassword.touched && form.hasError('passwordMismatch')
+                    ? ('register.passwordMismatch' | translate)
+                    : ''
+                "
+              >
                 <input
                   id="confirmPassword"
                   type="password"
                   class="form-control form-control-lg"
                   formControlName="confirmPassword"
                   autocomplete="new-password"
-                  [class.is-invalid]="
-                    form.controls.confirmPassword.touched &&
-                    (form.controls.confirmPassword.invalid || form.hasError('passwordMismatch'))
-                  "
                 />
-                @if (form.controls.confirmPassword.touched && form.hasError('passwordMismatch')) {
-                  <div class="invalid-feedback d-block">
-                    {{ 'register.passwordMismatch' | translate }}
-                  </div>
-                }
-              </div>
+              </app-form-field>
 
               <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="submitting()">
                 @if (submitting()) {

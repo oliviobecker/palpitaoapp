@@ -16,6 +16,7 @@ import { ToastService } from '../../core/notifications/toast.service';
 import { AdminService } from '../../core/services/admin.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { ErrorState } from '../../shared/components/error-state/error-state';
+import { FormField } from '../../shared/components/form-field/form-field';
 import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
 import { PageHeader } from '../../shared/components/page-header/page-header';
@@ -29,6 +30,7 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
     TranslatePipe,
     EmptyState,
     ErrorState,
+    FormField,
     Icon,
     Loading,
     PageHeader,
@@ -49,32 +51,57 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
           </h2>
         </div>
         <form [formGroup]="form" (ngSubmit)="save()" class="vstack gap-3">
-          <div class="input-group input-group-lg">
-            <span class="input-group-text"><app-icon name="user" [size]="16" /></span>
-            <input
-              class="form-control"
-              [placeholder]="'adminParticipants.name' | translate"
-              formControlName="name"
-            />
-          </div>
-          <div class="input-group input-group-lg">
-            <span class="input-group-text"><app-icon name="mail" [size]="16" /></span>
-            <input
-              class="form-control"
-              [placeholder]="'adminParticipants.email' | translate"
-              formControlName="email"
-            />
-          </div>
-          @if (!editingId()) {
+          <app-form-field
+            [label]="'adminParticipants.name' | translate"
+            forId="p-name"
+            [control]="form.controls.name"
+            [errors]="{ default: 'validation.nameRequired' | translate }"
+          >
             <div class="input-group input-group-lg">
-              <span class="input-group-text"><app-icon name="lock" [size]="16" /></span>
+              <span class="input-group-text"><app-icon name="user" [size]="16" /></span>
               <input
-                type="password"
+                id="p-name"
                 class="form-control"
-                [placeholder]="'adminParticipants.password' | translate"
-                formControlName="password"
+                [placeholder]="'adminParticipants.name' | translate"
+                formControlName="name"
               />
             </div>
+          </app-form-field>
+          <app-form-field
+            [label]="'adminParticipants.email' | translate"
+            forId="p-email"
+            [control]="form.controls.email"
+            [errors]="{ default: 'validation.emailInvalid' | translate }"
+          >
+            <div class="input-group input-group-lg">
+              <span class="input-group-text"><app-icon name="mail" [size]="16" /></span>
+              <input
+                id="p-email"
+                class="form-control"
+                [placeholder]="'adminParticipants.email' | translate"
+                formControlName="email"
+              />
+            </div>
+          </app-form-field>
+          @if (!editingId()) {
+            <app-form-field
+              [label]="'adminParticipants.password' | translate"
+              forId="p-password"
+              [control]="form.controls.password"
+              [errors]="{ default: 'validation.passwordWeak' | translate }"
+              [hint]="'register.passwordHint' | translate"
+            >
+              <div class="input-group input-group-lg">
+                <span class="input-group-text"><app-icon name="lock" [size]="16" /></span>
+                <input
+                  id="p-password"
+                  type="password"
+                  class="form-control"
+                  [placeholder]="'adminParticipants.password' | translate"
+                  formControlName="password"
+                />
+              </div>
+            </app-form-field>
           }
           <div class="d-flex gap-2">
             <button
@@ -276,34 +303,32 @@ export class AdminParticipants implements OnInit {
   }
 
   async eliminate(p: Participant): Promise<void> {
-    const ok = await this.confirm.ask(
+    const justification = await this.confirm.askWithInput(
       this.translate.instant('adminParticipants.confirmEliminate', { name: p.name }),
       {
         title: this.translate.instant('adminParticipants.eliminate'),
         confirmText: this.translate.instant('adminParticipants.eliminate'),
         danger: true,
+        inputLabel: this.translate.instant('adminParticipants.promptEliminate'),
       },
     );
-    if (!ok) return;
-    const justification =
-      window.prompt(this.translate.instant('adminParticipants.promptEliminate')) ?? '';
-    if (!justification.trim()) {
-      this.toast.error(this.translate.instant('adminParticipants.justificationRequired'));
-      return;
-    }
+    if (justification === null) return;
     this.api
       .eliminateParticipant(p.id, justification)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ next: () => this.afterAction('adminParticipants.eliminatedMsg') });
   }
 
-  reactivate(p: Participant): void {
-    const justification =
-      window.prompt(this.translate.instant('adminParticipants.promptReactivate')) ?? '';
-    if (!justification.trim()) {
-      this.toast.error(this.translate.instant('adminParticipants.justificationRequired'));
-      return;
-    }
+  async reactivate(p: Participant): Promise<void> {
+    const justification = await this.confirm.askWithInput(
+      this.translate.instant('adminParticipants.confirmReactivate', { name: p.name }),
+      {
+        title: this.translate.instant('adminParticipants.reactivate'),
+        confirmText: this.translate.instant('adminParticipants.reactivate'),
+        inputLabel: this.translate.instant('adminParticipants.promptReactivate'),
+      },
+    );
+    if (justification === null) return;
     this.api
       .reactivate(p.id, justification)
       .pipe(takeUntilDestroyed(this.destroyRef))

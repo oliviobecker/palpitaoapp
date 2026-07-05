@@ -163,6 +163,13 @@
     "yes": "Confirmar",
     "no": "Cancelar"
   },
+  "validation": {
+    "required": "Campo obrigatório.",
+    "nameRequired": "Informe o nome.",
+    "emailInvalid": "Informe um e-mail válido.",
+    "passwordWeak": "A senha deve ter pelo menos 8 caracteres, incluindo uma letra e um número.",
+    "endBeforeStart": "A data final deve ser posterior à inicial."
+  },
   "dashboard": {
     "title": "Início",
     "points": "Pontuação",
@@ -564,9 +571,9 @@
     "round": "Rodada",
     "absenceLine": "{{n}}ª ausência (punição: {{penalty}})",
     "confirmEliminate": "Eliminar {{name}} do campeonato?",
+    "confirmReactivate": "Reativar {{name}} no campeonato?",
     "promptEliminate": "Justificativa da eliminação:",
     "promptReactivate": "Justificativa da reativação:",
-    "justificationRequired": "A justificativa é obrigatória.",
     "saved": "Participante salvo!",
     "activatedMsg": "Participante ativado.",
     "deactivatedMsg": "Participante desativado.",

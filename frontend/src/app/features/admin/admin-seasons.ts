@@ -7,7 +7,13 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TournamentType } from '../../core/models/enums';
@@ -16,9 +22,17 @@ import { ToastService } from '../../core/notifications/toast.service';
 import { SeasonsService } from '../../core/services/seasons.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { ErrorState } from '../../shared/components/error-state/error-state';
+import { FormField } from '../../shared/components/form-field/form-field';
 import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
 import { PageHeader } from '../../shared/components/page-header/page-header';
+
+/** Form-level validator: endDate must not be before startDate (yyyy-MM-dd strings). */
+function dateRange(group: AbstractControl): ValidationErrors | null {
+  const start = group.get('startDate')?.value;
+  const end = group.get('endDate')?.value;
+  return start && end && end < start ? { dateRange: true } : null;
+}
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,6 +43,7 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
     TranslatePipe,
     EmptyState,
     ErrorState,
+    FormField,
     Icon,
     Loading,
     PageHeader,
@@ -51,8 +66,12 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
           </h2>
         </div>
         <form [formGroup]="form" (ngSubmit)="save()" class="vstack gap-3">
-          <div>
-            <label for="s-name" class="form-label">{{ 'adminSeasons.name' | translate }}</label>
+          <app-form-field
+            [label]="'adminSeasons.name' | translate"
+            forId="s-name"
+            [control]="form.controls.name"
+            [errors]="{ default: 'validation.required' | translate }"
+          >
             <div class="input-group input-group-lg">
               <span class="input-group-text"><app-icon name="tag" [size]="16" /></span>
               <input
@@ -62,28 +81,52 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
                 formControlName="name"
               />
             </div>
-          </div>
+          </app-form-field>
           <div class="row g-3">
             <div class="col-6">
-              <label for="s-startDate" class="form-label">{{
-                'adminSeasons.start' | translate
-              }}</label>
-              <div class="input-group input-group-lg">
-                <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
-                <input
-                  id="s-startDate"
-                  type="date"
-                  class="form-control"
-                  formControlName="startDate"
-                />
-              </div>
+              <app-form-field
+                [label]="'adminSeasons.start' | translate"
+                forId="s-startDate"
+                [control]="form.controls.startDate"
+                [errors]="{ default: 'validation.required' | translate }"
+              >
+                <div class="input-group input-group-lg">
+                  <span class="input-group-text"
+                    ><app-icon name="calendar-days" [size]="16"
+                  /></span>
+                  <input
+                    id="s-startDate"
+                    type="date"
+                    class="form-control"
+                    formControlName="startDate"
+                  />
+                </div>
+              </app-form-field>
             </div>
             <div class="col-6">
-              <label for="s-endDate" class="form-label">{{ 'adminSeasons.end' | translate }}</label>
-              <div class="input-group input-group-lg">
-                <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
-                <input id="s-endDate" type="date" class="form-control" formControlName="endDate" />
-              </div>
+              <app-form-field
+                [label]="'adminSeasons.end' | translate"
+                forId="s-endDate"
+                [control]="form.controls.endDate"
+                [errors]="{ default: 'validation.required' | translate }"
+                [forceError]="
+                  form.controls.endDate.touched && form.hasError('dateRange')
+                    ? ('validation.endBeforeStart' | translate)
+                    : ''
+                "
+              >
+                <div class="input-group input-group-lg">
+                  <span class="input-group-text"
+                    ><app-icon name="calendar-days" [size]="16"
+                  /></span>
+                  <input
+                    id="s-endDate"
+                    type="date"
+                    class="form-control"
+                    formControlName="endDate"
+                  />
+                </div>
+              </app-form-field>
             </div>
           </div>
           <div class="form-check">
@@ -252,15 +295,18 @@ export class AdminSeasons implements OnInit {
 
   protected readonly editingHasPredictions = signal(false);
 
-  protected readonly form = this.fb.nonNullable.group({
-    name: ['', Validators.required],
-    startDate: ['', Validators.required],
-    endDate: ['', Validators.required],
-    isActive: [false],
-    tournamentType: [TournamentType.PalpitaoEngland as TournamentType, Validators.required],
-    allowParticipantsToSubmitPredictions: [true],
-    allowParticipantsToViewOthersPredictions: [false],
-  });
+  protected readonly form = this.fb.nonNullable.group(
+    {
+      name: ['', Validators.required],
+      startDate: ['', Validators.required],
+      endDate: ['', Validators.required],
+      isActive: [false],
+      tournamentType: [TournamentType.PalpitaoEngland as TournamentType, Validators.required],
+      allowParticipantsToSubmitPredictions: [true],
+      allowParticipantsToViewOthersPredictions: [false],
+    },
+    { validators: dateRange },
+  );
 
   /** The certame type is fixed after creation; it can only be chosen while creating. */
   selectType(type: TournamentType): void {

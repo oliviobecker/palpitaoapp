@@ -13,35 +13,37 @@
     }
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <div class="mb-3">
-        <label for="email" class="form-label">{{ 'login.email' | translate }}</label>
+      <app-form-field
+        class="mb-3"
+        [label]="'login.email' | translate"
+        forId="email"
+        [control]="form.controls.email"
+        [errors]="{ default: 'login.emailInvalid' | translate }"
+      >
         <input
           id="email"
           type="email"
           class="form-control form-control-lg"
           formControlName="email"
           autocomplete="username"
-          [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid"
         />
-        @if (form.controls.email.touched && form.controls.email.invalid) {
-          <div class="invalid-feedback">{{ 'login.emailInvalid' | translate }}</div>
-        }
-      </div>
+      </app-form-field>
 
-      <div class="mb-4">
-        <label for="password" class="form-label">{{ 'login.password' | translate }}</label>
+      <app-form-field
+        class="mb-4"
+        [label]="'login.password' | translate"
+        forId="password"
+        [control]="form.controls.password"
+        [errors]="{ default: 'login.passwordRequired' | translate }"
+      >
         <input
           id="password"
           type="password"
           class="form-control form-control-lg"
           formControlName="password"
           autocomplete="current-password"
-          [class.is-invalid]="form.controls.password.touched && form.controls.password.invalid"
         />
-        @if (form.controls.password.touched && form.controls.password.invalid) {
-          <div class="invalid-feedback">{{ 'login.passwordRequired' | translate }}</div>
-        }
-      </div>
+      </app-form-field>
 
       <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="submitting()">
         @if (submitting()) {

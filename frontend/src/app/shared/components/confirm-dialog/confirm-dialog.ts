@@ -2,8 +2,10 @@ import {
   Component,
   ChangeDetectionStrategy,
   ElementRef,
+  computed,
   effect,
   inject,
+  signal,
   viewChild,
 } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -33,6 +35,21 @@ import { ConfirmService } from '../../../core/notifications/confirm.service';
             </div>
             <div class="modal-body">
               <p class="mb-0">{{ confirm.state().message }}</p>
+              @if (confirm.state().withInput) {
+                <div class="mt-3">
+                  <label for="confirm-dialog-input" class="form-label">
+                    {{ confirm.state().inputLabel }}
+                  </label>
+                  <textarea
+                    #inputEl
+                    id="confirm-dialog-input"
+                    class="form-control"
+                    rows="2"
+                    [value]="inputValue()"
+                    (input)="inputValue.set($any($event.target).value)"
+                  ></textarea>
+                </div>
+              }
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-outline-secondary" (click)="confirm.cancel()">
@@ -44,7 +61,8 @@ import { ConfirmService } from '../../../core/notifications/confirm.service';
                 class="btn"
                 [class.btn-danger]="confirm.state().danger"
                 [class.btn-primary]="!confirm.state().danger"
-                (click)="confirm.confirm()"
+                [disabled]="!canConfirm()"
+                (click)="confirm.confirm(inputValue())"
               >
                 {{ confirm.state().confirmText }}
               </button>
@@ -60,6 +78,14 @@ export class ConfirmDialog {
 
   private readonly dialog = viewChild<ElementRef<HTMLElement>>('dialog');
   private readonly confirmBtn = viewChild<ElementRef<HTMLButtonElement>>('confirmBtn');
+  private readonly inputEl = viewChild<ElementRef<HTMLTextAreaElement>>('inputEl');
+
+  protected readonly inputValue = signal('');
+
+  protected readonly canConfirm = computed(() => {
+    const state = this.confirm.state();
+    return !state.withInput || !state.inputRequired || this.inputValue().trim().length > 0;
+  });
 
   /** Element focused before the dialog opened, restored when it closes. */
   private lastFocused: HTMLElement | null = null;
@@ -67,14 +93,20 @@ export class ConfirmDialog {
   constructor() {
     // Move focus into the dialog when it opens and restore it when it closes.
     effect(() => {
-      const open = this.confirm.state().open;
+      const state = this.confirm.state();
       const btn = this.confirmBtn();
-      if (open && btn) {
+      const input = this.inputEl();
+      if (state.open) {
         if (!this.lastFocused) {
           this.lastFocused = document.activeElement as HTMLElement | null;
+          this.inputValue.set('');
         }
-        btn.nativeElement.focus();
-      } else if (!open && this.lastFocused) {
+        if (state.withInput && input) {
+          input.nativeElement.focus();
+        } else if (btn) {
+          btn.nativeElement.focus();
+        }
+      } else if (this.lastFocused) {
         this.lastFocused.focus();
         this.lastFocused = null;
       }
@@ -91,8 +123,10 @@ export class ConfirmDialog {
     if (event.key !== 'Tab') {
       return;
     }
-    const focusables = this.dialog()?.nativeElement.querySelectorAll<HTMLElement>('button');
-    if (!focusables || focusables.length === 0) {
+    const focusables = Array.from(
+      this.dialog()?.nativeElement.querySelectorAll<HTMLElement>('button, textarea') ?? [],
+    ).filter((el) => !(el as HTMLButtonElement).disabled);
+    if (focusables.length === 0) {
       return;
     }
     const first = focusables[0];
