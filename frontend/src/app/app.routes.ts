@@ -47,6 +47,7 @@ export const routes: Routes = [
       {
         path: 'rounds/:id/predictions',
         canActivate: [participantGuard],
+        canDeactivate: [unsavedChangesGuard],
         loadComponent: () => import('./features/rounds/predictions').then((m) => m.Predictions),
       },
       {
@@ -73,10 +74,12 @@ export const routes: Routes = [
       {
         path: 'admin',
         canActivate: [adminGuard],
+        loadComponent: () => import('./features/admin/admin-layout').then((m) => m.AdminLayout),
         children: [
           { path: '', loadComponent: () => import('./features/admin/admin').then((m) => m.Admin) },
           {
             path: 'seasons',
+            canDeactivate: [unsavedChangesGuard],
             loadComponent: () =>
               import('./features/admin/admin-seasons').then((m) => m.AdminSeasons),
           },
@@ -86,6 +89,7 @@ export const routes: Routes = [
           },
           {
             path: 'rounds/new',
+            canDeactivate: [unsavedChangesGuard],
             loadComponent: () =>
               import('./features/admin/admin-round-form').then((m) => m.AdminRoundForm),
           },
@@ -96,6 +100,7 @@ export const routes: Routes = [
           },
           {
             path: 'rounds/:id/matches',
+            canDeactivate: [unsavedChangesGuard],
             loadComponent: () =>
               import('./features/admin/admin-matches').then((m) => m.AdminMatches),
           },
@@ -129,6 +134,7 @@ export const routes: Routes = [
           },
           {
             path: 'participants',
+            canDeactivate: [unsavedChangesGuard],
             loadComponent: () =>
               import('./features/admin/admin-participants').then((m) => m.AdminParticipants),
           },

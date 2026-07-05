@@ -32,7 +32,15 @@
           </div>
 
           @if (round.status === RoundStatus.Published) {
-            <div class="small text-muted mt-3 mb-2">
+            <div
+              class="small mt-3 mb-2"
+              [class.text-muted]="!isDeadlineUrgent(round)"
+              [class.text-danger]="isDeadlineUrgent(round)"
+              [class.fw-semibold]="isDeadlineUrgent(round)"
+            >
+              @if (isDeadlineUrgent(round)) {
+                <app-icon name="triangle-alert" [size]="13" />
+              }
               {{ 'rounds.deadline' | translate }}:
               {{ round.firstMatchStartsAt | date: 'dd/MM HH:mm' }} ·
               <app-countdown [target]="round.firstMatchStartsAt ?? null" />

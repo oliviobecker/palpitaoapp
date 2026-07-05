@@ -9,6 +9,7 @@ import {
   ImportFixturesResponse,
   OcrBatch,
   Participant,
+  PredictionCoverage,
   RefreshResultsResponse,
   RegistrationRequest,
   RoundScout,
@@ -140,6 +141,14 @@ export class AdminService {
   ): Observable<AdminParticipantPredictions> {
     return this.http.get<AdminParticipantPredictions>(
       `${this.base}/rounds/${roundId}/predictions/participant/${userId}`,
+    );
+  }
+
+  /** Passive round-detail panel: failures degrade silently instead of popping a toast. */
+  getPredictionCoverage(roundId: string): Observable<PredictionCoverage> {
+    return this.http.get<PredictionCoverage>(
+      `${this.base}/rounds/${roundId}/predictions/coverage`,
+      { context: new HttpContext().set(SKIP_ERROR_TOAST, true) },
     );
   }
 

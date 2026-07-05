@@ -1,27 +1,30 @@
-<div class="mb-3">
-  <div class="page-trail">
+<app-page-header [title]="'roundDetail.title' | translate">
+  <div trail class="page-trail">
     <a routerLink="/admin">Admin</a> ·
     <a routerLink="/admin/rounds">{{ 'nav.rounds' | translate }}</a> ·
     {{ 'roundDetail.crumb' | translate }}
   </div>
-  <div class="d-flex align-items-center gap-2 flex-wrap">
-    <h1 class="h4 fw-bold mb-0">{{ 'roundDetail.title' | translate }}</h1>
-    @if (round(); as r) {
-      @if (r.allowParticipantsToSubmitPredictions === false) {
-        <span class="badge text-bg-secondary">{{
-          'predictionSubmission.adminOnlyBadge' | translate
-        }}</span>
-      } @else {
-        <span class="badge text-bg-success">{{
-          'predictionSubmission.participantAppBadge' | translate
-        }}</span>
-      }
+  @if (round(); as r) {
+    @if (r.allowParticipantsToSubmitPredictions === false) {
+      <span class="badge text-bg-secondary align-self-center">{{
+        'predictionSubmission.adminOnlyBadge' | translate
+      }}</span>
+    } @else {
+      <span class="badge text-bg-success align-self-center">{{
+        'predictionSubmission.participantAppBadge' | translate
+      }}</span>
     }
-  </div>
-</div>
+  }
+</app-page-header>
 
 @if (loading()) {
-  <app-loading />
+  <div class="card mb-3" role="status" aria-busy="true">
+    <div class="card-body vstack gap-3">
+      <app-skeleton width="45%" height="1.4rem" />
+      <app-skeleton height="3rem" radius="var(--radius)" />
+      <app-skeleton height="3rem" radius="var(--radius)" />
+    </div>
+  </div>
 } @else if (round(); as r) {
   <div class="card mb-3">
     <div class="card-body">
@@ -64,8 +67,116 @@
         </form>
       }
 
-      <!-- Manage actions -->
-      <div class="section-label mt-3 mb-2">{{ 'roundDetail.manage' | translate }}</div>
+      <!-- Round lifecycle + the single guided next step for the current state -->
+      <div class="section-label mt-3 mb-2">{{ 'roundDetail.lifecycle' | translate }}</div>
+      <app-round-stepper [status]="r.status" class="d-block mb-3" />
+
+      @if (r.status === RoundStatus.Draft) {
+        <div class="d-grid gap-2">
+          @if (r.matches.length === 0) {
+            <div class="alert alert-warning py-2 mb-0">
+              {{ 'roundDetail.needMatchesToPublish' | translate }}
+              <a [routerLink]="['/admin/rounds', r.id, 'matches']">{{
+                'roundDetail.manageGames' | translate
+              }}</a>
+            </div>
+          }
+          <button
+            class="btn btn-success btn-lg"
+            (click)="publish(r)"
+            [disabled]="r.matches.length === 0"
+          >
+            {{ 'roundDetail.publish' | translate }}
+          </button>
+        </div>
+      }
+
+      @if (r.status === RoundStatus.Published) {
+        <div class="d-grid gap-2">
+          @if (coverage(); as cov) {
+            <div
+              class="alert py-2 mb-0"
+              [class.alert-success]="cov.missing.length === 0"
+              [class.alert-info]="cov.missing.length > 0"
+            >
+              <div class="d-flex align-items-center gap-2">
+                <app-icon name="users" [size]="16" />
+                {{
+                  'roundDetail.coverage'
+                    | translate: { complete: cov.completeParticipants, total: cov.totalParticipants }
+                }}
+              </div>
+              @if (cov.missing.length > 0) {
+                <ul class="small mb-0 mt-1">
+                  @for (p of cov.missing; track p.userId) {
+                    <li>{{ p.name }} ({{ p.predictedCount }}/{{ cov.matchCount }})</li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+          <button class="btn btn-warning btn-lg" (click)="lock(r)">
+            <app-icon name="lock" [size]="18" /> {{ 'roundDetail.lock' | translate }}
+          </button>
+          <p class="text-muted small mb-0">{{ 'roundDetail.lockHint' | translate }}</p>
+        </div>
+      }
+
+      @if (r.status === RoundStatus.Locked || r.status === RoundStatus.Scored) {
+        <div class="section-label mt-1 mb-2">{{ 'adminResults.title' | translate }}</div>
+        <app-round-results-editor [matches]="matches()" (saved)="load()" />
+
+        <div class="d-grid gap-2 mt-3">
+          @if (r.status === RoundStatus.Locked && !resultsComplete()) {
+            <div class="alert alert-info py-2 mb-0">
+              {{
+                'roundDetail.resultsMissing'
+                  | translate: { count: missingResults(), total: r.matches.length }
+              }}
+            </div>
+          }
+          <button
+            class="btn btn-primary btn-lg"
+            (click)="score(r)"
+            [disabled]="finalizing() || (r.status === RoundStatus.Locked && !resultsComplete())"
+          >
+            @if (finalizing()) {
+              <span class="spinner-border spinner-border-sm me-2"></span>
+            }
+            {{
+              (r.status === RoundStatus.Scored ? 'roundDetail.recalculate' : 'roundDetail.finalize')
+                | translate
+            }}
+          </button>
+          @if (r.status === RoundStatus.Scored) {
+            <a class="btn btn-outline-secondary" [routerLink]="['/admin/rounds', r.id, 'audit']">
+              <app-icon name="list" [size]="16" /> {{ 'audit.scoringTitle' | translate }}
+            </a>
+            <button class="btn btn-outline-warning" (click)="reopen(r)">
+              <app-icon name="undo-2" [size]="16" /> {{ 'roundDetail.reopen' | translate }}
+            </button>
+          }
+        </div>
+      }
+
+      <!-- Cancel: secondary, destructive -->
+      @if (r.status !== RoundStatus.Scored && r.status !== RoundStatus.Cancelled) {
+        <div class="d-grid mt-3">
+          <button class="btn btn-outline-danger" (click)="cancel(r)">
+            {{ 'roundDetail.cancelRound' | translate }}
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Management tools: secondary, grouped and collapsible so the primary flow leads -->
+  <details class="card mb-3 tools-card" open>
+    <summary class="card-body py-2 px-3 fw-semibold d-flex align-items-center gap-2">
+      <app-icon name="settings" [size]="16" />
+      {{ 'roundDetail.manage' | translate }}
+    </summary>
+    <div class="card-body pt-0">
       <div class="row g-2">
         <div class="col-12 col-md-6">
           <a class="action-card h-100" [routerLink]="['/admin/rounds', r.id, 'matches']">
@@ -130,88 +241,8 @@
           </div>
         }
       </div>
-
-      <!-- Round lifecycle -->
-      <div class="section-label mt-3 mb-2">{{ 'roundDetail.lifecycle' | translate }}</div>
-      <app-round-stepper [status]="r.status" class="d-block mb-3" />
-
-      <!-- Next step: one guided primary action per state -->
-      @if (r.status === RoundStatus.Draft) {
-        <div class="d-grid gap-2">
-          @if (r.matches.length === 0) {
-            <div class="alert alert-warning py-2 mb-0">
-              {{ 'roundDetail.needMatchesToPublish' | translate }}
-              <a [routerLink]="['/admin/rounds', r.id, 'matches']">{{
-                'roundDetail.manageGames' | translate
-              }}</a>
-            </div>
-          }
-          <button
-            class="btn btn-success btn-lg"
-            (click)="publish(r)"
-            [disabled]="r.matches.length === 0"
-          >
-            {{ 'roundDetail.publish' | translate }}
-          </button>
-        </div>
-      }
-
-      @if (r.status === RoundStatus.Published) {
-        <div class="d-grid gap-2">
-          <button class="btn btn-warning btn-lg" (click)="lock(r)">
-            <app-icon name="lock" [size]="18" /> {{ 'roundDetail.lock' | translate }}
-          </button>
-          <p class="text-muted small mb-0">{{ 'roundDetail.lockHint' | translate }}</p>
-        </div>
-      }
-
-      @if (r.status === RoundStatus.Locked || r.status === RoundStatus.Scored) {
-        <div class="section-label mt-1 mb-2">{{ 'adminResults.title' | translate }}</div>
-        <app-round-results-editor [matches]="matches()" (saved)="load()" />
-
-        <div class="d-grid gap-2 mt-3">
-          @if (r.status === RoundStatus.Locked && !resultsComplete()) {
-            <div class="alert alert-info py-2 mb-0">
-              {{
-                'roundDetail.resultsMissing'
-                  | translate: { count: missingResults(), total: r.matches.length }
-              }}
-            </div>
-          }
-          <button
-            class="btn btn-primary btn-lg"
-            (click)="score(r)"
-            [disabled]="finalizing() || (r.status === RoundStatus.Locked && !resultsComplete())"
-          >
-            @if (finalizing()) {
-              <span class="spinner-border spinner-border-sm me-2"></span>
-            }
-            {{
-              (r.status === RoundStatus.Scored ? 'roundDetail.recalculate' : 'roundDetail.finalize')
-                | translate
-            }}
-          </button>
-          @if (r.status === RoundStatus.Scored) {
-            <a class="btn btn-outline-secondary" [routerLink]="['/admin/rounds', r.id, 'audit']">
-              <app-icon name="list" [size]="16" /> {{ 'audit.scoringTitle' | translate }}
-            </a>
-            <button class="btn btn-outline-warning" (click)="reopen(r)">
-              <app-icon name="undo-2" [size]="16" /> {{ 'roundDetail.reopen' | translate }}
-            </button>
-          }
-        </div>
-      }
-
-      <!-- Cancel: secondary, destructive -->
-      @if (r.status !== RoundStatus.Scored && r.status !== RoundStatus.Cancelled) {
-        <div class="d-grid mt-3">
-          <button class="btn btn-outline-danger" (click)="cancel(r)">
-            {{ 'roundDetail.cancelRound' | translate }}
-          </button>
-        </div>
-      }
     </div>
-  </div>
+  </details>
 
   <!-- Results refresh summary -->
   @if (refreshSummary(); as rs) {

@@ -16,6 +16,7 @@ import {
 } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
 import { TournamentType } from '../../core/models/enums';
 import { Season } from '../../core/models/models';
 import { ToastService } from '../../core/notifications/toast.service';
@@ -24,8 +25,8 @@ import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { ErrorState } from '../../shared/components/error-state/error-state';
 import { FormField } from '../../shared/components/form-field/form-field';
 import { Icon } from '../../shared/components/icon/icon';
-import { Loading } from '../../shared/components/loading/loading';
 import { PageHeader } from '../../shared/components/page-header/page-header';
+import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
 
 /** Form-level validator: endDate must not be before startDate (yyyy-MM-dd strings). */
 function dateRange(group: AbstractControl): ValidationErrors | null {
@@ -45,8 +46,8 @@ function dateRange(group: AbstractControl): ValidationErrors | null {
     ErrorState,
     FormField,
     Icon,
-    Loading,
     PageHeader,
+    SkeletonList,
   ],
   template: `
     <app-page-header [title]="'adminSeasons.title' | translate">
@@ -239,7 +240,7 @@ function dateRange(group: AbstractControl): ValidationErrors | null {
     </div>
 
     @if (loading()) {
-      <app-loading />
+      <app-skeleton-list [count]="4" />
     } @else if (error()) {
       <app-error-state (retry)="load()" />
     } @else if (seasons().length === 0) {
@@ -277,7 +278,7 @@ function dateRange(group: AbstractControl): ValidationErrors | null {
     }
   `,
 })
-export class AdminSeasons implements OnInit {
+export class AdminSeasons implements OnInit, HasUnsavedChanges {
   private readonly api = inject(SeasonsService);
   private readonly toast = inject(ToastService);
   private readonly translate = inject(TranslateService);
@@ -318,6 +319,11 @@ export class AdminSeasons implements OnInit {
 
   ngOnInit(): void {
     this.load();
+  }
+
+  /** Used by the unsaved-changes route guard. */
+  hasUnsavedChanges(): boolean {
+    return this.form.dirty && !this.saving();
   }
 
   load(): void {

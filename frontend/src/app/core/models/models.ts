@@ -300,6 +300,21 @@ export interface OcrBatch {
   candidates: OcrCandidate[];
 }
 
+export interface PredictionCoverageParticipant {
+  userId: string;
+  name: string;
+  predictedCount: number;
+}
+
+/** Who has predicted the whole round vs. who is still missing (admin round detail). */
+export interface PredictionCoverage {
+  roundId: string;
+  matchCount: number;
+  totalParticipants: number;
+  completeParticipants: number;
+  missing: PredictionCoverageParticipant[];
+}
+
 export interface AuditLog {
   id: string;
   userId?: string | null;

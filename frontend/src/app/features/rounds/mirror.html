@@ -43,6 +43,14 @@
     </div>
   </div>
 
+  @if (hasFilters()) {
+    <div class="mb-3">
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+        <app-icon name="x" [size]="14" /> {{ 'mirror.clearFilters' | translate }}
+      </button>
+    </div>
+  }
+
   @if (participants().length === 0) {
     <app-empty-state [message]="'mirror.noParticipants' | translate" />
   } @else {

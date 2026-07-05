@@ -18,8 +18,8 @@ import { AdminService } from '../../core/services/admin.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Icon } from '../../shared/components/icon/icon';
-import { Loading } from '../../shared/components/loading/loading';
 import { PageHeader } from '../../shared/components/page-header/page-header';
+import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,8 +32,8 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
     EmptyState,
     ErrorState,
     Icon,
-    Loading,
     PageHeader,
+    SkeletonList,
   ],
   template: `
     <app-page-header [title]="'adminRegistrations.title' | translate">
@@ -43,7 +43,7 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
     </app-page-header>
 
     @if (loading()) {
-      <app-loading />
+      <app-skeleton-list [count]="3" />
     } @else if (error()) {
       <app-error-state (retry)="load()" />
     } @else if (requests().length === 0) {

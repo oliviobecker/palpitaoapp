@@ -231,7 +231,9 @@
     "draftRestored": "Rascunho não salvo restaurado.",
     "remaining": "Faltam {{count}} jogo(s)",
     "allFilled": "Todos os jogos preenchidos",
-    "unsaved": "Não salvo"
+    "unsaved": "Não salvo",
+    "savedPanel": "Seus palpites estão salvos. Você pode editá-los até o prazo.",
+    "backHome": "Voltar ao início"
   },
   "mirror": {
     "title": "Espelho de palpites",
@@ -457,6 +459,7 @@
     "lifecycle": "Ciclo da rodada",
     "needMatchesToPublish": "Adicione ao menos uma partida antes de publicar.",
     "lockHint": "Travar encerra o envio de palpites. Depois, lance os resultados e calcule a pontuação.",
+    "coverage": "{{complete}} de {{total}} participantes com todos os palpites.",
     "resultsMissing": "Faltam {{count}} de {{total}} resultados.",
     "manageGames": "Gerir jogos",
     "registerPredictions": "Registrar palpites",
@@ -534,6 +537,9 @@
     "title": "Resultados",
     "finished": "Finalizado",
     "saveResults": "Salvar resultados",
+    "saveCount": "Salvar resultados ({{count}})",
+    "partialPair": "Preencha os dois placares ou deixe ambos vazios.",
+    "pendingHint": "Jogos sem os dois placares não são salvos ({{count}} restantes).",
     "saved": "Resultados salvos!"
   },
   "adminRegistrations": {

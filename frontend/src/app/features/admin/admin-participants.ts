@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   DestroyRef,
   OnInit,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -10,6 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
 import { Absence, Participant } from '../../core/models/models';
 import { ConfirmService } from '../../core/notifications/confirm.service';
 import { ToastService } from '../../core/notifications/toast.service';
@@ -18,8 +20,8 @@ import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { ErrorState } from '../../shared/components/error-state/error-state';
 import { FormField } from '../../shared/components/form-field/form-field';
 import { Icon } from '../../shared/components/icon/icon';
-import { Loading } from '../../shared/components/loading/loading';
 import { PageHeader } from '../../shared/components/page-header/page-header';
+import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,8 +34,8 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
     ErrorState,
     FormField,
     Icon,
-    Loading,
     PageHeader,
+    SkeletonList,
   ],
   template: `
     <app-page-header [title]="'adminParticipants.title' | translate">
@@ -122,14 +124,26 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
     </div>
 
     @if (loading()) {
-      <app-loading />
+      <app-skeleton-list [count]="5" />
     } @else if (error()) {
       <app-error-state (retry)="load()" />
     } @else if (participants().length === 0) {
       <app-empty-state [message]="'adminParticipants.empty' | translate" />
     } @else {
+      <div class="input-group input-group-lg mb-3">
+        <span class="input-group-text"><app-icon name="search" [size]="16" /></span>
+        <input
+          class="form-control"
+          [placeholder]="'adminParticipants.search' | translate"
+          [value]="search()"
+          (input)="search.set($any($event.target).value)"
+        />
+      </div>
+      @if (filtered().length === 0) {
+        <app-empty-state icon="search" [message]="'adminParticipants.noMatches' | translate" />
+      }
       <div class="vstack gap-2">
-        @for (p of participants(); track p.id) {
+        @for (p of filtered(); track p.id) {
           <div class="card" [class.border-danger]="p.isEliminated">
             <div class="card-body py-2 px-3">
               <div class="d-flex justify-content-between align-items-start">
@@ -210,7 +224,7 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
     }
   `,
 })
-export class AdminParticipants implements OnInit {
+export class AdminParticipants implements OnInit, HasUnsavedChanges {
   private readonly api = inject(AdminService);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
@@ -224,6 +238,16 @@ export class AdminParticipants implements OnInit {
   protected readonly participants = signal<Participant[]>([]);
   protected readonly editingId = signal<string | null>(null);
   protected readonly absences = signal<Record<string, Absence[]>>({});
+  protected readonly search = signal('');
+
+  /** Client-side filter by name or e-mail (lists are small — no server paging needed). */
+  protected readonly filtered = computed(() => {
+    const term = this.search().trim().toLowerCase();
+    if (!term) return this.participants();
+    return this.participants().filter(
+      (p) => p.name.toLowerCase().includes(term) || p.email.toLowerCase().includes(term),
+    );
+  });
 
   protected readonly form = this.fb.nonNullable.group({
     name: ['', Validators.required],
@@ -234,6 +258,11 @@ export class AdminParticipants implements OnInit {
 
   ngOnInit(): void {
     this.load();
+  }
+
+  /** Used by the unsaved-changes route guard. */
+  hasUnsavedChanges(): boolean {
+    return this.form.dirty && !this.saving();
   }
 
   load(): void {

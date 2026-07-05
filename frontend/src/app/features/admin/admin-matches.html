@@ -198,9 +198,7 @@
               <app-form-field
                 [label]="'roundForm.endDate' | translate"
                 forId="m-endDate"
-                [forceError]="
-                  searchRangeInvalid() ? ('fixtures.endBeforeStart' | translate) : ''
-                "
+                [forceError]="searchRangeInvalid() ? ('fixtures.endBeforeStart' | translate) : ''"
               >
                 <div class="input-group input-group-lg">
                   <span class="input-group-text"

@@ -9,4 +9,7 @@ public interface IAdminPredictionService
 
     /// <summary>A participant's current predictions for a round, to preload the manual screen.</summary>
     Task<AdminParticipantPredictionsDto> GetParticipantPredictionsAsync(Guid roundId, Guid userId, CancellationToken ct);
+
+    /// <summary>Prediction coverage of the round: who has all matches predicted, who is missing.</summary>
+    Task<PredictionCoverageDto> GetCoverageAsync(Guid roundId, CancellationToken ct);
 }

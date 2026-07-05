@@ -22,6 +22,7 @@ import {
   competitionsForType,
   phasesForType,
 } from '../../core/models/enums';
+import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
 import { FixtureCandidate, Round, RoundMatch, Team } from '../../core/models/models';
 import { ConfirmService } from '../../core/notifications/confirm.service';
 import { ToastService } from '../../core/notifications/toast.service';
@@ -77,7 +78,7 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
     `,
   ],
 })
-export class AdminMatches implements OnInit {
+export class AdminMatches implements OnInit, HasUnsavedChanges {
   private readonly route = inject(ActivatedRoute);
   private readonly roundsApi = inject(RoundsService);
   private readonly matchesApi = inject(MatchesService);
@@ -198,6 +199,11 @@ export class AdminMatches implements OnInit {
   ngOnInit(): void {
     this.roundId = this.route.snapshot.paramMap.get('id') ?? '';
     this.load();
+  }
+
+  /** Used by the unsaved-changes route guard. */
+  hasUnsavedChanges(): boolean {
+    return this.form.dirty && !this.saving();
   }
 
   load(): void {

@@ -459,6 +459,7 @@
     "lifecycle": "Round lifecycle",
     "needMatchesToPublish": "Add at least one match before publishing.",
     "lockHint": "Locking closes prediction entry. After that, enter the results and calculate the score.",
+    "coverage": "{{complete}} of {{total}} participants have all predictions in.",
     "resultsMissing": "{{count}} of {{total}} results still missing.",
     "manageGames": "Manage matches",
     "registerPredictions": "Register predictions",
@@ -536,6 +537,9 @@
     "title": "Results",
     "finished": "Finished",
     "saveResults": "Save results",
+    "saveCount": "Save results ({{count}})",
+    "partialPair": "Fill in both scores or clear both.",
+    "pendingHint": "Matches without both scores are not saved ({{count}} left).",
     "saved": "Results saved!"
   },
   "adminRegistrations": {

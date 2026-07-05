@@ -2,6 +2,7 @@ import {
   Component,
   ChangeDetectionStrategy,
   DestroyRef,
+  OnDestroy,
   OnInit,
   inject,
   signal,
@@ -74,6 +75,9 @@ import { Icon } from '../../shared/components/icon/icon';
           }
           {{ 'awaitingApproval.recheck' | translate }}
         </button>
+        <p class="text-muted small text-center mb-0">
+          <app-icon name="refresh-cw" [size]="13" /> {{ 'awaitingApproval.autoHint' | translate }}
+        </p>
         <button type="button" class="btn btn-link btn-sm text-muted" (click)="logout()">
           {{ 'nav.logout' | translate }}
         </button>
@@ -81,7 +85,7 @@ import { Icon } from '../../shared/components/icon/icon';
     </div>
   `,
 })
-export class AwaitingApproval implements OnInit {
+export class AwaitingApproval implements OnInit, OnDestroy {
   private readonly groupsApi = inject(GroupsService);
   private readonly groupContext = inject(GroupContextService);
   private readonly auth = inject(AuthService);
@@ -96,8 +100,18 @@ export class AwaitingApproval implements OnInit {
   protected readonly rechecking = signal(false);
   protected readonly pending = signal<MyGroup[]>([]);
 
+  /** Silent poll so an approved user is let in without having to press the button. */
+  private pollTimer?: ReturnType<typeof setInterval>;
+
   ngOnInit(): void {
     this.load();
+    this.pollTimer = setInterval(() => this.recheck(true), 30_000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+    }
   }
 
   load(): void {
@@ -118,9 +132,15 @@ export class AwaitingApproval implements OnInit {
       });
   }
 
-  /** Re-check approved access: enter if approved now, otherwise stay on this screen. */
-  recheck(): void {
-    this.rechecking.set(true);
+  /**
+   * Re-check approved access: enter if approved now, otherwise stay on this screen.
+   * `silent` is used by the background poll — it skips the spinner and the
+   * "still pending" toast so the automatic checks are unobtrusive.
+   */
+  recheck(silent = false): void {
+    if (!silent) {
+      this.rechecking.set(true);
+    }
     this.groupsApi
       .myGroups()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -132,7 +152,7 @@ export class AwaitingApproval implements OnInit {
             this.router.navigate([this.groupContext.homePath(groups[0].role)]);
           } else if (groups.length > 1) {
             this.router.navigate(['/select-group']);
-          } else {
+          } else if (!silent) {
             this.toast.info(this.translate.instant('awaitingApproval.stillPending'));
             this.load();
           }

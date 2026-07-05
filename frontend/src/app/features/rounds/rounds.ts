@@ -48,6 +48,13 @@ export class Rounds implements OnInit {
     return status.toLowerCase();
   }
 
+  /** Deadline within the final hour — used to flag the card's countdown as urgent. */
+  isDeadlineUrgent(round: RoundSummary): boolean {
+    if (!round.firstMatchStartsAt) return false;
+    const ms = new Date(round.firstMatchStartsAt).getTime() - Date.now();
+    return ms > 0 && ms < 3_600_000;
+  }
+
   /** Mirror is offered when the round's season allows it, or to group admins. */
   canViewOthers(round: RoundSummary): boolean {
     return round.allowParticipantsToViewOthersPredictions === true || this.group.isGroupAdmin();

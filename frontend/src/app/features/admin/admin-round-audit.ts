@@ -17,9 +17,9 @@ import { CompetitionBadge } from '../../shared/components/competition-badge/comp
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Icon } from '../../shared/components/icon/icon';
-import { Loading } from '../../shared/components/loading/loading';
 import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
 import { PageHeader } from '../../shared/components/page-header/page-header';
+import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
 import { phaseLabel } from '../../shared/utils/match.util';
 
 /**
@@ -36,15 +36,15 @@ import { phaseLabel } from '../../shared/utils/match.util';
     EmptyState,
     ErrorState,
     Icon,
-    Loading,
     MultiplierBadge,
     PageHeader,
+    SkeletonList,
   ],
   template: `
     <app-page-header [trail]="trail()" [title]="'audit.scoringTitle' | translate" />
 
     @if (loading()) {
-      <app-loading />
+      <app-skeleton-list [count]="5" />
     } @else if (error()) {
       <app-error-state (retry)="load()" />
     } @else if (!scored()) {
