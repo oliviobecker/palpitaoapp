@@ -99,12 +99,29 @@ overall standings update.
 - **Predictions local draft**: edits persist to `localStorage` (per round) and restore on return; a
   sticky status bar shows remaining/all-filled + an unsaved badge; draft cleared on successful save.
 
+**OCR + admin flow smoothing (this session)**
+- **OCR review**: image preview beside the candidates (sticky on desktop), client-side file guard
+  (extension + 10 MB), debounced **autosave per candidate** (no per-card Save; Confirm blocked while
+  saves are in flight), confidence % + missing-field reasons on each card, **discard candidate**
+  (`DELETE admin/ocr-imports/{batchId}/candidates/{id}`) so noise no longer blocks the batch, and
+  post-confirm navigation back to the round detail.
+- **OCR backend guards**: confirm/cancel/update reject already-confirmed batches; confirm requires
+  Processed/Reviewed and rejects duplicate participant+match candidates; `Confidence` recalculated on
+  edit; per-admin **rate limit** on the upload endpoint (`RateLimiting:Ocr`, 5/min default); request
+  size limit derived from the shared 10 MB constant.
+- **Results entry**: `round-results-editor` no longer prefills 0×0 — only complete score pairs are
+  saved (pair validator + count on the button), so partial entry can't mark unplayed matches finished;
+  typing a score auto-advances the focus.
+- **Prediction coverage**: `GET admin/rounds/{id}/predictions/coverage` + a Published-step panel in the
+  round detail showing who still hasn't predicted; manual predictions navigate back after saving.
+
 ## 4. Pending / not implemented (roadmap)
 
 - **Server-side autosave** of predictions (current draft is client-side only; needs partial/incremental
   save on the backend).
 - **Batch import** of predictions across participants (grid or CSV) — deferred by request.
-- OCR: file-size guard + progress; surface candidate confidence.
+- OCR: store the uploaded image (`StoredFilePath` is never set) for later re-processing; async
+  processing queue if image volume ever grows.
 - Public create-group requires a **new** email (existing user creating another group not supported).
 - `AdminSentryController` (diagnostics) still uses the global role.
 - Real secrets must be configured via env/user-secrets/GitHub Secrets; rotate the 3 once-public secrets.

@@ -424,10 +424,12 @@ Admin → **Import from image** (`/admin/rounds/:id/import-predictions`): upload
 
 Flow (never saves without review):
 `upload → OCR → candidates → review → confirm`.
-Endpoints: `POST /api/admin/rounds/{id}/predictions/import-image`,
-`GET /api/admin/ocr-imports/{batchId}`,
+Endpoints: `POST /api/admin/rounds/{id}/predictions/import-image` (per-admin rate limited,
+`RateLimiting:Ocr`), `GET /api/admin/ocr-imports/{batchId}`,
 `PUT /api/admin/ocr-imports/{batchId}/candidates/{candidateId}`,
-`POST .../confirm`, `POST .../cancel`.
+`DELETE .../candidates/{candidateId}` (discard a noise candidate),
+`POST .../confirm`, `POST .../cancel`. A confirmed batch is immutable (confirm/cancel/edit
+return 4xx), and confirm rejects duplicate participant+match candidates.
 
 ### Install/configure Tesseract
 
