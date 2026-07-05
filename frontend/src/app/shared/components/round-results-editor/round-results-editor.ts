@@ -125,7 +125,9 @@ export function completePairs(values: { home: unknown; away: unknown }[]): numbe
       </div>
       @if (completeCount() < matches().length) {
         <p class="text-muted small text-center mt-2 mb-0">
-          {{ 'adminResults.pendingHint' | translate: { count: matches().length - completeCount() } }}
+          {{
+            'adminResults.pendingHint' | translate: { count: matches().length - completeCount() }
+          }}
         </p>
       }
     </form>
