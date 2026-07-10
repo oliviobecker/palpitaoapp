@@ -3,6 +3,12 @@
 > **FanPicks** is the English product name. **Palpitão** is the Portuguese product name.
 > They are the same application — a generic **football prediction platform**.
 
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="Dashboard: live round countdown, prediction progress and a standings preview" width="32%">
+  <img src="docs/screenshots/predictions.png" alt="Predictions: per-match score entry with competition and multiplier badges" width="32%">
+  <img src="docs/screenshots/standings.png" alt="Standings: podium, points, absences, penalties and eliminations" width="32%">
+</p>
+
 A **multi-group** football prediction platform: each group is an independent pool, with its
 own tournament type, administrators, participants, rounds, matches, predictions and standings.
 The admin creates rounds with matches; participants predict the score until the first match
