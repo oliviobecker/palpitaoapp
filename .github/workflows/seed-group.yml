@@ -1,0 +1,64 @@
+name: Seed a group for the super-admin
+
+# Manual only. Creates the group defined in scripts/seed-group-for-admin.sql and
+# makes the kept super-admin its GroupAdmin, for go-live bootstrapping after a
+# full reset. Idempotent (no-op if that admin already has a group). Type the
+# environment name to confirm; runs under the staging/production Environment.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to seed the group in'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      confirm:
+        description: 'Type the environment name (staging or production) to confirm'
+        required: true
+        type: string
+
+concurrency:
+  group: db-ops
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    name: Seed group in ${{ inputs.environment }}
+    runs-on: [self-hosted]
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Validate confirmation
+        shell: pwsh
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          if ($env:CONFIRM -ne $env:ENVIRONMENT) {
+            throw "Confirmation '$($env:CONFIRM)' does not match the selected environment '$($env:ENVIRONMENT)'. Aborting."
+          }
+          Write-Host "Confirmed. Seeding the group in '$($env:ENVIRONMENT)'."
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Seed the group
+        shell: pwsh
+        env:
+          DB_CONNECTION: ${{ secrets.BACKEND_CONNECTION_STRING }}
+          SQL_FILE: ${{ github.workspace }}/scripts/seed-group-for-admin.sql
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:DB_CONNECTION)) {
+            throw "Missing secret BACKEND_CONNECTION_STRING for the '$($env:ENVIRONMENT)' environment."
+          }
+          dotnet run scripts/run-sql.cs
+
+      - name: Row counts AFTER
+        shell: pwsh
+        env:
+          DB_CONNECTION: ${{ secrets.BACKEND_CONNECTION_STRING }}
+          SQL_FILE: ${{ github.workspace }}/scripts/db-counts.sql
+        run: |
+          dotnet run scripts/run-sql.cs
