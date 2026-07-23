@@ -9,9 +9,16 @@
 --   * false           -- fresh slate: delete EVERY group and membership, so the
 --                        kept admin logs in with no group and creates one anew.
 --
+-- Schema-version tolerant: each per-round / structural / cross-cutting table is
+-- deleted only if it exists (to_regclass guard), so the wipe works on any
+-- deployed schema >= InitialCreate even if some migrations are not yet applied
+-- (e.g. a staging DB behind the latest SeasonScoringConfig migration). The core
+-- tenancy tables ("Users"/"Groups"/"GroupUsers") always exist, so they are
+-- deleted directly.
+--
 -- Portable plain SQL: runs in any client (DBeaver, psql, pgAdmin) and via the
 -- CI reset workflow (scripts/run-sql.cs). No psql meta-commands (\set / \echo)
--- so it works in GUI tools too.
+-- so it works in GUI tools too. Progress is emitted via RAISE NOTICE.
 --
 -- What ALWAYS survives: the admin matched by v_admin_email, and all "Teams".
 -- What is deleted: every other user, plus all seasons, rounds, matches,
@@ -25,8 +32,8 @@
 --   * The whole wipe is one atomic DO block: if the admin email is not found it
 --     RAISES and the transaction rolls back -- nothing is deleted.
 --   * >>> EDIT v_admin_email below to the super-admin you want to keep. <<<
---   * Run it as a SCRIPT (DBeaver: Alt+X / "Execute SQL Script"), not a single
---     statement, so the trailing count report runs too.
+--   * Run it as a SCRIPT (DBeaver: Alt+X / "Execute SQL Script"). Pair it with
+--     scripts/db-counts.sql to see row counts before / after.
 -- ---------------------------------------------------------------------------
 
 DO $$
@@ -36,40 +43,31 @@ DECLARE
     -- true: keep the groups the admin owns (emptied). false: delete ALL groups.
     v_keep_owner_groups boolean := true;
     v_admin_id          uuid;
+    t                   text;
+    -- Child -> parent order, so foreign keys never block a delete. Any table not
+    -- present in this environment's schema is skipped.
+    v_tables            text[] := ARRAY[
+        'OcrPredictionCandidates', 'OcrImportBatches',
+        'PredictionScores', 'Predictions',
+        'RoundParticipantResults', 'Standings', 'AbsenceOverrides', 'Absences',
+        'ScoringScoreEntries', 'ScoringMultiplierRules', 'ScoringClassicTeams', 'SeasonScoringConfigs',
+        'RoundMatches', 'Rounds', 'Seasons',
+        'AuditLogs', 'RefreshTokens'
+    ];
 BEGIN
     SELECT "Id" INTO v_admin_id FROM "Users" WHERE "Email" = v_admin_email;
     IF v_admin_id IS NULL THEN
         RAISE EXCEPTION 'No user found with email %, aborting wipe (nothing deleted).', v_admin_email;
     END IF;
 
-    -- --- Children first (predictions / scoring / OCR) ----------------------
-    DELETE FROM "OcrPredictionCandidates";
-    DELETE FROM "OcrImportBatches";
-    DELETE FROM "PredictionScores";
-    DELETE FROM "Predictions";
-    DELETE FROM "RoundParticipantResults";
-    DELETE FROM "Standings";
-    DELETE FROM "AbsenceOverrides";
-    DELETE FROM "Absences";
-
-    -- --- Per-season scoring config (children -> parent) --------------------
-    -- These cascade from "Seasons" too, but delete them explicitly so the wipe
-    -- stays exhaustive if a cascade is ever changed. SeasonScoringConfig is a
-    -- tenant root (IGroupOwned) whose Restrict FK to "Groups" would otherwise
-    -- block the group delete below if any row lingered.
-    DELETE FROM "ScoringScoreEntries";
-    DELETE FROM "ScoringMultiplierRules";
-    DELETE FROM "ScoringClassicTeams";
-    DELETE FROM "SeasonScoringConfigs";
-
-    -- --- Fixtures / structure ----------------------------------------------
-    DELETE FROM "RoundMatches";
-    DELETE FROM "Rounds";
-    DELETE FROM "Seasons";
-
-    -- --- Cross-cutting -----------------------------------------------------
-    DELETE FROM "AuditLogs";
-    DELETE FROM "RefreshTokens";
+    -- --- Per-round / structural / cross-cutting tables (skip absent ones) ---
+    FOREACH t IN ARRAY v_tables LOOP
+        IF to_regclass(format('%I', t)) IS NOT NULL THEN
+            EXECUTE format('DELETE FROM %I', t);
+        ELSE
+            RAISE NOTICE 'Skipping "%" (not present in this schema).', t;
+        END IF;
+    END LOOP;
 
     -- --- Memberships & groups ----------------------------------------------
     IF v_keep_owner_groups THEN
@@ -90,15 +88,3 @@ BEGIN
 
     RAISE NOTICE 'Wipe complete. Kept admin % (id %), keep_owner_groups=%.', v_admin_email, v_admin_id, v_keep_owner_groups;
 END $$;
-
--- --- Post-wipe sanity report (separate statement) --------------------------
-SELECT 'Users'        AS table_name, count(*) AS rows FROM "Users"
-UNION ALL SELECT 'Groups',        count(*) FROM "Groups"
-UNION ALL SELECT 'GroupUsers',    count(*) FROM "GroupUsers"
-UNION ALL SELECT 'Teams',         count(*) FROM "Teams"
-UNION ALL SELECT 'Seasons',       count(*) FROM "Seasons"
-UNION ALL SELECT 'Rounds',        count(*) FROM "Rounds"
-UNION ALL SELECT 'Predictions',   count(*) FROM "Predictions"
-UNION ALL SELECT 'Standings',     count(*) FROM "Standings"
-UNION ALL SELECT 'RefreshTokens', count(*) FROM "RefreshTokens"
-UNION ALL SELECT 'AuditLogs',     count(*) FROM "AuditLogs";
