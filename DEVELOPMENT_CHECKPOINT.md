@@ -206,6 +206,17 @@ node -e "const f=o=>Object.entries(o).flatMap(([k,v])=>v&&typeof v==='object'?f(
 
 Seed dev admin: `admin@palpitao.local` / `Admin@123`.
 
+**Database reset — keep only the super-admin (go-live wipe):**
+- **Staging / production:** Actions → *Reset database (keep super-admin)*
+  (`.github/workflows/reset-db.yml`) — manual dispatch; pick the environment and type its name to
+  confirm. Keeps the chosen admin (by email) + the global `Teams` catalogue and wipes everything else
+  (all groups too when `drop_all_groups` is on). The admin's password is preserved; only refresh
+  tokens are cleared (re-login needed). Runs the SQL via `scripts/run-sql.cs` (a .NET 10 file-based
+  app) using each environment's `BACKEND_CONNECTION_STRING` secret.
+- **Local (Docker):** `./scripts/reset-db-keep-admin.ps1 -DropAllGroups` mirrors that wipe (omit the
+  switch to keep the admin's own groups). Both paths run the same portable
+  `scripts/reset-db-keep-admin.sql`.
+
 ## 8. Recommended next steps
 
 1. **Open a PR for `feat/security-hardening-phase1`** (security & performance hardening, committed as

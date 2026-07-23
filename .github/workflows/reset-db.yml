@@ -1,0 +1,115 @@
+name: Reset database (keep super-admin)
+
+# DANGER: wipes almost all data in the selected environment's database, keeping
+# only the chosen super-admin user and the global "Teams" catalogue. Manual
+# dispatch only. You must type the environment name to confirm, and the job runs
+# under the GitHub `staging`/`production` Environment -- add "Required reviewers"
+# to the production Environment for a second pair of eyes before a prod wipe.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment whose database to WIPE'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      admin_email:
+        description: 'Super-admin to KEEP (matched by email)'
+        required: true
+        default: 'admin@palpitao.local'
+        type: string
+      drop_all_groups:
+        description: 'Delete ALL groups too (fresh slate). Uncheck to keep the groups the kept admin owns.'
+        required: true
+        default: true
+        type: boolean
+      confirm:
+        description: 'Type the environment name (staging or production) to confirm'
+        required: true
+        type: string
+
+# Serialize resets so two runs never race on the same database.
+concurrency:
+  group: reset-db
+  cancel-in-progress: false
+
+jobs:
+  reset:
+    name: Reset ${{ inputs.environment }} database
+    runs-on: [self-hosted]
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Validate confirmation
+        shell: pwsh
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          ADMIN_EMAIL: ${{ inputs.admin_email }}
+          DROP_ALL_GROUPS: ${{ inputs.drop_all_groups }}
+        run: |
+          if ($env:CONFIRM -ne $env:ENVIRONMENT) {
+            throw "Confirmation '$($env:CONFIRM)' does not match the selected environment '$($env:ENVIRONMENT)'. Aborting -- nothing was changed."
+          }
+          Write-Host "Confirmed. Will wipe '$($env:ENVIRONMENT)', keep admin '$($env:ADMIN_EMAIL)', drop_all_groups=$($env:DROP_ALL_GROUPS)."
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare wipe SQL (inject admin email + group scope)
+        shell: pwsh
+        env:
+          ADMIN_EMAIL: ${{ inputs.admin_email }}
+          DROP_ALL_GROUPS: ${{ inputs.drop_all_groups }}
+        run: |
+          $src = Join-Path $PWD 'scripts/reset-db-keep-admin.sql'
+          if (-not (Test-Path $src)) { throw "SQL template not found: $src" }
+
+          if ($env:ADMIN_EMAIL -notmatch "^[^'@\s]+@[^'@\s]+$") {
+            throw "admin_email '$($env:ADMIN_EMAIL)' is not a valid email; refusing to build the wipe."
+          }
+          $keepOwnerGroups = if ($env:DROP_ALL_GROUPS -eq 'true') { 'false' } else { 'true' }
+
+          $sql = Get-Content -Raw $src
+          $sql = $sql -replace "v_admin_email\s+text\s+:=\s+'[^']*'", "v_admin_email       text    := '$($env:ADMIN_EMAIL)'"
+          $sql = $sql -replace "v_keep_owner_groups\s+boolean\s+:=\s+(true|false)", "v_keep_owner_groups boolean := $keepOwnerGroups"
+
+          if ($sql -notmatch [regex]::Escape("v_admin_email       text    := '$($env:ADMIN_EMAIL)'")) {
+            throw "Failed to inject the admin email into the SQL template (pattern not found)."
+          }
+          if ($sql -notmatch "v_keep_owner_groups boolean := $keepOwnerGroups") {
+            throw "Failed to inject the group scope into the SQL template (pattern not found)."
+          }
+
+          $out = Join-Path $env:RUNNER_TEMP 'reset-db.generated.sql'
+          Set-Content -Path $out -Value $sql -Encoding UTF8
+          Write-Host "Prepared wipe SQL at $out (keep_owner_groups=$keepOwnerGroups)."
+
+      - name: Row counts BEFORE
+        shell: pwsh
+        env:
+          DB_CONNECTION: ${{ secrets.BACKEND_CONNECTION_STRING }}
+          SQL_FILE: ${{ github.workspace }}/scripts/db-counts.sql
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:DB_CONNECTION)) {
+            throw "Missing secret BACKEND_CONNECTION_STRING for the '$($env:ENVIRONMENT)' environment."
+          }
+          dotnet run scripts/run-sql.cs
+
+      - name: Execute wipe
+        shell: pwsh
+        env:
+          DB_CONNECTION: ${{ secrets.BACKEND_CONNECTION_STRING }}
+          SQL_FILE: ${{ runner.temp }}/reset-db.generated.sql
+        run: |
+          dotnet run scripts/run-sql.cs
+
+      - name: Row counts AFTER
+        shell: pwsh
+        env:
+          DB_CONNECTION: ${{ secrets.BACKEND_CONNECTION_STRING }}
+          SQL_FILE: ${{ github.workspace }}/scripts/db-counts.sql
+        run: |
+          dotnet run scripts/run-sql.cs
