@@ -14,17 +14,22 @@
 .PARAMETER AdminEmail
     Email of the user to keep. Default: admin@palpitao.local
 
+.PARAMETER DropAllGroups
+    Also delete EVERY group and membership (fresh slate), mirroring the go-live
+    reset. Without it the script keeps the group(s) the kept admin owns (emptied).
+
 .PARAMETER Force
     Skip the interactive confirmation prompt.
 
 .EXAMPLE
     ./scripts/reset-db-keep-admin.ps1
-    ./scripts/reset-db-keep-admin.ps1 -AdminEmail admin@palpitao.local -Force
+    ./scripts/reset-db-keep-admin.ps1 -AdminEmail admin@palpitao.local -DropAllGroups -Force
 #>
 [CmdletBinding()]
 param(
     [string]$AdminEmail = "admin@palpitao.local",
     [string]$Container  = "palpitao-postgres",
+    [switch]$DropAllGroups,
     [switch]$Force
 )
 
@@ -54,10 +59,11 @@ if ($running -notcontains $Container) {
     throw "Container '$Container' is not running. Start it with: docker compose up -d"
 }
 
+$groupScope = if ($DropAllGroups) { "NO groups (all deleted) + all Teams" } else { "groups owned by that admin + all Teams" }
 Write-Host "Target container : $Container"
 Write-Host "Database         : $dbName (user $dbUser)"
 Write-Host "Keeping admin    : $AdminEmail"
-Write-Host "Keeping          : groups owned by that admin + all Teams" -ForegroundColor DarkGray
+Write-Host "Keeping          : $groupScope" -ForegroundColor DarkGray
 Write-Host ""
 
 if (-not $Force) {
@@ -69,11 +75,15 @@ if (-not $Force) {
     }
 }
 
-# --- Execute: inject the chosen admin email, pipe the SQL into psql ---
-# The SQL is portable plain SQL (a DO block); we set the kept admin by rewriting
-# the v_admin_email literal rather than relying on psql -v variables.
+# --- Execute: inject the chosen admin email + group scope, pipe into psql ---
+# The SQL is portable plain SQL (a DO block); we set the kept admin and the group
+# scope by rewriting the v_admin_email / v_keep_owner_groups literals rather than
+# relying on psql -v variables. The regex is whitespace-flexible so it keeps
+# matching regardless of the literal's alignment in the .sql file.
+$keepOwnerGroups = if ($DropAllGroups) { 'false' } else { 'true' }
 $sql = Get-Content -Raw $sqlFile
-$sql = $sql -replace "v_admin_email text := '[^']*'", "v_admin_email text := '$AdminEmail'"
+$sql = $sql -replace "v_admin_email\s+text\s+:=\s+'[^']*'", "v_admin_email       text    := '$AdminEmail'"
+$sql = $sql -replace "v_keep_owner_groups\s+boolean\s+:=\s+(true|false)", "v_keep_owner_groups boolean := $keepOwnerGroups"
 $sql | docker exec -i $Container psql -U $dbUser -d $dbName -v ON_ERROR_STOP=1
 
 if ($LASTEXITCODE -ne 0) {
