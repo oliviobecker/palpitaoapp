@@ -119,12 +119,18 @@ const CORS = {
   'access-control-allow-headers': 'authorization,content-type,accept-language,x-group-id',
 };
 
+interface ApiResponse {
+  status?: number;
+  json?: unknown;
+  /** Raw body for non-JSON endpoints (e.g. the stored OCR image); pair with contentType. */
+  body?: Buffer;
+  contentType?: string;
+}
+
 export interface ApiHandler {
   method: string;
   match: (path: string) => boolean;
-  respond: (
-    req: Request,
-  ) => { status?: number; json?: unknown } | Promise<{ status?: number; json?: unknown }>;
+  respond: (req: Request) => ApiResponse | Promise<ApiResponse>;
 }
 
 /**
@@ -155,6 +161,15 @@ export async function installApi(page: Page, handlers: ApiHandler[]): Promise<vo
     const status = result.status ?? 200;
     if (status === 204) {
       await route.fulfill({ status, headers: CORS });
+      return;
+    }
+
+    if (result.body) {
+      await route.fulfill({
+        status,
+        headers: { ...CORS, 'content-type': result.contentType ?? 'application/octet-stream' },
+        body: result.body,
+      });
       return;
     }
 

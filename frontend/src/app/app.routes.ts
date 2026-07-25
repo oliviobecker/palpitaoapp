@@ -127,6 +127,11 @@ export const routes: Routes = [
               import('./features/admin/admin-ocr-import').then((m) => m.AdminOcrImport),
           },
           {
+            path: 'rounds/:id/import-history',
+            loadComponent: () =>
+              import('./features/admin/admin-ocr-history').then((m) => m.AdminOcrHistory),
+          },
+          {
             path: 'scoring',
             canDeactivate: [unsavedChangesGuard],
             loadComponent: () =>

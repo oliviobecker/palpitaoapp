@@ -203,6 +203,13 @@
           </a>
         </div>
         <div class="col-12 col-md-6">
+          <a class="action-card h-100" [routerLink]="['/admin/rounds', r.id, 'import-history']">
+            <span class="icon-tile icon-tile--teal"><app-icon name="eye" [size]="20" /></span>
+            <div class="action-card__title">{{ 'roundDetail.importHistory' | translate }}</div>
+            <span class="action-card__arrow"><app-icon name="arrow-right" [size]="18" /></span>
+          </a>
+        </div>
+        <div class="col-12 col-md-6">
           <a class="action-card h-100" [routerLink]="['/admin/rounds', r.id, 'scout']">
             <span class="icon-tile icon-tile--teal"><app-icon name="search" [size]="20" /></span>
             <div class="action-card__title">{{ 'scout.title' | translate }}</div>

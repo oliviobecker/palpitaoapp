@@ -294,10 +294,30 @@ export interface OcrBatch {
   languageUsed: string;
   originalFileName: string;
   extractedText?: string | null;
+  /** False for pre-feature batches and for those whose image retention pruned. */
+  hasImage: boolean;
   createdAt: string;
   processedAt?: string | null;
   confirmedAt?: string | null;
   candidates: OcrCandidate[];
+}
+
+/** One past import of a round, without the extracted text or the image bytes. */
+export interface OcrBatchSummary {
+  id: string;
+  roundId: string;
+  status: string;
+  originalFileName: string;
+  languageUsed: string;
+  hasImage: boolean;
+  imageContentType?: string | null;
+  imageByteSize?: number | null;
+  candidateCount: number;
+  uploadedByUserId: string;
+  uploadedByName?: string | null;
+  createdAt: string;
+  processedAt?: string | null;
+  confirmedAt?: string | null;
 }
 
 export interface PredictionCoverageParticipant {

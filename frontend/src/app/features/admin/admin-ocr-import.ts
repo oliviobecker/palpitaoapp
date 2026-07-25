@@ -14,8 +14,10 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { OcrBatch, OcrCandidate, Participant, Round } from '../../core/models/models';
 import { ConfirmService } from '../../core/notifications/confirm.service';
+import { ImageViewerService } from '../../core/notifications/image-viewer.service';
 import { ToastService } from '../../core/notifications/toast.service';
 import { AdminService } from '../../core/services/admin.service';
+import { OcrImageService } from '../../core/services/ocr-image.service';
 import { RoundsService } from '../../core/services/rounds.service';
 import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
@@ -146,10 +148,6 @@ export function validateOcrFile(name: string, size: number): 'invalidFormat' | '
         background: var(--surface-2);
         cursor: zoom-in;
       }
-      .ocr-preview--expanded {
-        max-height: none;
-        cursor: zoom-out;
-      }
       @media (min-width: 992px) {
         .ocr-sticky {
           position: sticky;
@@ -166,6 +164,8 @@ export class AdminOcrImport implements OnInit {
   private readonly adminApi = inject(AdminService);
   private readonly toast = inject(ToastService);
   private readonly confirmDialog = inject(ConfirmService);
+  private readonly imageViewer = inject(ImageViewerService);
+  private readonly ocrImages = inject(OcrImageService);
   private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -176,14 +176,19 @@ export class AdminOcrImport implements OnInit {
   protected readonly participants = signal<Participant[]>([]);
   protected readonly batch = signal<OcrBatch | null>(null);
   protected readonly file = signal<File | null>(null);
-  protected readonly previewUrl = signal<string | null>(null);
-  protected readonly previewExpanded = signal(false);
+  /** Object URL of the file just picked, before it is uploaded. */
+  protected readonly localPreviewUrl = signal<string | null>(null);
+  /** Object URL of the image fetched back from the database (after a reload). */
+  protected readonly storedPreviewUrl = signal<string | null>(null);
   protected readonly dragOver = signal(false);
   protected readonly saveStates = signal<Record<string, SaveState>>({});
   protected language = 'por';
   protected roundId = '';
 
   private readonly saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  /** The local pick wins (no round trip); the stored copy covers a reload. */
+  protected readonly previewUrl = computed(() => this.localPreviewUrl() ?? this.storedPreviewUrl());
 
   protected readonly needsReviewCount = computed(
     () => this.batch()?.candidates.filter((c) => c.needsReview).length ?? 0,
@@ -195,8 +200,10 @@ export class AdminOcrImport implements OnInit {
 
   ngOnInit(): void {
     this.roundId = this.route.snapshot.paramMap.get('id') ?? '';
+    const batchId = this.route.snapshot.queryParamMap.get('batch');
     this.destroyRef.onDestroy(() => {
-      this.revokePreview();
+      this.revokeLocalPreview();
+      this.ocrImages.releaseAll();
       this.saveTimers.forEach((t) => clearTimeout(t));
     });
     forkJoin({
@@ -212,6 +219,31 @@ export class AdminOcrImport implements OnInit {
         },
         error: () => this.loading.set(false),
       });
+
+    // A reload (or a link from the import history) lands here with only a batch id: restore
+    // the review state from the server, image included.
+    if (batchId) {
+      this.adminApi
+        .getOcrBatch(batchId)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({ next: (b) => this.applyBatch(b) });
+    }
+  }
+
+  /** Adopts a batch as the current review target and pulls its stored image if there is one. */
+  private applyBatch(b: OcrBatch): void {
+    this.batch.set(b);
+    this.saveStates.set({});
+    if (b.hasImage && !this.localPreviewUrl()) {
+      this.ocrImages
+        .load(b.id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (url) => this.storedPreviewUrl.set(url),
+          // A missing/pruned image just leaves the preview card out — the review still works.
+          error: () => this.storedPreviewUrl.set(null),
+        });
+    }
   }
 
   onFile(event: Event): void {
@@ -243,17 +275,26 @@ export class AdminOcrImport implements OnInit {
     return `${(f.size / 1024 / 1024).toFixed(1)} MB`;
   }
 
-  togglePreview(): void {
-    this.previewExpanded.set(!this.previewExpanded());
+  openPreview(): void {
+    const url = this.previewUrl();
+    if (!url) {
+      return;
+    }
+    const name = this.file()?.name ?? this.batch()?.originalFileName ?? 'image';
+    this.imageViewer.open(url, {
+      title: this.translate.instant('ocr.preview'),
+      subtitle: name,
+      downloadName: name,
+    });
   }
 
   private setFile(f: File | null): void {
     if (f && !this.isValidFile(f)) {
       return;
     }
-    this.revokePreview();
+    this.revokeLocalPreview();
     this.file.set(f);
-    this.previewUrl.set(f ? URL.createObjectURL(f) : null);
+    this.localPreviewUrl.set(f ? URL.createObjectURL(f) : null);
   }
 
   private isValidFile(f: File): boolean {
@@ -265,8 +306,8 @@ export class AdminOcrImport implements OnInit {
     return true;
   }
 
-  private revokePreview(): void {
-    const url = this.previewUrl();
+  private revokeLocalPreview(): void {
+    const url = this.localPreviewUrl();
     if (url) {
       URL.revokeObjectURL(url);
     }
@@ -284,9 +325,15 @@ export class AdminOcrImport implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (b) => {
-          this.batch.set(b);
-          this.saveStates.set({});
+          this.applyBatch(b);
           this.processing.set(false);
+          // Keep the batch id in the URL so a reload comes back to this review, not the
+          // upload form — the image is re-fetched from the database.
+          void this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: { batch: b.id },
+            replaceUrl: true,
+          });
         },
         error: () => this.processing.set(false),
       });
@@ -462,7 +509,14 @@ export class AdminOcrImport implements OnInit {
         next: () => {
           this.batch.set(null);
           this.saveStates.set({});
+          this.storedPreviewUrl.set(null);
+          this.ocrImages.releaseAll();
           this.toast.success(this.translate.instant('ocr.cancelled'));
+          void this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: {},
+            replaceUrl: true,
+          });
         },
       });
   }

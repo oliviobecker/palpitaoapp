@@ -87,6 +87,7 @@ public static class DomainMessages
             ["notFound.team"] = ("Time informado não existe.", "The given team does not exist."),
             ["notFound.ocrBatch"] = ("Importação não encontrada.", "Import not found."),
             ["notFound.ocrCandidate"] = ("Candidato não encontrado.", "Candidate not found."),
+            ["notFound.ocrImage"] = ("Nenhuma imagem armazenada para esta importação.", "No image stored for this import."),
 
             // Common.
             ["common.justificationRequired"] = ("A justificativa é obrigatória.", "A justification is required."),
@@ -223,6 +224,9 @@ public static class DomainMessages
             ["ocr.sendImage"] = ("Envie uma imagem.", "Send an image."),
             ["ocr.invalidFormat"] = ("Envie uma imagem nos formatos PNG, JPG, JPEG ou WEBP.", "Send an image in PNG, JPG, JPEG or WEBP format."),
             ["ocr.emptyFile"] = ("Arquivo de imagem vazio.", "Empty image file."),
+            ["ocr.contentMismatch"] = (
+                "O conteúdo do arquivo não corresponde a uma imagem PNG, JPG ou WEBP.",
+                "The file content is not a PNG, JPG or WEBP image."),
             ["ocr.tooLarge"] = ("A imagem deve ter no máximo 10 MB.", "The image must be at most 10 MB."),
             ["ocr.incompleteCandidates"] = ("Há candidatos incompletos. Revise antes de confirmar a importação.", "There are incomplete candidates. Review before confirming the import."),
             ["ocr.duplicateCandidates"] = (

@@ -46,6 +46,7 @@ public class AppDbContext : DbContext
     public DbSet<ScoringMultiplierRule> ScoringMultiplierRules => Set<ScoringMultiplierRule>();
     public DbSet<ScoringClassicTeam> ScoringClassicTeams => Set<ScoringClassicTeam>();
     public DbSet<OcrImportBatch> OcrImportBatches => Set<OcrImportBatch>();
+    public DbSet<OcrImportImage> OcrImportImages => Set<OcrImportImage>();
     public DbSet<OcrPredictionCandidate> OcrPredictionCandidates => Set<OcrPredictionCandidate>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
@@ -414,7 +415,6 @@ public class AppDbContext : DbContext
         {
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(30);
             e.Property(x => x.OriginalFileName).HasMaxLength(300);
-            e.Property(x => x.StoredFilePath).HasMaxLength(500);
             e.Property(x => x.LanguageUsed).HasMaxLength(20);
 
             e.HasOne(x => x.Round)
@@ -433,6 +433,24 @@ public class AppDbContext : DbContext
             e.HasOne(x => x.Batch)
                 .WithMany(b => b.Candidates)
                 .HasForeignKey(x => x.OcrImportBatchId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<OcrImportImage>(e =>
+        {
+            // Shared PK with the batch: no surrogate id, no extra index, and the bytes stay
+            // unreachable unless a query names this table explicitly.
+            e.HasKey(x => x.OcrImportBatchId);
+            e.Property(x => x.OcrImportBatchId).ValueGeneratedNever();
+            e.Property(x => x.Content).IsRequired();
+            e.Property(x => x.ContentType).HasMaxLength(50).IsRequired();
+            e.Property(x => x.FileExtension).HasMaxLength(10).IsRequired();
+            e.Property(x => x.Sha256).HasMaxLength(64).IsRequired();
+            e.HasIndex(x => x.CreatedAt);
+
+            e.HasOne(x => x.Batch)
+                .WithOne(b => b.Image)
+                .HasForeignKey<OcrImportImage>(x => x.OcrImportBatchId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
