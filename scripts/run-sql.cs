@@ -5,8 +5,11 @@
 // with `dotnet run scripts/run-sql.cs` -- no project file needed.
 //
 // Inputs (env vars):
-//   DB_CONNECTION  Npgsql connection string of the target database (required).
-//   SQL_FILE       Path to the .sql file to execute (or pass it as argv[0]).
+//   DB_CONNECTION        Npgsql connection string of the target database (required).
+//   SQL_FILE             Path to the .sql file to execute (or pass it as argv[0]).
+//   SQL_TIMEOUT_SECONDS  Command timeout; default 30 (Npgsql's), 0 = unlimited.
+//                        Bump it for large scripts -- the whole file runs as one
+//                        command, so the timeout covers the entire script.
 //
 // It echoes RAISE NOTICE messages and any result-set rows so the wipe and its
 // count report show up in the Actions log. Exit code is non-zero on any error,
@@ -31,8 +34,20 @@ if (string.IsNullOrWhiteSpace(sqlFile) || !File.Exists(sqlFile))
     return 1;
 }
 
+var timeoutRaw = Environment.GetEnvironmentVariable("SQL_TIMEOUT_SECONDS");
+var timeoutSeconds = 30;
+if (!string.IsNullOrWhiteSpace(timeoutRaw))
+{
+    if (!int.TryParse(timeoutRaw, out timeoutSeconds) || timeoutSeconds < 0)
+    {
+        Console.Error.WriteLine($"ERROR: SQL_TIMEOUT_SECONDS='{timeoutRaw}' is not a non-negative integer.");
+        return 1;
+    }
+}
+
 var sql = await File.ReadAllTextAsync(sqlFile);
-Console.WriteLine($"Executing {sqlFile} ({sql.Length} chars) against the target database...");
+Console.WriteLine($"Executing {sqlFile} ({sql.Length} chars) against the target database"
+    + $" (timeout {(timeoutSeconds == 0 ? "unlimited" : timeoutSeconds + "s")})...");
 
 try
 {
@@ -40,7 +55,7 @@ try
     db.Notice += (_, e) => Console.WriteLine($"[pg] {e.Notice.MessageText}");
     await db.OpenAsync();
 
-    await using var cmd = new NpgsqlCommand(sql, db);
+    await using var cmd = new NpgsqlCommand(sql, db) { CommandTimeout = timeoutSeconds };
     await using var reader = await cmd.ExecuteReaderAsync();
     do
     {
