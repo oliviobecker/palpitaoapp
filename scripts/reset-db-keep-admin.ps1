@@ -90,5 +90,13 @@ if ($LASTEXITCODE -ne 0) {
     throw "psql exited with code $LASTEXITCODE - database was NOT modified (transaction rolled back)."
 }
 
+# --- Post-wipe row counts (same snapshot the CI workflow prints) ---
+$countsFile = Join-Path $PSScriptRoot "db-counts.sql"
+if (Test-Path $countsFile) {
+    Write-Host ""
+    Write-Host "Post-wipe row counts:" -ForegroundColor Cyan
+    Get-Content -Raw $countsFile | docker exec -i $Container psql -U $dbUser -d $dbName -v ON_ERROR_STOP=1
+}
+
 Write-Host ""
 Write-Host "Done. Database wiped, admin '$AdminEmail' preserved." -ForegroundColor Green
