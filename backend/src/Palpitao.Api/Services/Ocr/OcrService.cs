@@ -170,8 +170,14 @@ public class OcrService : IOcrService
             await _db.SaveChangesAsync(ct);
             throw new BusinessRuleException("ocr.processFailed");
         }
-
-        await PruneRoundImagesAsync(roundId, ct);
+        finally
+        {
+            // In the finally, not after the try: the catch above persists the image of a failed
+            // batch and rethrows, so pruning only on the success path would let a round whose OCR
+            // keeps failing grow past MaxImagesPerRound. Cannot throw (it swallows and logs), so
+            // it never masks the original exception.
+            await PruneRoundImagesAsync(roundId, ct);
+        }
 
         return await GetBatchAsync(batch.Id, ct);
     }
@@ -190,21 +196,29 @@ public class OcrService : IOcrService
 
         try
         {
-            var stale = await _db.OcrImportImages
+            // Project the keys only: materialising the entities would SELECT the bytea of every
+            // image about to be deleted (up to 10 MB each), which is exactly what the side table
+            // exists to avoid. CreatedAt alone is not a total order — two uploads can share a
+            // tick — so the key breaks ties and keeps the window deterministic.
+            var staleIds = await _db.OcrImportImages
                 .Where(i => i.Batch!.RoundId == roundId)
                 .OrderByDescending(i => i.CreatedAt)
+                .ThenByDescending(i => i.OcrImportBatchId)
                 .Skip(_storage.MaxImagesPerRound)
+                .Select(i => i.OcrImportBatchId)
                 .ToListAsync(ct);
 
-            if (stale.Count == 0)
+            if (staleIds.Count == 0)
             {
                 return;
             }
 
-            _db.OcrImportImages.RemoveRange(stale);
-            await _db.SaveChangesAsync(ct);
+            // Set-based delete: no change-tracker entries left in a Deleted state if it fails.
+            var removed = await _db.OcrImportImages
+                .Where(i => staleIds.Contains(i.OcrImportBatchId))
+                .ExecuteDeleteAsync(ct);
             _logger.LogInformation(
-                "Removidas {Count} imagens antigas de OCR da rodada {RoundId}.", stale.Count, roundId);
+                "Removidas {Count} imagens antigas de OCR da rodada {RoundId}.", removed, roundId);
         }
         catch (Exception ex)
         {

@@ -1,6 +1,8 @@
+using System.Data.Common;
 using System.Security.Cryptography;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Palpitao.Api.Common;
@@ -44,11 +46,38 @@ public class OcrServiceTests
     private static IOptions<OcrStorageOptions> Storage(OcrStorageOptions? options = null)
         => Options.Create(options ?? new OcrStorageOptions());
 
-    private static AppDbContext CreateContext()
+    /// <summary>Records the SQL EF actually emits, so a test can assert on the shape of a query.</summary>
+    private sealed class SqlCapture : DbCommandInterceptor
+    {
+        public readonly List<string> Commands = [];
+
+        public override InterceptionResult<DbDataReader> ReaderExecuting(
+            DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result)
+        {
+            Commands.Add(command.CommandText);
+            return result;
+        }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command.CommandText);
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    private static AppDbContext CreateContext(SqlCapture? capture = null)
     {
         var connection = new SqliteConnection("DataSource=:memory:");
         connection.Open();
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
+        var builder = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection);
+        if (capture is not null)
+        {
+            builder.AddInterceptors(capture);
+        }
+
+        var options = builder.Options;
         var db = new AppDbContext(options);
         db.Database.EnsureCreated();
         db.Seasons.Add(new Season
@@ -522,5 +551,49 @@ public class OcrServiceTests
         Assert.DoesNotContain(oldest, remaining);
         // Only the bytes go: the batch row and its history survive.
         Assert.Equal(3, await db.OcrImportBatches.CountAsync());
+    }
+
+    [Fact]
+    public async Task Process_prunes_the_oldest_images_even_when_ocr_fails()
+    {
+        using var db = CreateContext();
+        var roundId = SeedRound(db);
+        var oldest = SeedBatchWithImage(db, roundId, PngBytes(1), DateTime.UtcNow.AddHours(-3));
+        var middle = SeedBatchWithImage(db, roundId, PngBytes(2), DateTime.UtcNow.AddHours(-2));
+        var service = CreateService(
+            db, engine: new ThrowingOcrEngine(), storage: new OcrStorageOptions { MaxImagesPerRound = 2 });
+
+        await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.ProcessAsync(roundId, "palpites.png", PngBytes(3), "por", Admin, Ct));
+
+        // A failed batch keeps its image, so the cap has to hold on that path too — otherwise a
+        // round whose OCR is broken grows without bound.
+        var remaining = await db.OcrImportImages.Select(i => i.OcrImportBatchId).ToListAsync();
+        Assert.Equal(2, remaining.Count);
+        Assert.Contains(middle, remaining);
+        Assert.DoesNotContain(oldest, remaining);
+    }
+
+    [Fact]
+    public async Task Prune_does_not_select_the_image_bytes()
+    {
+        var capture = new SqlCapture();
+        using var db = CreateContext(capture);
+        var roundId = SeedRound(db);
+        SeedBatchWithImage(db, roundId, PngBytes(1), DateTime.UtcNow.AddHours(-1));
+        var service = CreateService(db, storage: new OcrStorageOptions { MaxImagesPerRound = 1 });
+        capture.Commands.Clear();
+
+        await service.ProcessAsync(roundId, "palpites.png", PngBytes(2), "por", Admin, Ct);
+
+        // Pruning must project keys, never materialise the entity — otherwise it SELECTs the bytea
+        // of every image it is about to delete, which is exactly what the side table exists to avoid.
+        var selectsContent = capture.Commands
+            .Where(c => c.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+            .Where(c => c.Contains("OcrImportImages", StringComparison.Ordinal))
+            .Where(c => c.Contains("\"Content\"", StringComparison.Ordinal))
+            .ToList();
+        Assert.Empty(selectsContent);
+        Assert.Single(await db.OcrImportImages.ToListAsync());
     }
 }
