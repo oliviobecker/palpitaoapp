@@ -8,6 +8,7 @@ import {
   AuditLog,
   ImportFixturesResponse,
   OcrBatch,
+  OcrBatchSummary,
   Participant,
   PredictionCoverage,
   RefreshResultsResponse,
@@ -165,6 +166,19 @@ export class AdminService {
 
   getOcrBatch(batchId: string): Observable<OcrBatch> {
     return this.http.get<OcrBatch>(`${this.base}/ocr-imports/${batchId}`);
+  }
+
+  listOcrBatches(roundId: string): Observable<OcrBatchSummary[]> {
+    return this.http.get<OcrBatchSummary[]>(`${this.base}/rounds/${roundId}/ocr-imports`);
+  }
+
+  /** Blob body: the error interceptor cannot read a Blob error, so callers render an
+   *  inline placeholder instead of relying on a toast. */
+  getOcrImage(batchId: string): Observable<Blob> {
+    return this.http.get(`${this.base}/ocr-imports/${batchId}/image`, {
+      responseType: 'blob',
+      context: new HttpContext().set(SKIP_ERROR_TOAST, true),
+    });
   }
 
   updateOcrCandidate(

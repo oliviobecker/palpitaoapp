@@ -240,6 +240,27 @@ async Task<object?> Scalar(string sql, params (string, object?)[] ps)
     return r is DBNull ? null : r;
 }
 
+// Schema-version tolerance, same idea as scripts/reset-db-keep-admin.sql: an
+// environment whose API build predates a migration simply will not have that
+// table, and every table this seeder touches beyond the core is optional.
+var tables = new HashSet<string>(StringComparer.Ordinal);
+{
+    await using var cmd = new NpgsqlCommand(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema()", db);
+    await using var rd = await cmd.ExecuteReaderAsync();
+    while (await rd.ReadAsync()) tables.Add(rd.GetString(0));
+}
+bool Has(string table) => tables.Contains(table);
+
+foreach (var required in new[] { "Users", "Groups", "GroupUsers", "Teams", "Seasons", "Rounds", "RoundMatches", "Predictions" })
+{
+    if (!Has(required))
+    {
+        Console.Error.WriteLine($"ERROR: table \"{required}\" is missing from this schema. Deploy the API (it applies migrations at startup) before seeding.");
+        return 1;
+    }
+}
+
 var adminId = (Guid?)await Scalar("SELECT \"Id\" FROM \"Users\" WHERE \"Email\" = @e", ("e", adminEmail));
 if (adminId is null) { Console.Error.WriteLine($"ERROR: admin '{adminEmail}' not found."); return 1; }
 
@@ -299,8 +320,13 @@ var seasonId = Det($"palpitao-{tag}:season");
 }
 
 // A persisted SeasonScoringConfig would take the classic set from ScoringClassicTeams
-// instead of Teams.IsBigSevenClub, quietly collapsing every multiplier to 1.
-if (Convert.ToInt64(await Scalar("SELECT count(*) FROM \"SeasonScoringConfigs\" WHERE \"SeasonId\" = @s", ("s", seasonId))!) > 0
+// instead of Teams.IsBigSevenClub, quietly collapsing every multiplier to 1. When the
+// table is absent the ruleset can only come from ScoringDefaults, which is what we want.
+if (!Has("SeasonScoringConfigs"))
+{
+    Console.WriteLine("  scoring ruleset   : SeasonScoringConfigs absent -> ScoringDefaults + Teams.IsBigSevenClub (classic x2 active)");
+}
+else if (Convert.ToInt64(await Scalar("SELECT count(*) FROM \"SeasonScoringConfigs\" WHERE \"SeasonId\" = @s", ("s", seasonId))!) > 0
     && !replace)
 {
     Console.Error.WriteLine("ERROR: a SeasonScoringConfig exists for the demo season; it would disable the classic x2 multiplier.");
@@ -582,22 +608,32 @@ try
     if (replace)
     {
         const string inSeason = "SELECT \"Id\" FROM \"Rounds\" WHERE \"SeasonId\" = @s";
+        const string configs = "SELECT \"Id\" FROM \"SeasonScoringConfigs\" WHERE \"SeasonId\" = @s";
         var removed = 0;
-        removed += await Exec($"DELETE FROM \"OcrPredictionCandidates\" WHERE \"RoundId\" IN ({inSeason})", ("s", seasonId));
-        removed += await Exec($"DELETE FROM \"OcrImportBatches\" WHERE \"RoundId\" IN ({inSeason})", ("s", seasonId));
-        removed += await Exec($"DELETE FROM \"PredictionScores\" WHERE \"RoundId\" IN ({inSeason})", ("s", seasonId));
-        removed += await Exec($"DELETE FROM \"Predictions\" WHERE \"RoundId\" IN ({inSeason})", ("s", seasonId));
-        removed += await Exec("DELETE FROM \"RoundParticipantResults\" WHERE \"SeasonId\" = @s", ("s", seasonId));
-        removed += await Exec("DELETE FROM \"Standings\" WHERE \"SeasonId\" = @s", ("s", seasonId));
-        removed += await Exec($"DELETE FROM \"AbsenceOverrides\" WHERE \"RoundId\" IN ({inSeason})", ("s", seasonId));
-        removed += await Exec($"DELETE FROM \"Absences\" WHERE \"RoundId\" IN ({inSeason})", ("s", seasonId));
-        removed += await Exec("DELETE FROM \"ScoringScoreEntries\" WHERE \"ConfigId\" IN (SELECT \"Id\" FROM \"SeasonScoringConfigs\" WHERE \"SeasonId\" = @s)", ("s", seasonId));
-        removed += await Exec("DELETE FROM \"ScoringMultiplierRules\" WHERE \"ConfigId\" IN (SELECT \"Id\" FROM \"SeasonScoringConfigs\" WHERE \"SeasonId\" = @s)", ("s", seasonId));
-        removed += await Exec("DELETE FROM \"ScoringClassicTeams\" WHERE \"ConfigId\" IN (SELECT \"Id\" FROM \"SeasonScoringConfigs\" WHERE \"SeasonId\" = @s)", ("s", seasonId));
-        removed += await Exec("DELETE FROM \"SeasonScoringConfigs\" WHERE \"SeasonId\" = @s", ("s", seasonId));
-        removed += await Exec($"DELETE FROM \"RoundMatches\" WHERE \"RoundId\" IN ({inSeason})", ("s", seasonId));
-        removed += await Exec("DELETE FROM \"Rounds\" WHERE \"SeasonId\" = @s", ("s", seasonId));
-        removed += await Exec("DELETE FROM \"Seasons\" WHERE \"Id\" = @s", ("s", seasonId));
+
+        // Child -> parent, so foreign keys never block a delete. Absent tables are
+        // skipped rather than fatal, mirroring scripts/reset-db-keep-admin.sql.
+        async Task Del(string table, string where)
+        {
+            if (!Has(table)) return;
+            removed += await Exec($"DELETE FROM \"{table}\" WHERE {where}", ("s", seasonId));
+        }
+
+        await Del("OcrPredictionCandidates", $"\"RoundId\" IN ({inSeason})");
+        await Del("OcrImportBatches", $"\"RoundId\" IN ({inSeason})");
+        await Del("PredictionScores", $"\"RoundId\" IN ({inSeason})");
+        await Del("Predictions", $"\"RoundId\" IN ({inSeason})");
+        await Del("RoundParticipantResults", "\"SeasonId\" = @s");
+        await Del("Standings", "\"SeasonId\" = @s");
+        await Del("AbsenceOverrides", $"\"RoundId\" IN ({inSeason})");
+        await Del("Absences", $"\"RoundId\" IN ({inSeason})");
+        await Del("ScoringScoreEntries", $"\"ConfigId\" IN ({configs})");
+        await Del("ScoringMultiplierRules", $"\"ConfigId\" IN ({configs})");
+        await Del("ScoringClassicTeams", $"\"ConfigId\" IN ({configs})");
+        await Del("SeasonScoringConfigs", "\"SeasonId\" = @s");
+        await Del("RoundMatches", $"\"RoundId\" IN ({inSeason})");
+        await Del("Rounds", "\"SeasonId\" = @s");
+        await Del("Seasons", "\"Id\" = @s");
         Console.WriteLine($"  replaced          : {removed} pre-existing rows deleted");
     }
 

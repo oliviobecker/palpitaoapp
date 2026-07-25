@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Net.Http.Headers;
 using Palpitao.Api.Auth;
 using Palpitao.Api.Common;
 using Palpitao.Api.DTOs.Admin;
@@ -49,9 +50,37 @@ public class OcrImportsController : ControllerBase
         return Ok(batch);
     }
 
+    [HttpGet("rounds/{roundId:guid}/ocr-imports")]
+    public async Task<ActionResult<List<OcrBatchSummaryDto>>> ListForRound(Guid roundId, CancellationToken ct)
+        => Ok(await _ocr.ListBatchesAsync(roundId, ct));
+
     [HttpGet("ocr-imports/{batchId:guid}")]
     public async Task<ActionResult<OcrBatchDto>> Get(Guid batchId, CancellationToken ct)
         => Ok(await _ocr.GetBatchAsync(batchId, ct));
+
+    /// <summary>Streams the stored upload. Separate rate-limit policy from the import itself:
+    /// a gallery legitimately issues many reads, while uploads stay tightly capped.</summary>
+    [HttpGet("ocr-imports/{batchId:guid}/image")]
+    [EnableRateLimiting("ocrImage")]
+    public async Task<IActionResult> GetImage(Guid batchId, CancellationToken ct)
+    {
+        var image = await _ocr.GetImageAsync(batchId, ct);
+
+        // User-supplied bytes served from the API origin: refuse content sniffing and neuter any
+        // polyglot that slipped past the header check. The filename is never echoed back.
+        Response.Headers.XContentTypeOptions = "nosniff";
+        Response.Headers.ContentSecurityPolicy = "default-src 'none'; sandbox";
+        Response.Headers.ContentDisposition = "inline";
+        // Authenticated and tenant-scoped, so never public. The bytes for a batch id never change.
+        Response.Headers.CacheControl = "private, max-age=86400, immutable";
+
+        // This overload handles If-None-Match / If-Modified-Since (304) and range requests.
+        return File(
+            image.Content,
+            image.ContentType,
+            lastModified: new DateTimeOffset(image.CreatedAt, TimeSpan.Zero),
+            entityTag: new EntityTagHeaderValue($"\"{image.Sha256}\""));
+    }
 
     [HttpPut("ocr-imports/{batchId:guid}/candidates/{candidateId:guid}")]
     public async Task<ActionResult<OcrBatchDto>> UpdateCandidate(

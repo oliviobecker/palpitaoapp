@@ -13,8 +13,6 @@ public class OcrImportBatch
 
     public string OriginalFileName { get; set; } = string.Empty;
 
-    public string? StoredFilePath { get; set; }
-
     public string? ExtractedText { get; set; }
 
     public string LanguageUsed { get; set; } = "por";
@@ -28,4 +26,7 @@ public class OcrImportBatch
     // Navigation
     public Round? Round { get; set; }
     public ICollection<OcrPredictionCandidate> Candidates { get; set; } = new List<OcrPredictionCandidate>();
+
+    /// <summary>The stored upload. Never auto-included: loading it pulls the whole image.</summary>
+    public OcrImportImage? Image { get; set; }
 }

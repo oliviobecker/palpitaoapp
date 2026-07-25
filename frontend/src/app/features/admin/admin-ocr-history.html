@@ -1,0 +1,97 @@
+<div class="mb-3">
+  <div class="page-trail">
+    <a routerLink="/admin/rounds">{{ 'nav.rounds' | translate }}</a> ·
+    <a [routerLink]="['/admin/rounds', roundId]">{{ 'dashboard.round' | translate }}</a> ·
+    {{ 'ocrHistory.crumb' | translate }}
+  </div>
+  <h1 class="h4 fw-bold mb-1">{{ 'ocrHistory.title' | translate }}</h1>
+  <p class="text-muted small mb-0">{{ 'ocrHistory.subtitle' | translate }}</p>
+</div>
+
+@if (loading()) {
+  <app-skeleton-list [count]="4" />
+} @else if (error()) {
+  <app-error-state (retry)="load()" />
+} @else if (batches().length === 0) {
+  <app-empty-state icon="image" [message]="'ocrHistory.empty' | translate" />
+} @else {
+  <div class="row g-3">
+    @for (b of batches(); track b.id) {
+      <div class="col-12 col-sm-6 col-lg-4">
+        <div class="card import-card">
+          @if (b.hasImage) {
+            <button
+              type="button"
+              class="import-card__thumb import-card__thumb--clickable"
+              [disabled]="opening() === b.id"
+              [attr.aria-label]="'ocrHistory.viewImage' | translate"
+              (click)="view(b)"
+            >
+              @if (thumbs()[b.id]; as url) {
+                <img [src]="url" [alt]="b.originalFileName" />
+              } @else if (opening() === b.id) {
+                <span class="spinner-border spinner-border-sm text-secondary"></span>
+              } @else {
+                <span class="icon-tile icon-tile--blue"><app-icon name="image" [size]="20" /></span>
+              }
+            </button>
+          } @else {
+            <div class="import-card__thumb">
+              <span class="text-muted small">{{ 'ocrHistory.noImage' | translate }}</span>
+            </div>
+          }
+
+          <div class="card-body">
+            <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+              <h2 class="h6 fw-bold mb-0 text-truncate" [title]="b.originalFileName">
+                {{ b.originalFileName }}
+              </h2>
+              <span class="badge flex-shrink-0" [class]="statusClass(b.status)">{{
+                statusLabel(b.status)
+              }}</span>
+            </div>
+            <dl class="small text-body-secondary mb-0">
+              <div class="d-flex justify-content-between">
+                <dt class="fw-normal">{{ 'ocrHistory.uploadedBy' | translate }}</dt>
+                <dd class="mb-1 text-end">{{ b.uploadedByName ?? '—' }}</dd>
+              </div>
+              <div class="d-flex justify-content-between">
+                <dt class="fw-normal">{{ 'ocrHistory.uploadedAt' | translate }}</dt>
+                <dd class="mb-1 text-end">{{ b.createdAt | date: 'short' }}</dd>
+              </div>
+              <div class="d-flex justify-content-between">
+                <dt class="fw-normal">{{ 'ocrHistory.size' | translate }}</dt>
+                <dd class="mb-1 text-end">{{ sizeMb(b.imageByteSize) }}</dd>
+              </div>
+              <div class="d-flex justify-content-between">
+                <dt class="fw-normal">{{ 'ocrHistory.candidates' | translate }}</dt>
+                <dd class="mb-0 text-end">{{ b.candidateCount }}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="card-footer d-flex gap-2">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary flex-grow-1"
+              [disabled]="!b.hasImage || opening() === b.id"
+              (click)="view(b)"
+            >
+              <app-icon name="eye" [size]="14" />
+              <span class="ms-1">{{ 'ocrHistory.viewImage' | translate }}</span>
+            </button>
+            @if (isReviewable(b)) {
+              <a
+                class="btn btn-sm btn-outline-secondary"
+                [routerLink]="['/admin/rounds', roundId, 'import-predictions']"
+                [queryParams]="{ batch: b.id }"
+              >
+                {{ 'ocrHistory.review' | translate }}
+              </a>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}

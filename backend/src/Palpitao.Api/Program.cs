@@ -100,6 +100,11 @@ var authRateLimitWindowSeconds = builder.Configuration.GetValue<int?>("RateLimit
 const string OcrRateLimitPolicy = "ocr";
 var ocrRateLimitPermit = builder.Configuration.GetValue<int?>("RateLimiting:Ocr:PermitLimit") ?? 5;
 var ocrRateLimitWindowSeconds = builder.Configuration.GetValue<int?>("RateLimiting:Ocr:WindowSeconds") ?? 60;
+// Serving stored images is a cheap read, but a gallery issues many of them — the import
+// throttle above would reject the second row of cards. Tunable via "RateLimiting:OcrImage".
+const string OcrImageRateLimitPolicy = "ocrImage";
+var ocrImageRateLimitPermit = builder.Configuration.GetValue<int?>("RateLimiting:OcrImage:PermitLimit") ?? 60;
+var ocrImageRateLimitWindowSeconds = builder.Configuration.GetValue<int?>("RateLimiting:OcrImage:WindowSeconds") ?? 60;
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -122,6 +127,17 @@ builder.Services.AddRateLimiter(options =>
             {
                 PermitLimit = ocrRateLimitPermit,
                 Window = TimeSpan.FromSeconds(ocrRateLimitWindowSeconds),
+                QueueLimit = 0,
+            }));
+
+    options.AddPolicy(OcrImageRateLimitPolicy, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = ocrImageRateLimitPermit,
+                Window = TimeSpan.FromSeconds(ocrImageRateLimitWindowSeconds),
                 QueueLimit = 0,
             }));
 
@@ -177,6 +193,9 @@ builder.Services.AddScoped<IAdminPredictionService, AdminPredictionService>();
 builder.Services.AddScoped<IPredictionImportService, PredictionImportService>();
 builder.Services.AddScoped<IOcrService, OcrService>();
 builder.Services.AddSingleton<IOcrEngine, TesseractOcrEngine>();
+// Uploaded images live in Postgres, so their footprint is capped per round and swept by age.
+builder.Services.Configure<OcrStorageOptions>(builder.Configuration.GetSection(OcrStorageOptions.SectionName));
+builder.Services.AddHostedService<OcrImageRetentionBackgroundService>();
 
 // --- External fixtures (round-by-period import) -----------------------------
 builder.Services.Configure<FixtureOptions>(builder.Configuration.GetSection(FixtureOptions.SectionName));

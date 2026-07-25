@@ -7,7 +7,12 @@
     · {{ 'ocr.crumb' | translate }}
   </div>
   <h1 class="h4 fw-bold mb-1">{{ 'ocr.title' | translate }}</h1>
-  <p class="text-muted small mb-0">{{ 'ocr.subtitle' | translate }}</p>
+  <p class="text-muted small mb-0">
+    {{ 'ocr.subtitle' | translate }} ·
+    <a [routerLink]="['/admin/rounds', roundId, 'import-history']">{{
+      'ocr.viewHistory' | translate
+    }}</a>
+  </p>
 </div>
 
 @if (loading()) {
@@ -62,13 +67,8 @@
           <button type="button" class="file-chip__remove" (click)="removeFile()">×</button>
         </div>
         @if (previewUrl(); as url) {
-          <button type="button" class="ocr-preview-btn" (click)="togglePreview()">
-            <img
-              [src]="url"
-              class="ocr-preview"
-              [class.ocr-preview--expanded]="previewExpanded()"
-              [alt]="'ocr.preview' | translate"
-            />
+          <button type="button" class="ocr-preview-btn" (click)="openPreview()">
+            <img [src]="url" class="ocr-preview" [alt]="'ocr.preview' | translate" />
           </button>
         }
       }
@@ -102,13 +102,8 @@
           <div class="card">
             <div class="card-body">
               <h2 class="h6 fw-bold mb-2">{{ 'ocr.preview' | translate }}</h2>
-              <button type="button" class="ocr-preview-btn" (click)="togglePreview()">
-                <img
-                  [src]="url"
-                  class="ocr-preview"
-                  [class.ocr-preview--expanded]="previewExpanded()"
-                  [alt]="'ocr.preview' | translate"
-                />
+              <button type="button" class="ocr-preview-btn" (click)="openPreview()">
+                <img [src]="url" class="ocr-preview" [alt]="'ocr.preview' | translate" />
               </button>
             </div>
           </div>

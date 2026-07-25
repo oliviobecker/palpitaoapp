@@ -8,6 +8,8 @@ const batch = {
   languageUsed: 'por',
   originalFileName: 'palpites.png',
   extractedText: 'João Silva\nArsenal 2 x 1 Chelsea\nLiverpool 0 x 3 Newcastle',
+  // The just-picked file supplies the preview, so no image is fetched back here.
+  hasImage: true,
   createdAt: '2026-01-01T00:00:00Z',
   processedAt: '2026-01-01T00:00:00Z',
   confirmedAt: null,

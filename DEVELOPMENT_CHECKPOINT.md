@@ -115,6 +115,27 @@ overall standings update.
 - **Prediction coverage**: `GET admin/rounds/{id}/predictions/coverage` + a Published-step panel in the
   round detail showing who still hasn't predicted; manual predictions navigate back after saving.
 
+**Stored OCR images**
+- Uploads are now **persisted in Postgres** (`OcrImportImages`, `bytea`) instead of being discarded
+  after Tesseract runs. It is a **1:1 side table**, never a column on `OcrImportBatch` — EF has no
+  lazy scalars, so a blob on the batch would be pulled by every candidate autosave. The dead
+  `StoredFilePath` column was dropped in the same migration.
+- **Viewing**: `GET admin/rounds/{id}/ocr-imports` (summaries, no bytes) and
+  `GET admin/ocr-imports/{id}/image` (bytes, `nosniff` + CSP `default-src 'none'; sandbox` +
+  `private, immutable` cache + SHA-256 ETag → 304). Own rate-limit policy `RateLimiting:OcrImage`
+  (60/min) — the 5/min upload throttle would reject a gallery. The frontend fetches images as blobs
+  through `HttpClient` (so the bearer/group interceptors apply) and wraps them in object URLs
+  (`OcrImageService`), shown in a root-level lightbox (`ImageViewer`, modelled on `ConfirmDialog`).
+  New page `/admin/rounds/:id/import-history`; the review screen keeps its image across a reload via
+  a `?batch=` query param.
+- **Validation**: uploads are now sniffed by **magic bytes** (PNG/JPEG/WebP) and cross-checked against
+  the claimed extension → `ocr.contentMismatch` (422) *before* any row is written. A fake `.png` no
+  longer produces a junk `Failed` batch.
+- **Storage footprint** (`OcrStorage` in appsettings): `StoreImages` kill switch,
+  `MaxImagesPerRound` (10) pruned synchronously on upload, `RetentionDays` (180) swept daily by
+  `OcrImageRetentionBackgroundService` (Postgres advisory lock, single-runner). Pruning removes
+  **only the bytes** — batches, candidates and audit survive. Expect ~1 GB/season/group otherwise.
+
 ## 4. Pending / not implemented (roadmap)
 
 - **Server-side autosave** of predictions (current draft is client-side only; needs partial/incremental
