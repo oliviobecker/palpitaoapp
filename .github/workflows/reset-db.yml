@@ -30,9 +30,10 @@ on:
         required: true
         type: string
 
-# Serialize resets so two runs never race on the same database.
+# Serialize every database operation (reset / seed-group / seed-rehearsal) so two
+# runs never race on the same database. All DB-ops workflows share this group.
 concurrency:
-  group: reset-db
+  group: db-ops
   cancel-in-progress: false
 
 jobs:

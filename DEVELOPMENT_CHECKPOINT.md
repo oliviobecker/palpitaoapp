@@ -217,6 +217,38 @@ Seed dev admin: `admin@palpitao.local` / `Admin@123`.
   switch to keep the admin's own groups). Both paths run the same portable
   `scripts/reset-db-keep-admin.sql`.
 
+**Rehearsal season on staging (`scripts/rehearsal/`):** Actions → *Seed rehearsal season (STAGING
+ONLY)* (`.github/workflows/seed-rehearsal-staging.yml`) seeds a full, already-played English 2025/26
+season (real fixtures + real final scores from the frozen feeds in `scripts/rehearsal/fixtures/`),
+12 test participants, and an empty `Draft` round to run by hand — then scores every round through
+the real API and asserts the result. Phases: `all | seed | score | verify | reset-scoring`.
+
+- **Staging only by construction:** the job hardcodes `environment: staging`; there is no
+  `environment` input, so `BACKEND_CONNECTION_STRING` cannot resolve to production. Needs
+  `STAGING_API_BASE_URL` (var) plus `STAGING_ADMIN_PASSWORD` and `SEED_PARTICIPANT_PASSWORD`
+  (secrets) on that environment.
+- **The seeder writes raw rows only** (users, memberships, season, rounds, matches, predictions).
+  `PredictionScores`, `RoundParticipantResults`, `Absences`, `Standings` and `GroupUsers.IsEliminated`
+  come exclusively from `POST /rounds/{id}/score`, driven in ascending order by
+  `scripts/rehearsal/score-season.ps1` — the Flávio rule reads live standings, so order is load-bearing.
+- **Re-scoring:** use `phase: reset-scoring`, never `POST /seasons/{id}/recalculate` — see §7a.
+- `SEED_DRY_RUN=true` (the `dry_run` input) runs the whole seed in a transaction and rolls it back.
+
+## 7a. Known scoring bugs found while building the rehearsal tooling
+
+1. **`RecalculateSeasonAsync` is not idempotent for `PalpitaoEngland`.**
+   `RoundScoringService.RecalculateSeasonCoreAsync` deletes `PredictionScores` /
+   `RoundParticipantResults` / `Absences` but **never deletes `Standings`**, then re-scores with
+   `updateStandings: false`. `FlavioRuleService.GetLeadersBeforeRoundAsync` therefore reads the
+   previous run's *end-of-season* standings for every round ≥ 16, penalising last run's champion
+   instead of the leader at that point. README §16 currently claims it is idempotent.
+   Same root cause makes re-scoring a single middle round unfaithful; `reopen` + re-score is only
+   correct for the highest-numbered scored round.
+2. **`ResultsUpdateService.cs:170` hardcodes `ResultSource = "ConfiguredWebsite"`** regardless of
+   which provider ran, so a OneFootball refresh mislabels every match it touches.
+3. **`AdminMatches.remove()` sends no justification** (`admin-matches.ts:446`) while
+   `MatchesService.remove()` supports one — deleting a match on a closed round always 422s from the UI.
+
 ## 8. Recommended next steps
 
 1. **Open a PR for `feat/security-hardening-phase1`** (security & performance hardening, committed as

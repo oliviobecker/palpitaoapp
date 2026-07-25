@@ -1,0 +1,248 @@
+name: Seed rehearsal season (STAGING ONLY)
+
+# Seeds a full, already-played English 2025/26 season plus 12 test participants so
+# the whole app can be rehearsed before a real season starts, then scores every
+# round through the real API and asserts the result is coherent.
+#
+# STAGING ONLY, BY CONSTRUCTION. There is deliberately no `environment` input:
+# `environment: staging` is a literal on the job, and GitHub resolves
+# environment-scoped secrets from that literal when the job starts. No input,
+# expression or re-run option can redirect it, so BACKEND_CONNECTION_STRING is
+# structurally incapable of resolving to the production value.
+#
+# >>> REVIEW RULE: never add `production` to a choice input here "for symmetry". <<<
+#
+# Requires, on the `staging` GitHub Environment:
+#   secret  BACKEND_CONNECTION_STRING   (already used by deploy-staging.yml)
+#   secret  STAGING_ADMIN_PASSWORD      password of admin_email, for the scoring API calls
+#   secret  SEED_PARTICIPANT_PASSWORD   shared password given to the 12 seeded accounts
+#   var     STAGING_API_BASE_URL        e.g. https://<host>/api  (no trailing slash)
+#   var     STAGING_DB_NAME             optional; enables the connection-string fingerprint check
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "staging" to confirm'
+        required: true
+        type: string
+      group_slug:
+        description: 'Slug of the group to seed into'
+        required: true
+        default: 'palpitao-england-2026-2027'
+        type: string
+      phase:
+        description: 'Which part to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - seed
+          - score
+          - verify
+          - reset-scoring
+      rounds:
+        description: 'Played rounds to seed (1-38)'
+        required: true
+        default: '38'
+        type: string
+      flavio_round:
+        description: 'Round where everyone submits late, so the Flavio rule fires (>= 16)'
+        required: true
+        default: '18'
+        type: string
+      from_round:
+        description: 'Resume scoring from this round (every round below must already be scored)'
+        required: true
+        default: '1'
+        type: string
+      replace:
+        description: 'Rebuild the demo season if it already exists'
+        required: true
+        default: false
+        type: boolean
+      dry_run:
+        description: 'Run the seed inside a transaction and roll it back (writes nothing)'
+        required: true
+        default: false
+        type: boolean
+      admin_email:
+        description: 'Group admin used to score the rounds'
+        required: true
+        default: 'admin@palpitao.local'
+        type: string
+
+# Shared with reset-db.yml and seed-group.yml so database operations serialize.
+concurrency:
+  group: db-ops
+  cancel-in-progress: false
+
+jobs:
+  rehearse:
+    name: Seed and score the rehearsal season
+    runs-on: [self-hosted]
+    environment: staging
+    steps:
+      - name: Validate request
+        shell: pwsh
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+          PHASE: ${{ inputs.phase }}
+          ROUNDS: ${{ inputs.rounds }}
+          FLAVIO_ROUND: ${{ inputs.flavio_round }}
+          FROM_ROUND: ${{ inputs.from_round }}
+          ADMIN_EMAIL: ${{ inputs.admin_email }}
+          GROUP_SLUG: ${{ inputs.group_slug }}
+        run: |
+          if ($env:CONFIRM -ne 'staging') {
+            throw "Confirmation '$($env:CONFIRM)' must be exactly 'staging'. Aborting -- nothing was changed."
+          }
+          $rounds = 0; $flavio = 0; $from = 0
+          if (-not [int]::TryParse($env:ROUNDS, [ref]$rounds) -or $rounds -lt 1 -or $rounds -gt 38) {
+            throw "rounds '$($env:ROUNDS)' must be an integer between 1 and 38."
+          }
+          if (-not [int]::TryParse($env:FLAVIO_ROUND, [ref]$flavio) -or $flavio -lt 16 -or $flavio -gt $rounds) {
+            throw "flavio_round '$($env:FLAVIO_ROUND)' must be between 16 (FlavioRuleService.FirstApplicableRound) and rounds ($rounds). Below 16 the rule silently never fires."
+          }
+          if (-not [int]::TryParse($env:FROM_ROUND, [ref]$from) -or $from -lt 1 -or $from -gt $rounds) {
+            throw "from_round '$($env:FROM_ROUND)' must be between 1 and $rounds."
+          }
+          if ($env:ADMIN_EMAIL -notmatch "^[^'@\s]+@[^'@\s]+$") {
+            throw "admin_email '$($env:ADMIN_EMAIL)' is not a valid email."
+          }
+          if ($env:GROUP_SLUG -notmatch '^[a-z0-9][a-z0-9-]*$') {
+            throw "group_slug '$($env:GROUP_SLUG)' is not a valid slug."
+          }
+          Write-Host "Confirmed. phase=$($env:PHASE) rounds=$rounds flavio=$flavio from=$from group=$($env:GROUP_SLUG)"
+
+      - name: Assert the target really is staging
+        shell: pwsh
+        env:
+          DB_CONNECTION: ${{ secrets.BACKEND_CONNECTION_STRING }}
+          EXPECTED_DB: ${{ vars.STAGING_DB_NAME }}
+          API_BASE_URL: ${{ vars.STAGING_API_BASE_URL }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:DB_CONNECTION)) {
+            throw "Missing secret BACKEND_CONNECTION_STRING on the 'staging' environment."
+          }
+          if ([string]::IsNullOrWhiteSpace($env:API_BASE_URL)) {
+            throw "Missing variable STAGING_API_BASE_URL on the 'staging' environment (e.g. https://host/api)."
+          }
+          # Parse the database name only -- never echo the connection string.
+          $dbName = ($env:DB_CONNECTION -split ';' | Where-Object { $_ -match '^\s*Database\s*=' } |
+                     ForEach-Object { ($_ -split '=', 2)[1].Trim() }) | Select-Object -First 1
+          if ([string]::IsNullOrWhiteSpace($dbName)) { throw "Could not read Database= from the connection string." }
+          if ([string]::IsNullOrWhiteSpace($env:EXPECTED_DB)) {
+            Write-Host "::warning::STAGING_DB_NAME is not set, so the connection-string fingerprint check is skipped. Target database is '$dbName'."
+          } elseif ($dbName -ne $env:EXPECTED_DB) {
+            throw "Target database '$dbName' does not match STAGING_DB_NAME ('$($env:EXPECTED_DB)'). Aborting."
+          } else {
+            Write-Host "Target database '$dbName' matches STAGING_DB_NAME."
+          }
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Row counts BEFORE
+        shell: pwsh
+        env:
+          DB_CONNECTION: ${{ secrets.BACKEND_CONNECTION_STRING }}
+          SQL_FILE: ${{ github.workspace }}/scripts/db-counts.sql
+        run: dotnet run scripts/run-sql.cs
+
+      - name: Seed the season
+        if: inputs.phase == 'all' || inputs.phase == 'seed'
+        shell: pwsh
+        env:
+          DB_CONNECTION: ${{ secrets.BACKEND_CONNECTION_STRING }}
+          SEED_PARTICIPANT_PASSWORD: ${{ secrets.SEED_PARTICIPANT_PASSWORD }}
+          SEED_CONFIRM: ${{ inputs.group_slug }}
+          SEED_GROUP_SLUG: ${{ inputs.group_slug }}
+          SEED_ADMIN_EMAIL: ${{ inputs.admin_email }}
+          SEED_PLAYED_ROUNDS: ${{ inputs.rounds }}
+          SEED_FLAVIO_ROUND: ${{ inputs.flavio_round }}
+          SEED_REPLACE: ${{ inputs.replace }}
+          SEED_DRY_RUN: ${{ inputs.dry_run }}
+          SQL_TIMEOUT_SECONDS: '600'
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SEED_PARTICIPANT_PASSWORD)) {
+            throw "Missing secret SEED_PARTICIPANT_PASSWORD on the 'staging' environment. It is defined only there, which is itself a production guard."
+          }
+          dotnet run scripts/rehearsal/seed-demo-season.cs
+
+      - name: Row counts AFTER seed
+        if: inputs.phase == 'all' || inputs.phase == 'seed'
+        shell: pwsh
+        env:
+          DB_CONNECTION: ${{ secrets.BACKEND_CONNECTION_STRING }}
+          SQL_FILE: ${{ github.workspace }}/scripts/db-counts.sql
+        run: dotnet run scripts/run-sql.cs
+
+      # Clearing Standings too is what makes a replay faithful; see the comment
+      # at the top of reset-scoring.sql.
+      - name: Reset previous scoring
+        if: inputs.phase == 'reset-scoring'
+        shell: pwsh
+        env:
+          DB_CONNECTION: ${{ secrets.BACKEND_CONNECTION_STRING }}
+          SQL_FILE: ${{ github.workspace }}/scripts/rehearsal/reset-scoring.sql
+        run: dotnet run scripts/run-sql.cs
+
+      # The only path that writes PredictionScores / RoundParticipantResults /
+      # Absences / Standings: the real scorer, one round at a time, ascending.
+      - name: Score the rounds
+        if: (inputs.phase == 'all' || inputs.phase == 'score' || inputs.phase == 'reset-scoring') && !inputs.dry_run
+        shell: pwsh
+        env:
+          API_BASE_URL: ${{ vars.STAGING_API_BASE_URL }}
+          ADMIN_EMAIL: ${{ inputs.admin_email }}
+          ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+          GROUP_SLUG: ${{ inputs.group_slug }}
+          FROM_ROUND: ${{ inputs.from_round }}
+          PHASE: ${{ inputs.phase }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:ADMIN_PASSWORD)) {
+            throw "Missing secret STAGING_ADMIN_PASSWORD on the 'staging' environment."
+          }
+          # A reset-scoring run always replays the whole season -- resuming partway
+          # would leave a hole in Standings and mis-target the Flavio rule.
+          $from = if ($env:PHASE -eq 'reset-scoring') { 1 } else { [int]$env:FROM_ROUND }
+          ./scripts/rehearsal/score-season.ps1 `
+            -BaseUrl  $env:API_BASE_URL `
+            -Email    $env:ADMIN_EMAIL `
+            -Password $env:ADMIN_PASSWORD `
+            -GroupSlug $env:GROUP_SLUG `
+            -FromRound $from
+
+      - name: Prepare verification SQL
+        if: (inputs.phase == 'all' || inputs.phase == 'verify') && !inputs.dry_run
+        shell: pwsh
+        env:
+          FLAVIO_ROUND: ${{ inputs.flavio_round }}
+        run: |
+          $src = Join-Path $PWD 'scripts/rehearsal/verify.sql'
+          if (-not (Test-Path $src)) { throw "Not found: $src" }
+          $sql = Get-Content -Raw $src
+          $sql = $sql -replace 'v_flavio_round\s+int\s+:=\s+\d+', "v_flavio_round int := $($env:FLAVIO_ROUND)"
+          if ($sql -notmatch "v_flavio_round int := $($env:FLAVIO_ROUND)") {
+            throw "Failed to inject flavio_round into verify.sql (pattern not found)."
+          }
+          $out = Join-Path $env:RUNNER_TEMP 'verify.generated.sql'
+          Set-Content -Path $out -Value $sql -Encoding UTF8
+          Write-Host "Prepared verification SQL at $out (flavio_round=$($env:FLAVIO_ROUND))."
+
+      - name: Verify
+        if: (inputs.phase == 'all' || inputs.phase == 'verify') && !inputs.dry_run
+        shell: pwsh
+        env:
+          DB_CONNECTION: ${{ secrets.BACKEND_CONNECTION_STRING }}
+          SQL_FILE: ${{ runner.temp }}/verify.generated.sql
+        run: dotnet run scripts/run-sql.cs
+
+      # The generated SQL carries participant e-mail addresses.
+      - name: Clean up generated files
+        if: always()
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path $env:RUNNER_TEMP -Filter 'verify.generated.sql' -ErrorAction SilentlyContinue |
+            Remove-Item -Force -ErrorAction SilentlyContinue
