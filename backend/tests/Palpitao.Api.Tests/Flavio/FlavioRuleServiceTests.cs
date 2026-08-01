@@ -4,6 +4,7 @@ using Palpitao.Api.Data;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Flavio;
+using Palpitao.Api.Services.Scoring;
 using Xunit;
 
 namespace Palpitao.Api.Tests.Flavio;
@@ -100,13 +101,40 @@ public class FlavioRuleServiceTests
     // -----------------------------------------------------------------------
 
     [Fact]
-    public void Does_not_apply_before_round_16()
+    public void Does_not_apply_before_round_16_by_default()
     {
         using var db = CreateContext();
         var service = new FlavioRuleService(db);
 
-        Assert.False(service.AppliesToRound(15));
-        Assert.True(service.AppliesToRound(16));
+        Assert.False(service.AppliesToRound(15, ScoringDefaults.FlavioFromRound));
+        Assert.True(service.AppliesToRound(16, ScoringDefaults.FlavioFromRound));
+    }
+
+    [Fact]
+    public void Honours_the_seasons_configured_threshold()
+    {
+        using var db = CreateContext();
+        var service = new FlavioRuleService(db);
+
+        // A season that starts the rule at round 10 penalizes from 10 on, not from 16.
+        Assert.False(service.AppliesToRound(9, 10));
+        Assert.True(service.AppliesToRound(10, 10));
+        Assert.True(service.AppliesToRound(15, 10));
+    }
+
+    [Fact]
+    public async Task Configured_threshold_drives_the_penalty()
+    {
+        using var db = CreateContext();
+        var service = new FlavioRuleService(db);
+        var leader = CreateParticipant(db, "Líder");
+
+        var published = new DateTime(2026, 1, 10, 12, 0, 0, DateTimeKind.Utc);
+        var round = InsertPublishedRound(db, 10, published, published.AddHours(48));
+        InsertPrediction(db, round, leader, published.AddHours(30)); // late
+
+        Assert.False(await service.ShouldPenalizeLeaderAsync(round.Id, leader, 16, Ct));
+        Assert.True(await service.ShouldPenalizeLeaderAsync(round.Id, leader, 10, Ct));
     }
 
     [Fact]
@@ -139,7 +167,7 @@ public class FlavioRuleServiceTests
 
         InsertPrediction(db, round, leader, published.AddHours(1)); // within 24h
 
-        Assert.False(await service.ShouldPenalizeLeaderAsync(round.Id, leader, Ct));
+        Assert.False(await service.ShouldPenalizeLeaderAsync(round.Id, leader, ScoringDefaults.FlavioFromRound, Ct));
     }
 
     [Fact]
@@ -155,7 +183,7 @@ public class FlavioRuleServiceTests
 
         InsertPrediction(db, round, leader, published.AddHours(30)); // after 24h, before lock
 
-        Assert.True(await service.ShouldPenalizeLeaderAsync(round.Id, leader, Ct));
+        Assert.True(await service.ShouldPenalizeLeaderAsync(round.Id, leader, ScoringDefaults.FlavioFromRound, Ct));
     }
 
     [Fact]
@@ -169,7 +197,7 @@ public class FlavioRuleServiceTests
         var round = InsertPublishedRound(db, 16, published, published.AddHours(48));
 
         // No predictions inserted -> not penalized by Flávio (handled as absence).
-        Assert.False(await service.ShouldPenalizeLeaderAsync(round.Id, leader, Ct));
+        Assert.False(await service.ShouldPenalizeLeaderAsync(round.Id, leader, ScoringDefaults.FlavioFromRound, Ct));
     }
 
     [Theory]

@@ -52,7 +52,7 @@ public class GroupIsolationTests
     }
 
     private static RoundService Rounds(AppDbContext db, Guid groupId)
-        => new(db, new AuditService(db), new FakeCurrentGroupService(groupId));
+        => new(db, new AuditService(db), new FakeCurrentGroupService(groupId), TestServices.ScoringConfig(db));
 
     private static StandingsService Standings(AppDbContext db, Guid groupId)
         => new(db, new FakeCurrentGroupService(groupId));

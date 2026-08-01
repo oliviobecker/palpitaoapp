@@ -17,16 +17,21 @@ public sealed class ScoringRuleSet
     /// <summary>Teams that count as classic-eligible (Big Seven / world champions) this season.</summary>
     public IReadOnlySet<Guid> ClassicTeamIds { get; }
 
+    /// <summary>The season's Flávio Rule / absence-punishment parameters.</summary>
+    public SeasonRuleParams Rules { get; }
+
     public ScoringRuleSet(
         IReadOnlyDictionary<ScoreCategory, int> basePoints,
         IReadOnlyDictionary<(int, int), ScoreCategory> scoreCategories,
         IReadOnlyDictionary<(Competition, MatchPhase), (int, int)> multipliers,
-        IReadOnlySet<Guid> classicTeamIds)
+        IReadOnlySet<Guid> classicTeamIds,
+        SeasonRuleParams rules)
     {
         _basePoints = basePoints;
         _scoreCategories = scoreCategories;
         _multipliers = multipliers;
         ClassicTeamIds = classicTeamIds;
+        Rules = rules;
     }
 
     /// <summary>Base points awarded for a category (before the multiplier).</summary>

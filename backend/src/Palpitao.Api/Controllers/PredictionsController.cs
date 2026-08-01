@@ -34,7 +34,7 @@ public class PredictionsController : ControllerBase
     public async Task<ActionResult<MyPredictionsDto>> Update(Guid roundId, SavePredictionsRequest request, CancellationToken ct)
         => Ok(await _predictions.SavePredictionsAsync(roundId, User.GetUserId(), request, isEdit: true, ct));
 
-    /// <summary>Predictions mirror — released only after the round is locked.</summary>
+    /// <summary>Predictions mirror — released once predictions close (or live, per season setting).</summary>
     [HttpGet("mirror")]
     public async Task<ActionResult<MirrorDto>> GetMirror(Guid roundId, CancellationToken ct)
         => Ok(await _predictions.GetMirrorAsync(roundId, User.GetUserId(), ct));

@@ -1,3 +1,4 @@
+using Palpitao.Api.Common;
 using Palpitao.Api.Enums;
 
 namespace Palpitao.Api.Entities;
@@ -28,10 +29,16 @@ public class Round : IGroupOwned
     public RoundStatus Status { get; set; } = RoundStatus.Draft;
 
     /// <summary>
-    /// General lock / prediction deadline: start of the round's earliest match.
-    /// Calculated when the round is published.
+    /// Start of the round's earliest match. Calculated when the round is published.
     /// </summary>
     public DateTime? FirstMatchStartsAt { get; set; }
+
+    /// <summary>
+    /// General lock: predictions close one minute before the first kickoff. Computed,
+    /// not stored — EF ignores get-only properties. Cannot be used inside an
+    /// <c>IQueryable</c> projection; the DTOs expose their own computed copy.
+    /// </summary>
+    public DateTime? PredictionDeadlineUtc => PredictionDeadline.From(FirstMatchStartsAt);
 
     /// <summary>Set when the round transitions Draft -> Published.</summary>
     public DateTime? PublishedAt { get; set; }

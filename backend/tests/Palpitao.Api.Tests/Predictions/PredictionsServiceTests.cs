@@ -77,7 +77,7 @@ public class PredictionsServiceTests
     private static async Task<RoundDto> CreateRoundWithMatches(
         AppDbContext db, DateTime firstStartsAt, int matchCount = 2, int number = 1)
     {
-        var rounds = new RoundService(db, new AuditService(db), new FakeCurrentGroupService());
+        var rounds = new RoundService(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db));
         var round = await rounds.CreateAsync(
             new CreateRoundRequest { SeasonId = SeasonId, Number = number }, SeedIds.AdminUser, Ct);
 
@@ -100,7 +100,7 @@ public class PredictionsServiceTests
         AppDbContext db, DateTime firstStartsAt, int matchCount = 2, int number = 1)
     {
         var round = await CreateRoundWithMatches(db, firstStartsAt, matchCount, number);
-        var rounds = new RoundService(db, new AuditService(db), new FakeCurrentGroupService());
+        var rounds = new RoundService(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db));
         return await rounds.PublishAsync(round.Id, SeedIds.AdminUser, Ct);
     }
 
@@ -174,7 +174,7 @@ public class PredictionsServiceTests
         var service = CreateService(db);
         var round = await PublishedRound(db, Future);
         var user = CreateParticipant(db);
-        await new RoundService(db, new AuditService(db), new FakeCurrentGroupService()).LockAsync(round.Id, SeedIds.AdminUser, Ct);
+        await new RoundService(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db)).LockAsync(round.Id, SeedIds.AdminUser, Ct);
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(
             () => service.SavePredictionsAsync(round.Id, user, FullBatch(round), false, Ct));
@@ -189,7 +189,7 @@ public class PredictionsServiceTests
         var service = CreateService(db);
         var round = await PublishedRound(db, Future);
         var user = CreateParticipant(db);
-        await new RoundService(db, new AuditService(db), new FakeCurrentGroupService()).CancelAsync(round.Id, SeedIds.AdminUser, Ct);
+        await new RoundService(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db)).CancelAsync(round.Id, SeedIds.AdminUser, Ct);
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(
             () => service.SavePredictionsAsync(round.Id, user, FullBatch(round), false, Ct));
@@ -209,6 +209,34 @@ public class PredictionsServiceTests
             () => service.SavePredictionsAsync(round.Id, user, FullBatch(round), false, Ct));
 
         Assert.Contains("prazo", ex.Message);
+    }
+
+    [Fact]
+    public async Task Cannot_predict_in_the_last_minute_before_kickoff()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        // Kickoff is still 30s away, but predictions closed a minute before it.
+        var round = await PublishedRound(db, DateTime.UtcNow.AddSeconds(30));
+        var user = CreateParticipant(db);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.SavePredictionsAsync(round.Id, user, FullBatch(round), false, Ct));
+
+        Assert.Contains("prazo", ex.Message);
+    }
+
+    [Fact]
+    public async Task Can_predict_up_to_one_minute_before_kickoff()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await PublishedRound(db, DateTime.UtcNow.AddMinutes(2));
+        var user = CreateParticipant(db);
+
+        var result = await service.SavePredictionsAsync(round.Id, user, FullBatch(round), false, Ct);
+
+        Assert.Equal(round.Matches.Count, result.Predictions.Count);
     }
 
     [Fact]
@@ -294,7 +322,7 @@ public class PredictionsServiceTests
     }
 
     [Fact]
-    public async Task Mirror_is_hidden_before_lock()
+    public async Task Mirror_is_hidden_before_the_deadline()
     {
         using var db = CreateContext();
         var service = CreateService(db);
@@ -304,7 +332,7 @@ public class PredictionsServiceTests
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(
             () => service.GetMirrorAsync(round.Id, viewer, Ct));
 
-        Assert.Contains("após o bloqueio", ex.Message);
+        Assert.Contains("após o encerramento dos palpites", ex.Message);
     }
 
     [Fact]
@@ -316,7 +344,7 @@ public class PredictionsServiceTests
         var user = CreateParticipant(db);
 
         await service.SavePredictionsAsync(round.Id, user, FullBatch(round), false, Ct);
-        await new RoundService(db, new AuditService(db), new FakeCurrentGroupService()).LockAsync(round.Id, SeedIds.AdminUser, Ct);
+        await new RoundService(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db)).LockAsync(round.Id, SeedIds.AdminUser, Ct);
 
         var mirror = await service.GetMirrorAsync(round.Id, user, Ct);
 

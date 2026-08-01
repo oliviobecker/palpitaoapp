@@ -84,6 +84,164 @@
     </div>
   </section>
 
+  <!-- Special rules: Flávio threshold + absence punishments -->
+  <section class="card sr-card mb-3">
+    <div class="card-body">
+      <div class="sr-section-title">
+        <span class="bar"></span>{{ 'scoringRules.flavioTitle' | translate }}
+      </div>
+      <p class="text-muted small mb-3">
+        {{ 'scoringRules.flavioHelp' | translate }}
+        @if (isWorldCup()) {
+          <br />{{ 'scoringRules.flavioWorldCupNote' | translate }}
+        }
+      </p>
+      <div class="base-grid">
+        <div class="base-card">
+          <div class="base-card__head">{{ 'scoringRules.flavioFromRound' | translate }}</div>
+          <div class="stepper">
+            <button
+              type="button"
+              class="step"
+              (click)="stepRule('flavioFromRound', -1)"
+              aria-label="−"
+            >
+              −
+            </button>
+            <input
+              type="number"
+              inputmode="numeric"
+              min="1"
+              class="step-val"
+              [value]="rules().flavioFromRound"
+              (input)="setRuleValue('flavioFromRound', $any($event.target).value)"
+              [attr.aria-label]="'scoringRules.flavioFromRound' | translate"
+            />
+            <button
+              type="button"
+              class="step"
+              (click)="stepRule('flavioFromRound', 1)"
+              aria-label="+"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card sr-card mb-3">
+    <div class="card-body">
+      <div class="sr-section-title">
+        <span class="bar"></span>{{ 'scoringRules.absencesTitle' | translate }}
+      </div>
+      <p class="text-muted small mb-3">{{ 'scoringRules.absencesHelp' | translate }}</p>
+      <div class="base-grid">
+        <div class="base-card">
+          <div class="base-card__head">{{ 'scoringRules.absenceFromRound' | translate }}</div>
+          <div class="stepper">
+            <button
+              type="button"
+              class="step"
+              (click)="stepRule('absenceFromRound', -1)"
+              aria-label="−"
+            >
+              −
+            </button>
+            <input
+              type="number"
+              inputmode="numeric"
+              min="1"
+              class="step-val"
+              [value]="rules().absenceFromRound"
+              (input)="setRuleValue('absenceFromRound', $any($event.target).value)"
+              [attr.aria-label]="'scoringRules.absenceFromRound' | translate"
+            />
+            <button
+              type="button"
+              class="step"
+              (click)="stepRule('absenceFromRound', 1)"
+              aria-label="+"
+            >
+              +
+            </button>
+          </div>
+        </div>
+        <div class="base-card">
+          <div class="base-card__head">{{ 'scoringRules.absencePenalty' | translate }}</div>
+          <div class="stepper">
+            <button
+              type="button"
+              class="step"
+              (click)="stepRule('absencePenaltyPoints', -1)"
+              aria-label="−"
+            >
+              −
+            </button>
+            <input
+              type="number"
+              inputmode="numeric"
+              min="0"
+              class="step-val"
+              [value]="rules().absencePenaltyPoints"
+              (input)="setRuleValue('absencePenaltyPoints', $any($event.target).value)"
+              [attr.aria-label]="'scoringRules.absencePenalty' | translate"
+            />
+            <button
+              type="button"
+              class="step"
+              (click)="stepRule('absencePenaltyPoints', 1)"
+              aria-label="+"
+            >
+              +
+            </button>
+          </div>
+        </div>
+        <div class="base-card">
+          <div class="base-card__head">{{ 'scoringRules.absenceElimination' | translate }}</div>
+          <div class="stepper">
+            <button
+              type="button"
+              class="step"
+              (click)="stepRule('absenceEliminationCount', -1)"
+              aria-label="−"
+            >
+              −
+            </button>
+            <input
+              type="number"
+              inputmode="numeric"
+              min="1"
+              class="step-val"
+              [value]="rules().absenceEliminationCount"
+              (input)="setRuleValue('absenceEliminationCount', $any($event.target).value)"
+              [attr.aria-label]="'scoringRules.absenceElimination' | translate"
+            />
+            <button
+              type="button"
+              class="step"
+              (click)="stepRule('absenceEliminationCount', 1)"
+              aria-label="+"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      </div>
+      <p class="text-muted small mb-0 mt-3">
+        {{
+          'scoringRules.absencesSummary'
+            | translate
+              : {
+                  penalty: rules().absencePenaltyPoints,
+                  elimination: rules().absenceEliminationCount,
+                }
+        }}
+      </p>
+    </div>
+  </section>
+
   <!-- Score categories (paint grid) -->
   <section class="card sr-card mb-3">
     <div class="card-body">

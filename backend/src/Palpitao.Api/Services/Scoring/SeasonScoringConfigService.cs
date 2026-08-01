@@ -61,6 +61,37 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
         return await GetRuleSetAsync(seasonId, ct);
     }
 
+    public async Task<SeasonRuleParams> GetRuleParamsAsync(Guid seasonId, CancellationToken ct)
+    {
+        // Scalar projection on purpose: the round and absence services only need these four
+        // numbers, and must not pay for the multiplier table and the classic-team list.
+        var rules = await _db.SeasonScoringConfigs
+            .AsNoTracking()
+            .Where(c => c.SeasonId == seasonId)
+            .Select(c => new SeasonRuleParams(
+                c.FlavioFromRound,
+                c.AbsenceFromRound,
+                c.AbsencePenaltyPoints,
+                c.AbsenceEliminationCount))
+            .FirstOrDefaultAsync(ct);
+
+        return rules ?? SeasonRuleParams.Defaults;
+    }
+
+    public async Task<SeasonRuleParams> GetRuleParamsForRoundAsync(Guid roundId, CancellationToken ct)
+    {
+        var seasonId = await _db.Rounds
+            .Where(r => r.Id == roundId)
+            .Select(r => r.SeasonId)
+            .FirstOrDefaultAsync(ct);
+        if (seasonId == Guid.Empty)
+        {
+            throw new NotFoundException("notFound.round");
+        }
+
+        return await GetRuleParamsAsync(seasonId, ct);
+    }
+
     public async Task<ScoringConfigDto> GetConfigAsync(Guid seasonId, CancellationToken ct)
     {
         var season = await LoadSeasonAsync(seasonId, ct);
@@ -103,6 +134,10 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
         config.MediumPoints = request.BasePoints.Medium;
         config.UncommonPoints = request.BasePoints.Uncommon;
         config.ExtraUncommonPoints = request.BasePoints.ExtraUncommon;
+        config.FlavioFromRound = request.Rules.FlavioFromRound;
+        config.AbsenceFromRound = request.Rules.AbsenceFromRound;
+        config.AbsencePenaltyPoints = request.Rules.AbsencePenaltyPoints;
+        config.AbsenceEliminationCount = request.Rules.AbsenceEliminationCount;
         config.UpdatedAt = now;
 
         // Replace children wholesale (delete-then-insert keeps the edit simple and atomic).
@@ -152,6 +187,10 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
             scoreEntries = request.ScoreEntries.Count,
             multiplierRules = request.MultiplierRules.Count,
             classicTeams = request.ClassicTeamIds.Count,
+            flavioFromRound = request.Rules.FlavioFromRound,
+            absenceFromRound = request.Rules.AbsenceFromRound,
+            absencePenaltyPoints = request.Rules.AbsencePenaltyPoints,
+            absenceEliminationCount = request.Rules.AbsenceEliminationCount,
         });
         await _db.SaveChangesAsync(ct);
 
@@ -232,8 +271,22 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
         }
 
         var classic = config.ClassicTeams.Select(t => t.TeamId).ToHashSet();
-        return new ScoringRuleSet(basePoints, scoreCategories, multipliers, classic);
+        return new ScoringRuleSet(basePoints, scoreCategories, multipliers, classic, RulesOf(config));
     }
+
+    private static SeasonRuleParams RulesOf(SeasonScoringConfig config) => new(
+        config.FlavioFromRound,
+        config.AbsenceFromRound,
+        config.AbsencePenaltyPoints,
+        config.AbsenceEliminationCount);
+
+    private static ScoringRulesDto MapRules(SeasonRuleParams rules) => new()
+    {
+        FlavioFromRound = rules.FlavioFromRound,
+        AbsenceFromRound = rules.AbsenceFromRound,
+        AbsencePenaltyPoints = rules.AbsencePenaltyPoints,
+        AbsenceEliminationCount = rules.AbsenceEliminationCount,
+    };
 
     private static ScoringConfigDto MapDto(
         Season season, SeasonScoringConfig config, bool hasScored, List<ScoringConfigTeamDto> candidates)
@@ -253,6 +306,7 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
                 Uncommon = config.UncommonPoints,
                 ExtraUncommon = config.ExtraUncommonPoints,
             },
+            Rules = MapRules(RulesOf(config)),
             ScoreEntries = config.ScoreEntries
                 .OrderBy(e => e.Low).ThenBy(e => e.High)
                 .Select(e => new ScoringScoreEntryDto { Low = e.Low, High = e.High, Category = e.Category })
@@ -289,6 +343,7 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
                 Uncommon = bp[ScoreCategory.Uncommon],
                 ExtraUncommon = bp[ScoreCategory.ExtraUncommon],
             },
+            Rules = MapRules(SeasonRuleParams.Defaults),
             ScoreEntries = ScoringDefaults.ScoreCategories()
                 .Select(e => new ScoringScoreEntryDto { Low = e.Low, High = e.High, Category = e.Category })
                 .ToList(),
@@ -323,6 +378,24 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
         if (bp.ColumnOnly < 0 || bp.Traditional < 0 || bp.Medium < 0 || bp.Uncommon < 0 || bp.ExtraUncommon < 0)
         {
             throw new BusinessRuleException("scoring.basePointsNegative");
+        }
+
+        var rules = request.Rules;
+        if (rules.FlavioFromRound < 1)
+        {
+            throw new BusinessRuleException("scoring.flavioFromRoundMin");
+        }
+        if (rules.AbsenceFromRound < 1)
+        {
+            throw new BusinessRuleException("scoring.absenceFromRoundMin");
+        }
+        if (rules.AbsencePenaltyPoints < 0)
+        {
+            throw new BusinessRuleException("scoring.absencePenaltyNegative");
+        }
+        if (rules.AbsenceEliminationCount < 1)
+        {
+            throw new BusinessRuleException("scoring.absenceEliminationMin");
         }
 
         var seenScores = new HashSet<(int, int)>();

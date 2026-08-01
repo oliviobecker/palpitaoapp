@@ -1,5 +1,6 @@
 import { Competition } from '../../core/models/enums';
 import { Round } from '../../core/models/models';
+import { predictionDeadlineIso } from './deadline.util';
 import { computeMultiplier, phaseLabel } from './match.util';
 
 const COMP_LABEL: Record<Competition, string> = {
@@ -39,9 +40,12 @@ export function buildRoundMessage(round: Round, groupTitle = ''): string {
     return lines.join('\n');
   }
 
-  const first = matches.reduce((a, b) => (a.startsAt <= b.startsAt ? a : b));
+  // The deadline is one minute before the first kickoff, not the kickoff itself.
+  const deadline = predictionDeadlineIso(round);
   lines.push('');
-  lines.push(`Palpites até ${formatDeadline(first.startsAt)}:`);
+  if (deadline) {
+    lines.push(`Palpites até ${formatDeadline(deadline)}:`);
+  }
 
   // Flávio rule (round 16+): the leader has a special, earlier deadline.
   const flavio = round.flavio;

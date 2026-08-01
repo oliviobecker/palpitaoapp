@@ -171,6 +171,8 @@ export interface Round {
   endDate?: string | null;
   status: RoundStatus;
   firstMatchStartsAt?: string | null;
+  /** General lock: one minute before the first kickoff (computed by the API). */
+  predictionDeadlineUtc?: string | null;
   publishedAt?: string | null;
   lockedAt?: string | null;
   mirrorPublishedAt?: string | null;
@@ -194,6 +196,8 @@ export interface RoundSummary {
   endDate?: string | null;
   status: RoundStatus;
   firstMatchStartsAt?: string | null;
+  /** General lock: one minute before the first kickoff (computed by the API). */
+  predictionDeadlineUtc?: string | null;
   publishedAt?: string | null;
   lockedAt?: string | null;
   matchCount: number;
@@ -240,6 +244,8 @@ export interface MyPredictions {
   roundId: string;
   status: RoundStatus;
   firstMatchStartsAt?: string | null;
+  /** General lock: one minute before the first kickoff (computed by the API). */
+  predictionDeadlineUtc?: string | null;
   predictions: Prediction[];
 }
 
@@ -449,6 +455,21 @@ export interface ScoringConfigTeam {
   isClassic: boolean;
 }
 
+/**
+ * The season's special rules: when the Flávio Rule starts applying and how absences
+ * are punished. Defaults reproduce the classic Palpitão rules (16 / 1 / 20 / 5).
+ */
+export interface ScoringRules {
+  /** First round the Flávio Rule applies to (England; the World Cup goes by phase). */
+  flavioFromRound: number;
+  /** First round in which an absence counts towards the punishment ladder. */
+  absenceFromRound: number;
+  /** Points deducted from the total per absence, from the 3rd one on. */
+  absencePenaltyPoints: number;
+  /** Absence ordinal that eliminates the participant from the season. */
+  absenceEliminationCount: number;
+}
+
 export interface ScoringConfig {
   seasonId: string;
   seasonName: string;
@@ -456,6 +477,7 @@ export interface ScoringConfig {
   /** True when the season already has scored rounds — edits need a recalculate to take effect. */
   hasScoredRounds: boolean;
   basePoints: ScoringBasePoints;
+  rules: ScoringRules;
   scoreEntries: ScoringScoreEntry[];
   multiplierRules: ScoringMultiplierRule[];
   /** Candidate classic teams for the season's tournament type, with selection. */
@@ -464,6 +486,7 @@ export interface ScoringConfig {
 
 export interface ScoringConfigRequest {
   basePoints: ScoringBasePoints;
+  rules: ScoringRules;
   scoreEntries: ScoringScoreEntry[];
   multiplierRules: ScoringMultiplierRule[];
   classicTeamIds: string[];

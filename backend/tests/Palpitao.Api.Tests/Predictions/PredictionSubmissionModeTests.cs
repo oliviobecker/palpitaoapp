@@ -79,7 +79,7 @@ public class PredictionSubmissionModeTests
 
     private static async Task<RoundDto> PublishedRound(AppDbContext db, DateTime firstStartsAt)
     {
-        var rounds = new RoundService(db, new AuditService(db), new FakeCurrentGroupService());
+        var rounds = new RoundService(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db));
         var round = await rounds.CreateAsync(new CreateRoundRequest { SeasonId = SeasonId, Number = 1 }, SeedIds.AdminUser, Ct);
         await rounds.AddMatchAsync(round.Id, new CreateMatchRequest
         {

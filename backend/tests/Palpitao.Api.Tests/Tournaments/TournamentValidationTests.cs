@@ -88,7 +88,7 @@ public class TournamentValidationTests
     }
 
     private static RoundService Service(AppDbContext db, Guid groupId)
-        => new(db, new AuditService(db), new FakeCurrentGroupService(groupId));
+        => new(db, new AuditService(db), new FakeCurrentGroupService(groupId), TestServices.ScoringConfig(db));
 
     private static Guid TeamId(AppDbContext db, string name) => db.Teams.Single(t => t.Name == name).Id;
 

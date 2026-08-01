@@ -94,8 +94,8 @@ public class ResultsServiceTests
         return new Kit(
             new ResultsUpdateService(db, provider, audit, current),
             new TemporaryStandingsService(db, scoring, scoringConfig, current),
-            new RoundScoringService(db, scoring, scoringConfig, new AbsenceService(db, audit, current), new FlavioRuleService(db), standings, audit, current),
-            new RoundService(db, audit, current),
+            new RoundScoringService(db, scoring, scoringConfig, new AbsenceService(db, audit, current, TestServices.ScoringConfig(db, current)), new FlavioRuleService(db), standings, audit, current),
+            new RoundService(db, audit, current, TestServices.ScoringConfig(db, current)),
             new PredictionsService(db, audit, current),
             provider);
     }

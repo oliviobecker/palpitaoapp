@@ -172,9 +172,11 @@ public class AdminPredictionService : IAdminPredictionService
 
     private static void EnsureRoundOpen(Round round, bool allowAfterDeadline, bool hasJustification)
     {
+        // "On time" = the window in which participants themselves could still predict,
+        // i.e. up to one minute before the first kickoff.
         var openOnTime = round.Status == RoundStatus.Published
-            && round.FirstMatchStartsAt is not null
-            && DateTime.UtcNow < round.FirstMatchStartsAt.Value;
+            && round.PredictionDeadlineUtc is DateTime deadline
+            && DateTime.UtcNow < deadline;
 
         if (openOnTime)
         {

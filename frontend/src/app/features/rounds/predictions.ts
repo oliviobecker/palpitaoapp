@@ -6,6 +6,7 @@ import {
   OnDestroy,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -28,6 +29,11 @@ import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
 import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
 import { PageHeader } from '../../shared/components/page-header/page-header';
+import {
+  deadlinePassed,
+  predictionDeadline,
+  predictionDeadlineIso,
+} from '../../shared/utils/deadline.util';
 import {
   computeMultiplier,
   isClassic,
@@ -142,7 +148,15 @@ export class Predictions implements OnInit, OnDestroy, HasUnsavedChanges {
     () =>
       this.isWorldCup() && this.matches().some((m) => WORLD_CUP_FLAVIO_PHASES.includes(m.phase)),
   );
-  protected readonly editable = signal(false);
+  /**
+   * Whether the form accepts input. Recomputed against the 30s clock below, so a page
+   * left open past the deadline locks itself instead of only failing on save.
+   */
+  protected readonly editable = computed(() => {
+    const round = this.round();
+    if (!round || this.adminOnly()) return false;
+    return round.status === RoundStatus.Published && !deadlinePassed(round, this.now());
+  });
   protected readonly error = signal(false);
   protected readonly saving = signal(false);
   protected readonly saved = signal(false);
@@ -166,11 +180,22 @@ export class Predictions implements OnInit, OnDestroy, HasUnsavedChanges {
   // Deadline urgency: turns the countdown badge red within the final hour.
   private readonly now = signal(Date.now());
   private timer?: ReturnType<typeof setInterval>;
+  protected readonly deadline = computed(() => predictionDeadlineIso(this.round()));
   protected readonly deadlineUrgent = computed(() => {
-    const d = this.round()?.firstMatchStartsAt;
-    if (!d || !this.editable()) return false;
-    const ms = new Date(d).getTime() - this.now();
+    const d = predictionDeadline(this.round());
+    if (d === null || !this.editable()) return false;
+    const ms = d - this.now();
     return ms > 0 && ms < 3_600_000;
+  });
+
+  /**
+   * Locks the form the moment the deadline passes with the page open. Only ever
+   * disables — `load()` owns enabling, after the controls exist.
+   */
+  private readonly lockOnDeadline = effect(() => {
+    if (!this.editable() && this.form.length > 0 && this.form.enabled) {
+      this.form.disable();
+    }
   });
   private isEdit = false;
   protected roundId = '';
@@ -248,12 +273,9 @@ export class Predictions implements OnInit, OnDestroy, HasUnsavedChanges {
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({ next: (cfg) => this.scoringConfig.set(cfg), error: () => {} });
 
-          const open = round.status === RoundStatus.Published;
-          const beforeDeadline = round.firstMatchStartsAt
-            ? new Date(round.firstMatchStartsAt).getTime() > Date.now()
-            : false;
-          // In admin-only mode the form is read-only — predictions come from the admin.
-          this.editable.set(open && beforeDeadline && !this.adminOnly());
+          // `editable` derives from the round + the clock; refresh the clock so a stale
+          // tick can't leave the form open for up to 30s past the deadline.
+          this.now.set(Date.now());
           this.isEdit = mine.predictions.length > 0;
           this.saved.set(this.isEdit);
 

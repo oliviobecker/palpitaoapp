@@ -105,6 +105,25 @@ public class ScoringMultiplierRuleDto
     public int ClassicMultiplier { get; set; }
 }
 
+/// <summary>
+/// The season's special rules: when the Flávio Rule starts applying and how absences are
+/// punished. Defaults reproduce the classic Palpitão rules (16 / 1 / 20 / 5).
+/// </summary>
+public class ScoringRulesDto
+{
+    /// <summary>First round the Flávio Rule applies to (England variant; the World Cup goes by phase).</summary>
+    public int FlavioFromRound { get; set; }
+
+    /// <summary>First round in which an absence counts towards the punishment ladder.</summary>
+    public int AbsenceFromRound { get; set; }
+
+    /// <summary>Points deducted from the total per absence, from the 3rd one on.</summary>
+    public int AbsencePenaltyPoints { get; set; }
+
+    /// <summary>Absence ordinal that eliminates the participant from the season.</summary>
+    public int AbsenceEliminationCount { get; set; }
+}
+
 /// <summary>A candidate team for classic designation, with its current selection state.</summary>
 public class ScoringConfigTeamDto
 {
@@ -125,6 +144,7 @@ public class ScoringConfigDto
     public bool HasScoredRounds { get; set; }
 
     public ScoringBasePointsDto BasePoints { get; set; } = new();
+    public ScoringRulesDto Rules { get; set; } = new();
     public List<ScoringScoreEntryDto> ScoreEntries { get; set; } = new();
     public List<ScoringMultiplierRuleDto> MultiplierRules { get; set; } = new();
 
@@ -136,6 +156,7 @@ public class ScoringConfigDto
 public class ScoringConfigRequest
 {
     public ScoringBasePointsDto BasePoints { get; set; } = new();
+    public ScoringRulesDto Rules { get; set; } = new();
     public List<ScoringScoreEntryDto> ScoreEntries { get; set; } = new();
     public List<ScoringMultiplierRuleDto> MultiplierRules { get; set; } = new();
     public List<Guid> ClassicTeamIds { get; set; } = new();

@@ -8,6 +8,7 @@ using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Flavio;
 using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Services.Scoring;
 using Palpitao.Api.Services.Tournaments;
 
 namespace Palpitao.Api.Services.Rounds;
@@ -17,12 +18,15 @@ public class RoundService : IRoundService
     private readonly AppDbContext _db;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
+    private readonly ISeasonScoringConfigService _config;
 
-    public RoundService(AppDbContext db, IAuditService audit, ICurrentGroupService current)
+    public RoundService(
+        AppDbContext db, IAuditService audit, ICurrentGroupService current, ISeasonScoringConfigService config)
     {
         _db = db;
         _audit = audit;
         _current = current;
+        _config = config;
     }
 
     // -----------------------------------------------------------------------
@@ -78,12 +82,14 @@ public class RoundService : IRoundService
     }
 
     /// <summary>
-    /// Flávio-rule info for the group message: only from round 16 onwards, with the
-    /// current standings leader(s) and their special deadline (once published).
+    /// Flávio-rule info for the group message: only from the season's configured
+    /// <c>FlavioFromRound</c> on (default 16), with the current standings leader(s) and
+    /// their special deadline (once published).
     /// </summary>
     private async Task<RoundFlavioDto?> BuildFlavioAsync(Round round, CancellationToken ct)
     {
-        if (round.Number < FlavioRuleService.FirstApplicableRound)
+        var rules = await _config.GetRuleParamsAsync(round.SeasonId, ct);
+        if (round.Number < rules.FlavioFromRound)
         {
             return null;
         }
@@ -215,9 +221,10 @@ public class RoundService : IRoundService
             .Select(s => s.TournamentType)
             .FirstAsync(ct);
 
+        var rules = await _config.GetRuleParamsAsync(round.SeasonId, ct);
         round.FlavioRuleApplies = tournamentType == TournamentType.FifaWorldCup
             ? round.Matches.Any(m => TournamentRules.IsWorldCupFlavioPhase(m.Phase))
-            : round.Number >= FlavioRuleService.FirstApplicableRound;
+            : round.Number >= rules.FlavioFromRound;
 
         round.FlavioRuleTargetUserId = round.FlavioRuleApplies
             ? await _db.Standings

@@ -119,7 +119,7 @@
             <app-icon name="pencil" [size]="18" />
             {{ (allPredicted() ? 'dashboard.editPredictions' : 'dashboard.continue') | translate }}
           </a>
-          @if (round.allowParticipantsToViewOthersPredictions) {
+          @if (canViewOpenMirror()) {
             <a class="hero-link mt-2" [routerLink]="['/rounds', round.id, 'mirror']">
               <app-icon name="eye" [size]="16" /> {{ 'predictionsMirror.view' | translate }}
             </a>

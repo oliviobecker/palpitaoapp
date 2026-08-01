@@ -25,8 +25,9 @@ public class Season : IGroupOwned
     public bool IsActive { get; set; }
 
     /// <summary>
-    /// When true, approved participants may view others' predictions (the mirror),
-    /// still subject to the round being locked/scored. Off by default for privacy.
+    /// When true, approved participants may view others' predictions (the mirror), and
+    /// it opens "live" as soon as the round is published. When false the mirror is
+    /// admin-only and opens once predictions close. Off by default for privacy.
     /// </summary>
     public bool AllowParticipantsToViewOthersPredictions { get; set; }
 

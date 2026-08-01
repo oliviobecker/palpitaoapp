@@ -57,7 +57,7 @@ public class ScoutServiceTests
     {
         var audit = new AuditService(db);
         var current = new FakeCurrentGroupService();
-        return new Kit(new ScoutService(db, current), new RoundService(db, audit, current), new PredictionsService(db, audit, current));
+        return new Kit(new ScoutService(db, current), new RoundService(db, audit, current, TestServices.ScoringConfig(db, current)), new PredictionsService(db, audit, current));
     }
 
     private static Guid CreateParticipant(AppDbContext db, string name)

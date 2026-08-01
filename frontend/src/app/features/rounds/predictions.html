@@ -13,8 +13,7 @@
         class="badge border"
         [class.text-bg-light]="!deadlineUrgent()"
         [class.text-bg-danger]="deadlineUrgent()"
-        >{{ 'predictions.closesIn' | translate }}
-        <app-countdown [target]="r.firstMatchStartsAt ?? null"
+        >{{ 'predictions.closesIn' | translate }} <app-countdown [target]="deadline()"
       /></span>
     }
   </app-page-header>

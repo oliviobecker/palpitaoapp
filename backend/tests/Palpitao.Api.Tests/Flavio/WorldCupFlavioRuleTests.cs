@@ -4,6 +4,7 @@ using Palpitao.Api.Data;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Flavio;
+using Palpitao.Api.Services.Scoring;
 using Xunit;
 
 namespace Palpitao.Api.Tests.Flavio;
@@ -61,7 +62,7 @@ public class WorldCupFlavioRuleTests
     {
         var svc = new FlavioRuleService(CreateContext());
         Assert.Equal(expected, svc.ShouldApplyWorldCupFlavioRule(RoundWith(phase)));
-        Assert.Equal(expected, svc.ShouldApplyFlavioRule(RoundWith(phase), TournamentType.FifaWorldCup));
+        Assert.Equal(expected, svc.ShouldApplyFlavioRule(RoundWith(phase), TournamentType.FifaWorldCup, ScoringDefaults.FlavioFromRound));
     }
 
     [Fact]
@@ -136,7 +137,7 @@ public class WorldCupFlavioRuleTests
         // 24h window -> deadline t0+24h. Predicts at t0+30h (late, before first match).
         var leader = AddLeaderWithPrediction(db, round, t0.AddHours(30));
 
-        Assert.True(await new FlavioRuleService(db).ShouldPenalizeLeaderAsync(round.Id, leader, Ct));
+        Assert.True(await new FlavioRuleService(db).ShouldPenalizeLeaderAsync(round.Id, leader, ScoringDefaults.FlavioFromRound, Ct));
     }
 
     [Fact]
@@ -147,7 +148,7 @@ public class WorldCupFlavioRuleTests
         var round = InsertPublishedQuarterFinal(db, publishedAt: t0, firstMatchStartsAt: t0.AddHours(48));
         var leader = AddLeaderWithPrediction(db, round, t0.AddHours(10)); // on time
 
-        Assert.False(await new FlavioRuleService(db).ShouldPenalizeLeaderAsync(round.Id, leader, Ct));
+        Assert.False(await new FlavioRuleService(db).ShouldPenalizeLeaderAsync(round.Id, leader, ScoringDefaults.FlavioFromRound, Ct));
     }
 
     [Fact]
@@ -158,6 +159,6 @@ public class WorldCupFlavioRuleTests
         var round = InsertPublishedQuarterFinal(db, publishedAt: t0, firstMatchStartsAt: t0.AddHours(48));
         var leader = AddLeaderWithPrediction(db, round, submittedAt: null); // no predictions
 
-        Assert.False(await new FlavioRuleService(db).ShouldPenalizeLeaderAsync(round.Id, leader, Ct));
+        Assert.False(await new FlavioRuleService(db).ShouldPenalizeLeaderAsync(round.Id, leader, ScoringDefaults.FlavioFromRound, Ct));
     }
 }

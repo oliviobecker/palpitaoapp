@@ -49,7 +49,7 @@ public class AbsenceServiceTests
         return db;
     }
 
-    private static AbsenceService Service(AppDbContext db) => new(db, new AuditService(db), new FakeCurrentGroupService());
+    private static AbsenceService Service(AppDbContext db) => new(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db));
 
     private static Guid CreateParticipant(AppDbContext db)
     {
@@ -71,7 +71,7 @@ public class AbsenceServiceTests
 
     private static async Task<RoundDto> PublishedRound(AppDbContext db, int number, int matchCount = 1)
     {
-        var rounds = new RoundService(db, new AuditService(db), new FakeCurrentGroupService());
+        var rounds = new RoundService(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db));
         var round = await rounds.CreateAsync(new CreateRoundRequest { SeasonId = SeasonId, Number = number }, SeedIds.AdminUser, Ct);
         for (var i = 0; i < matchCount; i++)
         {
@@ -117,6 +117,127 @@ public class AbsenceServiceTests
         }
 
         Assert.True(TestSeed.IsEliminatedInDefaultGroup(db, user));
+    }
+
+    /// <summary>Persists a custom rule set for the season (mirrors what the admin screen saves).</summary>
+    private static void ConfigureRules(
+        AppDbContext db, int penaltyPoints = 20, int eliminationCount = 5, int absenceFromRound = 1)
+    {
+        db.SeasonScoringConfigs.Add(new SeasonScoringConfig
+        {
+            Id = Guid.NewGuid(),
+            GroupId = SeedIds.DefaultGroup,
+            SeasonId = SeasonId,
+            ColumnOnlyPoints = 1,
+            TraditionalPoints = 3,
+            MediumPoints = 5,
+            UncommonPoints = 7,
+            ExtraUncommonPoints = 10,
+            AbsencePenaltyPoints = penaltyPoints,
+            AbsenceEliminationCount = eliminationCount,
+            AbsenceFromRound = absenceFromRound,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        });
+        db.SaveChanges();
+    }
+
+    [Fact]
+    public async Task Custom_penalty_and_elimination_ordinal_are_honoured()
+    {
+        using var db = CreateContext();
+        ConfigureRules(db, penaltyPoints: 10, eliminationCount: 3);
+        var service = Service(db);
+        var user = CreateParticipant(db);
+
+        var expected = new (int Number, int Penalty, bool Eliminated)[]
+        {
+            (1, 0, false),
+            (2, 0, false),
+            (3, 0, true), // elimination is checked first, so the 3rd both eliminates and costs nothing
+        };
+
+        foreach (var (number, penalty, eliminated) in expected)
+        {
+            var round = await PublishedRound(db, number);
+            var outcomes = await service.ProcessRoundAbsencesAsync(round.Id, SeedIds.AdminUser, Ct);
+
+            var outcome = Assert.Single(outcomes, o => o.UserId == user);
+            Assert.Equal(number, outcome.AbsenceNumber);
+            Assert.Equal(penalty, outcome.PenaltyPoints);
+            Assert.Equal(eliminated, outcome.Eliminated);
+        }
+
+        Assert.True(TestSeed.IsEliminatedInDefaultGroup(db, user));
+    }
+
+    [Fact]
+    public async Task Custom_penalty_applies_before_the_elimination_ordinal()
+    {
+        using var db = CreateContext();
+        ConfigureRules(db, penaltyPoints: 10, eliminationCount: 5);
+        var service = Service(db);
+        var user = CreateParticipant(db);
+
+        AbsenceOutcome? third = null;
+        foreach (var number in new[] { 1, 2, 3 })
+        {
+            var round = await PublishedRound(db, number);
+            var outcomes = await service.ProcessRoundAbsencesAsync(round.Id, SeedIds.AdminUser, Ct);
+            third = Assert.Single(outcomes, o => o.UserId == user);
+        }
+
+        Assert.Equal(10, third!.PenaltyPoints);
+        Assert.False(third.Eliminated);
+    }
+
+    [Fact]
+    public async Task Rounds_before_the_threshold_zero_the_round_without_counting()
+    {
+        using var db = CreateContext();
+        ConfigureRules(db, absenceFromRound: 3);
+        var service = Service(db);
+        var user = CreateParticipant(db);
+
+        var round1 = await PublishedRound(db, 1);
+        var outcome1 = Assert.Single(
+            await service.ProcessRoundAbsencesAsync(round1.Id, SeedIds.AdminUser, Ct), o => o.UserId == user);
+
+        // Not on the ladder: no ordinal, no penalty, no Absence row...
+        Assert.Equal(0, outcome1.AbsenceNumber);
+        Assert.Equal(0, outcome1.PenaltyPoints);
+        Assert.False(outcome1.Eliminated);
+        Assert.Empty(db.Absences.Where(a => a.RoundId == round1.Id));
+
+        // ...but the participant still has a zeroed result row for the round.
+        var result = db.RoundParticipantResults.Single(r => r.RoundId == round1.Id && r.UserId == user);
+        Assert.True(result.WasAbsent);
+        Assert.Equal(0, result.FinalPoints);
+
+        // The first counted absence is the one in round 3, numbered 1.
+        var round3 = await PublishedRound(db, 3);
+        var outcome3 = Assert.Single(
+            await service.ProcessRoundAbsencesAsync(round3.Id, SeedIds.AdminUser, Ct), o => o.UserId == user);
+        Assert.Equal(1, outcome3.AbsenceNumber);
+    }
+
+    [Fact]
+    public async Task Raising_the_threshold_and_reprocessing_clears_stale_absences()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var user = CreateParticipant(db);
+
+        var round = await PublishedRound(db, 1);
+        await service.ProcessRoundAbsencesAsync(round.Id, SeedIds.AdminUser, Ct);
+        Assert.Single(db.Absences.Where(a => a.RoundId == round.Id));
+
+        // The admin now starts punishing only from round 5 on, then re-scores.
+        ConfigureRules(db, absenceFromRound: 5);
+        await service.ProcessRoundAbsencesAsync(round.Id, SeedIds.AdminUser, Ct);
+
+        Assert.Empty(db.Absences.Where(a => a.RoundId == round.Id));
+        Assert.True(db.RoundParticipantResults.Single(r => r.RoundId == round.Id && r.UserId == user).WasAbsent);
     }
 
     [Fact]

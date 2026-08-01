@@ -51,7 +51,7 @@ public class MirrorVisibilityTests
         => new(db, new AuditService(db), new FakeCurrentGroupService(role: role));
 
     private static RoundService Rounds(AppDbContext db)
-        => new(db, new AuditService(db), new FakeCurrentGroupService());
+        => new(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db));
 
     private static void SetVisibility(AppDbContext db, bool allowed)
     {
@@ -224,6 +224,55 @@ public class MirrorVisibilityTests
 
         var mirror = await Service(db, GroupRole.GroupAdmin).GetMirrorAsync(roundId, user, Ct);
         Assert.Contains(mirror.Participants, p => p.UserId == user);
+    }
+
+    /// <summary>Moves the round's first kickoff so the prediction deadline is behind us.</summary>
+    private static void SetFirstKickoff(AppDbContext db, Guid roundId, DateTime startsAt)
+    {
+        db.Rounds.First(r => r.Id == roundId).FirstMatchStartsAt = startsAt;
+        db.SaveChanges();
+    }
+
+    [Fact]
+    public async Task Admin_can_view_mirror_when_the_deadline_passed_without_a_lock()
+    {
+        using var db = CreateContext();
+        SetVisibility(db, false);
+        var (roundId, user) = await RoundInStatus(db, RoundStatus.Published);
+
+        // The lock is manual; the mirror must not wait for an admin who forgets it.
+        SetFirstKickoff(db, roundId, DateTime.UtcNow.AddMinutes(-10));
+
+        var mirror = await Service(db, GroupRole.GroupAdmin).GetMirrorAsync(roundId, user, Ct);
+        Assert.Contains(mirror.Participants, p => p.UserId == user);
+    }
+
+    [Fact]
+    public async Task Mirror_opens_one_minute_before_the_kickoff()
+    {
+        using var db = CreateContext();
+        SetVisibility(db, false);
+        var (roundId, user) = await RoundInStatus(db, RoundStatus.Published);
+
+        // Kickoff is 30s away, so predictions closed 30s ago — the mirror is already open.
+        SetFirstKickoff(db, roundId, DateTime.UtcNow.AddSeconds(30));
+
+        var mirror = await Service(db, GroupRole.GroupAdmin).GetMirrorAsync(roundId, user, Ct);
+        Assert.Contains(mirror.Participants, p => p.UserId == user);
+    }
+
+    [Fact]
+    public async Task Participant_still_cannot_view_mirror_after_the_deadline_when_disabled()
+    {
+        using var db = CreateContext();
+        SetVisibility(db, false);
+        var (roundId, user) = await RoundInStatus(db, RoundStatus.Published);
+        SetFirstKickoff(db, roundId, DateTime.UtcNow.AddMinutes(-10));
+
+        // Auto-release only moves *when* the mirror opens, never *who* may see it.
+        var ex = await Assert.ThrowsAsync<ForbiddenException>(
+            () => Service(db, GroupRole.Participant).GetMirrorAsync(roundId, user, Ct));
+        Assert.Equal("mirror.notAllowed", ex.Key);
     }
 
     [Fact]

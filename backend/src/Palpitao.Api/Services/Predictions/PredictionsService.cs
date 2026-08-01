@@ -155,11 +155,16 @@ public class PredictionsService : IPredictionsService
 
         // Timing. When the season allows live visibility, the mirror is released as
         // soon as the round is Published — participants can see others' predictions
-        // before the lock. Otherwise predictions stay private until the round is
-        // Locked/Scored (admin-only by then). Draft/Cancelled never expose a mirror.
+        // before the deadline. Otherwise it opens when predictions close: either the
+        // admin locked the round, or the deadline simply passed (the lock is manual, so
+        // waiting for it would leave the mirror shut whenever the admin forgets).
+        // Draft/Cancelled never expose a mirror.
+        var deadlinePassed = round.Status == RoundStatus.Published
+            && round.PredictionDeadlineUtc is DateTime deadline
+            && DateTime.UtcNow >= deadline;
         var released = allowParticipantsLive
             ? round.Status is RoundStatus.Published or RoundStatus.Locked or RoundStatus.Scored
-            : round.Status is RoundStatus.Locked or RoundStatus.Scored;
+            : round.Status is RoundStatus.Locked or RoundStatus.Scored || deadlinePassed;
         if (!released)
         {
             throw new BusinessRuleException("mirror.afterLockOnly");
@@ -253,7 +258,8 @@ public class PredictionsService : IPredictionsService
                 break;
         }
 
-        if (round.FirstMatchStartsAt is null || DateTime.UtcNow >= round.FirstMatchStartsAt.Value)
+        // Predictions close one minute before the first kickoff, never at the kickoff itself.
+        if (round.PredictionDeadlineUtc is not DateTime deadline || DateTime.UtcNow >= deadline)
         {
             throw new BusinessRuleException("prediction.deadlinePassed");
         }
