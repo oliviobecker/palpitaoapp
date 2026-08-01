@@ -26,6 +26,24 @@ public class SeasonScoringConfig : IGroupOwned
     public int UncommonPoints { get; set; }
     public int ExtraUncommonPoints { get; set; }
 
+    // --- Special rules (Flávio Rule + absence punishments) -------------------
+    // Defaults reproduce the historical hardcoded behaviour; the migration backfills
+    // existing rows with the same numbers. Deliberately NOT mapped with
+    // HasDefaultValue: AbsencePenaltyPoints = 0 is a legitimate choice, and a store
+    // default would make EF omit the column on insert and silently persist 20.
+
+    /// <summary>First round the Flávio Rule applies to (Palpitão England variant).</summary>
+    public int FlavioFromRound { get; set; } = 16;
+
+    /// <summary>First round in which an absence counts towards the punishment ladder.</summary>
+    public int AbsenceFromRound { get; set; } = 1;
+
+    /// <summary>Points deducted from the total per absence, from the 3rd one on.</summary>
+    public int AbsencePenaltyPoints { get; set; } = 20;
+
+    /// <summary>Absence ordinal that eliminates the participant from the season.</summary>
+    public int AbsenceEliminationCount { get; set; } = 5;
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 

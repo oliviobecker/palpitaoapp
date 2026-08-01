@@ -20,6 +20,16 @@ public interface ISeasonScoringConfigService
     Task<ScoringRuleSet> GetRuleSetForRoundAsync(Guid roundId, CancellationToken ct);
 
     /// <summary>
+    /// Only the season's special rules (Flávio threshold + absence punishments), read with a
+    /// scalar projection. For callers that need the thresholds but not the points ruleset.
+    /// Falls back to <see cref="SeasonRuleParams.Defaults"/> when the season has no config.
+    /// </summary>
+    Task<SeasonRuleParams> GetRuleParamsAsync(Guid seasonId, CancellationToken ct);
+
+    /// <summary>Same as <see cref="GetRuleParamsAsync"/>, resolving the season from a round.</summary>
+    Task<SeasonRuleParams> GetRuleParamsForRoundAsync(Guid roundId, CancellationToken ct);
+
+    /// <summary>
     /// The editable config DTO for a season: the persisted config when present, otherwise
     /// the tournament-type defaults. Read-only — never persists (so a participant viewing
     /// the predictions page can't create admin config rows). Persisted on save via

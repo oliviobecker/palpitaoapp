@@ -53,10 +53,12 @@ overall standings update.
 - Round lifecycle `Draft → Published → Locked → Scored` (+ `Cancelled`), now with a **guided stepper**
   in the admin round-detail screen (one primary action per state, prerequisites enforced).
 - **Reopen** a Scored round back to Locked (admin), keeping scores until recalculated.
-- Predictions per match (editable while Published, deadline = first kickoff); prediction **mirror**
-  after lock; **scoring** by column/exact score with **multipliers** by competition/phase/classic.
-- **Absences** (progressive penalties, elimination on the 5th) + **Flávio Rule** (England: round 16+,
-  live leader; World Cup: quarter-finals+, leader captured at publication).
+- Predictions per match (editable while Published, deadline = **one minute before** the first
+  kickoff); prediction **mirror** released when predictions close (or live, per season setting);
+  **scoring** by column/exact score with **multipliers** by competition/phase/classic.
+- **Absences** (progressive penalties, elimination on the 5th) + **Flávio Rule** (England: from the
+  season's configured round, live leader; World Cup: quarter-finals+, leader captured at
+  publication). Both **configurable per season** in admin → *Regras de pontuação*.
 - **Overall standings** (idempotent recompute); **temporary standings** while in play.
 - **Two tournament types** per season (England / FIFA World Cup), fixed after creation; World Cup uses
   seeded national-team world champions for the knockout "classic" multiplier.
@@ -191,8 +193,11 @@ overall standings update.
 - **Multipliers (World Cup):** group ×1; round of 32/16 ×2; QF/SF/3rd/final ×3; doubled for a knockout
   **classic** (both teams former world champions). Phase prevails, no stacking.
 - **Absences:** 1st–2nd none; 3rd–4th −20 total; 5th → eliminated (manual reactivate only). Per-group.
+  The penalty, the eliminating ordinal and the first counting round are **per-season settings**
+  (`SeasonScoringConfig`); those numbers are the defaults.
 - **Flávio Rule:** leader gets a 24h (or 12h) special deadline; missing it = lose half the round; no
-  prediction = treated as absence; ties apply to all leaders.
+  prediction = treated as absence; ties apply to all leaders. The starting round is a per-season
+  setting (default 16); the World Cup variant still goes by phase.
 - **Login/access:** account requires `Status=Approved` + `User.IsActive`; group access additionally
   requires an `Approved` + active `GroupUser`.
 

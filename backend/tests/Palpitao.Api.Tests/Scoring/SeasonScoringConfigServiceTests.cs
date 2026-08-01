@@ -45,6 +45,7 @@ public class SeasonScoringConfigServiceTests
     private static ScoringConfigRequest ToRequest(ScoringConfigDto dto) => new()
     {
         BasePoints = dto.BasePoints,
+        Rules = dto.Rules,
         ScoreEntries = dto.ScoreEntries,
         MultiplierRules = dto.MultiplierRules,
         ClassicTeamIds = dto.Teams.Where(t => t.IsClassic).Select(t => t.TeamId).ToList(),
@@ -136,6 +137,78 @@ public class SeasonScoringConfigServiceTests
         request.BasePoints.Traditional = -1;
 
         await Assert.ThrowsAsync<BusinessRuleException>(() => svc.UpdateAsync(SeasonId, request, Admin, Ct));
+    }
+
+    [Fact]
+    public async Task GetConfig_returns_the_classic_special_rules_by_default()
+    {
+        using var db = CreateContext();
+        var dto = await Build(db).GetConfigAsync(SeasonId, Ct);
+
+        Assert.Equal(16, dto.Rules.FlavioFromRound);
+        Assert.Equal(1, dto.Rules.AbsenceFromRound);
+        Assert.Equal(20, dto.Rules.AbsencePenaltyPoints);
+        Assert.Equal(5, dto.Rules.AbsenceEliminationCount);
+    }
+
+    [Fact]
+    public async Task GetRuleParams_falls_back_to_defaults_without_a_config_row()
+    {
+        using var db = CreateContext();
+
+        var rules = await Build(db).GetRuleParamsAsync(SeasonId, Ct);
+
+        Assert.Equal(SeasonRuleParams.Defaults, rules);
+    }
+
+    [Fact]
+    public async Task Update_round_trips_the_special_rules()
+    {
+        using var db = CreateContext();
+        var svc = Build(db);
+        var request = ToRequest(await svc.GetConfigAsync(SeasonId, Ct));
+        request.Rules = new ScoringRulesDto
+        {
+            FlavioFromRound = 10,
+            AbsenceFromRound = 3,
+            AbsencePenaltyPoints = 0, // legitimate: no points penalty at all
+            AbsenceEliminationCount = 4,
+        };
+
+        await svc.UpdateAsync(SeasonId, request, Admin, Ct);
+
+        var saved = await svc.GetConfigAsync(SeasonId, Ct);
+        Assert.Equal(10, saved.Rules.FlavioFromRound);
+        Assert.Equal(3, saved.Rules.AbsenceFromRound);
+        Assert.Equal(0, saved.Rules.AbsencePenaltyPoints);
+        Assert.Equal(4, saved.Rules.AbsenceEliminationCount);
+
+        // And the scalar read path sees the same values.
+        Assert.Equal(new SeasonRuleParams(10, 3, 0, 4), await svc.GetRuleParamsAsync(SeasonId, Ct));
+    }
+
+    [Theory]
+    [InlineData(0, 1, 20, 5, "scoring.flavioFromRoundMin")]
+    [InlineData(16, 0, 20, 5, "scoring.absenceFromRoundMin")]
+    [InlineData(16, 1, -1, 5, "scoring.absencePenaltyNegative")]
+    [InlineData(16, 1, 20, 0, "scoring.absenceEliminationMin")]
+    public async Task Update_rejects_out_of_range_special_rules(
+        int flavioFrom, int absenceFrom, int penalty, int elimination, string expectedKey)
+    {
+        using var db = CreateContext();
+        var svc = Build(db);
+        var request = ToRequest(await svc.GetConfigAsync(SeasonId, Ct));
+        request.Rules = new ScoringRulesDto
+        {
+            FlavioFromRound = flavioFrom,
+            AbsenceFromRound = absenceFrom,
+            AbsencePenaltyPoints = penalty,
+            AbsenceEliminationCount = elimination,
+        };
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => svc.UpdateAsync(SeasonId, request, Admin, Ct));
+        Assert.Equal(expectedKey, ex.Key);
     }
 
     [Fact]

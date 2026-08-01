@@ -13,18 +13,23 @@ public record FlavioDeadline(
 
 public interface IFlavioRuleService
 {
-    /// <summary>England rule: the Flávio rule only applies from round 16 onwards.</summary>
-    bool AppliesToRound(int roundNumber);
+    /// <summary>
+    /// England rule: the Flávio rule only applies from <paramref name="firstApplicableRound"/>
+    /// on — the season's <c>FlavioFromRound</c> setting (default 16). Passed explicitly rather
+    /// than defaulted so a configured threshold can never be silently ignored.
+    /// </summary>
+    bool AppliesToRound(int roundNumber, int firstApplicableRound);
 
-    /// <summary>England rule applicability (round number ≥ 16).</summary>
-    bool ShouldApplyEnglandFlavioRule(Round round);
+    /// <summary>England rule applicability (round number ≥ the season's threshold).</summary>
+    bool ShouldApplyEnglandFlavioRule(Round round, int firstApplicableRound);
 
     /// <summary>World Cup rule applicability: the round has at least one match from
-    /// the quarter-finals on. Requires <c>round.Matches</c> to be loaded.</summary>
+    /// the quarter-finals on. Requires <c>round.Matches</c> to be loaded. The round-number
+    /// threshold does not apply to this variant.</summary>
     bool ShouldApplyWorldCupFlavioRule(Round round);
 
     /// <summary>Applicability for the given certame type (dispatches England/World Cup).</summary>
-    bool ShouldApplyFlavioRule(Round round, TournamentType type);
+    bool ShouldApplyFlavioRule(Round round, TournamentType type, int firstApplicableRound);
 
     /// <summary>
     /// Computes the leader's special deadline. Reference = MirrorPublishedAt
@@ -44,5 +49,6 @@ public interface IFlavioRuleService
     /// special deadline (but before the general lock). A leader who did not
     /// predict (or predicted incompletely) is handled as a normal absence.
     /// </summary>
-    Task<bool> ShouldPenalizeLeaderAsync(Guid roundId, Guid leaderUserId, CancellationToken ct);
+    Task<bool> ShouldPenalizeLeaderAsync(
+        Guid roundId, Guid leaderUserId, int firstApplicableRound, CancellationToken ct);
 }

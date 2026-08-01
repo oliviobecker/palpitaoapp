@@ -48,7 +48,7 @@ public class RoundServiceTests
         return db;
     }
 
-    private static RoundService CreateService(AppDbContext db) => new(db, new AuditService(db), new FakeCurrentGroupService());
+    private static RoundService CreateService(AppDbContext db) => new(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db));
 
     private static CreateMatchRequest Match(
         Guid home,

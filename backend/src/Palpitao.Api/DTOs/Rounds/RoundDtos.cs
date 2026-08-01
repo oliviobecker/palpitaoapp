@@ -1,3 +1,4 @@
+using Palpitao.Api.Common;
 using Palpitao.Api.DTOs.Matches;
 using Palpitao.Api.Enums;
 
@@ -37,6 +38,10 @@ public class RoundSummaryDto
     public DateTime? EndDate { get; set; }
     public RoundStatus Status { get; set; }
     public DateTime? FirstMatchStartsAt { get; set; }
+
+    /// <summary>General lock: one minute before the first kickoff. Computed on serialization.</summary>
+    public DateTime? PredictionDeadlineUtc => PredictionDeadline.From(FirstMatchStartsAt);
+
     public DateTime? PublishedAt { get; set; }
     public DateTime? LockedAt { get; set; }
     public int MatchCount { get; set; }
@@ -61,6 +66,10 @@ public class RoundDto
     public DateTime? EndDate { get; set; }
     public RoundStatus Status { get; set; }
     public DateTime? FirstMatchStartsAt { get; set; }
+
+    /// <summary>General lock: one minute before the first kickoff. Computed on serialization.</summary>
+    public DateTime? PredictionDeadlineUtc => PredictionDeadline.From(FirstMatchStartsAt);
+
     public DateTime? PublishedAt { get; set; }
     public DateTime? LockedAt { get; set; }
     public DateTime? MirrorPublishedAt { get; set; }

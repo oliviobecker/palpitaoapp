@@ -1,4 +1,5 @@
 using Palpitao.Api.Enums;
+using Palpitao.Api.Services.Flavio;
 
 namespace Palpitao.Api.Services.Scoring;
 
@@ -10,6 +11,20 @@ namespace Palpitao.Api.Services.Scoring;
 /// </summary>
 public static class ScoringDefaults
 {
+    // --- Special rules (Flávio Rule + absence punishments) -------------------
+
+    /// <summary>Flávio Rule applies from round 16 on (England variant).</summary>
+    public const int FlavioFromRound = FlavioRuleService.FirstApplicableRound;
+
+    /// <summary>Absences count towards the punishment ladder from the very first round.</summary>
+    public const int AbsenceFromRound = 1;
+
+    /// <summary>3rd and 4th absences cost 20 points of the total each.</summary>
+    public const int AbsencePenaltyPoints = 20;
+
+    /// <summary>The 5th absence eliminates the participant.</summary>
+    public const int AbsenceEliminationCount = 5;
+
     /// <summary>Base points per category (identical for every tournament type).</summary>
     public static IReadOnlyDictionary<ScoreCategory, int> BasePoints() => new Dictionary<ScoreCategory, int>
     {
@@ -69,6 +84,7 @@ public static class ScoringDefaults
             .ToDictionary(e => (e.Low, e.High), e => e.Category);
         var multipliers = MultiplierRules(type)
             .ToDictionary(r => (r.Competition, r.Phase), r => (r.Normal, r.Classic));
-        return new ScoringRuleSet(BasePoints(), scoreCategories, multipliers, classicTeamIds);
+        return new ScoringRuleSet(
+            BasePoints(), scoreCategories, multipliers, classicTeamIds, SeasonRuleParams.Defaults);
     }
 }

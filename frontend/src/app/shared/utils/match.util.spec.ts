@@ -70,6 +70,12 @@ describe('match.util — config-driven multipliers', () => {
     tournamentType: TournamentType.PalpitaoEngland,
     hasScoredRounds: false,
     basePoints: { columnOnly: 1, traditional: 3, medium: 5, uncommon: 7, extraUncommon: 10 },
+    rules: {
+      flavioFromRound: 16,
+      absenceFromRound: 1,
+      absencePenaltyPoints: 20,
+      absenceEliminationCount: 5,
+    },
     scoreEntries: [],
     multiplierRules: [
       // Custom: Premier League classic is x5 (vs default x2).

@@ -48,11 +48,11 @@ name, not the app's name.
 ## 1. Overview
 
 - **Rounds** created manually by the admin, with the lifecycle `Draft → Published → Locked → Scored` (or `Cancelled`), driven by a **guided stepper** (one action per step); a Scored round can be **reopened** back to Locked.
-- **Predictions** of the score per match, editable while the round is open; the deadline is the first match kickoff.
-- **Prediction mirror** released after the round is locked.
+- **Predictions** of the score per match, editable while the round is open; the deadline is **one minute before** the first match kickoff.
+- **Prediction mirror** released once predictions close (or live from publication, per season setting).
 - **Scoring** by column/exact score, with **multipliers** by competition/phase/classic (§13).
-- **Absences** with progressive penalties and elimination on the 5th.
-- **Flávio Rule**: penalizes a late leader — **England** from round 16, **FIFA World Cup** from the quarter-finals (§15).
+- **Absences** with progressive penalties and elimination on the 5th — all **configurable per season** (§14).
+- **Flávio Rule**: penalizes a late leader — **England** from a **configurable round** (default 16), **FIFA World Cup** from the quarter-finals (§15).
 - **Overall standings**, ordered and recomputable idempotently.
 
 ### Tournament types (certames)
@@ -367,19 +367,36 @@ admin can apply an override). Penalty by season ordinal:
 
 An eliminated participant no longer predicts, unless **manually reactivated** by the admin.
 
+**Configurable per season** (admin → *Regras de pontuação*, stored on `SeasonScoringConfig`; the
+values in the table above are the defaults):
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `AbsenceFromRound` | 1 | First round in which an absence counts towards the ladder |
+| `AbsencePenaltyPoints` | 20 | Points deducted from the total, from the 3rd absence on |
+| `AbsenceEliminationCount` | 5 | Absence ordinal that eliminates |
+
+The band start (3rd absence) is fixed. Elimination is evaluated **first**, so setting the
+elimination ordinal to 2 or less removes the penalty band instead of stacking with it. An absence
+in a round **before** `AbsenceFromRound` still zeroes that round — it just does not climb the
+ladder. Changes apply to rounds scored from then on; use **recalculate** to reapply them to the
+whole season.
+
 ## 15. Flávio Rule
 
 The standings **leader** gets a special deadline before the round; missing it costs points:
 - Reference = `MirrorPublishedAt` (or `PublishedAt`).
 - Window = **24h**, or **12h** if the round was published less than 24h before the first match.
-- The **general lock** (first match kickoff) always prevails.
+- The **general lock** always prevails (this cap stays at the first kickoff, not at the
+  participants' deadline — in that last minute nobody can submit anyway).
 
 If the leader completes the predictions **after** that deadline (but before the lock), they lose
 **half** of the round's points (rounded down — 17 → 8). If they don't predict, they are treated as
 a normal **absence**. A tie at the top ⇒ it applies to all tied leaders.
 
 **Activation by tournament type:**
-- **Palpitão England** — from **round 16** on; the target is the **live leader(s)** before the round.
+- **Palpitão England** — from the season's `FlavioFromRound` on (**default 16**, editable in
+  admin → *Regras de pontuação*); the target is the **live leader(s)** before the round.
 - **FIFA World Cup** — whenever the round contains a **quarter-final-or-later** match; the target is
   the **single leader captured at publication** (`FlavioRuleTargetUserId`), so a mid-round standings
   change can't move it.
@@ -397,8 +414,8 @@ eliminations and re-scores the finished rounds in order — **idempotent**.
 
 - **`ScoreCategory`** (ColumnOnly/Traditional/Medium/Uncommon/ExtraUncommon) reflects the
   exact-score difficulty taxonomy defined by the pool rules.
-- **Mirror before the lock**: the API rejects with 422 (informative message); the frontend shows an
-  empty state and no error toast.
+- **Mirror before predictions close**: the API rejects with 422 (informative message); the frontend
+  shows an empty state and no error toast.
 - **Flávio Rule deadline milestone** = the leader's first complete submission (the latest
   `SubmittedAt` among their round predictions).
 - **Tie at the top**: the Flávio Rule applies to all tied leaders.
@@ -589,12 +606,13 @@ available (draft/published rounds).
 ### Message for the group (copyable)
 
 Once the round has matches, the **round detail** screen shows a **"Message for the group"** card
-with a ready WhatsApp-style text — title, round number, **deadline (first match kickoff)** and the
+with a ready WhatsApp-style text — title, round number, **deadline (one minute before the first
+kickoff)** and the
 matches grouped by competition with their multipliers/phases — plus a **Copy** button that works
 even on mobile (Clipboard API with fallback). Just copy and paste it into the group.
 
-**Flávio Rule in the message:** when the Flávio Rule applies to the round (England round 16+, World
-Cup quarter-finals+), and only then, the message includes a line with the current leader(s) and
+**Flávio Rule in the message:** when the Flávio Rule applies to the round (England: from the
+season's configured round, default 16; World Cup: quarter-finals+), and only then, the message includes a line with the current leader(s) and
 their **special deadline** (e.g. "Leader @Manoel Neto has until
 23:59 on Friday (22/05/2026) to predict."). The backend computes this in `RoundDto.Flavio` (leaders
 = top of the season standings; deadline = 24h, or 12h if the round was published less than 24h
@@ -863,7 +881,7 @@ rows pointing at a seeded **default group** — _Palpitão England 2025/2026_
 ## 27. Participant prediction visibility
 
 By default, participants **cannot** see each other's predictions — only group admins can. A per-season
-setting opens this up to participants, still respecting the post-lock timing of the mirror.
+setting opens this up to participants, still respecting the mirror's release timing.
 
 ### The setting
 
@@ -879,14 +897,15 @@ separate endpoint:
 
 | | Setting `false` | Setting `true` |
 |---|---|---|
-| **Group admin** | sees the mirror (after the round is `Locked`/`Scored`) | sees the mirror **live**, from `Published` (open) through `Locked`/`Scored` |
+| **Group admin** | sees the mirror once predictions close — the deadline passing is enough, no lock required — and on `Locked`/`Scored` | sees the mirror **live**, from `Published` (open) through `Locked`/`Scored` |
 | **Participant** | **403 Forbidden** | sees the mirror **live**, from `Published` (open) through `Locked`/`Scored` |
 
 So when the season has `AllowParticipantsToViewOthersPredictions = true`, the mirror is **live**: it
 opens as soon as the round is `Published` (still open, before the lock) for participants and admins
 alike — useful for casual/transparent pools. When the setting is `false`, predictions stay private
-until the round is `Locked`/`Scored` and only admins can see them (participants get **403**); `Draft`/
-`Cancelled` rounds never expose a mirror. The mirror returns matches, participants, each prediction with its submission time,
+until they close — which happens on its own at the deadline (one minute before the first kickoff),
+since the lock is a manual admin action the mirror must not wait for — and only admins can see them
+(participants get **403**); `Draft`/`Cancelled` rounds never expose a mirror. The mirror returns matches, participants, each prediction with its submission time,
 absent/eliminated/Flávio flags — and **no** sensitive data (no email, password hash, tokens or admin
 justifications).
 

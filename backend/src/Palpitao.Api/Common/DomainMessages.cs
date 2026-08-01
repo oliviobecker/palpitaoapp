@@ -208,7 +208,7 @@ public static class DomainMessages
             ["prediction.appSubmitDisabled"] = ("Participantes não podem enviar palpites pelo app nesta temporada. Os palpites serão inseridos pelo administrador.", "Participants cannot submit predictions in the app for this season. Predictions will be entered by the administrator."),
 
             // Mirror.
-            ["mirror.afterLockOnly"] = ("O espelho fica disponível somente após o bloqueio da rodada.", "The mirror is only available after the round is locked."),
+            ["mirror.afterLockOnly"] = ("O espelho fica disponível somente após o encerramento dos palpites.", "The mirror is only available after predictions close."),
             ["mirror.notAllowed"] = ("Você não tem permissão para visualizar os palpites dos demais participantes.", "You do not have permission to view other participants' predictions."),
 
             // Admin manual predictions.
@@ -271,6 +271,18 @@ public static class DomainMessages
             ["scoring.unknownTeam"] = (
                 "Um dos times selecionados como clássico não existe.",
                 "One of the teams selected as a classic does not exist."),
+            ["scoring.flavioFromRoundMin"] = (
+                "A rodada inicial da Regra Flávio deve ser no mínimo 1.",
+                "The first round of the Flávio Rule must be at least 1."),
+            ["scoring.absenceFromRoundMin"] = (
+                "A rodada inicial das punições de ausência deve ser no mínimo 1.",
+                "The first round for absence punishments must be at least 1."),
+            ["scoring.absencePenaltyNegative"] = (
+                "O desconto por ausência não pode ser negativo.",
+                "The absence penalty cannot be negative."),
+            ["scoring.absenceEliminationMin"] = (
+                "O número de ausências para eliminação deve ser no mínimo 1.",
+                "The number of absences for elimination must be at least 1."),
         };
 
     /// <summary>Resolves a key to the given language ("pt"/"en"); falls back to the key itself.</summary>

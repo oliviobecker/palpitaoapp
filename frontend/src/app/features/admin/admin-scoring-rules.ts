@@ -14,6 +14,7 @@ import {
   ENGLAND_PHASES,
   MatchPhase,
   ScoreCategory,
+  TournamentType,
   WORLD_CUP_PHASES,
 } from '../../core/models/enums';
 import {
@@ -21,6 +22,7 @@ import {
   ScoringConfigRequest,
   ScoringConfigTeam,
   ScoringMultiplierRule,
+  ScoringRules,
   Season,
 } from '../../core/models/models';
 import { ConfirmService } from '../../core/notifications/confirm.service';
@@ -114,12 +116,23 @@ export class AdminScoringRules implements OnInit, HasUnsavedChanges {
   /** "low-high" → category for the score grid (ExtraUncommon = unmapped default). */
   protected readonly scoreCategories = signal<Record<string, ScoreCategory>>({});
   protected readonly multiplierRules = signal<ScoringMultiplierRule[]>([]);
+  /** Flávio threshold + absence punishments (the season's "special rules"). */
+  protected readonly rules = signal<ScoringRules>({
+    flavioFromRound: 16,
+    absenceFromRound: 1,
+    absencePenaltyPoints: 20,
+    absenceEliminationCount: 5,
+  });
   protected readonly teams = signal<ScoringConfigTeam[]>([]);
   protected readonly teamFilter = signal('');
   /** Active "brush" category — painting a grid cell assigns it. */
   protected readonly activeCategory = signal<ScoreCategory>(ScoreCategory.Traditional);
 
   protected readonly hasScoredRounds = computed(() => this.config()?.hasScoredRounds ?? false);
+  /** World Cup seasons apply the Flávio Rule by phase (QF+), not by round number. */
+  protected readonly isWorldCup = computed(
+    () => this.config()?.tournamentType === TournamentType.FifaWorldCup,
+  );
   protected readonly selectedTeams = computed(() => this.teams().filter((t) => t.isClassic));
   protected readonly addableTeams = computed(() => {
     const q = this.teamFilter().trim().toLowerCase();
@@ -230,6 +243,26 @@ export class AdminScoringRules implements OnInit, HasUnsavedChanges {
     this.markDirty();
   }
 
+  // --- Special rules (Flávio + absences) ---------------------------------
+  /** Minimum accepted value per field; only the penalty may legitimately be zero. */
+  private readonly ruleMin: Record<keyof ScoringRules, number> = {
+    flavioFromRound: 1,
+    absenceFromRound: 1,
+    absencePenaltyPoints: 0,
+    absenceEliminationCount: 1,
+  };
+
+  stepRule(field: keyof ScoringRules, delta: number): void {
+    const min = this.ruleMin[field];
+    this.rules.update((r) => ({ ...r, [field]: Math.max(min, r[field] + delta) }));
+    this.markDirty();
+  }
+
+  setRuleValue(field: keyof ScoringRules, value: string): void {
+    this.rules.update((r) => ({ ...r, [field]: this.clamp(value, this.ruleMin[field]) }));
+    this.markDirty();
+  }
+
   /** Parses a numeric input value and clamps to an integer ≥ min. */
   private clamp(value: string, min: number): number {
     const n = Math.trunc(Number(value));
@@ -308,6 +341,7 @@ export class AdminScoringRules implements OnInit, HasUnsavedChanges {
     }
     this.scoreCategories.set(map);
     this.multiplierRules.set(config.multiplierRules.map((r) => ({ ...r })));
+    this.rules.set({ ...config.rules });
     this.teams.set(config.teams.map((t) => ({ ...t })));
     this.teamFilter.set('');
     this.dirty.set(false);
@@ -321,6 +355,7 @@ export class AdminScoringRules implements OnInit, HasUnsavedChanges {
   save(): void {
     const request: ScoringConfigRequest = {
       basePoints: { ...this.basePoints() },
+      rules: { ...this.rules() },
       // Persist only scores assigned to a non-default category (ExtraUncommon is implicit).
       scoreEntries: this.normalizedEntries().filter(
         (e) => e.category !== ScoreCategory.ExtraUncommon,

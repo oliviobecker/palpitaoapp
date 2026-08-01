@@ -121,7 +121,7 @@ public class OcrServiceTests
         using var db = CreateContext();
 
         // Round with one match (Arsenal x Chelsea) + a participant named "João".
-        var rounds = new RoundService(db, new AuditService(db), new FakeCurrentGroupService());
+        var rounds = new RoundService(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db));
         var round = await rounds.CreateAsync(new CreateRoundRequest { SeasonId = SeasonId, Number = 1 }, Admin, Ct);
         await rounds.AddMatchAsync(round.Id, new CreateMatchRequest
         {

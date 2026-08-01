@@ -21,6 +21,11 @@ import { Countdown } from '../../shared/components/countdown/countdown';
 import { Icon } from '../../shared/components/icon/icon';
 import { PageHeader } from '../../shared/components/page-header/page-header';
 import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
+import {
+  deadlinePassed,
+  predictionDeadline,
+  predictionDeadlineIso,
+} from '../../shared/utils/deadline.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,10 +53,16 @@ export class Rounds implements OnInit {
     return status.toLowerCase();
   }
 
+  /** Prediction deadline (one minute before the first kickoff), for the card's countdown. */
+  deadlineOf(round: RoundSummary): string | null {
+    return predictionDeadlineIso(round);
+  }
+
   /** Deadline within the final hour — used to flag the card's countdown as urgent. */
   isDeadlineUrgent(round: RoundSummary): boolean {
-    if (!round.firstMatchStartsAt) return false;
-    const ms = new Date(round.firstMatchStartsAt).getTime() - Date.now();
+    const deadline = predictionDeadline(round);
+    if (deadline === null) return false;
+    const ms = deadline - Date.now();
     return ms > 0 && ms < 3_600_000;
   }
 
@@ -61,12 +72,13 @@ export class Rounds implements OnInit {
   }
 
   /**
-   * Live visibility: when the season flag is on, others' predictions are released
-   * while the round is still open (before the lock), for everyone. Admins without
-   * the flag still only see the mirror after the lock.
+   * Whether an open round's mirror is already readable: the season flag releases it
+   * live (from publication), and otherwise it opens on its own once predictions close
+   * — the lock is manual, so the mirror must not wait for it.
    */
-  canViewLive(round: RoundSummary): boolean {
-    return round.allowParticipantsToViewOthersPredictions === true;
+  canViewOpenMirror(round: RoundSummary): boolean {
+    if (round.allowParticipantsToViewOthersPredictions === true) return true;
+    return this.canViewOthers(round) && deadlinePassed(round);
   }
 
   protected readonly loading = signal(true);

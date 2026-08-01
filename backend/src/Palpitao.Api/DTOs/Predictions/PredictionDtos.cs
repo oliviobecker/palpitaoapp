@@ -1,3 +1,4 @@
+using Palpitao.Api.Common;
 using Palpitao.Api.Enums;
 
 namespace Palpitao.Api.DTOs.Predictions;
@@ -30,5 +31,9 @@ public class MyPredictionsDto
     public Guid RoundId { get; set; }
     public RoundStatus Status { get; set; }
     public DateTime? FirstMatchStartsAt { get; set; }
+
+    /// <summary>General lock: one minute before the first kickoff. Computed on serialization.</summary>
+    public DateTime? PredictionDeadlineUtc => PredictionDeadline.From(FirstMatchStartsAt);
+
     public List<PredictionDto> Predictions { get; set; } = new();
 }

@@ -9,6 +9,11 @@ namespace Palpitao.Api.Services.Flavio;
 
 public class FlavioRuleService : IFlavioRuleService
 {
+    /// <summary>
+    /// Historical threshold, now only the <em>default</em> of the per-season
+    /// <c>FlavioFromRound</c> setting (see <c>ScoringDefaults</c>). The applicability
+    /// methods take the season's configured value explicitly.
+    /// </summary>
     public const int FirstApplicableRound = 16;
     private const int StandardWindowHours = 24;
     private const int ShortWindowHours = 12;
@@ -20,17 +25,19 @@ public class FlavioRuleService : IFlavioRuleService
         _db = db;
     }
 
-    public bool AppliesToRound(int roundNumber) => roundNumber >= FirstApplicableRound;
+    public bool AppliesToRound(int roundNumber, int firstApplicableRound)
+        => roundNumber >= firstApplicableRound;
 
-    public bool ShouldApplyEnglandFlavioRule(Round round) => AppliesToRound(round.Number);
+    public bool ShouldApplyEnglandFlavioRule(Round round, int firstApplicableRound)
+        => AppliesToRound(round.Number, firstApplicableRound);
 
     public bool ShouldApplyWorldCupFlavioRule(Round round)
         => round.Matches.Any(m => TournamentRules.IsWorldCupFlavioPhase(m.Phase));
 
-    public bool ShouldApplyFlavioRule(Round round, TournamentType type) => type switch
+    public bool ShouldApplyFlavioRule(Round round, TournamentType type, int firstApplicableRound) => type switch
     {
         TournamentType.FifaWorldCup => ShouldApplyWorldCupFlavioRule(round),
-        _ => ShouldApplyEnglandFlavioRule(round),
+        _ => ShouldApplyEnglandFlavioRule(round, firstApplicableRound),
     };
 
     public FlavioDeadline ComputeSpecialDeadline(Round round)
@@ -95,7 +102,8 @@ public class FlavioRuleService : IFlavioRuleService
             .ToList();
     }
 
-    public async Task<bool> ShouldPenalizeLeaderAsync(Guid roundId, Guid leaderUserId, CancellationToken ct)
+    public async Task<bool> ShouldPenalizeLeaderAsync(
+        Guid roundId, Guid leaderUserId, int firstApplicableRound, CancellationToken ct)
     {
         var round = await _db.Rounds
             .Include(r => r.Matches)
@@ -107,7 +115,7 @@ public class FlavioRuleService : IFlavioRuleService
             .Select(s => s.TournamentType)
             .FirstAsync(ct);
 
-        if (!ShouldApplyFlavioRule(round, type))
+        if (!ShouldApplyFlavioRule(round, type, firstApplicableRound))
         {
             return false;
         }

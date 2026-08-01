@@ -23,6 +23,7 @@ import {
   RoundSummary,
   Standing,
 } from '../../core/models/models';
+import { GroupContextService } from '../../core/services/group-context.service';
 import { PredictionsService } from '../../core/services/predictions.service';
 import { RoundsService } from '../../core/services/rounds.service';
 import { SeasonsService } from '../../core/services/seasons.service';
@@ -31,6 +32,7 @@ import { CompetitionBadge } from '../../shared/components/competition-badge/comp
 import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Icon } from '../../shared/components/icon/icon';
 import { Skeleton } from '../../shared/components/skeleton/skeleton';
+import { deadlinePassed, predictionDeadlineIso } from '../../shared/utils/deadline.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,6 +47,7 @@ export class Dashboard implements OnInit, OnDestroy {
   private readonly standingsApi = inject(StandingsService);
   private readonly seasonsApi = inject(SeasonsService);
   protected readonly auth = inject(AuthService);
+  private readonly group = inject(GroupContextService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
@@ -71,7 +74,8 @@ export class Dashboard implements OnInit, OnDestroy {
   protected readonly progressPct = computed(() =>
     this.matchCount() > 0 ? Math.round((this.predictionsDone() / this.matchCount()) * 100) : 0,
   );
-  protected readonly deadline = computed(() => this.openRound()?.firstMatchStartsAt ?? null);
+  protected readonly deadline = computed(() => predictionDeadlineIso(this.openRound()));
+
   protected readonly nextMatches = computed<RoundMatch[]>(() =>
     [...(this.openRound()?.matches ?? [])]
       .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
@@ -92,6 +96,18 @@ export class Dashboard implements OnInit, OnDestroy {
       mins: pad(Math.floor((total % 3600) / 60)),
       secs: pad(total % 60),
     };
+  });
+
+  /**
+   * Whether the open round's mirror is already readable: live when the season allows
+   * it, otherwise (admins only) once predictions close — the lock is manual, so the
+   * mirror must not wait for it. Ticks with the countdown clock.
+   */
+  protected readonly canViewOpenMirror = computed(() => {
+    const round = this.openRound();
+    if (!round) return false;
+    if (round.allowParticipantsToViewOthersPredictions === true) return true;
+    return this.group.isGroupAdmin() && deadlinePassed(round, this.now());
   });
 
   // --- Per-match prediction lookup -----------------------------------------

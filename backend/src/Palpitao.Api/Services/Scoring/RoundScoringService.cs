@@ -246,7 +246,9 @@ public class RoundScoringService : IRoundScoringService
 
             var flavioApplied = false;
             var roundFinal = gross;
-            if (flavioTargets.Contains(participant.Id) && await _flavio.ShouldPenalizeLeaderAsync(roundId, participant.Id, ct))
+            if (flavioTargets.Contains(participant.Id)
+                && await _flavio.ShouldPenalizeLeaderAsync(
+                    roundId, participant.Id, ruleSet.Rules.FlavioFromRound, ct))
             {
                 roundFinal = _flavio.ApplyHalfPenalty(gross);
                 flavioApplied = true;

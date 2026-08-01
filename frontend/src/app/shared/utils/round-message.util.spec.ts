@@ -34,6 +34,28 @@ function round(matches: RoundMatch[], extra: Partial<Round> = {}): Round {
 }
 
 describe('buildRoundMessage', () => {
+  it('announces the deadline one minute before the first kickoff', () => {
+    // Draft round: no firstMatchStartsAt yet, so it falls back to the earliest match.
+    const msg = buildRoundMessage(round([match({ startsAt: '2026-05-23T13:30:00Z' })]));
+
+    const deadline = new Date('2026-05-23T13:29:00Z');
+    const expected = `${deadline.getHours()}h${`${deadline.getMinutes()}`.padStart(2, '0')}`;
+    expect(msg).toContain(`Palpites até ${expected}`);
+  });
+
+  it('prefers the deadline the API computed', () => {
+    const msg = buildRoundMessage(
+      round([match({ startsAt: '2026-05-23T13:30:00Z' })], {
+        firstMatchStartsAt: '2026-05-23T13:30:00Z',
+        predictionDeadlineUtc: '2026-05-23T10:00:00Z',
+      }),
+    );
+
+    const deadline = new Date('2026-05-23T10:00:00Z');
+    const expected = `${deadline.getHours()}h${`${deadline.getMinutes()}`.padStart(2, '0')}`;
+    expect(msg).toContain(`Palpites até ${expected}`);
+  });
+
   it('renders title, round number, deadline and grouped matches with multipliers', () => {
     const msg = buildRoundMessage(
       round([

@@ -6,21 +6,32 @@ using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Services.Scoring;
 using Sentry;
 
 namespace Palpitao.Api.Services.Absences;
 
 public class AbsenceService : IAbsenceService
 {
+    /// <summary>
+    /// First absence ordinal that costs points. Fixed by the domain rules (the 1st and 2nd
+    /// absences only zero the round); what the admin configures is how much it costs and
+    /// which ordinal eliminates.
+    /// </summary>
+    private const int FirstPenalizedAbsence = 3;
+
     private readonly AppDbContext _db;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
+    private readonly ISeasonScoringConfigService _config;
 
-    public AbsenceService(AppDbContext db, IAuditService audit, ICurrentGroupService current)
+    public AbsenceService(
+        AppDbContext db, IAuditService audit, ICurrentGroupService current, ISeasonScoringConfigService config)
     {
         _db = db;
         _audit = audit;
         _current = current;
+        _config = config;
     }
 
     public async Task<bool> IsAbsentAsync(Guid roundId, Guid userId, CancellationToken ct)
@@ -102,6 +113,14 @@ public class AbsenceService : IAbsenceService
         var now = DateTime.UtcNow;
         var outcomes = new List<AbsenceOutcome>();
 
+        // Rounds before the season's AbsenceFromRound still zero the absentee's round —
+        // they just don't climb the punishment ladder (no Absence row, so no ordinal, no
+        // penalty, no elimination). The delete above and the result upsert below run
+        // regardless, so raising the threshold and re-scoring cleans up stale rows and
+        // still leaves every absentee with their zeroed result row.
+        var rules = await _config.GetRuleParamsAsync(round.SeasonId, ct);
+        var counted = round.Number >= rules.AbsenceFromRound;
+
         // Prior season absences for every absentee in a single query (this round's
         // records were cleared above), instead of one COUNT query per absentee.
         var priorCounts = await _db.Absences
@@ -113,18 +132,23 @@ public class AbsenceService : IAbsenceService
 
         foreach (var userId in absentees)
         {
-            var absenceNumber = priorCounts.GetValueOrDefault(userId) + 1;
-            var (penalty, eliminated) = PenaltyFor(absenceNumber);
+            var absenceNumber = counted ? priorCounts.GetValueOrDefault(userId) + 1 : 0;
+            var (penalty, eliminated) = counted
+                ? PenaltyFor(absenceNumber, rules.AbsencePenaltyPoints, rules.AbsenceEliminationCount)
+                : (0, false);
 
-            _db.Absences.Add(new Absence
+            if (counted)
             {
-                Id = Guid.NewGuid(),
-                RoundId = roundId,
-                UserId = userId,
-                AbsenceNumber = absenceNumber,
-                PenaltyPoints = penalty,
-                CreatedAt = now,
-            });
+                _db.Absences.Add(new Absence
+                {
+                    Id = Guid.NewGuid(),
+                    RoundId = roundId,
+                    UserId = userId,
+                    AbsenceNumber = absenceNumber,
+                    PenaltyPoints = penalty,
+                    CreatedAt = now,
+                });
+            }
 
             if (eliminated)
             {
@@ -250,13 +274,23 @@ public class AbsenceService : IAbsenceService
             .ToListAsync(ct);
     }
 
-    /// <summary>Maps an absence ordinal to its (penalty, eliminated) outcome.</summary>
-    private static (int Penalty, bool Eliminated) PenaltyFor(int absenceNumber) => absenceNumber switch
+    /// <summary>
+    /// Maps an absence ordinal to its (penalty, eliminated) outcome under the season's
+    /// rules. Defaults reproduce the classic table: 1st–2nd nothing, 3rd–4th −20 points,
+    /// 5th eliminates. Elimination is checked first, so lowering
+    /// <paramref name="eliminationCount"/> to 2 or less legitimately removes the penalty
+    /// band instead of both applying.
+    /// </summary>
+    private static (int Penalty, bool Eliminated) PenaltyFor(
+        int absenceNumber, int penaltyPoints, int eliminationCount)
     {
-        3 or 4 => (20, false),
-        >= 5 => (0, true),
-        _ => (0, false),
-    };
+        if (absenceNumber >= eliminationCount)
+        {
+            return (0, true);
+        }
+
+        return absenceNumber >= FirstPenalizedAbsence ? (penaltyPoints, false) : (0, false);
+    }
 
     private async Task UpsertAbsentResultAsync(
         Round round, Guid userId, int penalty, bool eliminated, DateTime now, CancellationToken ct)
