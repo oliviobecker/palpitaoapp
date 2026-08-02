@@ -1,5 +1,6 @@
 import { Competition, MatchPhase } from '../../core/models/enums';
 import { RoundResultMatch, RoundResults, Standing } from '../../core/models/models';
+import { shortTeamName } from './team-name.util';
 
 const COMP_LABEL: Record<Competition, string> = {
   [Competition.PremierLeague]: 'Premier League',
@@ -137,7 +138,7 @@ export function buildClosingMessage(
 }
 
 function scoreLine(m: RoundResultMatch): string {
-  return `${m.homeTeamName} ${m.homeScore} x ${m.awayScore} ${m.awayTeamName}`;
+  return `${shortTeamName(m.homeTeamName)} ${m.homeScore} x ${m.awayScore} ${shortTeamName(m.awayTeamName)}`;
 }
 
 function phaseHeader(phase: MatchPhase): string {

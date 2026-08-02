@@ -619,6 +619,16 @@ kickoff)** and the
 matches grouped by competition with their multipliers/phases — plus a **Copy** button that works
 even on mobile (Clipboard API with fallback). Just copy and paste it into the group.
 
+**Short team names.** The messages print the clubs the way the group says them —
+`Wolverhampton Wanderers` → `Wolves`, `Queens Park Rangers` → `QPR`, `Manchester United` →
+`Man Utd`, `Preston North End` → `Preston` — from the table in
+`frontend/src/app/shared/utils/team-name.util.ts`. This applies to the closing and Scout messages
+too; names outside the table (national teams, clubs created by the fixture import) are printed
+unchanged. The short form is **display only**: multipliers and the classic rule still key off the
+full name, and `OcrTeamMatcher` on the backend mirrors the table so a screenshot of a reply still
+imports (see §OCR import). Adding a short name that is not a prefix of the full name means adding an
+alias there as well — the frontend spec and `OcrShortNameRoundTripTests` both fail if you don't.
+
 **Flávio Rule in the message:** when the Flávio Rule applies to the round (England: from the
 season's configured round, default 16; World Cup: quarter-finals+), and only then, the message includes a line with the current leader(s) and
 their **special deadline** (e.g. "Leader @Manoel Neto has until

@@ -1,17 +1,21 @@
 import { RoundScout, ScoutMatch } from '../../core/models/models';
+import { shortTeamName } from './team-name.util';
 
 /**
  * Builds the WhatsApp-style "Scout" block for a single match: a header plus the
  * participants grouped by the exact scoreline they predicted. Plain text, ready
- * to copy. Example:
+ * to copy, with the team names shortened as in the other messages. Example:
  *
- *   Scout Man United x Man City
+ *   Scout Man Utd x Man City
  *
  *   - 1x1 @Felipe
  *   - 2x0 @Bruno @Dourado
  */
 export function buildMatchScoutMessage(match: ScoutMatch): string {
-  const lines: string[] = [`Scout ${match.homeTeamName} x ${match.awayTeamName}`, ''];
+  const lines: string[] = [
+    `Scout ${shortTeamName(match.homeTeamName)} x ${shortTeamName(match.awayTeamName)}`,
+    '',
+  ];
   if (match.groups.length === 0) {
     lines.push('- (sem palpites)');
   } else {
