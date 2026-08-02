@@ -215,6 +215,13 @@ export class Admin implements OnInit {
       link: '/admin/scoring',
     },
     {
+      icon: 'shield',
+      tile: 'icon-tile--teal',
+      title: 'adminDash.teams',
+      sub: 'adminDash.teamsSub',
+      link: '/admin/teams',
+    },
+    {
       icon: 'users',
       tile: 'icon-tile--teal',
       title: 'adminDash.participants',

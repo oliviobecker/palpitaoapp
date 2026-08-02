@@ -115,6 +115,7 @@ export class AdminLayout implements OnInit {
     { label: 'adminNav.seasons', icon: 'calendar-days', link: '/admin/seasons', exact: false },
     { label: 'adminNav.rounds', icon: 'list', link: '/admin/rounds', exact: false },
     { label: 'adminNav.scoring', icon: 'calculator', link: '/admin/scoring', exact: false },
+    { label: 'adminNav.teams', icon: 'shield', link: '/admin/teams', exact: false },
     { label: 'adminNav.participants', icon: 'users', link: '/admin/participants', exact: false },
     {
       label: 'adminNav.requests',
