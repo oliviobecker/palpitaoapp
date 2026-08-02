@@ -27,7 +27,7 @@ function candidate(
     awayTeamName: away,
     startsAt,
     source: 'OneFootball',
-    isBigSevenMatch: false,
+    isClassicMatch: false,
     suggestedMultiplier: 1,
     isAlreadyAddedToRound: false,
     ...extra,
@@ -63,7 +63,7 @@ test.describe('Round-by-period fixture import', () => {
               source: 'OneFootball',
               fixtures: [
                 candidate('of-1', 'Arsenal', 'Chelsea', '2026-08-15T13:30:00Z', 'PremierLeague', {
-                  isBigSevenMatch: true,
+                  isClassicMatch: true,
                   suggestedMultiplier: 2,
                 }),
                 candidate('of-2', 'Luton', 'Reading', '2026-08-16T15:00:00Z', 'LeagueOne', {
@@ -184,7 +184,7 @@ test.describe('Round-by-period fixture import', () => {
             source: 'OneFootball',
             fixtures: [
               candidate('of-9', 'Arsenal', 'Chelsea', '2026-08-15T13:30:00Z', 'PremierLeague', {
-                isBigSevenMatch: true,
+                isClassicMatch: true,
                 suggestedMultiplier: 2,
               }),
             ],

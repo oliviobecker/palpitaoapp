@@ -12,8 +12,8 @@ using Palpitao.Api.Data;
 namespace Palpitao.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260802191920_UpdateTeamCatalog2026_27")]
-    partial class UpdateTeamCatalog2026_27
+    [Migration("20260802191059_AddScoringClassicTeamCompetition")]
+    partial class AddScoringClassicTeamCompetition
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -784,6 +784,11 @@ namespace Palpitao.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Competition")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
                     b.Property<Guid>("ConfigId")
                         .HasColumnType("uuid");
 
@@ -1201,12 +1206,12 @@ namespace Palpitao.Api.Migrations
                         },
                         new
                         {
-                            Id = new Guid("e81bf932-8829-70a6-e530-fdf18e26adf9"),
+                            Id = new Guid("e8a096f2-7f6b-7a4f-8d39-69489afb69d9"),
                             CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Division = 0,
                             IsBigSevenClub = false,
-                            Name = "Coventry City",
-                            ShortName = "COV",
+                            Name = "Burnley",
+                            ShortName = "BUR",
                             TeamType = "Club",
                             WorldCupTitles = 0
                         },
@@ -1245,28 +1250,6 @@ namespace Palpitao.Api.Migrations
                         },
                         new
                         {
-                            Id = new Guid("c77966c8-92ed-c0fa-396e-475f5da6bd88"),
-                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Division = 0,
-                            IsBigSevenClub = false,
-                            Name = "Hull City",
-                            ShortName = "HUL",
-                            TeamType = "Club",
-                            WorldCupTitles = 0
-                        },
-                        new
-                        {
-                            Id = new Guid("197657bf-8de2-f68a-f5c4-e69ed9919c03"),
-                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Division = 0,
-                            IsBigSevenClub = false,
-                            Name = "Ipswich Town",
-                            ShortName = "IPS",
-                            TeamType = "Club",
-                            WorldCupTitles = 0
-                        },
-                        new
-                        {
                             Id = new Guid("f616d444-c35d-1e44-65c7-ce9ae64f734a"),
                             CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Division = 0,
@@ -1300,6 +1283,17 @@ namespace Palpitao.Api.Migrations
                         },
                         new
                         {
+                            Id = new Guid("1a6265b5-9b03-67cf-914d-3d09f651c999"),
+                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Division = 0,
+                            IsBigSevenClub = false,
+                            Name = "Wolverhampton Wanderers",
+                            ShortName = "WOL",
+                            TeamType = "Club",
+                            WorldCupTitles = 0
+                        },
+                        new
+                        {
                             Id = new Guid("f77c1d3f-d3c5-118f-1a0a-bab078be9695"),
                             CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Division = 2,
@@ -1322,45 +1316,12 @@ namespace Palpitao.Api.Migrations
                         },
                         new
                         {
-                            Id = new Guid("527eb8ae-87e3-4dcd-edcf-1fdc272d065d"),
-                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Division = 2,
-                            IsBigSevenClub = false,
-                            Name = "Bolton Wanderers",
-                            ShortName = "BOL",
-                            TeamType = "Club",
-                            WorldCupTitles = 0
-                        },
-                        new
-                        {
                             Id = new Guid("962ce353-613c-74db-83d5-cca35bede489"),
                             CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Division = 2,
                             IsBigSevenClub = false,
                             Name = "Bristol City",
                             ShortName = "BRC",
-                            TeamType = "Club",
-                            WorldCupTitles = 0
-                        },
-                        new
-                        {
-                            Id = new Guid("e8a096f2-7f6b-7a4f-8d39-69489afb69d9"),
-                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Division = 2,
-                            IsBigSevenClub = false,
-                            Name = "Burnley",
-                            ShortName = "BUR",
-                            TeamType = "Club",
-                            WorldCupTitles = 0
-                        },
-                        new
-                        {
-                            Id = new Guid("a4787bdf-b277-7fde-f8f1-1d2ce6babf6a"),
-                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Division = 2,
-                            IsBigSevenClub = false,
-                            Name = "Cardiff City",
-                            ShortName = "CAR",
                             TeamType = "Club",
                             WorldCupTitles = 0
                         },
@@ -1377,6 +1338,17 @@ namespace Palpitao.Api.Migrations
                         },
                         new
                         {
+                            Id = new Guid("e81bf932-8829-70a6-e530-fdf18e26adf9"),
+                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Division = 2,
+                            IsBigSevenClub = false,
+                            Name = "Coventry City",
+                            ShortName = "COV",
+                            TeamType = "Club",
+                            WorldCupTitles = 0
+                        },
+                        new
+                        {
                             Id = new Guid("c4cb6ae6-7dc8-efcd-ceb5-2b68e6919110"),
                             CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Division = 2,
@@ -1388,12 +1360,34 @@ namespace Palpitao.Api.Migrations
                         },
                         new
                         {
-                            Id = new Guid("0c0d8b61-57be-7e2e-0f32-160c4fb6c6e8"),
+                            Id = new Guid("c77966c8-92ed-c0fa-396e-475f5da6bd88"),
                             CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Division = 2,
                             IsBigSevenClub = false,
-                            Name = "Lincoln City",
-                            ShortName = "LIN",
+                            Name = "Hull City",
+                            ShortName = "HUL",
+                            TeamType = "Club",
+                            WorldCupTitles = 0
+                        },
+                        new
+                        {
+                            Id = new Guid("197657bf-8de2-f68a-f5c4-e69ed9919c03"),
+                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Division = 2,
+                            IsBigSevenClub = false,
+                            Name = "Ipswich Town",
+                            ShortName = "IPS",
+                            TeamType = "Club",
+                            WorldCupTitles = 0
+                        },
+                        new
+                        {
+                            Id = new Guid("f29f0509-a891-a240-ed5e-b635b29130bd"),
+                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Division = 2,
+                            IsBigSevenClub = false,
+                            Name = "Leicester City",
+                            ShortName = "LEI",
                             TeamType = "Club",
                             WorldCupTitles = 0
                         },
@@ -1427,6 +1421,17 @@ namespace Palpitao.Api.Migrations
                             IsBigSevenClub = false,
                             Name = "Norwich City",
                             ShortName = "NOR",
+                            TeamType = "Club",
+                            WorldCupTitles = 0
+                        },
+                        new
+                        {
+                            Id = new Guid("79e62f46-f73d-82a8-a7ee-d974bd26b2e6"),
+                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Division = 2,
+                            IsBigSevenClub = false,
+                            Name = "Oxford United",
+                            ShortName = "OXF",
                             TeamType = "Club",
                             WorldCupTitles = 0
                         },
@@ -1471,6 +1476,17 @@ namespace Palpitao.Api.Migrations
                             IsBigSevenClub = false,
                             Name = "Sheffield United",
                             ShortName = "SHU",
+                            TeamType = "Club",
+                            WorldCupTitles = 0
+                        },
+                        new
+                        {
+                            Id = new Guid("452dce33-d510-05e9-9d4c-009b3b524689"),
+                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Division = 2,
+                            IsBigSevenClub = false,
+                            Name = "Sheffield Wednesday",
+                            ShortName = "SHW",
                             TeamType = "Club",
                             WorldCupTitles = 0
                         },
@@ -1542,17 +1558,6 @@ namespace Palpitao.Api.Migrations
                         },
                         new
                         {
-                            Id = new Guid("1a6265b5-9b03-67cf-914d-3d09f651c999"),
-                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Division = 2,
-                            IsBigSevenClub = false,
-                            Name = "Wolverhampton Wanderers",
-                            ShortName = "WOL",
-                            TeamType = "Club",
-                            WorldCupTitles = 0
-                        },
-                        new
-                        {
                             Id = new Guid("633f620c-6d3a-18d1-e042-049ce9648fcc"),
                             CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Division = 2,
@@ -1597,23 +1602,23 @@ namespace Palpitao.Api.Migrations
                         },
                         new
                         {
+                            Id = new Guid("527eb8ae-87e3-4dcd-edcf-1fdc272d065d"),
+                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Division = 3,
+                            IsBigSevenClub = false,
+                            Name = "Bolton Wanderers",
+                            ShortName = "BOL",
+                            TeamType = "Club",
+                            WorldCupTitles = 0
+                        },
+                        new
+                        {
                             Id = new Guid("a606681b-46b1-9faf-919d-a93a8b2e6fd3"),
                             CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Division = 3,
                             IsBigSevenClub = false,
                             Name = "Bradford City",
                             ShortName = "BRA",
-                            TeamType = "Club",
-                            WorldCupTitles = 0
-                        },
-                        new
-                        {
-                            Id = new Guid("99d6f86c-a49c-86e1-977c-055eecaf05fd"),
-                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Division = 3,
-                            IsBigSevenClub = false,
-                            Name = "Bromley",
-                            ShortName = "BRO",
                             TeamType = "Club",
                             WorldCupTitles = 0
                         },
@@ -1630,12 +1635,12 @@ namespace Palpitao.Api.Migrations
                         },
                         new
                         {
-                            Id = new Guid("014f92c4-08cc-edcd-5774-4f6a3a82e8f6"),
+                            Id = new Guid("a4787bdf-b277-7fde-f8f1-1d2ce6babf6a"),
                             CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Division = 3,
                             IsBigSevenClub = false,
-                            Name = "Cambridge United",
-                            ShortName = "CAM",
+                            Name = "Cardiff City",
+                            ShortName = "CAR",
                             TeamType = "Club",
                             WorldCupTitles = 0
                         },
@@ -1652,6 +1657,17 @@ namespace Palpitao.Api.Migrations
                         },
                         new
                         {
+                            Id = new Guid("309f8718-aefc-5b6d-87c4-873e92e05832"),
+                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Division = 3,
+                            IsBigSevenClub = false,
+                            Name = "Exeter City",
+                            ShortName = "EXE",
+                            TeamType = "Club",
+                            WorldCupTitles = 0
+                        },
+                        new
+                        {
                             Id = new Guid("b42c38ba-d9f9-6898-5c95-0572b8cc4461"),
                             CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Division = 3,
@@ -1663,23 +1679,23 @@ namespace Palpitao.Api.Migrations
                         },
                         new
                         {
-                            Id = new Guid("f29f0509-a891-a240-ed5e-b635b29130bd"),
-                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Division = 3,
-                            IsBigSevenClub = false,
-                            Name = "Leicester City",
-                            ShortName = "LEI",
-                            TeamType = "Club",
-                            WorldCupTitles = 0
-                        },
-                        new
-                        {
                             Id = new Guid("157207da-1d38-a621-7402-9bd9c6e0e1ba"),
                             CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Division = 3,
                             IsBigSevenClub = false,
                             Name = "Leyton Orient",
                             ShortName = "LEY",
+                            TeamType = "Club",
+                            WorldCupTitles = 0
+                        },
+                        new
+                        {
+                            Id = new Guid("0c0d8b61-57be-7e2e-0f32-160c4fb6c6e8"),
+                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Division = 3,
+                            IsBigSevenClub = false,
+                            Name = "Lincoln City",
+                            ShortName = "LIN",
                             TeamType = "Club",
                             WorldCupTitles = 0
                         },
@@ -1707,34 +1723,12 @@ namespace Palpitao.Api.Migrations
                         },
                         new
                         {
-                            Id = new Guid("f6d20fee-a413-b482-f1d1-dcdd579d7c71"),
+                            Id = new Guid("a4a9a1a8-a7ee-047e-1753-d0ac5a1288fd"),
                             CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Division = 3,
                             IsBigSevenClub = false,
-                            Name = "Milton Keynes Dons",
-                            ShortName = "MKD",
-                            TeamType = "Club",
-                            WorldCupTitles = 0
-                        },
-                        new
-                        {
-                            Id = new Guid("00a969d4-be71-0522-63dc-f3417623cab5"),
-                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Division = 3,
-                            IsBigSevenClub = false,
-                            Name = "Notts County",
-                            ShortName = "NOT",
-                            TeamType = "Club",
-                            WorldCupTitles = 0
-                        },
-                        new
-                        {
-                            Id = new Guid("79e62f46-f73d-82a8-a7ee-d974bd26b2e6"),
-                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Division = 3,
-                            IsBigSevenClub = false,
-                            Name = "Oxford United",
-                            ShortName = "OXF",
+                            Name = "Northampton Town",
+                            ShortName = "NTH",
                             TeamType = "Club",
                             WorldCupTitles = 0
                         },
@@ -1762,6 +1756,17 @@ namespace Palpitao.Api.Migrations
                         },
                         new
                         {
+                            Id = new Guid("94ce7ba0-e73b-79ec-619d-c0817e296bb6"),
+                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Division = 3,
+                            IsBigSevenClub = false,
+                            Name = "Port Vale",
+                            ShortName = "PVL",
+                            TeamType = "Club",
+                            WorldCupTitles = 0
+                        },
+                        new
+                        {
                             Id = new Guid("b4b1c616-ac3a-da52-8f53-3925ce003bf0"),
                             CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Division = 3,
@@ -1773,12 +1778,12 @@ namespace Palpitao.Api.Migrations
                         },
                         new
                         {
-                            Id = new Guid("452dce33-d510-05e9-9d4c-009b3b524689"),
+                            Id = new Guid("a87325bb-8d0c-d832-fbf2-f6eb99c6d78f"),
                             CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Division = 3,
                             IsBigSevenClub = false,
-                            Name = "Sheffield Wednesday",
-                            ShortName = "SHW",
+                            Name = "Rotherham United",
+                            ShortName = "ROT",
                             TeamType = "Club",
                             WorldCupTitles = 0
                         },
@@ -1823,46 +1828,6 @@ namespace Palpitao.Api.Migrations
                             IsBigSevenClub = false,
                             Name = "Wycombe Wanderers",
                             ShortName = "WYC",
-                            TeamType = "Club",
-                            WorldCupTitles = 0
-                        },
-                        new
-                        {
-                            Id = new Guid("309f8718-aefc-5b6d-87c4-873e92e05832"),
-                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsBigSevenClub = false,
-                            Name = "Exeter City",
-                            ShortName = "EXE",
-                            TeamType = "Club",
-                            WorldCupTitles = 0
-                        },
-                        new
-                        {
-                            Id = new Guid("a4a9a1a8-a7ee-047e-1753-d0ac5a1288fd"),
-                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsBigSevenClub = false,
-                            Name = "Northampton Town",
-                            ShortName = "NTH",
-                            TeamType = "Club",
-                            WorldCupTitles = 0
-                        },
-                        new
-                        {
-                            Id = new Guid("94ce7ba0-e73b-79ec-619d-c0817e296bb6"),
-                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsBigSevenClub = false,
-                            Name = "Port Vale",
-                            ShortName = "PVL",
-                            TeamType = "Club",
-                            WorldCupTitles = 0
-                        },
-                        new
-                        {
-                            Id = new Guid("a87325bb-8d0c-d832-fbf2-f6eb99c6d78f"),
-                            CreatedAt = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsBigSevenClub = false,
-                            Name = "Rotherham United",
-                            ShortName = "ROT",
                             TeamType = "Club",
                             WorldCupTitles = 0
                         },
@@ -1936,7 +1901,7 @@ namespace Palpitao.Api.Migrations
                             Name = "Spain",
                             ShortName = "ESP",
                             TeamType = "NationalTeam",
-                            WorldCupTitles = 2
+                            WorldCupTitles = 1
                         },
                         new
                         {

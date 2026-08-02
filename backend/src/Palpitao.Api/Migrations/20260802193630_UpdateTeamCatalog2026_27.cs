@@ -51,13 +51,6 @@ namespace Palpitao.Api.Migrations
             migrationBuilder.UpdateData(
                 table: "Teams",
                 keyColumn: "Id",
-                keyValue: new Guid("464c232d-1caa-774c-1477-6ca9c2991738"),
-                column: "Division",
-                value: 2);
-
-            migrationBuilder.UpdateData(
-                table: "Teams",
-                keyColumn: "Id",
                 keyValue: new Guid("527eb8ae-87e3-4dcd-edcf-1fdc272d065d"),
                 column: "Division",
                 value: 2);
@@ -201,13 +194,6 @@ namespace Palpitao.Api.Migrations
                 keyValue: new Guid("452dce33-d510-05e9-9d4c-009b3b524689"),
                 column: "Division",
                 value: 2);
-
-            migrationBuilder.UpdateData(
-                table: "Teams",
-                keyColumn: "Id",
-                keyValue: new Guid("464c232d-1caa-774c-1477-6ca9c2991738"),
-                column: "Division",
-                value: 0);
 
             migrationBuilder.UpdateData(
                 table: "Teams",

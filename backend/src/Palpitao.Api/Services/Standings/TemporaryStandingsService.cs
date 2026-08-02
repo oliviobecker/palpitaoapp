@@ -101,7 +101,7 @@ public class TemporaryStandingsService : ITemporaryStandingsService
                 // Same multiplier rule as the official scoring (manual override wins).
                 var multiplier = match.ManualMultiplierOverride ?? _scoring.GetMultiplier(
                     ruleSet, match.Competition, match.Phase,
-                    ruleSet.IsClassicTeam(match.HomeTeamId), ruleSet.IsClassicTeam(match.AwayTeamId));
+                    ruleSet.IsClassicPair(match.HomeTeamId, match.AwayTeamId));
                 points += basePoints * multiplier;
             }
 

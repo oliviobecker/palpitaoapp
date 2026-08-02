@@ -87,8 +87,27 @@ describe('match.util — config-driven multipliers', () => {
       },
     ],
     teams: [
-      { teamId: 'h', name: 'Arsenal', shortName: 'ARS', isClassic: true },
-      { teamId: 'a', name: 'Chelsea', shortName: 'CHE', isClassic: true },
+      {
+        teamId: 'h',
+        name: 'Arsenal',
+        shortName: 'ARS',
+        isClassic: true,
+        classicCompetition: Competition.PremierLeague,
+      },
+      {
+        teamId: 'a',
+        name: 'Chelsea',
+        shortName: 'CHE',
+        isClassic: true,
+        classicCompetition: Competition.PremierLeague,
+      },
+      {
+        teamId: 'w',
+        name: 'West Ham United',
+        shortName: 'WHU',
+        isClassic: true,
+        classicCompetition: Competition.Championship,
+      },
     ],
   };
 
@@ -106,10 +125,55 @@ describe('match.util — config-driven multipliers', () => {
     expect(isClassic(plMatch({ awayTeamId: 'other' }), config)).toBe(false);
   });
 
+  it('does not pair teams from different classic groups', () => {
+    // Arsenal (Premier League group) x West Ham (Championship group): both are classic
+    // teams, but not with each other.
+    const crossGroup = plMatch({ awayTeamId: 'w' });
+    expect(isClassic(crossGroup, config)).toBe(false);
+    expect(computeMultiplier(crossGroup, config)).toBe(1);
+  });
+
   it('falls back to defaults when no config is given', () => {
     // Default Premier League classic is x2 (Arsenal x Chelsea by name).
     expect(computeMultiplier(plMatch({ homeTeamName: 'Arsenal', awayTeamName: 'Chelsea' }))).toBe(
       2,
     );
+  });
+});
+
+describe('match.util — Championship classics (default rules)', () => {
+  const englandMatch = (over: Partial<RoundMatch> = {}): RoundMatch =>
+    match({
+      competition: Competition.Championship,
+      phase: MatchPhase.Regular,
+      homeTeamName: 'Millwall',
+      awayTeamName: 'West Ham United',
+      ...over,
+    });
+
+  it('doubles a Championship derby', () => {
+    expect(isClassic(englandMatch())).toBe(true);
+    expect(computeMultiplier(englandMatch())).toBe(2);
+  });
+
+  it('leaves a plain Championship match at x1', () => {
+    const plain = englandMatch({ awayTeamName: 'Norwich City' });
+    expect(isClassic(plain)).toBe(false);
+    expect(computeMultiplier(plain)).toBe(1);
+  });
+
+  it('doubles the same pair in the FA Cup', () => {
+    // The group decides the pair; the competition decides the multiplier row.
+    expect(computeMultiplier(englandMatch({ competition: Competition.FACup }))).toBe(2);
+  });
+
+  it('never pairs a Championship rival with a Big Seven club', () => {
+    const crossGroup = englandMatch({ competition: Competition.FACup, awayTeamName: 'Arsenal' });
+    expect(isClassic(crossGroup)).toBe(false);
+    expect(computeMultiplier(crossGroup)).toBe(1);
+  });
+
+  it('keeps the phase multiplier in the playoffs (no stacking)', () => {
+    expect(computeMultiplier(englandMatch({ phase: MatchPhase.PlayoffFinal }))).toBe(2);
   });
 });

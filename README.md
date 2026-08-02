@@ -61,9 +61,10 @@ Each **season** runs a `TournamentType` — **Palpitão England** or **FIFA Worl
 creation and **fixed afterwards** (the type drives the allowed competitions/phases, the multipliers
 in §13 and the Flávio Rule variant in §15):
 
-- **Palpitão England** — `Competition`: Premier League, FA Cup, Championship, League One. The
-  **Big Seven** clubs (Arsenal, Chelsea, Liverpool, Manchester City, Manchester United, Newcastle,
-  Tottenham) define the classics. Seeded club catalogue. The **FA Cup is optional per season**
+- **Palpitão England** — `Competition`: Premier League, FA Cup, Championship, League One. Classics
+  come in two groups: the **Big Seven** clubs (Arsenal, Chelsea, Liverpool, Manchester City,
+  Manchester United, Newcastle, Tottenham) and the **Championship** rivalry (Millwall, West Ham
+  United) — see §13. Seeded club catalogue. The **FA Cup is optional per season**
   (`Season.FaCupEnabled`, on by default, editable in **/admin/seasons**): turning it off hides FA
   Cup fixtures from the fixture search (§24) and rejects them on manual add and import
   (`season.faCupDisabled`). Matches already in a round are untouched — they still render, score and
@@ -345,11 +346,12 @@ Exact-score categories (symmetric — e.g. 1x0 ≡ 0x1):
 
 | Competition / phase | Multiplier |
 |---|---|
-| Premier League — classic (two Big Seven) | 2 |
+| Premier League — classic | 2 |
 | Premier League — others | 1 |
 | FA Cup — semifinal | 2 |
 | FA Cup — final | 3 |
-| FA Cup — Big Seven classic (regular phase) | 2 |
+| FA Cup — classic (regular phase) | 2 |
+| Championship — classic | 2 |
 | Championship — playoff (semi/final) | 2 |
 | Championship — others | 1 |
 | League One — every match | 2 |
@@ -362,9 +364,19 @@ Exact-score categories (symmetric — e.g. 1x0 ≡ 0x1):
 | Round of 32 / Round of 16 | 2 | 4 |
 | Quarter-final / Semi-final / Third place / Final | 3 | 6 |
 
-The phase prevails and **does not stack** in England (a Big Seven classic in the FA Cup final = 3,
-not 6); in the World Cup the classic only doubles the phase multiplier from the **knockout** on.
-**Big Seven**: Arsenal, Chelsea, Liverpool, Manchester City, Manchester United, Newcastle, Tottenham.
+A match is a **classic** when both teams belong to the **same classic group**. Each group is named
+after a competition, but the group — not the match's competition — decides the pair: a Championship
+rivalry also doubles when drawn in the FA Cup, while a Championship rival against a Big Seven club
+is never a classic. The match's own (competition, phase) row then supplies the value.
+
+Default groups of the England certame:
+**Premier League** — Arsenal, Chelsea, Liverpool, Manchester City, Manchester United, Newcastle,
+Tottenham (the **Big Seven**). **Championship** — Millwall, West Ham United.
+Admins edit the groups per season in `/admin/scoring`; a team belongs to at most one.
+
+The phase prevails and **does not stack** in England (a classic in the FA Cup final = 3, not 6; in a
+Championship playoff = 2, not 4); in the World Cup the classic only doubles the phase multiplier
+from the **knockout** on.
 **World champions** (campeãs mundiais): Brazil, Germany, Argentina, France, Uruguay, Spain, England.
 There is also a per-match **manual multiplier override** (requires a justification).
 
@@ -433,8 +445,10 @@ eliminations and re-scores the finished rounds in order — **idempotent**.
 - **Flávio Rule deadline milestone** = the leader's first complete submission (the latest
   `SubmittedAt` among their round predictions).
 - **Tie at the top**: the Flávio Rule applies to all tied leaders.
-- **Multiplier on the frontend** (before scoring): computed on the client mirroring the backend
-  rule — by the Big Seven club names (England) or the world-champion national teams (World Cup).
+- **Multiplier on the frontend** (before scoring): the admin round screens pass the season's
+  scoring config, so a customised season is reflected. Without it the client mirrors the default
+  rule by name — the Big Seven and the Championship pair (England) or the world-champion national
+  teams (World Cup).
 - **Active season**: only one per group at a time; the frontend resolves it via
   `GET /api/seasons/active` (the standings and dashboard read the **active season's** id, not
   `rounds[0]`).

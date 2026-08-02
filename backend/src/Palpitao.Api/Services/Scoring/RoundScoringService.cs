@@ -222,7 +222,7 @@ public class RoundScoringService : IRoundScoringService
                 var basePoints = _scoring.GetBasePoints(ruleSet, category);
                 var multiplier = match.ManualMultiplierOverride ?? _scoring.GetMultiplier(
                     ruleSet, match.Competition, match.Phase,
-                    ruleSet.IsClassicTeam(match.HomeTeamId), ruleSet.IsClassicTeam(match.AwayTeamId));
+                    ruleSet.IsClassicPair(match.HomeTeamId, match.AwayTeamId));
                 var finalPoints = basePoints * multiplier;
 
                 _db.PredictionScores.Add(new PredictionScore
@@ -336,7 +336,7 @@ public class RoundScoringService : IRoundScoringService
                 .ThenBy(m => m.StartsAt)
                 .Select(m =>
                 {
-                    var isClassic = ruleSet.IsClassicTeam(m.HomeTeamId) && ruleSet.IsClassicTeam(m.AwayTeamId);
+                    var isClassic = ruleSet.IsClassicPair(m.HomeTeamId, m.AwayTeamId);
                     return new RoundResultMatchDto
                     {
                         RoundMatchId = m.Id,
@@ -350,8 +350,7 @@ public class RoundScoringService : IRoundScoringService
                         IsClassic = isClassic,
                         IsManualMultiplier = m.ManualMultiplierOverride is not null,
                         Multiplier = m.ManualMultiplierOverride ?? _scoring.GetMultiplier(
-                            ruleSet, m.Competition, m.Phase,
-                            ruleSet.IsClassicTeam(m.HomeTeamId), ruleSet.IsClassicTeam(m.AwayTeamId)),
+                            ruleSet, m.Competition, m.Phase, isClassic),
                     };
                 })
                 .ToList(),

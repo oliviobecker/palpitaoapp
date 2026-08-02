@@ -23,12 +23,13 @@ import {
   phasesForType,
 } from '../../core/models/enums';
 import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
-import { FixtureCandidate, Round, RoundMatch, Team } from '../../core/models/models';
+import { FixtureCandidate, Round, RoundMatch, ScoringConfig, Team } from '../../core/models/models';
 import { ConfirmService } from '../../core/notifications/confirm.service';
 import { ToastService } from '../../core/notifications/toast.service';
 import { AdminService } from '../../core/services/admin.service';
 import { MatchesService } from '../../core/services/matches.service';
 import { RoundsService } from '../../core/services/rounds.service';
+import { ScoringConfigService } from '../../core/services/scoring-config.service';
 import { TeamsService } from '../../core/services/teams.service';
 import {
   FixtureSelection,
@@ -83,6 +84,7 @@ export class AdminMatches implements OnInit, HasUnsavedChanges {
   private readonly roundsApi = inject(RoundsService);
   private readonly matchesApi = inject(MatchesService);
   private readonly teamsApi = inject(TeamsService);
+  private readonly scoringApi = inject(ScoringConfigService);
   private readonly adminApi = inject(AdminService);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
@@ -121,6 +123,11 @@ export class AdminMatches implements OnInit, HasUnsavedChanges {
   protected readonly saving = signal(false);
   protected readonly round = signal<Round | null>(null);
   protected readonly teams = signal<Team[]>([]);
+  /**
+   * The season's ruleset, so the multiplier badges match a customised season. Best-effort:
+   * without it the historical defaults apply.
+   */
+  protected readonly scoringConfig = signal<ScoringConfig | null>(null);
   protected readonly editingId = signal<string | null>(null);
   protected roundId = '';
 
@@ -237,6 +244,7 @@ export class AdminMatches implements OnInit, HasUnsavedChanges {
         next: ({ round, teams }) => {
           this.round.set(round);
           this.teams.set(teams);
+          this.loadScoringConfig(round.seasonId);
           // Apply season-type-aware defaults to the (empty) add form.
           this.resetForm();
           // Default the fixture-search window to the round's own period when set,
@@ -300,6 +308,17 @@ export class AdminMatches implements OnInit, HasUnsavedChanges {
       .getById(this.roundId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((r) => this.round.set(r));
+  }
+
+  /** Best-effort: a failure just leaves the defaults in charge of the multipliers. */
+  private loadScoringConfig(seasonId: string): void {
+    this.scoringApi
+      .get(seasonId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (config) => this.scoringConfig.set(config),
+        error: () => this.scoringConfig.set(null),
+      });
   }
 
   // --- External fixture import -------------------------------------------

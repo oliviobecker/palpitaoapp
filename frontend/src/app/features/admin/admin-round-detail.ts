@@ -13,12 +13,13 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { RoundStatus } from '../../core/models/enums';
-import { PredictionCoverage, Round, RoundMatch } from '../../core/models/models';
+import { PredictionCoverage, Round, RoundMatch, ScoringConfig } from '../../core/models/models';
 import { ConfirmService } from '../../core/notifications/confirm.service';
 import { ToastService } from '../../core/notifications/toast.service';
 import { AdminService } from '../../core/services/admin.service';
 import { GroupContextService } from '../../core/services/group-context.service';
 import { RoundsService } from '../../core/services/rounds.service';
+import { ScoringConfigService } from '../../core/services/scoring-config.service';
 import { StandingsService } from '../../core/services/standings.service';
 import { RefreshResultsResponse } from '../../core/models/models';
 import { Icon } from '../../shared/components/icon/icon';
@@ -80,6 +81,7 @@ export class AdminRoundDetail implements OnInit {
   private readonly api = inject(RoundsService);
   private readonly adminApi = inject(AdminService);
   private readonly standingsApi = inject(StandingsService);
+  private readonly scoringApi = inject(ScoringConfigService);
   protected readonly group = inject(GroupContextService);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
@@ -99,6 +101,11 @@ export class AdminRoundDetail implements OnInit {
   protected readonly closing = signal('');
   /** Who has predicted everything vs. who is missing — shown while Published. */
   protected readonly coverage = signal<PredictionCoverage | null>(null);
+  /**
+   * The season's ruleset, so the multipliers shown here (and in the group message) match a
+   * customised season. Best-effort: without it the historical defaults apply.
+   */
+  protected readonly scoringConfig = signal<ScoringConfig | null>(null);
   private id = '';
 
   /** All matches have a result entered — gate for scoring (mirrors the backend rule). */
@@ -138,6 +145,7 @@ export class AdminRoundDetail implements OnInit {
           this.loading.set(false);
           this.loadClosing(r);
           this.loadCoverage(r);
+          this.loadScoringConfig(r);
         },
         error: () => this.loading.set(false),
       });
@@ -155,6 +163,17 @@ export class AdminRoundDetail implements OnInit {
       .subscribe({
         next: (cov) => this.coverage.set(cov),
         error: () => this.coverage.set(null),
+      });
+  }
+
+  /** Best-effort: a failure just leaves the defaults in charge of the multipliers. */
+  private loadScoringConfig(round: Round): void {
+    this.scoringApi
+      .get(round.seasonId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (config) => this.scoringConfig.set(config),
+        error: () => this.scoringConfig.set(null),
       });
   }
 
@@ -288,7 +307,7 @@ export class AdminRoundDetail implements OnInit {
   }
 
   message(round: Round): string {
-    return buildRoundMessage(round, this.group.groupName() ?? '');
+    return buildRoundMessage(round, this.group.groupName() ?? '', this.scoringConfig());
   }
 
   private after(key: string): void {

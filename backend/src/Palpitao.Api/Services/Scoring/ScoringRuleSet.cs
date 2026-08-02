@@ -14,8 +14,12 @@ public sealed class ScoringRuleSet
     private readonly IReadOnlyDictionary<(int Low, int High), ScoreCategory> _scoreCategories;
     private readonly IReadOnlyDictionary<(Competition Competition, MatchPhase Phase), (int Normal, int Classic)> _multipliers;
 
-    /// <summary>Teams that count as classic-eligible (Big Seven / world champions) this season.</summary>
-    public IReadOnlySet<Guid> ClassicTeamIds { get; }
+    /// <summary>
+    /// Classic-eligible teams of the season, each mapped to the classic group it belongs to
+    /// (Big Seven → Premier League, the Championship rivals → Championship, world champions →
+    /// World Cup).
+    /// </summary>
+    public IReadOnlyDictionary<Guid, Competition> ClassicTeams { get; }
 
     /// <summary>The season's Flávio Rule / absence-punishment parameters.</summary>
     public SeasonRuleParams Rules { get; }
@@ -24,13 +28,13 @@ public sealed class ScoringRuleSet
         IReadOnlyDictionary<ScoreCategory, int> basePoints,
         IReadOnlyDictionary<(int, int), ScoreCategory> scoreCategories,
         IReadOnlyDictionary<(Competition, MatchPhase), (int, int)> multipliers,
-        IReadOnlySet<Guid> classicTeamIds,
+        IReadOnlyDictionary<Guid, Competition> classicTeams,
         SeasonRuleParams rules)
     {
         _basePoints = basePoints;
         _scoreCategories = scoreCategories;
         _multipliers = multipliers;
-        ClassicTeamIds = classicTeamIds;
+        ClassicTeams = classicTeams;
         Rules = rules;
     }
 
@@ -48,8 +52,16 @@ public sealed class ScoringRuleSet
         return _scoreCategories.TryGetValue(key, out var category) ? category : ScoreCategory.ExtraUncommon;
     }
 
-    /// <summary>True when the team is classic-eligible this season.</summary>
-    public bool IsClassicTeam(Guid teamId) => ClassicTeamIds.Contains(teamId);
+    /// <summary>
+    /// True when the two teams form a classic: both are classic-eligible <em>and</em> belong to
+    /// the same group. The match's own competition is irrelevant here — it only selects the
+    /// multiplier row — so a Championship pair also counts in the FA Cup, while a pair from two
+    /// different groups (say a Championship rival against a Big Seven club) never does.
+    /// </summary>
+    public bool IsClassicPair(Guid homeTeamId, Guid awayTeamId)
+        => ClassicTeams.TryGetValue(homeTeamId, out var home)
+            && ClassicTeams.TryGetValue(awayTeamId, out var away)
+            && home == away;
 
     /// <summary>
     /// Effective multiplier for a (competition, phase): the classic value when

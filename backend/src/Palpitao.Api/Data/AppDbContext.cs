@@ -407,6 +407,9 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<ScoringClassicTeam>(e =>
         {
+            e.Property(x => x.Competition).HasConversion<string>().HasMaxLength(40);
+            // One group per team per season: the pair test compares groups, so a team in two
+            // of them would make "same group" ambiguous.
             e.HasIndex(x => new { x.ConfigId, x.TeamId }).IsUnique();
 
             e.HasOne(x => x.Team)
@@ -595,6 +598,7 @@ public class AppDbContext : DbContext
             (null, "Derby County", "DER", Competition.Championship),
             (null, "Lincoln City", "LIN", Competition.Championship),
             (null, "Middlesbrough", "MID", Competition.Championship),
+            // Millwall and West Ham are the Championship classic pair (see ScoringDefaults).
             (null, "Millwall", "MIL", Competition.Championship),
             (null, "Norwich City", "NOR", Competition.Championship),
             (null, "Portsmouth", "POR", Competition.Championship),
