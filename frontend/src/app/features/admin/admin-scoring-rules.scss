@@ -204,6 +204,11 @@
   justify-content: center;
   cursor: pointer;
 }
+.classic-group {
+  border-top: 1px solid var(--bs-border-color);
+  padding-top: 0.6rem;
+  margin-top: 0.6rem;
+}
 .add-list {
   max-height: 16rem;
   overflow-y: auto;

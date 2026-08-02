@@ -17,8 +17,9 @@ namespace Palpitao.Api.Tests.Ocr;
 /// The round is built from the <em>whole</em> seeded catalogue, so a short name that
 /// is ambiguous (matches two clubs) fails here instead of silently degrading to a
 /// manual-review row in production. The table mirrors the frontend one — adding an
-/// entry there means adding one here, and an alias in
-/// <see cref="OcrTeamMatcher"/> when the short name is not a substring of the full name.
+/// entry there means adding one here, and a row in the
+/// <see cref="Palpitao.Api.Common.FootballReference"/> alias map when the short name is
+/// not a substring of the full name.
 /// </summary>
 public class OcrShortNameRoundTripTests
 {
@@ -27,49 +28,45 @@ public class OcrShortNameRoundTripTests
     /// <summary>Seeded <c>Team.Name</c> → short name printed in the messages.</summary>
     private static readonly (string Full, string Short)[] ShortNames =
     [
-        // Premier League
-        ("Brighton & Hove Albion", "Brighton"),
-        ("Leeds United", "Leeds"),
-        ("Manchester City", "Man City"),
-        ("Manchester United", "Man Utd"),
-        ("West Ham United", "West Ham"),
-        ("Wolverhampton Wanderers", "Wolves"),
-        // Championship
+        ("AFC Wimbledon", "Wimbledon"),
         ("Birmingham City", "Birmingham"),
         ("Blackburn Rovers", "Blackburn"),
+        ("Bolton Wanderers", "Bolton"),
+        ("Bradford City", "Bradford"),
+        ("Brighton & Hove Albion", "Brighton"),
+        ("Burton Albion", "Burton"),
+        ("Cambridge United", "Cambridge"),
+        ("Cardiff City", "Cardiff"),
         ("Charlton Athletic", "Charlton"),
         ("Coventry City", "Coventry"),
         ("Derby County", "Derby"),
+        ("Doncaster Rovers", "Doncaster"),
+        ("Huddersfield Town", "Huddersfield"),
         ("Hull City", "Hull"),
         ("Ipswich Town", "Ipswich"),
+        ("Leeds United", "Leeds"),
         ("Leicester City", "Leicester"),
+        ("Lincoln City", "Lincoln"),
+        ("Luton Town", "Luton"),
+        ("Manchester City", "Man City"),
+        ("Manchester United", "Man Utd"),
+        ("Mansfield Town", "Mansfield"),
+        ("Milton Keynes Dons", "MK Dons"),
         ("Norwich City", "Norwich"),
         ("Oxford United", "Oxford"),
+        ("Peterborough United", "Peterborough"),
+        ("Plymouth Argyle", "Plymouth"),
         ("Preston North End", "Preston"),
         ("Queens Park Rangers", "QPR"),
         ("Sheffield United", "Sheffield Utd"),
-        ("Sheffield Wednesday", "Sheffield Wed"),
+        ("Sheffield Wednesday", "Sheffield Weds"),
+        ("Stockport County", "Stockport"),
         ("Stoke City", "Stoke"),
         ("Swansea City", "Swansea"),
         ("West Bromwich Albion", "West Brom"),
-        // League One
-        ("AFC Wimbledon", "Wimbledon"),
-        ("Bolton Wanderers", "Bolton"),
-        ("Bradford City", "Bradford"),
-        ("Burton Albion", "Burton"),
-        ("Cardiff City", "Cardiff"),
-        ("Doncaster Rovers", "Doncaster"),
-        ("Exeter City", "Exeter"),
-        ("Huddersfield Town", "Huddersfield"),
-        ("Lincoln City", "Lincoln"),
-        ("Luton Town", "Luton"),
-        ("Mansfield Town", "Mansfield"),
-        ("Northampton Town", "Northampton"),
-        ("Peterborough United", "Peterborough"),
-        ("Plymouth Argyle", "Plymouth"),
-        ("Rotherham United", "Rotherham"),
-        ("Stockport County", "Stockport"),
+        ("West Ham United", "West Ham"),
         ("Wigan Athletic", "Wigan"),
+        ("Wolverhampton Wanderers", "Wolves"),
         ("Wycombe Wanderers", "Wycombe"),
     ];
 

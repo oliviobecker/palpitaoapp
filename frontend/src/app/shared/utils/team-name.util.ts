@@ -6,11 +6,11 @@
  * The round trip is the constraint: participants edit their scores into the copied
  * message, reply on WhatsApp, and the admin screenshots that reply for the OCR
  * import. `OcrTeamMatcher` matches the OCR'd name back against the full `Team.Name`
- * with an alias table plus two-way substring containment, so most short names below
- * resolve for free (they are prefixes of the full name). The three that are not —
- * "Wolves", "QPR", "Sheffield Utd" — have a matching row in
- * `Services/Ocr/OcrTeamMatcher.TeamAliases`; `team-name.util.spec.ts` fails if that
- * set ever changes without the backend following.
+ * with two-way substring containment, so most short names below resolve for free
+ * (they are prefixes of the full name). The ones that are not — "Wolves", "QPR",
+ * "Sheffield Utd", "MK Dons" — are rows in `Common/FootballReference.NameAliases`,
+ * the same map the fixture import uses for external spellings;
+ * `team-name.util.spec.ts` fails if that set changes without the backend following.
  *
  * Deliberately an explicit table rather than a suffix-stripping rule: the rule would
  * collapse "Manchester City" and "Manchester United" into the same token, and it
@@ -18,51 +18,51 @@
  * teams arrive in Portuguese — "Bélgica", "Nova Zelândia", "RD Congo"). Anything not
  * listed here is emitted verbatim, which is what keeps those safe.
  */
+// Sorted by full name, not by division: clubs are promoted and relegated every season
+// (the catalogue refresh moves them around), while the names stay put.
 export const TEAM_SHORT_NAMES: Readonly<Record<string, string>> = {
-  // Premier League
-  'Brighton & Hove Albion': 'Brighton',
-  'Leeds United': 'Leeds',
-  'Manchester City': 'Man City',
-  'Manchester United': 'Man Utd',
-  'West Ham United': 'West Ham',
-  'Wolverhampton Wanderers': 'Wolves',
-  // Championship
+  'AFC Wimbledon': 'Wimbledon',
   'Birmingham City': 'Birmingham',
   'Blackburn Rovers': 'Blackburn',
+  'Bolton Wanderers': 'Bolton',
+  'Bradford City': 'Bradford',
+  'Brighton & Hove Albion': 'Brighton',
+  'Burton Albion': 'Burton',
+  'Cambridge United': 'Cambridge',
+  'Cardiff City': 'Cardiff',
   'Charlton Athletic': 'Charlton',
   'Coventry City': 'Coventry',
   'Derby County': 'Derby',
+  'Doncaster Rovers': 'Doncaster',
+  'Huddersfield Town': 'Huddersfield',
   'Hull City': 'Hull',
   'Ipswich Town': 'Ipswich',
+  'Leeds United': 'Leeds',
   'Leicester City': 'Leicester',
+  'Lincoln City': 'Lincoln',
+  'Luton Town': 'Luton',
+  'Manchester City': 'Man City',
+  'Manchester United': 'Man Utd',
+  'Mansfield Town': 'Mansfield',
+  'Milton Keynes Dons': 'MK Dons',
   'Norwich City': 'Norwich',
   'Oxford United': 'Oxford',
+  'Peterborough United': 'Peterborough',
+  'Plymouth Argyle': 'Plymouth',
   'Preston North End': 'Preston',
   'Queens Park Rangers': 'QPR',
   'Sheffield United': 'Sheffield Utd',
-  'Sheffield Wednesday': 'Sheffield Wed',
+  'Sheffield Wednesday': 'Sheffield Weds',
+  'Stockport County': 'Stockport',
   'Stoke City': 'Stoke',
   'Swansea City': 'Swansea',
   'West Bromwich Albion': 'West Brom',
-  // League One
-  'AFC Wimbledon': 'Wimbledon',
-  'Bolton Wanderers': 'Bolton',
-  'Bradford City': 'Bradford',
-  'Burton Albion': 'Burton',
-  'Cardiff City': 'Cardiff',
-  'Doncaster Rovers': 'Doncaster',
-  'Exeter City': 'Exeter',
-  'Huddersfield Town': 'Huddersfield',
-  'Lincoln City': 'Lincoln',
-  'Luton Town': 'Luton',
-  'Mansfield Town': 'Mansfield',
-  'Northampton Town': 'Northampton',
-  'Peterborough United': 'Peterborough',
-  'Plymouth Argyle': 'Plymouth',
-  'Rotherham United': 'Rotherham',
-  'Stockport County': 'Stockport',
+  'West Ham United': 'West Ham',
   'Wigan Athletic': 'Wigan',
+  'Wolverhampton Wanderers': 'Wolves',
   'Wycombe Wanderers': 'Wycombe',
+  // Left alone on purpose: Notts County (bare "Notts" reads as Nottingham Forest) and
+  // Bristol City (Bristol alone is ambiguous while Bristol Rovers exists in the pyramid).
 };
 
 const normalize = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase();

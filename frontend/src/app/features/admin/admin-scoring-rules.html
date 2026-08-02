@@ -382,7 +382,7 @@
     </div>
   </section>
 
-  <!-- Classic teams -->
+  <!-- Classic teams, one group per competition -->
   <section class="card sr-card mb-3">
     <div class="card-body">
       <div class="d-flex justify-content-between align-items-center">
@@ -395,24 +395,6 @@
       </div>
       <p class="text-muted small mb-2">{{ 'scoringRules.classicTeamsHelp' | translate }}</p>
 
-      @if (selectedTeams().length > 0) {
-        <div class="chips mb-2">
-          @for (t of selectedTeams(); track t.teamId) {
-            <span class="chip">
-              {{ t.name }}
-              <button
-                type="button"
-                class="chip__x"
-                [attr.aria-label]="('common.remove' | translate) + ' ' + t.name"
-                (click)="setTeam(t.teamId, false)"
-              >
-                <app-icon name="x" [size]="12" />
-              </button>
-            </span>
-          }
-        </div>
-      }
-
       <input
         class="form-control form-control-sm mb-2"
         [value]="teamFilter()"
@@ -421,16 +403,45 @@
         [attr.aria-label]="'scoringRules.searchTeams' | translate"
       />
 
-      <div class="add-list">
-        @for (t of addableTeams(); track t.teamId) {
-          <div class="add-row">
-            <span>{{ t.name }}</span>
-            <button type="button" class="add-btn" (click)="setTeam(t.teamId, true)">
-              + {{ 'scoringRules.add' | translate }}
-            </button>
+      @for (g of classicGroups(); track g.competition) {
+        <div class="classic-group">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <app-competition-badge [competition]="g.competition" />
+            <span class="text-muted small">
+              {{ g.teams.length }} {{ 'scoringRules.selected' | translate }}
+            </span>
           </div>
-        }
-      </div>
+
+          @if (g.teams.length > 0) {
+            <div class="chips mb-2">
+              @for (t of g.teams; track t.teamId) {
+                <span class="chip">
+                  {{ t.name }}
+                  <button
+                    type="button"
+                    class="chip__x"
+                    [attr.aria-label]="('common.remove' | translate) + ' ' + t.name"
+                    (click)="setTeam(t.teamId, null)"
+                  >
+                    <app-icon name="x" [size]="12" />
+                  </button>
+                </span>
+              }
+            </div>
+          }
+
+          <div class="add-list">
+            @for (t of addableTeams(); track t.teamId) {
+              <div class="add-row">
+                <span>{{ t.name }}</span>
+                <button type="button" class="add-btn" (click)="setTeam(t.teamId, g.competition)">
+                  + {{ 'scoringRules.add' | translate }}
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
     </div>
   </section>
 

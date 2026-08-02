@@ -6,7 +6,8 @@ describe('shortTeamName', () => {
     expect(shortTeamName('Wolverhampton Wanderers')).toBe('Wolves');
     expect(shortTeamName('Queens Park Rangers')).toBe('QPR');
     expect(shortTeamName('Sheffield United')).toBe('Sheffield Utd');
-    expect(shortTeamName('Sheffield Wednesday')).toBe('Sheffield Wed');
+    expect(shortTeamName('Sheffield Wednesday')).toBe('Sheffield Weds');
+    expect(shortTeamName('Milton Keynes Dons')).toBe('MK Dons');
     expect(shortTeamName('Manchester United')).toBe('Man Utd');
     expect(shortTeamName('West Bromwich Albion')).toBe('West Brom');
     expect(shortTeamName('AFC Wimbledon')).toBe('Wimbledon');
@@ -26,21 +27,30 @@ describe('shortTeamName', () => {
   });
 
   it('keeps clubs that are already short as they are', () => {
-    for (const name of ['Arsenal', 'Tottenham', 'Crystal Palace', 'Nottingham Forest']) {
+    // Notts County and Bristol City stay long on purpose — see the table's comment.
+    for (const name of ['Arsenal', 'Tottenham', 'Nottingham Forest', 'Notts County']) {
       expect(shortTeamName(name)).toBe(name);
     }
   });
 
-  it('lists exactly the short names that need a backend OCR alias', () => {
+  it('lists exactly the short names that need a backend alias', () => {
     // OcrTeamMatcher resolves a short name for free when it is a substring of the full
-    // name. The rest need a row in Services/Ocr/OcrTeamMatcher.TeamAliases and in
+    // name. The rest need a row in Common/FootballReference.NameAliases and in
     // OcrShortNameRoundTripTests, or the screenshot of the message stops importing.
     const needsAlias = Object.entries(TEAM_SHORT_NAMES)
       .filter(([full, short]) => !full.toLowerCase().includes(short.toLowerCase()))
       .map(([, short]) => short)
       .sort();
 
-    expect(needsAlias).toEqual(['Man City', 'Man Utd', 'QPR', 'Sheffield Utd', 'Wolves']);
+    expect(needsAlias).toEqual([
+      'MK Dons',
+      'Man City',
+      'Man Utd',
+      'QPR',
+      'Sheffield Utd',
+      'Sheffield Weds',
+      'Wolves',
+    ]);
   });
 
   it('never maps two clubs onto the same short name', () => {

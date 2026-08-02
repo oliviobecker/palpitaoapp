@@ -225,7 +225,8 @@ export interface FixtureCandidate {
   awayTeamName: string;
   startsAt: string;
   source: string;
-  isBigSevenMatch: boolean;
+  /** Both teams form a classic pair (Big Seven or the Championship rivals). */
+  isClassicMatch: boolean;
   suggestedMultiplier: number;
   isAlreadyAddedToRound: boolean;
 }
@@ -463,6 +464,17 @@ export interface ScoringConfigTeam {
   name: string;
   shortName: string;
   isClassic: boolean;
+  /**
+   * The classic group the team belongs to, or null when it is not a classic. Only two teams
+   * from the same group form a classic.
+   */
+  classicCompetition?: Competition | null;
+}
+
+/** A team designated as a classic, with the group it belongs to. */
+export interface ScoringClassicTeamRequest {
+  teamId: string;
+  competition: Competition;
 }
 
 /**
@@ -499,5 +511,5 @@ export interface ScoringConfigRequest {
   rules: ScoringRules;
   scoreEntries: ScoringScoreEntry[];
   multiplierRules: ScoringMultiplierRule[];
-  classicTeamIds: string[];
+  classicTeams: ScoringClassicTeamRequest[];
 }

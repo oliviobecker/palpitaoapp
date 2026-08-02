@@ -344,7 +344,7 @@
     "classic": "Clássico",
     "general": "Geral",
     "classicTeamsTitle": "Times de clássico",
-    "classicTeamsHelp": "Quando dois destes times se enfrentam, vale o multiplicador de clássico.",
+    "classicTeamsHelp": "Quando dois times do mesmo grupo se enfrentam — em qualquer competição — vale o multiplicador de clássico da competição do jogo. Cada time pertence a um único grupo.",
     "searchTeams": "Buscar time para adicionar...",
     "selected": "selecionados",
     "add": "Adicionar",

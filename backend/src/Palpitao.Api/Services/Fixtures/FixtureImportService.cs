@@ -14,7 +14,7 @@ namespace Palpitao.Api.Services.Fixtures;
 
 public class FixtureImportService : IFixtureImportService
 {
-    private static readonly IReadOnlySet<Guid> NoClassicTeams = new HashSet<Guid>();
+    private static readonly IReadOnlyDictionary<Guid, Competition> NoClassicTeams = new Dictionary<Guid, Competition>();
 
     private readonly AppDbContext _db;
     private readonly IFixtureProvider _provider;
@@ -122,13 +122,11 @@ public class FixtureImportService : IFixtureImportService
 
         foreach (var c in candidates.OfType<FixtureCandidateDto>())
         {
-            var homeBig = FootballReference.IsBigSeven(c.HomeTeamName);
-            var awayBig = FootballReference.IsBigSeven(c.AwayTeamName);
-            c.IsBigSevenMatch = homeBig && awayBig;
+            c.IsClassicMatch = FootballReference.IsClassicPair(c.HomeTeamName, c.AwayTeamName);
             var ruleSet = roundRuleSet ?? ScoringDefaults.ForTournamentType(
                 c.Competition == Competition.FifaWorldCup ? TournamentType.FifaWorldCup : TournamentType.PalpitaoEngland,
                 NoClassicTeams);
-            c.SuggestedMultiplier = _scoring.GetMultiplier(ruleSet, c.Competition, c.Phase, homeBig, awayBig);
+            c.SuggestedMultiplier = _scoring.GetMultiplier(ruleSet, c.Competition, c.Phase, c.IsClassicMatch);
             c.Source = string.IsNullOrWhiteSpace(c.Source) ? _provider.SourceName : c.Source;
             c.IsAlreadyAddedToRound = existingKeys.Contains(MatchKey(c.HomeTeamName, c.AwayTeamName, c.StartsAt));
         }
@@ -252,7 +250,7 @@ public class FixtureImportService : IFixtureImportService
                 continue;
             }
 
-            if (string.Equals(FootballReference.Normalize(item.HomeTeamName), FootballReference.Normalize(item.AwayTeamName), StringComparison.Ordinal))
+            if (string.Equals(FootballReference.Canonical(item.HomeTeamName), FootballReference.Canonical(item.AwayTeamName), StringComparison.Ordinal))
             {
                 throw new BusinessRuleException("match.sameTeam");
             }
@@ -330,8 +328,8 @@ public class FixtureImportService : IFixtureImportService
     // -----------------------------------------------------------------------
     private Team ResolveTeam(List<Team> cache, string name, Competition competition, ref int createdCount, Guid actingUserId)
     {
-        var normalized = FootballReference.Normalize(name);
-        var existing = cache.FirstOrDefault(t => FootballReference.Normalize(t.Name) == normalized);
+        var normalized = FootballReference.Canonical(name);
+        var existing = cache.FirstOrDefault(t => FootballReference.Canonical(t.Name) == normalized);
         if (existing is not null)
         {
             return existing;
@@ -370,8 +368,10 @@ public class FixtureImportService : IFixtureImportService
         return string.IsNullOrEmpty(code) ? "TBD" : code;
     }
 
+    // Canonical (not Normalize): this key compares provider spellings against the
+    // stored team names, so "Wolves" must dedupe against "Wolverhampton Wanderers".
     private static string MatchKey(string home, string away, DateTime startsAt)
-        => $"{FootballReference.Normalize(home)}|{FootballReference.Normalize(away)}|{startsAt:yyyyMMddHHmm}";
+        => $"{FootballReference.Canonical(home)}|{FootballReference.Canonical(away)}|{startsAt:yyyyMMddHHmm}";
 
     private static DateTime ToUtc(DateTime value) => value.Kind switch
     {

@@ -36,20 +36,33 @@ const roundWithMatches = {
       isFinished: false,
     },
     {
-      id: 'm3',
+      id: 'm4',
       roundId: 'r7',
       competition: 'PremierLeague',
       phase: 'Regular',
-      homeTeamId: 't5',
+      homeTeamId: 't7',
       homeTeamName: 'Wolverhampton Wanderers',
-      awayTeamId: 't6',
+      awayTeamId: 't8',
       awayTeamName: 'Leeds United',
       startsAt: '2026-05-23T16:00:00Z',
-      order: 2,
+      order: 3,
       isFinished: false,
     },
     {
       id: 'm2',
+      roundId: 'r7',
+      competition: 'Championship',
+      phase: 'Regular',
+      homeTeamId: 't5',
+      homeTeamName: 'Millwall',
+      awayTeamId: 't6',
+      awayTeamName: 'West Ham United',
+      startsAt: '2026-05-23T16:00:00Z',
+      order: 1,
+      isFinished: false,
+    },
+    {
+      id: 'm3',
       roundId: 'r7',
       competition: 'LeagueOne',
       phase: 'Regular',
@@ -58,7 +71,7 @@ const roundWithMatches = {
       awayTeamId: 't4',
       awayTeamName: 'Stockport',
       startsAt: '2026-05-24T12:00:00Z',
-      order: 1,
+      order: 2,
       isFinished: false,
     },
   ],
@@ -82,6 +95,8 @@ test.describe('Round group message', () => {
     await expect(pre).toContainText('Arsenal x Chelsea (×2)');
     // The full names come from the API; the message prints them short.
     await expect(pre).toContainText('Wolves x Leeds');
+    await expect(pre).toContainText('*Championship*');
+    await expect(pre).toContainText('Millwall x West Ham (×2)');
     await expect(pre).toContainText('Bolton x Stockport (×2)');
     await expect(pre).toContainText('Palpites até');
     await expect(pre).toContainText('*REGRA FLÁVIO:* @Manoel Neto tem até 24 horas para palpitar');

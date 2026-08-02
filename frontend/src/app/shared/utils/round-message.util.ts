@@ -1,5 +1,5 @@
 import { Competition } from '../../core/models/enums';
-import { Round } from '../../core/models/models';
+import { Round, ScoringConfig } from '../../core/models/models';
 import { predictionDeadlineIso } from './deadline.util';
 import { computeMultiplier, phaseLabel } from './match.util';
 import { shortTeamName } from './team-name.util';
@@ -26,8 +26,15 @@ const COMP_ORDER: Competition[] = [
  * prediction deadline (kickoff of the earliest match) and the matches grouped by
  * competition with their multipliers/phases annotated. Ready to copy — the `*…*`
  * around the headings is WhatsApp's bold syntax, rendered on paste.
+ *
+ * `config` is the season's scoring ruleset: with it the multipliers match a customised
+ * season, without it they fall back to the historical defaults.
  */
-export function buildRoundMessage(round: Round, groupTitle = ''): string {
+export function buildRoundMessage(
+  round: Round,
+  groupTitle = '',
+  config?: ScoringConfig | null,
+): string {
   const lines: string[] = [];
   // Header is the current group/season name (not the product name).
   if (groupTitle.trim()) {
@@ -75,7 +82,7 @@ export function buildRoundMessage(round: Round, groupTitle = ''): string {
     lines.push('');
     lines.push(`*${COMP_LABEL[comp]}*`);
     for (const m of group) {
-      const mult = computeMultiplier(m);
+      const mult = computeMultiplier(m, config);
       multipliers.add(mult);
       const tags: string[] = [];
       const phase = phaseLabel(m.phase);

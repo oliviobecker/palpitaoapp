@@ -274,6 +274,12 @@ public static class DomainMessages
             ["scoring.unknownTeam"] = (
                 "Um dos times selecionados como clássico não existe.",
                 "One of the teams selected as a classic does not exist."),
+            ["scoring.invalidClassicCompetition"] = (
+                "Esta competição não aceita times de clássico neste certame.",
+                "This competition does not accept classic teams in this tournament."),
+            ["scoring.duplicateClassicTeam"] = (
+                "Um time só pode pertencer a um grupo de clássico.",
+                "A team can only belong to one classic group."),
             ["scoring.flavioFromRoundMin"] = (
                 "A rodada inicial da Regra Flávio deve ser no mínimo 1.",
                 "The first round of the Flávio Rule must be at least 1."),

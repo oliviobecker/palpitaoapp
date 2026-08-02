@@ -170,12 +170,44 @@ public class FixtureImportServiceTests
         Assert.Equal(2, response.Fixtures.Count);
 
         var derby = response.Fixtures.Single(f => f.HomeTeamName == "Arsenal");
-        Assert.True(derby.IsBigSevenMatch);
+        Assert.True(derby.IsClassicMatch);
         Assert.Equal(2, derby.SuggestedMultiplier); // PL Big Seven derby
 
         var leagueOne = response.Fixtures.Single(f => f.Competition == Competition.LeagueOne);
         Assert.Equal(2, leagueOne.SuggestedMultiplier); // League One always x2
-        Assert.False(leagueOne.IsBigSevenMatch);
+        Assert.False(leagueOne.IsClassicMatch);
+    }
+
+    [Fact]
+    public async Task Search_flags_the_championship_derby_as_a_classic()
+    {
+        using var db = CreateContext();
+        var provider = new FakeFixtureProvider
+        {
+            Fixtures =
+            {
+                Fixture("Millwall", "West Ham United",
+                    new DateTime(2026, 8, 15, 13, 30, 0, DateTimeKind.Utc), Competition.Championship),
+                // Same two classic teams, but one from each group: not a classic.
+                Fixture("West Ham United", "Arsenal",
+                    new DateTime(2026, 8, 16, 13, 30, 0, DateTimeKind.Utc), Competition.FACup),
+            },
+        };
+        var service = CreateService(db, provider);
+
+        var response = await service.SearchAsync(new SearchFixturesRequest
+        {
+            StartDate = new DateTime(2026, 8, 15, 0, 0, 0, DateTimeKind.Utc),
+            EndDate = new DateTime(2026, 8, 17, 0, 0, 0, DateTimeKind.Utc),
+        }, Admin, Ct);
+
+        var derby = response.Fixtures.Single(f => f.Competition == Competition.Championship);
+        Assert.True(derby.IsClassicMatch);
+        Assert.Equal(2, derby.SuggestedMultiplier);
+
+        var crossGroup = response.Fixtures.Single(f => f.Competition == Competition.FACup);
+        Assert.False(crossGroup.IsClassicMatch);
+        Assert.Equal(1, crossGroup.SuggestedMultiplier);
     }
 
     [Fact]
