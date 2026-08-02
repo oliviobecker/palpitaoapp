@@ -47,3 +47,8 @@ League feed uses eight short forms that the seeder maps via an alias table
 (`Spurs`, `Man Utd`, `Man City`, `Wolves`, `Nott'm Forest`, `Brighton`, `Leeds`,
 `West Ham`). Any name that fails to resolve aborts the seed — the seeder never
 auto-creates a `Teams` row, because that would silently split the catalogue in two.
+
+These feeds are frozen **2025/26** rosters while the catalogue now carries **2026/27**
+divisions, so several of these clubs sit in a different `Division` today (Wolves and
+West Ham in the Championship, Coventry/Hull/Ipswich in the Premier League, …). That is
+fine: the seeder resolves clubs by *name* and never reads `Division`.
