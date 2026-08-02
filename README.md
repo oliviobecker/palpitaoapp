@@ -177,7 +177,7 @@ For new migrations: `dotnet ef migrations add <Name> --project src/Palpitao.Api`
 cd backend
 dotnet run --project src/Palpitao.Api
 # API at https://localhost:7099 (and http://localhost:5146)
-# Health: GET /api/health  and  GET /api/health/db
+# Health: GET /api/health, GET /api/health/db and GET /api/health/ocr
 # OpenAPI (dev): GET /openapi/v1.json
 ```
 
@@ -485,7 +485,7 @@ return 4xx), and confirm rejects duplicate participant+match candidates.
 ### Install/configure Tesseract
 
 The `Tesseract` NuGet package ships the native libraries. The **language files**
-(`traineddata`) are missing:
+(`traineddata`) are gitignored (~38 MB), so a fresh clone has none. **Local setup:**
 
 1. Download `por.traineddata` and `eng.traineddata` from
    https://github.com/tesseract-ocr/tessdata
@@ -493,6 +493,13 @@ The `Tesseract` NuGet package ships the native libraries. The **language files**
    `backend/tessdata/eng.traineddata`). See [backend/tessdata/README.md](backend/tessdata/README.md).
 3. The path can be overridden via `Ocr:TessdataPath` (env `Ocr__TessdataPath`). On `dotnet run`
    (dev), point it to the absolute path of `backend/tessdata`.
+
+**Deployed environments need no manual step** — the deploy workflows download the same two models
+(pinned to a `tessdata` commit and checksum-verified) into `backend/tessdata/` before
+`dotnet publish`, so they ride along in the published output. Do **not** copy them onto the server
+by hand: the deploy mirrors the publish folder with `robocopy /MIR`, which purges anything that is
+not in it. `GET /api/health/ocr` reports whether the models are in place (`503` naming the missing
+codes when they are not).
 
 ### Limitations and why review is needed
 

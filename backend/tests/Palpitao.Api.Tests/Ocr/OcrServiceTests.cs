@@ -30,13 +30,18 @@ public class OcrServiceTests
     private sealed class FakeOcrEngine : IOcrEngine
     {
         public string Result = string.Empty;
+        public string[] Missing = [];
         public string ExtractText(byte[] image, string language) => Result;
+        public IReadOnlyList<string> MissingLanguages(string language) => Missing;
     }
 
     private sealed class ThrowingOcrEngine : IOcrEngine
     {
         public string ExtractText(byte[] image, string language)
             => throw new InvalidOperationException("tessdata ausente");
+
+        // Models present, engine broken — the case the generic failure path is for.
+        public IReadOnlyList<string> MissingLanguages(string language) => [];
     }
 
     /// <summary>A minimal byte array that passes the PNG header sniff.</summary>
@@ -377,6 +382,27 @@ public class OcrServiceTests
         Assert.Single(await db.OcrImportImages.ToListAsync());
         var batch = Assert.Single(await db.OcrImportBatches.ToListAsync());
         Assert.Equal(OcrBatchStatus.Failed, batch.Status);
+    }
+
+    [Theory]
+    [InlineData("por", "por")]
+    [InlineData("por+eng", "eng")]
+    public async Task Process_reports_a_missing_language_model_without_recording_an_upload(
+        string requested, string missing)
+    {
+        using var db = CreateContext();
+        var roundId = SeedRound(db);
+        var service = CreateService(db, engine: new FakeOcrEngine { Missing = [missing] });
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.ProcessAsync(roundId, "palpites.png", PngBytes(1), requested, Admin, Ct));
+
+        // A server without its models is a deployment fault, not a failed read: it must not leave
+        // a Failed batch or a stored image behind, and the admin must not be told to try another
+        // photo — no photo would work.
+        Assert.Equal("ocr.tessdataMissing", ex.Key);
+        Assert.Empty(await db.OcrImportBatches.ToListAsync());
+        Assert.Empty(await db.OcrImportImages.ToListAsync());
     }
 
     [Fact]

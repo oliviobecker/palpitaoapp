@@ -156,7 +156,10 @@ overall standings update.
 - **Full RFC 7807 ProblemDetails**: error body keeps the `{ status, message, traceId }` shape; switching
   to `problem+json` would break the frontend `body.message` parser and e2e error mocks (marginal gain).
 - **API versioning** (`/v1`): premature for a single first-party SPA (adds a dependency + routing).
-- **`tessdata/*.traineddata` → Git LFS** (~38 MB): requires rewriting the squashed history + force-push.
+- **`tessdata/*.traineddata` → Git LFS** (~38 MB): no history rewrite needed (they were never
+  committed), but GitHub's free LFS tier gives 1 GB/month of bandwidth and every CI checkout would
+  pull 38 MB — roughly 26 runs. The deploy workflows fetch them from a pinned `tessdata` commit
+  with a SHA256 check instead, so only the deploy pays for them.
 - **Temp-standings cache (M2)** and **list pagination (M4)**: optimizations, low urgency at current scale.
 
 ## 5. Key technical decisions

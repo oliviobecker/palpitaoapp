@@ -118,6 +118,16 @@ public class OcrService : IOcrService
         var now = DateTime.UtcNow;
         var lang = NormalizeLanguage(language);
 
+        // Before the batch, not inside the try below: a server without its language models is a
+        // deployment fault, not a failed import, so it should leave no Failed batch and no stored
+        // image behind. (It also could not use the catch — the `when` filter skips
+        // BusinessRuleException, so the batch would never be saved but would still be tracked.)
+        var missingLanguages = _engine.MissingLanguages(lang);
+        if (missingLanguages.Count > 0)
+        {
+            throw new BusinessRuleException("ocr.tessdataMissing");
+        }
+
         var batch = new OcrImportBatch
         {
             Id = Guid.NewGuid(),
@@ -165,7 +175,7 @@ public class OcrService : IOcrService
         }
         catch (Exception ex) when (ex is not BusinessRuleException and not NotFoundException)
         {
-            _logger.LogError(ex, "Falha ao processar OCR para a rodada {RoundId}", roundId);
+            _logger.LogError(ex, "Falha ao processar OCR para a rodada {RoundId} (idioma {Language})", roundId, lang);
             batch.Status = OcrBatchStatus.Failed;
             await _db.SaveChangesAsync(ct);
             throw new BusinessRuleException("ocr.processFailed");

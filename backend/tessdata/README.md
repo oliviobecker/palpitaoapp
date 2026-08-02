@@ -28,3 +28,11 @@ retornará erro (a API continua funcionando normalmente para o resto).
 > baixa os seus. Os comandos acima (`curl ... raw/main/...`) já deixam os arquivos
 > no lugar esperado. O engine real foi validado nesta máquina (libs nativas
 > `leptonica`/`tesseract50.dll` + modelos `por`/`eng`).
+
+## Servidores (staging/produção)
+
+Não é passo manual: os workflows de deploy baixam os dois modelos para cá **antes** do
+`dotnet publish`, fixados no commit `ced7875` do repositório `tessdata` e conferidos por SHA256, de
+modo que entram na saída do publish. **Não copie nada à mão no servidor** — o deploy espelha a pasta
+publicada com `robocopy /MIR` e apaga tudo que não veio junto. Para conferir um ambiente:
+`GET /health/ocr`.
