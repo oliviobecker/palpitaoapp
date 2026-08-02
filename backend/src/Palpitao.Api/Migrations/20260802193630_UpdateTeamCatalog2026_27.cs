@@ -125,16 +125,37 @@ namespace Palpitao.Api.Migrations
                 column: "Division",
                 value: 3);
 
-            migrationBuilder.InsertData(
-                table: "Teams",
-                columns: new[] { "Id", "CountryCode", "CreatedAt", "CrestUrl", "Division", "FifaCode", "IsBigSevenClub", "Name", "ShortName", "TeamType", "WorldCupTitles" },
-                values: new object[,]
-                {
-                    { new Guid("00a969d4-be71-0522-63dc-f3417623cab5"), null, new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, 3, null, false, "Notts County", "NOT", "Club", 0 },
-                    { new Guid("014f92c4-08cc-edcd-5774-4f6a3a82e8f6"), null, new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, 3, null, false, "Cambridge United", "CAM", "Club", 0 },
-                    { new Guid("99d6f86c-a49c-86e1-977c-055eecaf05fd"), null, new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, 3, null, false, "Bromley", "BRO", "Club", 0 },
-                    { new Guid("f6d20fee-a413-b482-f1d1-dcdd579d7c71"), null, new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, 3, null, false, "Milton Keynes Dons", "MKD", "Club", 0 }
-                });
+            // Four clubs join the catalogue, and they may already be in the database:
+            // FixtureImportService.ResolveTeam creates a missing team on the fly with a
+            // *random* Id, and an FA Cup fixture can pull in a club from outside the
+            // three tracked divisions. A plain InsertData then trips IX_Teams_Name and
+            // takes the whole deploy down with it — which is what happened on production.
+            //
+            // So: insert only the clubs that are genuinely absent, matching on the name
+            // (the constraint that failed) as well as the Id (so a re-run is a no-op).
+            //
+            // A club that is already there keeps its import-created Id, which means it
+            // no longer matches the name-derived Id in HasData — later UpdateData calls
+            // keyed on that Id will miss it. Reconciling that means repointing the
+            // RoundMatches/ScoringClassicTeams foreign keys, which needs a look at the
+            // real production rows first; it is deliberately not done blind here.
+            migrationBuilder.Sql("""
+                INSERT INTO "Teams"
+                    ("Id", "CountryCode", "CreatedAt", "CrestUrl", "Division", "FifaCode",
+                     "IsBigSevenClub", "Name", "ShortName", "TeamType", "WorldCupTitles")
+                SELECT
+                    v.id, NULL, TIMESTAMPTZ '2025-07-01 00:00:00+00', NULL, 3, NULL,
+                    false, v.name, v.short_name, 'Club', 0
+                FROM (VALUES
+                    ('00a969d4-be71-0522-63dc-f3417623cab5'::uuid, 'Notts County', 'NOT'),
+                    ('014f92c4-08cc-edcd-5774-4f6a3a82e8f6'::uuid, 'Cambridge United', 'CAM'),
+                    ('99d6f86c-a49c-86e1-977c-055eecaf05fd'::uuid, 'Bromley', 'BRO'),
+                    ('f6d20fee-a413-b482-f1d1-dcdd579d7c71'::uuid, 'Milton Keynes Dons', 'MKD')
+                ) AS v(id, name, short_name)
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM "Teams" t WHERE t."Name" = v.name OR t."Id" = v.id
+                );
+                """);
         }
 
         /// <inheritdoc />
