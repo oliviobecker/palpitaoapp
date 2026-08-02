@@ -105,4 +105,17 @@ public class RoundFlavioDto
 
     /// <summary>Leader's special deadline; null until the round is published.</summary>
     public DateTime? DeadlineUtc { get; set; }
+
+    /// <summary>
+    /// The rule's window in hours (24, or 12 when the round was published less than a day
+    /// before the first match); null until the round is published. This is what the group
+    /// message announces ("tem até 24 horas para palpitar").
+    /// </summary>
+    public int? WindowHours { get; set; }
+
+    /// <summary>
+    /// True when the general lock (one minute before the first kickoff) cut the window
+    /// short, so <see cref="DeadlineUtc"/> is earlier than reference + <see cref="WindowHours"/>.
+    /// </summary>
+    public bool DeadlineCappedByLock { get; set; }
 }

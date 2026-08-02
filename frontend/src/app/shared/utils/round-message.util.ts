@@ -23,13 +23,14 @@ const COMP_ORDER: Competition[] = [
 /**
  * Builds the WhatsApp-style group message for a round: title, round number, the
  * prediction deadline (kickoff of the earliest match) and the matches grouped by
- * competition with their multipliers/phases annotated. Plain text, ready to copy.
+ * competition with their multipliers/phases annotated. Ready to copy — the `*…*`
+ * around the headings is WhatsApp's bold syntax, rendered on paste.
  */
 export function buildRoundMessage(round: Round, groupTitle = ''): string {
   const lines: string[] = [];
   // Header is the current group/season name (not the product name).
   if (groupTitle.trim()) {
-    lines.push(groupTitle.trim());
+    lines.push(`*${groupTitle.trim()}*`);
   }
   lines.push(`${round.title ? round.title + ', ' : ''}Rodada ${round.number}`);
 
@@ -51,12 +52,16 @@ export function buildRoundMessage(round: Round, groupTitle = ''): string {
   const flavio = round.flavio;
   if (flavio?.applies && flavio.leaderNames.length > 0 && flavio.deadlineUtc) {
     const mentions = flavio.leaderNames.map((n) => `@${n}`).join(', ');
-    const noun = flavio.leaderNames.length === 1 ? 'Líder' : 'Líderes';
     const verb = flavio.leaderNames.length === 1 ? 'tem' : 'têm';
+    // The group is told the rule's window ("24 horas"). When the general lock cuts that
+    // window short the count would promise time the leader does not have, so the exact
+    // instant takes over.
+    const limit =
+      flavio.windowHours && !flavio.deadlineCappedByLock
+        ? `${flavio.windowHours} horas`
+        : formatDeadline(flavio.deadlineUtc);
     lines.push('');
-    lines.push(
-      `${noun} ${mentions} ${verb} até ${formatDeadline(flavio.deadlineUtc)} para palpitar.`,
-    );
+    lines.push(`*REGRA FLÁVIO:* ${mentions} ${verb} até ${limit} para palpitar`);
   }
 
   const multipliers = new Set<number>();
@@ -67,7 +72,7 @@ export function buildRoundMessage(round: Round, groupTitle = ''): string {
     if (group.length === 0) continue;
 
     lines.push('');
-    lines.push(COMP_LABEL[comp]);
+    lines.push(`*${COMP_LABEL[comp]}*`);
     for (const m of group) {
       const mult = computeMultiplier(m);
       multipliers.add(mult);
