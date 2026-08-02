@@ -60,6 +60,40 @@ jobs:
       - name: Test backend
         run: dotnet test backend/Palpitao.slnx --configuration Release --no-restore
 
+      # The language models are gitignored (~38 MB), so a clean checkout has none — and the
+      # `robocopy /MIR` further down purges anything hand-placed on the server. Riding along in
+      # the publish output (which the csproj already copies from backend/tessdata) is the only
+      # arrangement that survives a deploy. Pinned to a commit rather than a branch: these exact
+      # bytes are the ones the OCR preprocessing was tuned against.
+      - name: Cache Tesseract language models
+        uses: actions/cache@v4
+        with:
+          path: backend/tessdata/*.traineddata
+          key: tessdata-ced78752cc61322fb554c280d13360b35b8684e4
+
+      - name: Fetch Tesseract language models
+        shell: pwsh
+        run: |
+          $ProgressPreference = 'SilentlyContinue' # the progress bar makes a 23 MB download take minutes
+          $commit = 'ced78752cc61322fb554c280d13360b35b8684e4'
+          $expected = @{
+            'por.traineddata' = '016C6A371BB1E4C48FE521908CF3BA3D751FADE0AB846AD5D4086B563F5C528C'
+            'eng.traineddata' = 'DAA0C97D651C19FBA3B25E81317CD697E9908C8208090C94C3905381C23FC047'
+          }
+          foreach ($name in $expected.Keys) {
+            $path = "backend/tessdata/$name"
+            if ((Test-Path $path) -and ((Get-FileHash $path -Algorithm SHA256).Hash -eq $expected[$name])) {
+              Write-Host "$name already present."
+              continue
+            }
+            Invoke-WebRequest -Uri "https://github.com/tesseract-ocr/tessdata/raw/$commit/$name" -OutFile $path
+            $actual = (Get-FileHash $path -Algorithm SHA256).Hash
+            if ($actual -ne $expected[$name]) {
+              throw "$name checksum mismatch: expected $($expected[$name]), got $actual"
+            }
+            Write-Host "$name downloaded and verified."
+          }
+
       - name: Publish backend
         shell: pwsh
         run: |
