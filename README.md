@@ -501,6 +501,21 @@ by hand: the deploy mirrors the publish folder with `robocopy /MIR`, which purge
 not in it. `GET /api/health/ocr` reports whether the models are in place (`503` naming the missing
 codes when they are not).
 
+### How a screenshot is read
+
+Before recognition the image is turned grayscale, **enlarged** towards ~1100px wide (capped at 4×)
+and binarized. A phone screenshot of a single chat bubble arrives ~300px wide with ~9px glyphs,
+which Tesseract reads as noise; larger screenshots are left alone. The page is then read **twice —
+as-is and inverted** — and the reading Tesseract is more confident about wins, because a dark-mode
+bubble is white-on-dark, the reverse of what it expects, and nothing in the bytes says which theme
+the sender uses. `Ocr:Preprocess = false` disables the whole pass.
+
+Name matching is strict first (exact, then containment, then the alias map). Only when *nothing*
+matched does it retry allowing **one wrong character** — `Coventy` → `Coventry City`, `Joao` →
+`João` — and only when that retry finds exactly one fixture. A name that already matched two
+fixtures stays ambiguous; the tolerance never breaks a tie. `OcrShortNameRoundTripTests` sweeps the
+whole seeded catalogue to prove no two clubs collide under that budget.
+
 ### Limitations and why review is needed
 
 OCR is heuristic: it depends on the image quality and the text format. The parser recognizes

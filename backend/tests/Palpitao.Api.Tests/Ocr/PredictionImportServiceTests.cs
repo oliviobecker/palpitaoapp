@@ -59,6 +59,118 @@ public class PredictionImportServiceTests
     }
 
     [Theory]
+    // One letter dropped or misread by OCR — the real failure from a dark-mode WhatsApp
+    // screenshot, where "Coventry" came back as "Coventy" and cost the whole row.
+    [InlineData("Coventy")]
+    [InlineData("Coventrv")]
+    [InlineData("Goventry")]
+    public void Parser_tolerates_a_single_letter_the_ocr_got_wrong(string mangled)
+    {
+        List<RoundMatch> matches =
+        [
+            new() { Id = Match1, HomeTeam = new Team { Name = "Arsenal" }, AwayTeam = new Team { Name = "Coventry City" } },
+        ];
+
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), $"João\nArsenal 3 x 1 {mangled}", matches, Participants());
+
+        var c = Assert.Single(candidates);
+        Assert.Equal(Match1, c.RoundMatchId);
+        Assert.False(c.NeedsReview);
+        Assert.Equal(1.0, c.Confidence);
+    }
+
+    [Theory]
+    [InlineData("Premier League")]
+    [InlineData("Championship")]
+    [InlineData("League One")]
+    [InlineData("FA Cup")]
+    public void Parser_does_not_mistake_a_competition_heading_for_the_participant(string heading)
+    {
+        // The message prints the participant header first and a competition heading above each
+        // block. Both are bare letters-and-spaces lines, so the heading used to overwrite the
+        // participant and every fixture below it was filed against nobody.
+        var text = $"Becker, Rodada 2\n{heading}\nArsenal 2x1 Chelsea";
+        List<User> participants = [new() { Id = Guid.NewGuid(), Name = "Becker", Role = UserRole.Participant }];
+
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), text, Matches(), participants);
+
+        var c = Assert.Single(candidates);
+        Assert.Equal("Becker", c.ParticipantNameRaw);
+        Assert.Equal(participants[0].Id, c.UserId);
+        Assert.False(c.NeedsReview);
+    }
+
+    [Fact]
+    public void Parser_tolerates_an_accent_the_ocr_dropped_from_a_participant()
+    {
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), "Joao\nArsenal 2x1 Chelsea", Matches(), Participants());
+
+        var c = Assert.Single(candidates);
+        Assert.Equal(Participants()[0].Id, c.UserId);
+        Assert.False(c.NeedsReview);
+    }
+
+    [Theory]
+    // Too short to risk it: one edit already turns these into a different real club.
+    [InlineData("Hul")]
+    [InlineData("Stok")]
+    public void Parser_does_not_guess_at_a_short_mangled_name(string mangled)
+    {
+        List<RoundMatch> matches =
+        [
+            new() { Id = Match1, HomeTeam = new Team { Name = "Hull City" }, AwayTeam = new Team { Name = "Stoke City" } },
+        ];
+
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), $"João\n{mangled} 3 x 1 Wrexham", matches, Participants());
+
+        var c = Assert.Single(candidates);
+        Assert.Null(c.RoundMatchId);
+        Assert.True(c.NeedsReview);
+    }
+
+    [Fact]
+    public void Parser_refuses_when_two_fixtures_are_equally_close_to_the_mangled_name()
+    {
+        // "Barnslex" is one edit from Barnsley and Barnsler alike: ambiguity must stay
+        // ambiguous rather than pick the first fixture on the card.
+        List<RoundMatch> matches =
+        [
+            new() { Id = Match1, HomeTeam = new Team { Name = "Barnsley" }, AwayTeam = new Team { Name = "Wrexham" } },
+            new() { Id = Match2, HomeTeam = new Team { Name = "Barnsler" }, AwayTeam = new Team { Name = "Wrexham" } },
+        ];
+
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), "João\nBarnslex 3 x 1 Wrexham", matches, Participants());
+
+        var c = Assert.Single(candidates);
+        Assert.Null(c.RoundMatchId);
+        Assert.True(c.NeedsReview);
+    }
+
+    [Fact]
+    public void Parser_keeps_an_ambiguous_strict_match_ambiguous()
+    {
+        // Both Sheffields on the card: the strict pass finds two, so the fuzzy tier must not
+        // run at all — it could otherwise break the tie on an edit distance nobody asked for.
+        List<RoundMatch> matches =
+        [
+            new() { Id = Match1, HomeTeam = new Team { Name = "Sheffield United" }, AwayTeam = new Team { Name = "Wrexham" } },
+            new() { Id = Match2, HomeTeam = new Team { Name = "Sheffield Wednesday" }, AwayTeam = new Team { Name = "Wrexham" } },
+        ];
+
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), "João\nSheffield 3 x 1 Wrexham", matches, Participants());
+
+        var c = Assert.Single(candidates);
+        Assert.Null(c.RoundMatchId);
+        Assert.True(c.NeedsReview);
+    }
+
+    [Theory]
     // OCR commonly misreads digits as letters in the score slot.
     [InlineData("Arsenal O x 1 Chelsea", 0, 1)]   // O -> 0
     [InlineData("Arsenal l x 2 Chelsea", 1, 2)]   // l -> 1
