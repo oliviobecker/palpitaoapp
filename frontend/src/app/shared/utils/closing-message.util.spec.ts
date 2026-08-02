@@ -49,6 +49,12 @@ const results: RoundResults = {
     }),
     match({ homeTeamName: 'Tottenham', awayTeamName: 'Everton', homeScore: 1, awayScore: 0 }),
     match({
+      homeTeamName: 'Wolverhampton Wanderers',
+      awayTeamName: 'Queens Park Rangers',
+      homeScore: 2,
+      awayScore: 1,
+    }),
+    match({
       competition: Competition.LeagueOne,
       homeTeamName: 'Bolton',
       awayTeamName: 'Stockport',
@@ -112,6 +118,10 @@ describe('buildClosingMessage', () => {
   it('puts knockout matches in their own labelled block', () => {
     expect(text).toContain('*FINAL Championship ×2*');
     expect(text).toContain('Hull 1 x 0 Middlesbrough');
+  });
+
+  it('prints the short team names in the score lines', () => {
+    expect(text).toContain('Wolves 2 x 1 QPR');
   });
 
   it('flags League One with a footnote', () => {

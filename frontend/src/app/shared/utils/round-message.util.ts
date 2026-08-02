@@ -2,6 +2,7 @@ import { Competition } from '../../core/models/enums';
 import { Round, ScoringConfig } from '../../core/models/models';
 import { predictionDeadlineIso } from './deadline.util';
 import { computeMultiplier, phaseLabel } from './match.util';
+import { shortTeamName } from './team-name.util';
 
 const COMP_LABEL: Record<Competition, string> = {
   [Competition.PremierLeague]: 'Premier League',
@@ -91,7 +92,9 @@ export function buildRoundMessage(
       if (phase) tags.push(phase);
       if (mult > 1) tags.push(`×${mult}`);
       const suffix = tags.length ? ` (${tags.join(' ')})` : '';
-      lines.push(`${m.homeTeamName} x ${m.awayTeamName}${suffix}`);
+      // Short names are for display only — `computeMultiplier` above still sees the
+      // full name, which is what `isBigSeven` matches on.
+      lines.push(`${shortTeamName(m.homeTeamName)} x ${shortTeamName(m.awayTeamName)}${suffix}`);
     }
   }
 

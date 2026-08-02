@@ -1,0 +1,175 @@
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Palpitao.Api.Data;
+using Palpitao.Api.Entities;
+using Palpitao.Api.Services.Ocr;
+using Xunit;
+
+namespace Palpitao.Api.Tests.Ocr;
+
+/// <summary>
+/// Round-trip guard for the short team names the app prints in the copy-ready
+/// WhatsApp messages (frontend <c>shared/utils/team-name.util.ts</c>). Participants
+/// edit their scores into that message and reply on WhatsApp; the admin screenshots
+/// the reply and imports it here, so every short name must parse and resolve back to
+/// the club it was printed for.
+///
+/// The round is built from the <em>whole</em> seeded catalogue, so a short name that
+/// is ambiguous (matches two clubs) fails here instead of silently degrading to a
+/// manual-review row in production. The table mirrors the frontend one — adding an
+/// entry there means adding one here, and a row in the
+/// <see cref="Palpitao.Api.Common.FootballReference"/> alias map when the short name is
+/// not a substring of the full name.
+/// </summary>
+public class OcrShortNameRoundTripTests
+{
+    private const string OpponentName = "Arsenal";
+
+    /// <summary>Seeded <c>Team.Name</c> → short name printed in the messages.</summary>
+    private static readonly (string Full, string Short)[] ShortNames =
+    [
+        ("AFC Wimbledon", "Wimbledon"),
+        ("Birmingham City", "Birmingham"),
+        ("Blackburn Rovers", "Blackburn"),
+        ("Bolton Wanderers", "Bolton"),
+        ("Bradford City", "Bradford"),
+        ("Brighton & Hove Albion", "Brighton"),
+        ("Burton Albion", "Burton"),
+        ("Cambridge United", "Cambridge"),
+        ("Cardiff City", "Cardiff"),
+        ("Charlton Athletic", "Charlton"),
+        ("Coventry City", "Coventry"),
+        ("Derby County", "Derby"),
+        ("Doncaster Rovers", "Doncaster"),
+        ("Huddersfield Town", "Huddersfield"),
+        ("Hull City", "Hull"),
+        ("Ipswich Town", "Ipswich"),
+        ("Leeds United", "Leeds"),
+        ("Leicester City", "Leicester"),
+        ("Lincoln City", "Lincoln"),
+        ("Luton Town", "Luton"),
+        ("Manchester City", "Man City"),
+        ("Manchester United", "Man Utd"),
+        ("Mansfield Town", "Mansfield"),
+        ("Milton Keynes Dons", "MK Dons"),
+        ("Norwich City", "Norwich"),
+        ("Oxford United", "Oxford"),
+        ("Peterborough United", "Peterborough"),
+        ("Plymouth Argyle", "Plymouth"),
+        ("Preston North End", "Preston"),
+        ("Queens Park Rangers", "QPR"),
+        ("Sheffield United", "Sheffield Utd"),
+        ("Sheffield Wednesday", "Sheffield Weds"),
+        ("Stockport County", "Stockport"),
+        ("Stoke City", "Stoke"),
+        ("Swansea City", "Swansea"),
+        ("West Bromwich Albion", "West Brom"),
+        ("West Ham United", "West Ham"),
+        ("Wigan Athletic", "Wigan"),
+        ("Wolverhampton Wanderers", "Wolves"),
+        ("Wycombe Wanderers", "Wycombe"),
+    ];
+
+    public static TheoryData<string, string> Pairs
+    {
+        get
+        {
+            var data = new TheoryData<string, string>();
+            foreach (var (full, shortName) in ShortNames)
+            {
+                data.Add(shortName, full);
+            }
+
+            return data;
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(Pairs))]
+    public void Short_name_resolves_back_to_its_club_at_home(string shortName, string fullName)
+    {
+        var (matches, idByName) = RoundOfEveryClub(clubAtHome: true);
+
+        var parsed = Assert.Single(OcrTextParser.Parse($"{shortName} 2 x 1 {OpponentName}"));
+
+        Assert.Equal(
+            idByName[fullName],
+            OcrTeamMatcher.ResolveMatch(parsed.HomeTeamRaw, parsed.AwayTeamRaw, matches));
+    }
+
+    [Theory]
+    [MemberData(nameof(Pairs))]
+    public void Short_name_resolves_back_to_its_club_away(string shortName, string fullName)
+    {
+        // Worth repeating away: CleanTeam trims the leading and trailing edges with
+        // different rules, and an all-caps token like "QPR" is only confident leading.
+        var (matches, idByName) = RoundOfEveryClub(clubAtHome: false);
+
+        var parsed = Assert.Single(OcrTextParser.Parse($"{OpponentName} 2 x 1 {shortName}"));
+
+        Assert.Equal(
+            idByName[fullName],
+            OcrTeamMatcher.ResolveMatch(parsed.HomeTeamRaw, parsed.AwayTeamRaw, matches));
+    }
+
+    [Fact]
+    public void Every_abbreviated_club_is_still_in_the_seeded_catalogue()
+    {
+        // Renaming a club in AppDbContext must fail here, not in production.
+        var seeded = SeededTeamNames.Value;
+
+        var missing = ShortNames.Select(p => p.Full).Where(n => !seeded.Contains(n)).ToList();
+
+        Assert.Empty(missing);
+    }
+
+    [Fact]
+    public void Full_names_still_resolve_so_older_screenshots_keep_importing()
+    {
+        var (matches, idByName) = RoundOfEveryClub(clubAtHome: true);
+
+        foreach (var (full, _) in ShortNames)
+        {
+            var parsed = Assert.Single(OcrTextParser.Parse($"{full} 2 x 1 {OpponentName}"));
+            Assert.Equal(
+                idByName[full],
+                OcrTeamMatcher.ResolveMatch(parsed.HomeTeamRaw, parsed.AwayTeamRaw, matches));
+        }
+    }
+
+    /// <summary>
+    /// One fixture per seeded club, all against the same opponent, so the only thing
+    /// that can pick a match is the club side of the line. A short name that also fits
+    /// another club returns null from ResolveMatch and fails the assertion.
+    /// </summary>
+    private static (List<RoundMatch> Matches, Dictionary<string, Guid> IdByName) RoundOfEveryClub(bool clubAtHome)
+    {
+        var matches = new List<RoundMatch>();
+        var idByName = new Dictionary<string, Guid>();
+        foreach (var name in SeededTeamNames.Value)
+        {
+            var id = Guid.NewGuid();
+            idByName[name] = id;
+            var club = new Team { Name = name };
+            var opponent = new Team { Name = OpponentName };
+            matches.Add(new RoundMatch
+            {
+                Id = id,
+                HomeTeam = clubAtHome ? club : opponent,
+                AwayTeam = clubAtHome ? opponent : club,
+            });
+        }
+
+        return (matches, idByName);
+    }
+
+    private static readonly Lazy<IReadOnlyList<string>> SeededTeamNames = new(() =>
+    {
+        using var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
+        using var db = new AppDbContext(options);
+        db.Database.EnsureCreated();
+        return db.Teams.AsNoTracking().Select(t => t.Name).ToList();
+    });
+}

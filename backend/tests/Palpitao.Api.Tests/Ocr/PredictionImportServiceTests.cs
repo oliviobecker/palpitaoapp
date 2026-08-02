@@ -76,6 +76,72 @@ public class PredictionImportServiceTests
         Assert.False(c.NeedsReview);
     }
 
+    [Theory]
+    // A line returned exactly as it was copied, with no score filled in. The message
+    // template's own " x " separator looks like a score pair once OCR letter
+    // look-alikes are allowed on both sides ("Arsenal x Chelsea" → "Arsena" 1 x 1
+    // "helsea"), and both halves still resolve — so without a real digit the import
+    // would confidently store a prediction nobody made.
+    [InlineData("Arsenal x Chelsea")]
+    [InlineData("Liverpool x Manchester City")]
+    public void Parser_ignores_a_line_left_without_a_score(string line)
+    {
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), $"João\n{line}", Matches(), Participants());
+
+        Assert.Empty(candidates);
+    }
+
+    [Fact]
+    public void Parser_resolves_the_short_names_printed_in_the_group_message()
+    {
+        // "Man City" is an alias; "Liverpool" needs no help. Both come straight from
+        // the copy-ready message (frontend shared/utils/team-name.util.ts).
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), "João\nLiverpool 2 x 0 Man City", Matches(), Participants());
+
+        var c = Assert.Single(candidates);
+        Assert.Equal(Match2, c.RoundMatchId);
+        Assert.False(c.NeedsReview);
+    }
+
+    [Fact]
+    public void Short_name_still_matches_a_team_the_fixture_feed_named_that_way()
+    {
+        // Providers ship "Man City"/"Wolves" as the team name and FixtureImportService
+        // creates the row verbatim, so aliasing the raw name must not stop it matching
+        // a Team that already carries the short form.
+        var matches = new List<RoundMatch>
+        {
+            new() { Id = Match1, HomeTeam = new Team { Name = "Wolves" }, AwayTeam = new Team { Name = "Man City" } },
+        };
+
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), "João\nWolves 1 x 2 Man City", matches, Participants());
+
+        var c = Assert.Single(candidates);
+        Assert.Equal(Match1, c.RoundMatchId);
+        Assert.False(c.NeedsReview);
+    }
+
+    [Fact]
+    public void Ampersand_club_matches_even_though_ocr_drops_the_symbol()
+    {
+        // CleanTeam keeps letters only, so the seeded "Brighton & Hove Albion" is read
+        // back as "Brighton Hove Albion".
+        var brightonMatch = Guid.NewGuid();
+        var matches = new List<RoundMatch>
+        {
+            new() { Id = brightonMatch, HomeTeam = new Team { Name = "Brighton & Hove Albion" }, AwayTeam = new Team { Name = "Arsenal" } },
+        };
+
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), "João\nBrighton & Hove Albion 1 x 0 Arsenal", matches, Participants());
+
+        var c = Assert.Single(candidates);
+        Assert.Equal(brightonMatch, c.RoundMatchId);
+    }
+
     [Fact]
     public void Parser_handles_whatsapp_screenshot_with_flags_and_header()
     {

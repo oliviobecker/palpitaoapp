@@ -1,3 +1,4 @@
+using Palpitao.Api.Common;
 using Palpitao.Api.Entities;
 
 namespace Palpitao.Api.Services.Ocr;
@@ -9,14 +10,18 @@ namespace Palpitao.Api.Services.Ocr;
 /// </summary>
 public static class OcrTeamMatcher
 {
+    /// <summary>
+    /// Loose aliases that only make sense in this fuzzy, human-reviewed flow. The real
+    /// spelling map lives in <see cref="FootballReference.Canonical"/> — shared with the
+    /// fixture import, and where the short names the group message prints ("Wolves",
+    /// "QPR", "MK Dons", "Sheffield Utd") are registered. Only entries too loose for
+    /// that map belong here: a bare "city"/"united" would wreck import (Bristol City,
+    /// Leeds United, …) but is worth guessing at when an admin reviews the result.
+    /// </summary>
     private static readonly Dictionary<string, string> TeamAliases = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["man city"] = "manchester city",
         ["mancity"] = "manchester city",
-        ["man united"] = "manchester united",
-        ["man utd"] = "manchester united",
         ["man u"] = "manchester united",
-        ["spurs"] = "tottenham",
         ["united"] = "manchester united",
         ["city"] = "manchester city",
     };
@@ -60,14 +65,26 @@ public static class OcrTeamMatcher
             return false;
         }
 
-        var r = Normalize(raw);
-        var t = teamName.Trim().ToLowerInvariant();
-        return r == t || t.Contains(r) || r.Contains(t);
+        var t = Comparable(teamName);
+        var r = Comparable(raw);
+
+        // The raw form is tried before any rewrite: a Team may itself carry the short
+        // name — fixture feeds ship "Wolves", "Man Utd", "Spurs" and FixtureImportService
+        // creates the row verbatim — and rewriting it to the canonical name would then
+        // stop it matching itself.
+        return Overlaps(r, t)
+            || Overlaps(Comparable(FootballReference.Canonical(raw)), t)
+            || (TeamAliases.TryGetValue(r, out var alias) && Overlaps(alias, t));
+
+        static bool Overlaps(string a, string b) => a == b || b.Contains(a) || a.Contains(b);
     }
 
-    private static string Normalize(string raw)
-    {
-        var s = raw.Trim().ToLowerInvariant();
-        return TeamAliases.TryGetValue(s, out var alias) ? alias : s;
-    }
+    /// <summary>
+    /// Lowercases and drops what OCR cannot give back: OcrTextParser.CleanTeam keeps
+    /// letters only, so "Brighton &amp; Hove Albion" is read as "Brighton Hove Albion".
+    /// Comparing both sides without the ampersand keeps those clubs matchable.
+    /// </summary>
+    private static string Comparable(string value) => string.Join(
+        ' ',
+        value.ToLowerInvariant().Replace('&', ' ').Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 }

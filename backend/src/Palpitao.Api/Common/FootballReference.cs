@@ -87,6 +87,7 @@ public static class FootballReference
         ["peterborough"] = "peterborough united",
         ["preston"] = "preston north end",
         ["qpr"] = "queens park rangers",
+        ["sheffield utd"] = "sheffield united",
         ["sheffield weds"] = "sheffield wednesday",
         ["spurs"] = "tottenham",
         ["tottenham hotspur"] = "tottenham",

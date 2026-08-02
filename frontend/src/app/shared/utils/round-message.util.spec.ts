@@ -102,7 +102,9 @@ describe('buildRoundMessage', () => {
     expect(msg).toContain('Arsenal x Chelsea (×2)'); // Big Seven derby
     expect(msg).toContain('*Championship*');
     expect(msg).toContain('Hull x Middlesbrough (Final (Playoff) ×2)');
-    expect(msg).toContain('Millwall x West Ham United (×2)'); // Championship derby
+    // Championship derby, printed short — the ×2 proves the classic rule still reads
+    // the full "West Ham United" the API sent.
+    expect(msg).toContain('Millwall x West Ham (×2)');
     expect(msg).toContain('*League One*');
     expect(msg).toContain('Bolton x Stockport (×2)');
     expect(msg).toContain('Regras:');
@@ -120,7 +122,49 @@ describe('buildRoundMessage', () => {
         }),
       ]),
     );
-    expect(msg).toContain('Chelsea x Manchester City (Final ×3)');
+    expect(msg).toContain('Chelsea x Man City (Final ×3)');
+  });
+
+  it('prints the short team names', () => {
+    const msg = buildRoundMessage(
+      round([
+        match({
+          id: '1',
+          competition: Competition.PremierLeague,
+          homeTeamName: 'Manchester City',
+          awayTeamName: 'Manchester United',
+          startsAt: '2026-05-23T13:30:00Z',
+        }),
+        match({
+          id: '2',
+          competition: Competition.Championship,
+          homeTeamName: 'Wolverhampton Wanderers',
+          awayTeamName: 'Queens Park Rangers',
+          startsAt: '2026-05-24T15:00:00Z',
+        }),
+      ]),
+    );
+
+    // The (×2) is the point of this case: the classic multiplier is computed from the
+    // full name, so it only survives if the shortening stays in the formatting.
+    expect(msg).toContain('Man City x Man Utd (×2)');
+    expect(msg).toContain('Wolves x QPR');
+  });
+
+  it('leaves teams outside the table untouched', () => {
+    // National teams arrive from the fixture import in Portuguese and are not in the
+    // abbreviation table — shortening them would break the OCR round trip.
+    const msg = buildRoundMessage(
+      round([
+        match({
+          competition: Competition.FifaWorldCup,
+          phase: MatchPhase.WorldCupGroupStage,
+          homeTeamName: 'Nova Zelândia',
+          awayTeamName: 'Arábia Saudita',
+        }),
+      ]),
+    );
+    expect(msg).toContain('Nova Zelândia x Arábia Saudita');
   });
 
   it('announces the rule window on the Flávio line', () => {

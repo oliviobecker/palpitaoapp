@@ -276,6 +276,7 @@ public static partial class OcrTextParser
     {
         var a = ScorePair().Match(text);
         if (a.Success
+            && HasRealDigit(a.Groups[1].Value, a.Groups[2].Value)
             && ParseScore(a.Groups[1].Value) is { } homeA
             && ParseScore(a.Groups[2].Value) is { } awayA)
         {
@@ -302,6 +303,16 @@ public static partial class OcrTextParser
 
         return null;
     }
+
+    /// <summary>
+    /// True when at least one side of a score pair is an actual digit. Both sides
+    /// being letter look-alikes means the "score" is almost certainly two team names
+    /// around the message template's own separator: a line returned unedited
+    /// ("Arsenal x Leeds") otherwise reads as "Arsena" 1 x 1 "eeds", and both halves
+    /// still resolve, so a made-up 1x1 would be imported without review.
+    /// </summary>
+    private static bool HasRealDigit(string left, string right) =>
+        left.Any(char.IsAsciiDigit) || right.Any(char.IsAsciiDigit);
 
     /// <summary>
     /// Canonicalises a score token, mapping common OCR letter look-alikes to

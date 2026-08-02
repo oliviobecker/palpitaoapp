@@ -36,6 +36,19 @@ const roundWithMatches = {
       isFinished: false,
     },
     {
+      id: 'm4',
+      roundId: 'r7',
+      competition: 'PremierLeague',
+      phase: 'Regular',
+      homeTeamId: 't7',
+      homeTeamName: 'Wolverhampton Wanderers',
+      awayTeamId: 't8',
+      awayTeamName: 'Leeds United',
+      startsAt: '2026-05-23T16:00:00Z',
+      order: 3,
+      isFinished: false,
+    },
+    {
       id: 'm2',
       roundId: 'r7',
       competition: 'Championship',
@@ -80,8 +93,10 @@ test.describe('Round group message', () => {
     await expect(pre).toContainText('*Nome*, Rodada 41');
     await expect(pre).toContainText('*Premier League*');
     await expect(pre).toContainText('Arsenal x Chelsea (×2)');
+    // The full names come from the API; the message prints them short.
+    await expect(pre).toContainText('Wolves x Leeds');
     await expect(pre).toContainText('*Championship*');
-    await expect(pre).toContainText('Millwall x West Ham United (×2)');
+    await expect(pre).toContainText('Millwall x West Ham (×2)');
     await expect(pre).toContainText('Bolton x Stockport (×2)');
     await expect(pre).toContainText('Palpites até');
     await expect(pre).toContainText('*REGRA FLÁVIO:* @Manoel Neto tem até 24 horas para palpitar');

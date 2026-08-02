@@ -40,6 +40,22 @@ describe('buildScoutMessage', () => {
     expect(text).toMatch(/Scout Man United x Man City[\s\S]*\n\nScout Arsenal x Chelsea/);
   });
 
+  it('shortens the team names in the header', () => {
+    // The two Sheffields must stay distinguishable once shortened.
+    const derby: RoundScout = {
+      ...scout,
+      matches: [
+        {
+          roundMatchId: 'm1',
+          homeTeamName: 'Sheffield United',
+          awayTeamName: 'Sheffield Wednesday',
+          groups: [],
+        },
+      ],
+    };
+    expect(buildScoutMessage(derby)).toContain('Scout Sheffield Utd x Sheffield Wed');
+  });
+
   it('shows a placeholder when a match has no predictions', () => {
     const empty: RoundScout = {
       ...scout,
