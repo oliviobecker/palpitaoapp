@@ -188,10 +188,10 @@ public class ResultsUpdateService : IResultsUpdateService
             }
         }
 
-        var home = FootballReference.Normalize(result.HomeTeamName);
-        var away = FootballReference.Normalize(result.AwayTeamName);
+        var home = FootballReference.Canonical(result.HomeTeamName);
+        var away = FootballReference.Canonical(result.AwayTeamName);
         return round.Matches.FirstOrDefault(m =>
-            FootballReference.Normalize(m.HomeTeam?.Name ?? string.Empty) == home
-            && FootballReference.Normalize(m.AwayTeam?.Name ?? string.Empty) == away);
+            FootballReference.Canonical(m.HomeTeam?.Name ?? string.Empty) == home
+            && FootballReference.Canonical(m.AwayTeam?.Name ?? string.Empty) == away);
     }
 }

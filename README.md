@@ -76,6 +76,16 @@ in §13 and the Flávio Rule variant in §15):
 A group can host multiple seasons of either type. **`Team`** is a single global catalogue holding
 both clubs and national teams (`TeamType`).
 
+The club catalogue tracks the three league divisions and carries **one current `Division` per club**,
+refreshed each season by editing the seed and adding a migration (promotions/relegations are one-column
+updates — `Team`'s primary key is derived from its *name*, so it survives a division change). Clubs
+relegated out of the three divisions are **kept with a null `Division`**, never deleted: `RoundMatch`
+and `ScoringClassicTeam` hold `Restrict` foreign keys into `Teams`, so deleting one would break any
+database that already holds history. They remain selectable for the FA Cup, which draws from every
+division. External name variants (`Wolves`, `Newcastle United`, `Nott'm Forest`…) are mapped onto the
+catalogue's canonical names by `FootballReference.Canonical` before import or results matching, so a
+provider's spelling can't silently create a duplicate club.
+
 ## 2. Stack
 
 | Layer | Technology |
@@ -156,8 +166,8 @@ dotnet ef database update --project src/Palpitao.Api
 ```
 
 This creates all tables and the **initial seed**: the club catalogue (Premier League, Championship
-and League One), the seven national-team **world champions** (for World Cup certames), the **default
-group** + its admin membership, and the dev admin user.
+and League One — currently the **2026/2027** rosters), the seven national-team **world champions**
+(for World Cup certames), the **default group** + its admin membership, and the dev admin user.
 For new migrations: `dotnet ef migrations add <Name> --project src/Palpitao.Api`.
 
 ## 7. Run the backend

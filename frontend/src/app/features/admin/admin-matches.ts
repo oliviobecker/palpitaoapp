@@ -155,6 +155,18 @@ export class AdminMatches implements OnInit, HasUnsavedChanges {
   });
 
   /**
+   * Clubs already on the match being edited. The catalogue is global and carries a
+   * single current division, so a past season's round can hold a club that has since
+   * been promoted, relegated, or dropped out of the three tracked divisions. Those
+   * stay offered regardless of the selected competition — otherwise the select would
+   * render without its own value and the effect below would blank the selection.
+   */
+  private readonly editingTeamIds = computed(() => {
+    const editing = this.round()?.matches?.find((m) => m.id === this.editingId());
+    return editing ? [editing.homeTeamId, editing.awayTeamId] : [];
+  });
+
+  /**
    * Clubs offered in the home/away dropdowns. For a tracked league division only
    * its clubs are shown; the FA Cup (drawing from every division) shows them all.
    */
@@ -166,7 +178,8 @@ export class AdminMatches implements OnInit, HasUnsavedChanges {
       comp === Competition.Championship ||
       comp === Competition.LeagueOne
     ) {
-      return all.filter((t) => t.division === comp);
+      const kept = new Set(this.editingTeamIds());
+      return all.filter((t) => t.division === comp || kept.has(t.id));
     }
     return all;
   });

@@ -179,6 +179,13 @@ overall standings update.
   HTTP clients use a **transient-retry** `DelegatingHandler` (`Common/TransientHttpRetryHandler`).
 - **Scoring is idempotent:** re-scoring a round clears its `PredictionScores`/`RoundParticipantResults`
   and recomputes standings; reopening just flips status (no data wiped).
+- **Club catalogue is season-versioned by hand:** the seed carries the **2026/2027** rosters (20 PL /
+  24 Championship / 24 League One). A club's PK is an MD5 of its *name*, so promotion/relegation is a
+  one-column `UpdateData`; clubs relegated out of the three divisions keep their row with a **null**
+  `Division` (never deleted — `RoundMatch`/`ScoringClassicTeam` FKs are `Restrict`). `Division` is
+  global and season-less, so the admin match editor keeps already-selected clubs in the dropdown even
+  when their current division no longer matches. Provider name variants resolve through
+  `FootballReference.Canonical` before import/results matching, so a spelling can't fork the catalogue.
 - **Active season:** one per group; frontend resolves it via `GET /api/seasons/active` (not `rounds[0]`).
 - **i18n:** runtime switching (ngx-translate); backend localizes via `Accept-Language` + `DomainMessages`.
   `en-US.json`/`pt-BR.json` kept at **key parity** (508 keys each).

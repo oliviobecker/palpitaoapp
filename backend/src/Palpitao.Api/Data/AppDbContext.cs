@@ -542,18 +542,25 @@ public class AppDbContext : DbContext
             UpdatedAt = seededAt,
         });
 
-        // --- Club catalogue (season 2025/2026) ------------------------------
+        // --- Club catalogue (season 2026/2027) ------------------------------
         // Full rosters of the three tracked league divisions. The "Big Seven"
         // keep their fixed seed ids (referenced by tests and the scoring rules);
         // every other club gets a deterministic id derived from its name so the
         // seed stays stable across migrations without hand-coding dozens of GUIDs.
+        //
+        // Promotion/relegation is applied by editing the Division below and adding
+        // a migration. Because DeterministicGuid keys off the *name* only, moving a
+        // club between divisions keeps its id, so EF emits a one-column UpdateData.
+        // Clubs that drop out of the tracked divisions keep their row with a null
+        // Division -- deleting them would trip the Restrict FKs from RoundMatches
+        // and ScoringClassicTeams on any database that already holds history.
         var bigSevenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "Arsenal", "Chelsea", "Liverpool", "Manchester City",
             "Manchester United", "Newcastle", "Tottenham",
         };
 
-        var clubs = new (Guid? Id, string Name, string Short, Competition Division)[]
+        var clubs = new (Guid? Id, string Name, string Short, Competition? Division)[]
         {
             // Premier League — Big Seven (fixed ids)
             (SeedIds.Arsenal, "Arsenal", "ARS", Competition.PremierLeague),
@@ -568,65 +575,72 @@ public class AppDbContext : DbContext
             (null, "Bournemouth", "BOU", Competition.PremierLeague),
             (null, "Brentford", "BRE", Competition.PremierLeague),
             (null, "Brighton & Hove Albion", "BHA", Competition.PremierLeague),
-            (null, "Burnley", "BUR", Competition.PremierLeague),
+            (null, "Coventry City", "COV", Competition.PremierLeague),
             (null, "Crystal Palace", "CRY", Competition.PremierLeague),
             (null, "Everton", "EVE", Competition.PremierLeague),
             (null, "Fulham", "FUL", Competition.PremierLeague),
+            (null, "Hull City", "HUL", Competition.PremierLeague),
+            (null, "Ipswich Town", "IPS", Competition.PremierLeague),
             (null, "Leeds United", "LEE", Competition.PremierLeague),
             (null, "Nottingham Forest", "NFO", Competition.PremierLeague),
             (null, "Sunderland", "SUN", Competition.PremierLeague),
-            (null, "West Ham United", "WHU", Competition.PremierLeague),
-            (null, "Wolverhampton Wanderers", "WOL", Competition.PremierLeague),
             // Championship
             (null, "Birmingham City", "BIR", Competition.Championship),
             (null, "Blackburn Rovers", "BLB", Competition.Championship),
+            (null, "Bolton Wanderers", "BOL", Competition.Championship),
             (null, "Bristol City", "BRC", Competition.Championship),
+            (null, "Burnley", "BUR", Competition.Championship),
+            (null, "Cardiff City", "CAR", Competition.Championship),
             (null, "Charlton Athletic", "CHA", Competition.Championship),
-            (null, "Coventry City", "COV", Competition.Championship),
             (null, "Derby County", "DER", Competition.Championship),
-            (null, "Hull City", "HUL", Competition.Championship),
-            (null, "Ipswich Town", "IPS", Competition.Championship),
-            (null, "Leicester City", "LEI", Competition.Championship),
+            (null, "Lincoln City", "LIN", Competition.Championship),
             (null, "Middlesbrough", "MID", Competition.Championship),
             (null, "Millwall", "MIL", Competition.Championship),
             (null, "Norwich City", "NOR", Competition.Championship),
-            (null, "Oxford United", "OXF", Competition.Championship),
             (null, "Portsmouth", "POR", Competition.Championship),
             (null, "Preston North End", "PNE", Competition.Championship),
             (null, "Queens Park Rangers", "QPR", Competition.Championship),
             (null, "Sheffield United", "SHU", Competition.Championship),
-            (null, "Sheffield Wednesday", "SHW", Competition.Championship),
             (null, "Southampton", "SOU", Competition.Championship),
             (null, "Stoke City", "STK", Competition.Championship),
             (null, "Swansea City", "SWA", Competition.Championship),
             (null, "Watford", "WAT", Competition.Championship),
             (null, "West Bromwich Albion", "WBA", Competition.Championship),
+            (null, "West Ham United", "WHU", Competition.Championship),
+            (null, "Wolverhampton Wanderers", "WOL", Competition.Championship),
             (null, "Wrexham", "WRE", Competition.Championship),
             // League One
             (null, "AFC Wimbledon", "WIM", Competition.LeagueOne),
             (null, "Barnsley", "BAR", Competition.LeagueOne),
             (null, "Blackpool", "BLA", Competition.LeagueOne),
-            (null, "Bolton Wanderers", "BOL", Competition.LeagueOne),
             (null, "Bradford City", "BRA", Competition.LeagueOne),
+            (null, "Bromley", "BRO", Competition.LeagueOne),
             (null, "Burton Albion", "BTN", Competition.LeagueOne),
-            (null, "Cardiff City", "CAR", Competition.LeagueOne),
+            (null, "Cambridge United", "CAM", Competition.LeagueOne),
             (null, "Doncaster Rovers", "DON", Competition.LeagueOne),
-            (null, "Exeter City", "EXE", Competition.LeagueOne),
             (null, "Huddersfield Town", "HUD", Competition.LeagueOne),
+            (null, "Leicester City", "LEI", Competition.LeagueOne),
             (null, "Leyton Orient", "LEY", Competition.LeagueOne),
-            (null, "Lincoln City", "LIN", Competition.LeagueOne),
             (null, "Luton Town", "LUT", Competition.LeagueOne),
             (null, "Mansfield Town", "MNF", Competition.LeagueOne),
-            (null, "Northampton Town", "NTH", Competition.LeagueOne),
+            (null, "Milton Keynes Dons", "MKD", Competition.LeagueOne),
+            (null, "Notts County", "NOT", Competition.LeagueOne),
+            (null, "Oxford United", "OXF", Competition.LeagueOne),
             (null, "Peterborough United", "PET", Competition.LeagueOne),
             (null, "Plymouth Argyle", "PLY", Competition.LeagueOne),
-            (null, "Port Vale", "PVL", Competition.LeagueOne),
             (null, "Reading", "REA", Competition.LeagueOne),
-            (null, "Rotherham United", "ROT", Competition.LeagueOne),
+            (null, "Sheffield Wednesday", "SHW", Competition.LeagueOne),
             (null, "Stevenage", "STV", Competition.LeagueOne),
             (null, "Stockport County", "STO", Competition.LeagueOne),
             (null, "Wigan Athletic", "WIG", Competition.LeagueOne),
             (null, "Wycombe Wanderers", "WYC", Competition.LeagueOne),
+            // Outside the tracked divisions (relegated to League Two in 2025/26).
+            // Kept with a null Division so historical rounds keep their FK targets;
+            // they still show up for the FA Cup, which draws from every division.
+            (null, "Exeter City", "EXE", null),
+            (null, "Northampton Town", "NTH", null),
+            (null, "Port Vale", "PVL", null),
+            (null, "Rotherham United", "ROT", null),
         };
 
         modelBuilder.Entity<Team>().HasData(
@@ -651,7 +665,7 @@ public class AppDbContext : DbContext
             ("Argentina", "ARG", "AR", 3),
             ("France", "FRA", "FR", 2),
             ("Uruguay", "URU", "UY", 2),
-            ("Spain", "ESP", "ES", 1),
+            ("Spain", "ESP", "ES", 2),
             ("England", "ENG", "GB", 1),
         };
 
