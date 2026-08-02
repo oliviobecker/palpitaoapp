@@ -21,10 +21,10 @@ const COMP_ORDER: Competition[] = [
 ];
 
 /**
- * Builds the WhatsApp-style group message for a round: title, round number, the
- * prediction deadline (kickoff of the earliest match) and the matches grouped by
- * competition with their multipliers/phases annotated. Ready to copy — the `*…*`
- * around the headings is WhatsApp's bold syntax, rendered on paste.
+ * Builds the WhatsApp-style group message for a round: a name placeholder, the round
+ * number, the prediction deadline (kickoff of the earliest match) and the matches
+ * grouped by competition with their multipliers/phases annotated. Ready to copy — the
+ * `*…*` around the headings is WhatsApp's bold syntax, rendered on paste.
  *
  * `config` is the season's scoring ruleset: with it the multipliers match a customised
  * season, without it they fall back to the historical defaults.
@@ -39,7 +39,10 @@ export function buildRoundMessage(
   if (groupTitle.trim()) {
     lines.push(`*${groupTitle.trim()}*`);
   }
-  lines.push(`${round.title ? round.title + ', ' : ''}Rodada ${round.number}`);
+  // The participant replaces "Nome" with their own when sending the predictions back;
+  // bold so it reads as a field to fill in, not as part of the heading. The round's own
+  // title deliberately stays out — the line belongs to whoever is answering.
+  lines.push(`*Nome*, Rodada ${round.number}`);
 
   const matches = [...(round.matches ?? [])];
   if (matches.length === 0) {

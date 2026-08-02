@@ -77,7 +77,7 @@ test.describe('Round group message', () => {
     await expect(page.getByText('Mensagem para o grupo')).toBeVisible();
     const pre = page.locator('pre');
     await expect(pre).toContainText('*Palpitão England 2025/2026*');
-    await expect(pre).toContainText('Rodada 41');
+    await expect(pre).toContainText('*Nome*, Rodada 41');
     await expect(pre).toContainText('*Premier League*');
     await expect(pre).toContainText('Arsenal x Chelsea (×2)');
     await expect(pre).toContainText('*Championship*');
@@ -90,7 +90,7 @@ test.describe('Round group message', () => {
     await expect(page.locator('.toast-body')).toHaveText('Mensagem copiada!');
 
     const clip = await page.evaluate(() => navigator.clipboard.readText());
-    expect(clip).toContain('Rodada 41');
+    expect(clip).toContain('*Nome*, Rodada 41');
     expect(clip).toContain('Arsenal x Chelsea (×2)');
   });
 });
