@@ -30,6 +30,7 @@ using Palpitao.Api.Services.Scoring;
 using Palpitao.Api.Services.Scouts;
 using Palpitao.Api.Services.Seasons;
 using Palpitao.Api.Services.Standings;
+using Palpitao.Api.Services.Teams;
 using Palpitao.Api.Services.Users;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -218,6 +219,13 @@ IHttpClientBuilder fixtureClient = fixtureOptions.Provider?.ToLowerInvariant() s
 };
 fixtureClient.AddHttpMessageHandler<TransientHttpRetryHandler>();
 builder.Services.AddScoped<IFixtureImportService, FixtureImportService>();
+
+// --- Team catalogue (admin review + squad-list sync) ------------------------
+// Registered unconditionally: the catalogue sync reads OneFootball by design,
+// independently of which provider Fixtures:Provider picks for round import.
+builder.Services.AddHttpClient<ITeamCatalogProvider, OneFootballTeamCatalogProvider>()
+    .AddHttpMessageHandler<TransientHttpRetryHandler>();
+builder.Services.AddScoped<ITeamCatalogService, TeamCatalogService>();
 
 // --- Match results (refresh + temporary standings) --------------------------
 builder.Services.Configure<ResultsProviderOptions>(

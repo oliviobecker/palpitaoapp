@@ -180,6 +180,20 @@ public static class DomainMessages
                 "A importação externa de jogos está desabilitada.",
                 "External fixture import is disabled."),
 
+            // Teams (catalogue admin).
+            ["teams.syncDisabled"] = (
+                "A sincronização externa do catálogo de times está desabilitada.",
+                "External team catalogue sync is disabled."),
+            ["teams.syncFailed"] = (
+                "Não foi possível buscar os elencos da fonte externa no momento.",
+                "Could not fetch squad lists from the external source at this time."),
+            ["teams.invalidDivision"] = (
+                "Divisão inválida. Use Premier League, Championship ou League One.",
+                "Invalid division. Use Premier League, Championship or League One."),
+            ["teams.nationalTeamNoDivision"] = (
+                "Seleções nacionais não pertencem a divisões.",
+                "National teams do not belong to divisions."),
+
             // Results / scoring.
             ["result.cannotRegister"] = ("Não é possível cadastrar resultado nesta rodada.", "Cannot register a result for this round."),
             ["results.refreshed"] = ("Resultados atualizados com sucesso.", "Results refreshed successfully."),

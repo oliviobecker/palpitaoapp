@@ -47,6 +47,7 @@ public class TeamsController : ControllerBase
                 t.IsBigSevenClub,
                 t.CrestUrl,
                 t.Division,
+                t.TeamType,
             })
             .ToListAsync(ct);
 

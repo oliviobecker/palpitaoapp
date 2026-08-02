@@ -151,6 +151,10 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'teams',
+            loadComponent: () => import('./features/admin/admin-teams').then((m) => m.AdminTeams),
+          },
+          {
             path: 'audit',
             loadComponent: () => import('./features/admin/admin-audit').then((m) => m.AdminAudit),
           },

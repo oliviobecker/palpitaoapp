@@ -15,6 +15,8 @@ import {
   RegistrationRequest,
   RoundScout,
   SearchFixturesResponse,
+  Team,
+  TeamSyncResponse,
 } from '../models/models';
 import { Competition, MatchPhase } from '../models/enums';
 
@@ -244,6 +246,20 @@ export class AdminService {
       `${this.base}/rounds/${roundId}/refresh-results`,
       {},
     );
+  }
+
+  // --- Team catalogue -----------------------------------------------------
+  updateTeamDivision(teamId: string, division: Competition | null): Observable<Team> {
+    return this.http.patch<Team>(`${this.base}/teams/${teamId}`, { division });
+  }
+
+  /** Compares the catalogue with the external squad lists without writing anything. */
+  syncTeamsPreview(): Observable<TeamSyncResponse> {
+    return this.http.post<TeamSyncResponse>(`${this.base}/teams/sync-preview`, {});
+  }
+
+  syncTeamsApply(): Observable<TeamSyncResponse> {
+    return this.http.post<TeamSyncResponse>(`${this.base}/teams/sync-apply`, {});
   }
 
   // --- Scout (predictions grouped by scoreline) ---------------------------
