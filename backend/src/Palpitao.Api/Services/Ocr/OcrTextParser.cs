@@ -97,13 +97,30 @@ public static partial class OcrTextParser
     }
 
     /// <summary>
+    /// Competition headings the copy-ready message prints above each block of fixtures
+    /// (mirrors COMP_LABEL in the frontend's shared/utils/round-message.util.ts). They are
+    /// indistinguishable from a participant name by shape — letters and spaces, title case —
+    /// so without this "Premier League" is read as the participant and every fixture under it
+    /// is filed against a person who does not exist.
+    /// </summary>
+    private static readonly HashSet<string> CompetitionHeadings = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Premier League",
+        "Championship",
+        "FA Cup",
+        "League One",
+        "Copa do Mundo FIFA",
+        "FIFA World Cup",
+    };
+
+    /// <summary>
     /// True for plain participant names ("João", "Pedro Silva"): letters and
     /// spaces only, at least one lowercase letter, up to four words. Filters out
-    /// titles, timestamps and garbled OCR lines.
+    /// titles, timestamps, competition headings and garbled OCR lines.
     /// </summary>
     private static bool LooksLikeName(string line)
     {
-        if (line.Length is < 2 or > 40)
+        if (line.Length is < 2 or > 40 || CompetitionHeadings.Contains(line))
         {
             return false;
         }

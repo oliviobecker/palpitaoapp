@@ -124,6 +124,41 @@ public class OcrShortNameRoundTripTests
     }
 
     [Fact]
+    public void No_club_fuzzy_matches_a_different_club()
+    {
+        // The safety proof for the fuzzy tier in OcrTeamMatcher. Each club is *removed* from
+        // the round before its own name is looked up — otherwise it matches itself strictly and
+        // the fuzzy tier never runs, so the test would pass without proving anything. With it
+        // absent the strict pass finds nothing, fuzzy runs against every other club, and must
+        // still resolve to nobody.
+        //
+        // A failure means the edit-distance budget is too generous: tighten it in
+        // OcrTeamMatcher.Fuzzy, do not allowlist the pair here. The tight ones today are
+        // Luton/Leyton and Barnsley/Burnley, both exactly 2 edits apart against a budget of 1.
+        var shortByFull = ShortNames.ToDictionary(p => p.Full, p => p.Short);
+
+        var collisions = new List<string>();
+        foreach (var name in SeededTeamNames.Value)
+        {
+            var (matches, idByName) = RoundOfEveryClub(clubAtHome: true, except: name);
+            string[] written = shortByFull.TryGetValue(name, out var s) ? [name, s] : [name];
+
+            foreach (var form in written)
+            {
+                var parsed = Assert.Single(OcrTextParser.Parse($"{form} 2 x 1 {OpponentName}"));
+                var resolved = OcrTeamMatcher.ResolveMatch(parsed.HomeTeamRaw, parsed.AwayTeamRaw, matches);
+                if (resolved is not null)
+                {
+                    var other = idByName.First(kv => kv.Value == resolved).Key;
+                    collisions.Add($"'{form}' ({name}) fuzzy-matched '{other}'");
+                }
+            }
+        }
+
+        Assert.Empty(collisions);
+    }
+
+    [Fact]
     public void Full_names_still_resolve_so_older_screenshots_keep_importing()
     {
         var (matches, idByName) = RoundOfEveryClub(clubAtHome: true);
@@ -142,11 +177,12 @@ public class OcrShortNameRoundTripTests
     /// that can pick a match is the club side of the line. A short name that also fits
     /// another club returns null from ResolveMatch and fails the assertion.
     /// </summary>
-    private static (List<RoundMatch> Matches, Dictionary<string, Guid> IdByName) RoundOfEveryClub(bool clubAtHome)
+    private static (List<RoundMatch> Matches, Dictionary<string, Guid> IdByName) RoundOfEveryClub(
+        bool clubAtHome, string? except = null)
     {
         var matches = new List<RoundMatch>();
         var idByName = new Dictionary<string, Guid>();
-        foreach (var name in SeededTeamNames.Value)
+        foreach (var name in SeededTeamNames.Value.Where(n => n != except))
         {
             var id = Guid.NewGuid();
             idByName[name] = id;

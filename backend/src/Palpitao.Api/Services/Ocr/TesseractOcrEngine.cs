@@ -8,12 +8,18 @@ namespace Palpitao.Api.Services.Ocr;
 /// folder (see README): tessdata/por.traineddata and tessdata/eng.traineddata.
 ///
 /// Screenshots from messaging apps (dark chat bubbles, flag emoji) confuse the OCR.
-/// A grayscale + Otsu binarization pass markedly improves recognition on those
-/// images (validated: 9→12 matches recovered on a real WhatsApp print). It can be
-/// turned off with Ocr:Preprocess = false.
+/// A grayscale + upscale + Otsu binarization pass markedly improves recognition on
+/// those images (validated: 9→12 matches recovered on a real WhatsApp print), and the
+/// page is read both as-is and inverted because a dark-mode bubble is white-on-dark,
+/// the reverse of what Tesseract expects. The whole pass can be turned off with
+/// Ocr:Preprocess = false.
 /// </summary>
 public class TesseractOcrEngine : IOcrEngine
 {
+    /// <summary>Width the preprocessing aims for, and the hard cap on enlarging to reach it.</summary>
+    private const int TargetWidth = 1100;
+    private const int MaxUpscale = 4;
+
     private readonly string _tessdataPath;
     private readonly bool _preprocess;
     private readonly ILogger<TesseractOcrEngine> _logger;
@@ -55,11 +61,42 @@ public class TesseractOcrEngine : IOcrEngine
         using var engine = new TesseractEngine(_tessdataPath, language, EngineMode.Default);
         using var pix = Pix.LoadFromMemory(image);
 
+        if (!_preprocess)
+        {
+            return Read(engine, pix, "original").Text;
+        }
+
         var prepared = Preprocess(pix);
         try
         {
-            using var page = engine.Process(prepared);
-            return page.GetText() ?? string.Empty;
+            var best = Read(engine, prepared, "normal");
+
+            // Tesseract expects dark text on a light background. A dark-mode chat screenshot is
+            // the opposite, and binarization keeps it that way — so read the inverse too and let
+            // the engine's own confidence pick. Which one wins depends on the sender's theme,
+            // which we cannot know from the bytes.
+            var inverted = Invert(prepared);
+            if (inverted is not null)
+            {
+                try
+                {
+                    var alternative = Read(engine, inverted, "inverted");
+                    if (alternative.Confidence > best.Confidence)
+                    {
+                        best = alternative;
+                    }
+                }
+                finally
+                {
+                    inverted.Dispose();
+                }
+            }
+
+            _logger.LogInformation(
+                "OCR: variante {Variant} escolhida (confiança {Confidence:P0}), {Width}x{Height}px.",
+                best.Variant, best.Confidence, prepared.Width, prepared.Height);
+
+            return best.Text;
         }
         finally
         {
@@ -70,32 +107,69 @@ public class TesseractOcrEngine : IOcrEngine
         }
     }
 
+    private static (string Text, float Confidence, string Variant) Read(
+        TesseractEngine engine, Pix pix, string variant)
+    {
+        using var page = engine.Process(pix);
+        var text = page.GetText() ?? string.Empty;
+        return (text, page.GetMeanConfidence(), variant);
+    }
+
+    private Pix? Invert(Pix source)
+    {
+        try
+        {
+            return source.Invert();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "OCR inversion failed; keeping the non-inverted reading.");
+            return null;
+        }
+    }
+
     /// <summary>
-    /// Grayscale + Otsu binarization. Returns the original Pix when preprocessing
-    /// is disabled or fails, so OCR always has an image to work with.
+    /// Grayscale, upscale, then Otsu binarization. Returns the original Pix when
+    /// preprocessing is disabled or fails, so OCR always has an image to work with.
     /// </summary>
     private Pix Preprocess(Pix source)
     {
-        if (!_preprocess)
-        {
-            return source;
-        }
-
+        Pix? gray = null;
+        Pix? scaled = null;
         try
         {
-            var gray = source.Depth > 8 ? source.ConvertRGBToGray() : source;
-            var binary = gray.BinarizeOtsuAdaptiveThreshold(2000, 2000, 0, 0, 0.1f);
-            if (!ReferenceEquals(gray, source))
-            {
-                gray.Dispose();
-            }
-
-            return binary;
+            gray = source.Depth > 8 ? source.ConvertRGBToGray() : source;
+            scaled = Upscale(gray);
+            return scaled.BinarizeOtsuAdaptiveThreshold(2000, 2000, 0, 0, 0.1f);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "OCR preprocessing failed; falling back to the original image.");
             return source;
         }
+        finally
+        {
+            if (!ReferenceEquals(scaled, gray))
+            {
+                scaled?.Dispose();
+            }
+
+            if (!ReferenceEquals(gray, source))
+            {
+                gray?.Dispose();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Enlarges small screenshots. Tesseract wants roughly 30px-tall glyphs; a phone
+    /// screenshot of a single chat bubble arrives ~300px wide with ~9px text, which it
+    /// reads as noise. Capped at 4x, and a no-op for images already wide enough — the
+    /// full-screen screenshots that already worked are left untouched.
+    /// </summary>
+    private static Pix Upscale(Pix source)
+    {
+        var factor = Math.Clamp((int)Math.Ceiling(TargetWidth / (double)source.Width), 1, MaxUpscale);
+        return factor == 1 ? source : source.Scale(factor, factor);
     }
 }

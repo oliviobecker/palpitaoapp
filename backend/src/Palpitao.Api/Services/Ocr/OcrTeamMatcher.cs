@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using Palpitao.Api.Common;
 using Palpitao.Api.Entities;
 
@@ -18,6 +20,9 @@ public static class OcrTeamMatcher
     /// that map belong here: a bare "city"/"united" would wreck import (Bristol City,
     /// Leeds United, …) but is worth guessing at when an admin reviews the result.
     /// </summary>
+    /// <summary>Shortest name that may absorb a wrong character; below it only accents are folded.</summary>
+    private const int MinimumLengthForAnEdit = 5;
+
     private static readonly Dictionary<string, string> TeamAliases = new(StringComparer.OrdinalIgnoreCase)
     {
         ["mancity"] = "manchester city",
@@ -45,7 +50,21 @@ public static class OcrTeamMatcher
                 || name.Contains(p.Name, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        return contains.Count == 1 ? contains[0].Id : null;
+        if (contains.Count == 1)
+        {
+            return contains[0].Id;
+        }
+
+        // Only when nothing matched at all — a name OCR mangled by a letter or a dropped
+        // accent ("Joao" for "João"). Never when the strict pass already found candidates:
+        // that is real ambiguity and belongs in manual review.
+        if (contains.Count > 0)
+        {
+            return null;
+        }
+
+        var fuzzy = participants.Where(p => Fuzzy(name, p.Name)).ToList();
+        return fuzzy.Count == 1 ? fuzzy[0].Id : null;
     }
 
     /// <summary>Resolves raw home/away names to a round match, only when exactly one fits.</summary>
@@ -55,10 +74,29 @@ public static class OcrTeamMatcher
             .Where(m => TeamMatches(homeRaw, m.HomeTeam?.Name) && TeamMatches(awayRaw, m.AwayTeam?.Name))
             .ToList();
 
-        return hits.Count == 1 ? hits[0].Id : null;
+        if (hits.Count == 1)
+        {
+            return hits[0].Id;
+        }
+
+        // A strict hit is never second-guessed: two strict hits mean the line genuinely fits two
+        // fixtures ("Sheffield" with both Sheffields on the card), which is exactly what manual
+        // review is for. The fuzzy tier only rescues lines nothing matched — a single dropped
+        // letter ("Coventy") otherwise costs the admin the whole row.
+        if (hits.Count > 0)
+        {
+            return null;
+        }
+
+        var fuzzyHits = matches
+            .Where(m => TeamMatches(homeRaw, m.HomeTeam?.Name, fuzzy: true)
+                && TeamMatches(awayRaw, m.AwayTeam?.Name, fuzzy: true))
+            .ToList();
+
+        return fuzzyHits.Count == 1 ? fuzzyHits[0].Id : null;
     }
 
-    private static bool TeamMatches(string raw, string? teamName)
+    private static bool TeamMatches(string raw, string? teamName, bool fuzzy = false)
     {
         if (string.IsNullOrWhiteSpace(teamName))
         {
@@ -76,7 +114,8 @@ public static class OcrTeamMatcher
             || Overlaps(Comparable(FootballReference.Canonical(raw)), t)
             || (TeamAliases.TryGetValue(r, out var alias) && Overlaps(alias, t));
 
-        static bool Overlaps(string a, string b) => a == b || b.Contains(a) || a.Contains(b);
+        bool Overlaps(string a, string b) =>
+            a == b || b.Contains(a) || a.Contains(b) || (fuzzy && Fuzzy(a, b));
     }
 
     /// <summary>
@@ -87,4 +126,112 @@ public static class OcrTeamMatcher
     private static string Comparable(string value) => string.Join(
         ' ',
         value.ToLowerInvariant().Replace('&', ' ').Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+    /// <summary>
+    /// True when two names are within a small edit distance — the tolerance for characters
+    /// OCR simply got wrong ("Coventy" for "Coventry", "Joao" for "João").
+    ///
+    /// At most one edit, and none at all under 5 characters. Longer names do not earn a
+    /// bigger budget even though they offer OCR more to get wrong: English club names cluster
+    /// too tightly for it. "Northampton" and "Southampton" are two edits apart, as are
+    /// Luton/Leyton and Barnsley/Burnley — a budget of two silently merges the first pair.
+    ///
+    /// The shorter side is also compared against every run of consecutive words of the longer
+    /// one, because the message prints short names while the catalogue stores full ones:
+    /// "coventy" is one edit from "coventry", the first word of "coventry city".
+    ///
+    /// <see cref="OcrShortNameRoundTripTests"/> sweeps the whole seeded catalogue pairwise to
+    /// prove no two clubs collide under these budgets. Tighten the budgets if it ever fails —
+    /// an allowlist would only hide the next collision.
+    /// </summary>
+    private static bool Fuzzy(string a, string b)
+    {
+        var x = Fold(a);
+        var y = Fold(b);
+        if (x.Length == 0 || y.Length == 0)
+        {
+            return false;
+        }
+
+        var (shorter, longer) = x.Length <= y.Length ? (x, y) : (y, x);
+        // Below the floor the budget drops to zero rather than bailing out: at zero this is
+        // pure accent folding ("Joao" for "João"), which is a normalisation and not a guess,
+        // and short names must still get that.
+        var budget = shorter.Length < MinimumLengthForAnEdit ? 0 : 1;
+
+        if (WithinDistance(shorter, longer, budget))
+        {
+            return true;
+        }
+
+        var words = longer.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        for (var start = 0; start < words.Length; start++)
+        {
+            for (var count = 1; start + count <= words.Length; count++)
+            {
+                var span = string.Join(' ', words, start, count);
+                if (span.Length != longer.Length && WithinDistance(shorter, span, budget))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Lowercases and strips accents, so "Joao" and "João" compare equal.</summary>
+    private static string Fold(string value)
+    {
+        var decomposed = value.ToLowerInvariant().Normalize(NormalizationForm.FormD);
+        var builder = new StringBuilder(decomposed.Length);
+        foreach (var c in decomposed)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+            {
+                builder.Append(c);
+            }
+        }
+
+        return string.Join(
+            ' ',
+            builder.ToString().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    /// <summary>Levenshtein distance, abandoned as soon as every path exceeds the budget.</summary>
+    private static bool WithinDistance(string a, string b, int budget)
+    {
+        if (Math.Abs(a.Length - b.Length) > budget)
+        {
+            return false;
+        }
+
+        var previous = new int[b.Length + 1];
+        var current = new int[b.Length + 1];
+        for (var j = 0; j <= b.Length; j++)
+        {
+            previous[j] = j;
+        }
+
+        for (var i = 1; i <= a.Length; i++)
+        {
+            current[0] = i;
+            var rowBest = current[0];
+            for (var j = 1; j <= b.Length; j++)
+            {
+                var cost = a[i - 1] == b[j - 1] ? 0 : 1;
+                current[j] = Math.Min(Math.Min(current[j - 1] + 1, previous[j] + 1), previous[j - 1] + cost);
+                rowBest = Math.Min(rowBest, current[j]);
+            }
+
+            if (rowBest > budget)
+            {
+                return false;
+            }
+
+            (previous, current) = (current, previous);
+        }
+
+        return previous[b.Length] <= budget;
+    }
 }
