@@ -36,10 +36,12 @@ public interface IScoringService
 
     /// <summary>
     /// Multiplier of a match: the ruleset's value for the (competition, phase), using the
-    /// classic value when both teams are classic-eligible (a Big Seven derby for England /
-    /// a knockout between two world champions for the World Cup).
+    /// classic value when the two teams form a classic pair (a Big Seven or Championship derby
+    /// for England / a knockout between two world champions for the World Cup). Callers resolve
+    /// the pair with <see cref="ScoringRuleSet.IsClassicPair"/>, or by team name where the teams
+    /// are not in the catalogue yet (fixture import).
     /// </summary>
-    int GetMultiplier(ScoringRuleSet ruleSet, Competition competition, MatchPhase phase, bool homeIsClassic, bool awayIsClassic);
+    int GetMultiplier(ScoringRuleSet ruleSet, Competition competition, MatchPhase phase, bool isClassicPair);
 
     /// <summary>Full scoring breakdown of a prediction against the real result.</summary>
     PredictionScoreResult ScorePrediction(
@@ -50,6 +52,5 @@ public interface IScoringService
         int actualAway,
         Competition competition,
         MatchPhase phase,
-        bool homeIsClassic,
-        bool awayIsClassic);
+        bool isClassicPair);
 }

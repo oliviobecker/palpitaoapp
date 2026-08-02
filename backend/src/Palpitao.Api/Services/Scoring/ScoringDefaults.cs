@@ -71,20 +71,20 @@ public static class ScoringDefaults
                 (Competition.FACup, MatchPhase.Regular, 1, 2),
                 (Competition.FACup, MatchPhase.FACupSemiFinal, 2, 2),
                 (Competition.FACup, MatchPhase.FACupFinal, 3, 3),
-                (Competition.Championship, MatchPhase.Regular, 1, 1),
+                (Competition.Championship, MatchPhase.Regular, 1, 2),
                 (Competition.Championship, MatchPhase.PlayoffSemiFinal, 2, 2),
                 (Competition.Championship, MatchPhase.PlayoffFinal, 2, 2),
                 (Competition.LeagueOne, MatchPhase.Regular, 2, 2),
             };
 
     /// <summary>Builds a default <see cref="ScoringRuleSet"/> for a tournament type.</summary>
-    public static ScoringRuleSet ForTournamentType(TournamentType type, IReadOnlySet<Guid> classicTeamIds)
+    public static ScoringRuleSet ForTournamentType(TournamentType type, IReadOnlyDictionary<Guid, Competition> classicTeams)
     {
         var scoreCategories = ScoreCategories()
             .ToDictionary(e => (e.Low, e.High), e => e.Category);
         var multipliers = MultiplierRules(type)
             .ToDictionary(r => (r.Competition, r.Phase), r => (r.Normal, r.Classic));
         return new ScoringRuleSet(
-            BasePoints(), scoreCategories, multipliers, classicTeamIds, SeasonRuleParams.Defaults);
+            BasePoints(), scoreCategories, multipliers, classicTeams, SeasonRuleParams.Defaults);
     }
 }

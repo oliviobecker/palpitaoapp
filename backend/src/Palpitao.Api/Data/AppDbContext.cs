@@ -407,6 +407,9 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<ScoringClassicTeam>(e =>
         {
+            e.Property(x => x.Competition).HasConversion<string>().HasMaxLength(40);
+            // One group per team per season: the pair test compares groups, so a team in two
+            // of them would make "same group" ambiguous.
             e.HasIndex(x => new { x.ConfigId, x.TeamId }).IsUnique();
 
             e.HasOne(x => x.Team)
@@ -542,7 +545,7 @@ public class AppDbContext : DbContext
             UpdatedAt = seededAt,
         });
 
-        // --- Club catalogue (season 2025/2026) ------------------------------
+        // --- Club catalogue (season 2026/2027) ------------------------------
         // Full rosters of the three tracked league divisions. The "Big Seven"
         // keep their fixed seed ids (referenced by tests and the scoring rules);
         // every other club gets a deterministic id derived from its name so the
@@ -575,7 +578,6 @@ public class AppDbContext : DbContext
             (null, "Leeds United", "LEE", Competition.PremierLeague),
             (null, "Nottingham Forest", "NFO", Competition.PremierLeague),
             (null, "Sunderland", "SUN", Competition.PremierLeague),
-            (null, "West Ham United", "WHU", Competition.PremierLeague),
             (null, "Wolverhampton Wanderers", "WOL", Competition.PremierLeague),
             // Championship
             (null, "Birmingham City", "BIR", Competition.Championship),
@@ -588,6 +590,7 @@ public class AppDbContext : DbContext
             (null, "Ipswich Town", "IPS", Competition.Championship),
             (null, "Leicester City", "LEI", Competition.Championship),
             (null, "Middlesbrough", "MID", Competition.Championship),
+            // Millwall and West Ham are the Championship classic pair (see ScoringDefaults).
             (null, "Millwall", "MIL", Competition.Championship),
             (null, "Norwich City", "NOR", Competition.Championship),
             (null, "Oxford United", "OXF", Competition.Championship),
@@ -601,6 +604,7 @@ public class AppDbContext : DbContext
             (null, "Swansea City", "SWA", Competition.Championship),
             (null, "Watford", "WAT", Competition.Championship),
             (null, "West Bromwich Albion", "WBA", Competition.Championship),
+            (null, "West Ham United", "WHU", Competition.Championship),
             (null, "Wrexham", "WRE", Competition.Championship),
             // League One
             (null, "AFC Wimbledon", "WIM", Competition.LeagueOne),

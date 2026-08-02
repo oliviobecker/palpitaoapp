@@ -7,13 +7,13 @@ _Last updated: 2026-06-18 (UI modernization pack — committed on `feat/ui-moder
 | Check | Result |
 |---|---|
 | Backend build (`dotnet build`) | ✅ 0 errors (1 pre-existing xUnit2012 analyzer warning) |
-| Backend tests (`dotnet test`) | ✅ **467** passed, 0 failed |
+| Backend tests (`dotnet test`) | ✅ **479** passed, 0 failed |
 | Frontend build (`ng build` prod) | ✅ success |
 | Frontend lint (`ng lint`) | ✅ 0 errors (24 pre-existing `label-has-associated-control` warnings) |
-| Frontend unit tests (Vitest) | ✅ **75** passed (17 files) |
-| Frontend e2e (Playwright) | ✅ **38** passed |
+| Frontend unit tests (Vitest) | ✅ **81** passed (17 files) |
+| Frontend e2e (Playwright) | ✅ **39** passed |
 | Frontend prod budgets | ✅ within budget (no warnings) |
-| i18n parity | ✅ 509 = 509 (`en-US` / `pt-BR`) |
+| i18n parity | ✅ 663 = 663 (`en-US` / `pt-BR`) |
 | Working tree | Security & performance hardening implemented on `feat/security-hardening-phase1` (pending commit). `main` untouched. |
 
 > **Security & performance hardening (current branch):** auth-endpoint rate limiting;

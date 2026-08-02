@@ -14,7 +14,7 @@ namespace Palpitao.Api.Services.Fixtures;
 
 public class FixtureImportService : IFixtureImportService
 {
-    private static readonly IReadOnlySet<Guid> NoClassicTeams = new HashSet<Guid>();
+    private static readonly IReadOnlyDictionary<Guid, Competition> NoClassicTeams = new Dictionary<Guid, Competition>();
 
     private readonly AppDbContext _db;
     private readonly IFixtureProvider _provider;
@@ -122,13 +122,11 @@ public class FixtureImportService : IFixtureImportService
 
         foreach (var c in candidates.OfType<FixtureCandidateDto>())
         {
-            var homeBig = FootballReference.IsBigSeven(c.HomeTeamName);
-            var awayBig = FootballReference.IsBigSeven(c.AwayTeamName);
-            c.IsBigSevenMatch = homeBig && awayBig;
+            c.IsClassicMatch = FootballReference.IsClassicPair(c.HomeTeamName, c.AwayTeamName);
             var ruleSet = roundRuleSet ?? ScoringDefaults.ForTournamentType(
                 c.Competition == Competition.FifaWorldCup ? TournamentType.FifaWorldCup : TournamentType.PalpitaoEngland,
                 NoClassicTeams);
-            c.SuggestedMultiplier = _scoring.GetMultiplier(ruleSet, c.Competition, c.Phase, homeBig, awayBig);
+            c.SuggestedMultiplier = _scoring.GetMultiplier(ruleSet, c.Competition, c.Phase, c.IsClassicMatch);
             c.Source = string.IsNullOrWhiteSpace(c.Source) ? _provider.SourceName : c.Source;
             c.IsAlreadyAddedToRound = existingKeys.Contains(MatchKey(c.HomeTeamName, c.AwayTeamName, c.StartsAt));
         }

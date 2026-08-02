@@ -30,12 +30,9 @@ public class ResultsServiceTests
     private static readonly CancellationToken Ct = CancellationToken.None;
     private static DateTime Future => DateTime.UtcNow.AddDays(2);
 
-    private static readonly (Guid Home, Guid Away)[] Pairs =
-    {
-        (SeedIds.Arsenal, SeedIds.Chelsea),
-        (SeedIds.Liverpool, SeedIds.Newcastle),
-        (SeedIds.ManchesterCity, SeedIds.ManchesterUnited),
-    };
+    // Non-classic pairs: these tests measure base points, and a classic pair would double
+    // them wherever the ruleset gives classics a value.
+    private static readonly (Guid Home, Guid Away)[] Pairs = TestSeed.NeutralPairs;
 
     private sealed class FakeResultsProvider : IResultsProvider
     {
@@ -79,6 +76,7 @@ public class ResultsServiceTests
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
         });
+        TestSeed.AddNeutralTeams(db);
         db.SaveChanges();
         return db;
     }
@@ -224,8 +222,8 @@ public class ResultsServiceTests
         var round = await PublishedRound(kit, 1, (Competition.PremierLeague, MatchPhase.Regular));
         kit.Provider.Results.Add(new ExternalMatchResultDto
         {
-            HomeTeamName = "Arsenal",
-            AwayTeamName = "Chelsea",
+            HomeTeamName = TestSeed.NeutralPairNames[0].Home,
+            AwayTeamName = TestSeed.NeutralPairNames[0].Away,
             HomeScore = 2,
             AwayScore = 1,
             Status = MatchStatus.Finished,
@@ -271,8 +269,8 @@ public class ResultsServiceTests
         await db.SaveChangesAsync();
         kit.Provider.Results.Add(new ExternalMatchResultDto
         {
-            HomeTeamName = "Arsenal",
-            AwayTeamName = "Chelsea",
+            HomeTeamName = TestSeed.NeutralPairNames[0].Home,
+            AwayTeamName = TestSeed.NeutralPairNames[0].Away,
             HomeScore = 2,
             AwayScore = 1,
             Status = MatchStatus.Finished,

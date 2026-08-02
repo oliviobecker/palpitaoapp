@@ -48,7 +48,14 @@ public class SeasonScoringConfigServiceTests
         Rules = dto.Rules,
         ScoreEntries = dto.ScoreEntries,
         MultiplierRules = dto.MultiplierRules,
-        ClassicTeamIds = dto.Teams.Where(t => t.IsClassic).Select(t => t.TeamId).ToList(),
+        ClassicTeams = dto.Teams
+            .Where(t => t.IsClassic)
+            .Select(t => new ScoringClassicTeamRequest
+            {
+                TeamId = t.TeamId,
+                Competition = t.ClassicCompetition!.Value,
+            })
+            .ToList(),
     };
 
     [Fact]
@@ -65,8 +72,62 @@ public class SeasonScoringConfigServiceTests
         // League One defaults to x2 (normal and classic).
         var leagueOne = dto.MultiplierRules.Single(r => r.Competition == Competition.LeagueOne);
         Assert.Equal(2, leagueOne.Multiplier);
-        // The seven Big Seven clubs are pre-selected as classics.
-        Assert.Equal(7, dto.Teams.Count(t => t.IsClassic));
+        // Two classic groups are pre-selected: the Big Seven and the Championship pair.
+        Assert.Equal(9, dto.Teams.Count(t => t.IsClassic));
+        Assert.Equal(7, dto.Teams.Count(t => t.ClassicCompetition == Competition.PremierLeague));
+        var championship = dto.Teams.Where(t => t.ClassicCompetition == Competition.Championship).ToList();
+        Assert.Equal(["Millwall", "West Ham United"], championship.Select(t => t.Name).Order());
+        // ...and a Championship derby doubles.
+        var champRegular = dto.MultiplierRules
+            .Single(r => r.Competition == Competition.Championship && r.Phase == MatchPhase.Regular);
+        Assert.Equal(1, champRegular.Multiplier);
+        Assert.Equal(2, champRegular.ClassicMultiplier);
+    }
+
+    [Fact]
+    public async Task Update_round_trips_the_classic_groups()
+    {
+        using var db = CreateContext();
+        var svc = Build(db);
+
+        await svc.UpdateAsync(SeasonId, ToRequest(await svc.GetConfigAsync(SeasonId, Ct)), Admin, Ct);
+        var ruleSet = await svc.GetRuleSetAsync(SeasonId, Ct);
+
+        var millwall = await db.Teams.FirstAsync(t => t.Name == "Millwall", Ct);
+        var westHam = await db.Teams.FirstAsync(t => t.Name == "West Ham United", Ct);
+        Assert.True(ruleSet.IsClassicPair(millwall.Id, westHam.Id));
+        // Across groups it is not a classic, so the FA Cup row keeps its normal value.
+        Assert.False(ruleSet.IsClassicPair(westHam.Id, SeedIds.Arsenal));
+    }
+
+    [Fact]
+    public async Task Update_rejects_a_group_the_tournament_does_not_allow()
+    {
+        using var db = CreateContext();
+        var svc = Build(db);
+        var request = ToRequest(await svc.GetConfigAsync(SeasonId, Ct));
+        request.ClassicTeams[0].Competition = Competition.LeagueOne;
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => svc.UpdateAsync(SeasonId, request, Admin, Ct));
+        Assert.Equal("scoring.invalidClassicCompetition", ex.Key);
+    }
+
+    [Fact]
+    public async Task Update_rejects_a_team_in_two_groups()
+    {
+        using var db = CreateContext();
+        var svc = Build(db);
+        var request = ToRequest(await svc.GetConfigAsync(SeasonId, Ct));
+        request.ClassicTeams.Add(new ScoringClassicTeamRequest
+        {
+            TeamId = request.ClassicTeams[0].TeamId,
+            Competition = Competition.Championship,
+        });
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => svc.UpdateAsync(SeasonId, request, Admin, Ct));
+        Assert.Equal("scoring.duplicateClassicTeam", ex.Key);
     }
 
     [Fact]
@@ -224,8 +285,11 @@ public class SeasonScoringConfigServiceTests
         Assert.Equal(4, ruleSet.MultiplierFor(Competition.FifaWorldCup, MatchPhase.WorldCupRoundOf32, true));
         // Group-stage classics are not doubled.
         Assert.Equal(1, ruleSet.MultiplierFor(Competition.FifaWorldCup, MatchPhase.WorldCupGroupStage, true));
-        // The seven world champions are pre-selected; candidates are national teams.
-        Assert.Equal(7, dto.Teams.Count(t => t.IsClassic));
+        // The seven world champions are pre-selected, all in the World Cup group; candidates
+        // are national teams.
+        var classics = dto.Teams.Where(t => t.IsClassic).ToList();
+        Assert.Equal(7, classics.Count);
+        Assert.All(classics, t => Assert.Equal(Competition.FifaWorldCup, t.ClassicCompetition));
     }
 
     [Fact]

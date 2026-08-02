@@ -38,7 +38,9 @@ public class FixtureCandidateDto
     public string AwayTeamName { get; set; } = string.Empty;
     public DateTime StartsAt { get; set; }
     public string Source { get; set; } = string.Empty;
-    public bool IsBigSevenMatch { get; set; }
+
+    /// <summary>True when the two teams form a classic pair (Big Seven or the Championship rivals).</summary>
+    public bool IsClassicMatch { get; set; }
     public int SuggestedMultiplier { get; set; } = 1;
     public bool IsAlreadyAddedToRound { get; set; }
 }

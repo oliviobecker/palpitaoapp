@@ -50,8 +50,8 @@ public class ScoringService : IScoringService
     public int GetBasePoints(ScoringRuleSet ruleSet, ScoreCategory category)
         => category == ScoreCategory.None ? 0 : ruleSet.BasePointsFor(category);
 
-    public int GetMultiplier(ScoringRuleSet ruleSet, Competition competition, MatchPhase phase, bool homeIsClassic, bool awayIsClassic)
-        => ruleSet.MultiplierFor(competition, phase, homeIsClassic && awayIsClassic);
+    public int GetMultiplier(ScoringRuleSet ruleSet, Competition competition, MatchPhase phase, bool isClassicPair)
+        => ruleSet.MultiplierFor(competition, phase, isClassicPair);
 
     public PredictionScoreResult ScorePrediction(
         ScoringRuleSet ruleSet,
@@ -61,15 +61,14 @@ public class ScoringService : IScoringService
         int actualAway,
         Competition competition,
         MatchPhase phase,
-        bool homeIsClassic,
-        bool awayIsClassic)
+        bool isClassicPair)
     {
         var actualColumn = GetColumn(actualHome, actualAway);
         var isExact = IsExactScore(predictedHome, predictedAway, actualHome, actualAway);
         var isCorrectColumn = IsCorrectColumn(predictedHome, predictedAway, actualHome, actualAway);
         var category = GetCategory(ruleSet, predictedHome, predictedAway, actualHome, actualAway);
         var basePoints = GetBasePoints(ruleSet, category);
-        var multiplier = GetMultiplier(ruleSet, competition, phase, homeIsClassic, awayIsClassic);
+        var multiplier = GetMultiplier(ruleSet, competition, phase, isClassicPair);
 
         // A wrong prediction scores 0 even when the match has a multiplier
         // (base points are already 0, so the product is 0).

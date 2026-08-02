@@ -31,8 +31,32 @@ public static class FootballReference
         "spurs",
     };
 
+    /// <summary>
+    /// Canonical names (and aliases) of the default Championship classic pair, mirroring
+    /// <c>SeasonScoringConfigService</c>'s default groups.
+    /// </summary>
+    private static readonly HashSet<string> ChampionshipClassicNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "millwall",
+        "millwall fc",
+        "west ham",
+        "west ham united",
+    };
+
     public static bool IsBigSeven(string teamName)
         => !string.IsNullOrWhiteSpace(teamName) && BigSevenNames.Contains(Normalize(teamName));
+
+    public static bool IsChampionshipClassic(string teamName)
+        => !string.IsNullOrWhiteSpace(teamName) && ChampionshipClassicNames.Contains(Normalize(teamName));
+
+    /// <summary>
+    /// True when the two teams form a classic: both from the Big Seven, or both from the
+    /// Championship pair. Name-based because the import runs before the teams exist in the
+    /// catalogue — the season's own classic groups take over once the match is saved.
+    /// </summary>
+    public static bool IsClassicPair(string homeTeamName, string awayTeamName)
+        => (IsBigSeven(homeTeamName) && IsBigSeven(awayTeamName))
+            || (IsChampionshipClassic(homeTeamName) && IsChampionshipClassic(awayTeamName));
 
     /// <summary>Normalizes a team name for comparison (trim + collapse spaces + lower).</summary>
     public static string Normalize(string name)

@@ -13,6 +13,20 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
 {
     private const int MaxRuleScore = 20;
 
+    /// <summary>
+    /// Catalogue names of the default Championship classic pair. Matched by name because these
+    /// clubs carry no flag of their own (unlike <see cref="Entities.Team.IsBigSevenClub"/>) —
+    /// once a season saves its config, the selection lives in the config.
+    /// </summary>
+    private static readonly string[] DefaultChampionshipClassicNames = ["Millwall", "West Ham United"];
+
+    /// <summary>Classic groups an admin may use, per tournament type.</summary>
+    private static readonly Dictionary<TournamentType, HashSet<Competition>> AllowedClassicGroups = new()
+    {
+        [TournamentType.PalpitaoEngland] = [Competition.PremierLeague, Competition.Championship],
+        [TournamentType.FifaWorldCup] = [Competition.FifaWorldCup],
+    };
+
     // Categories that can be assigned to an exact score (ExtraUncommon is the implicit
     // catch-all; only None is not a real points category).
     private static readonly HashSet<ScoreCategory> AssignableCategories = new()
@@ -40,8 +54,8 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
         var config = await LoadConfigAsync(seasonId, tracking: false, ct);
         if (config is null)
         {
-            var classicIds = await DefaultClassicTeamIdsAsync(season.TournamentType, ct);
-            return ScoringDefaults.ForTournamentType(season.TournamentType, classicIds);
+            var classicTeams = await DefaultClassicTeamsAsync(season.TournamentType, ct);
+            return ScoringDefaults.ForTournamentType(season.TournamentType, classicTeams);
         }
 
         return BuildRuleSet(config);
@@ -103,8 +117,8 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
         // never writes, so a participant viewing predictions can't create admin rows).
         if (config is null)
         {
-            var classicIds = await DefaultClassicTeamIdsAsync(season.TournamentType, ct);
-            return BuildDefaultDto(season, hasScored, candidates, classicIds);
+            var classicTeams = await DefaultClassicTeamsAsync(season.TournamentType, ct);
+            return BuildDefaultDto(season, hasScored, candidates, classicTeams);
         }
 
         return MapDto(season, config, hasScored, candidates);
@@ -113,7 +127,7 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
     public async Task<ScoringConfigDto> UpdateAsync(Guid seasonId, ScoringConfigRequest request, Guid actingUserId, CancellationToken ct)
     {
         var season = await LoadSeasonAsync(seasonId, ct);
-        await Validate(request, ct);
+        await Validate(request, season.TournamentType, ct);
 
         var now = DateTime.UtcNow;
         var config = await LoadConfigAsync(seasonId, tracking: true, ct);
@@ -171,13 +185,14 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
             });
         }
 
-        foreach (var teamId in request.ClassicTeamIds.Distinct())
+        foreach (var team in request.ClassicTeams.DistinctBy(t => t.TeamId))
         {
             _db.ScoringClassicTeams.Add(new ScoringClassicTeam
             {
                 Id = Guid.NewGuid(),
                 ConfigId = config.Id,
-                TeamId = teamId,
+                TeamId = team.TeamId,
+                Competition = team.Competition,
             });
         }
 
@@ -186,7 +201,7 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
             seasonId,
             scoreEntries = request.ScoreEntries.Count,
             multiplierRules = request.MultiplierRules.Count,
-            classicTeams = request.ClassicTeamIds.Count,
+            classicTeams = request.ClassicTeams.Count,
             flavioFromRound = request.Rules.FlavioFromRound,
             absenceFromRound = request.Rules.AbsenceFromRound,
             absencePenaltyPoints = request.Rules.AbsencePenaltyPoints,
@@ -225,14 +240,27 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
     private Task<bool> HasScoredRoundsAsync(Guid seasonId, CancellationToken ct)
         => _db.Rounds.AnyAsync(r => r.SeasonId == seasonId && r.Status == RoundStatus.Scored, ct);
 
-    /// <summary>Default classic-eligible teams from the global catalogue (Big Seven / world champions).</summary>
-    private async Task<IReadOnlySet<Guid>> DefaultClassicTeamIdsAsync(TournamentType type, CancellationToken ct)
+    /// <summary>
+    /// Default classic-eligible teams from the global catalogue, each with its group: the Big
+    /// Seven for the Premier League, <see cref="DefaultChampionshipClassicNames"/> for the
+    /// Championship, and the world champions for the World Cup.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<Guid, Competition>> DefaultClassicTeamsAsync(TournamentType type, CancellationToken ct)
     {
-        var query = type == TournamentType.FifaWorldCup
-            ? _db.Teams.Where(t => t.WorldCupTitles > 0)
-            : _db.Teams.Where(t => t.IsBigSevenClub);
-        var ids = await query.Select(t => t.Id).ToListAsync(ct);
-        return ids.ToHashSet();
+        if (type == TournamentType.FifaWorldCup)
+        {
+            var champions = await _db.Teams.Where(t => t.WorldCupTitles > 0).Select(t => t.Id).ToListAsync(ct);
+            return champions.ToDictionary(id => id, _ => Competition.FifaWorldCup);
+        }
+
+        var clubs = await _db.Teams
+            .Where(t => t.IsBigSevenClub || DefaultChampionshipClassicNames.Contains(t.Name))
+            .Select(t => new { t.Id, t.Name, t.IsBigSevenClub })
+            .ToListAsync(ct);
+
+        return clubs.ToDictionary(
+            t => t.Id,
+            t => t.IsBigSevenClub ? Competition.PremierLeague : Competition.Championship);
     }
 
     /// <summary>Candidate teams an admin may mark as classics, by tournament type.</summary>
@@ -270,7 +298,7 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
             multipliers[(rule.Competition, rule.Phase)] = (rule.Multiplier, rule.ClassicMultiplier);
         }
 
-        var classic = config.ClassicTeams.Select(t => t.TeamId).ToHashSet();
+        var classic = config.ClassicTeams.ToDictionary(t => t.TeamId, t => t.Competition);
         return new ScoringRuleSet(basePoints, scoreCategories, multipliers, classic, RulesOf(config));
     }
 
@@ -291,7 +319,7 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
     private static ScoringConfigDto MapDto(
         Season season, SeasonScoringConfig config, bool hasScored, List<ScoringConfigTeamDto> candidates)
     {
-        var selected = config.ClassicTeams.Select(t => t.TeamId).ToHashSet();
+        var selected = config.ClassicTeams.ToDictionary(t => t.TeamId, t => t.Competition);
         return new ScoringConfigDto
         {
             SeasonId = season.Id,
@@ -326,7 +354,8 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
     }
 
     private static ScoringConfigDto BuildDefaultDto(
-        Season season, bool hasScored, List<ScoringConfigTeamDto> candidates, IReadOnlySet<Guid> classicIds)
+        Season season, bool hasScored, List<ScoringConfigTeamDto> candidates,
+        IReadOnlyDictionary<Guid, Competition> classicTeams)
     {
         var bp = ScoringDefaults.BasePoints();
         return new ScoringConfigDto
@@ -356,23 +385,28 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
                     ClassicMultiplier = r.Classic,
                 })
                 .ToList(),
-            Teams = WithSelection(candidates, classicIds),
+            Teams = WithSelection(candidates, classicTeams),
         };
     }
 
     private static List<ScoringConfigTeamDto> WithSelection(
-        List<ScoringConfigTeamDto> candidates, IReadOnlySet<Guid> selected)
+        List<ScoringConfigTeamDto> candidates, IReadOnlyDictionary<Guid, Competition> selected)
         => candidates
-            .Select(t => new ScoringConfigTeamDto
+            .Select(t =>
             {
-                TeamId = t.TeamId,
-                Name = t.Name,
-                ShortName = t.ShortName,
-                IsClassic = selected.Contains(t.TeamId),
+                var isClassic = selected.TryGetValue(t.TeamId, out var group);
+                return new ScoringConfigTeamDto
+                {
+                    TeamId = t.TeamId,
+                    Name = t.Name,
+                    ShortName = t.ShortName,
+                    IsClassic = isClassic,
+                    ClassicCompetition = isClassic ? group : null,
+                };
             })
             .ToList();
 
-    private async Task Validate(ScoringConfigRequest request, CancellationToken ct)
+    private async Task Validate(ScoringConfigRequest request, TournamentType type, CancellationToken ct)
     {
         var bp = request.BasePoints;
         if (bp.ColumnOnly < 0 || bp.Traditional < 0 || bp.Medium < 0 || bp.Uncommon < 0 || bp.ExtraUncommon < 0)
@@ -424,11 +458,26 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
             }
         }
 
-        var teamIds = request.ClassicTeamIds.Distinct().ToList();
-        if (teamIds.Count > 0)
+        var allowedGroups = AllowedClassicGroups[type];
+        var seenTeams = new HashSet<Guid>();
+        foreach (var team in request.ClassicTeams)
         {
-            var existing = await _db.Teams.CountAsync(t => teamIds.Contains(t.Id), ct);
-            if (existing != teamIds.Count)
+            if (!allowedGroups.Contains(team.Competition))
+            {
+                throw new BusinessRuleException("scoring.invalidClassicCompetition");
+            }
+            // A team in two groups would make "same group" ambiguous — and the unique index
+            // on (ConfigId, TeamId) would reject the insert anyway.
+            if (!seenTeams.Add(team.TeamId))
+            {
+                throw new BusinessRuleException("scoring.duplicateClassicTeam");
+            }
+        }
+
+        if (seenTeams.Count > 0)
+        {
+            var existing = await _db.Teams.CountAsync(t => seenTeams.Contains(t.Id), ct);
+            if (existing != seenTeams.Count)
             {
                 throw new BusinessRuleException("scoring.unknownTeam");
             }

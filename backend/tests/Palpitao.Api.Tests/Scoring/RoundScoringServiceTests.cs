@@ -49,6 +49,7 @@ public class RoundScoringServiceTests
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
         });
+        TestSeed.AddNeutralTeams(db);
         db.SaveChanges();
         return db;
     }
@@ -82,14 +83,26 @@ public class RoundScoringServiceTests
         return id;
     }
 
-    private static readonly (Guid Home, Guid Away)[] Pairs =
+    /// <summary>Big Seven pairs — a classic wherever the ruleset gives classics a value.</summary>
+    private static readonly (Guid Home, Guid Away)[] ClassicPairs =
     {
         (SeedIds.Arsenal, SeedIds.Chelsea),
         (SeedIds.Liverpool, SeedIds.Newcastle),
     };
 
-    private static async Task<RoundDto> PublishedRound(
+    /// <summary>A round of neutral (non-classic) pairs: the multiplier comes from the phase alone.</summary>
+    private static Task<RoundDto> PublishedRound(
         Kit kit, int number, params (Competition Competition, MatchPhase Phase)[] specs)
+        => PublishedRound(kit, number, TestSeed.NeutralPairs, specs);
+
+    /// <summary>A round of Big Seven pairs, for the classic-multiplier cases.</summary>
+    private static Task<RoundDto> PublishedClassicRound(
+        Kit kit, int number, params (Competition Competition, MatchPhase Phase)[] specs)
+        => PublishedRound(kit, number, ClassicPairs, specs);
+
+    private static async Task<RoundDto> PublishedRound(
+        Kit kit, int number, (Guid Home, Guid Away)[] pairs,
+        (Competition Competition, MatchPhase Phase)[] specs)
     {
         if (specs.Length == 0)
         {
@@ -103,8 +116,8 @@ public class RoundScoringServiceTests
             {
                 Competition = specs[i].Competition,
                 Phase = specs[i].Phase,
-                HomeTeamId = Pairs[i].Home,
-                AwayTeamId = Pairs[i].Away,
+                HomeTeamId = pairs[i].Home,
+                AwayTeamId = pairs[i].Away,
                 StartsAt = Future.AddHours(i),
             }, Admin, Ct);
         }
@@ -191,7 +204,7 @@ public class RoundScoringServiceTests
         var kit = Build(db);
         var user = CreateParticipant(db);
         // Premier League Big Seven derby -> x2.
-        var round = await PublishedRound(kit, 1, (Competition.PremierLeague, MatchPhase.Regular));
+        var round = await PublishedClassicRound(kit, 1, (Competition.PremierLeague, MatchPhase.Regular));
         await SavePredictions(kit, round, user, (2, 1));
         await kit.Rounds.LockAsync(round.Id, Admin, Ct);
         await SetResults(kit, round, (2, 1)); // exact Traditional 3 * 2 = 6
@@ -210,7 +223,7 @@ public class RoundScoringServiceTests
         var kit = Build(db);
         var user = CreateParticipant(db);
         // Arsenal x Chelsea — both Big Seven, so a classic with multiplier x2.
-        var round = await PublishedRound(kit, 1, (Competition.PremierLeague, MatchPhase.Regular));
+        var round = await PublishedClassicRound(kit, 1, (Competition.PremierLeague, MatchPhase.Regular));
         await SavePredictions(kit, round, user, (2, 1));
         await kit.Rounds.LockAsync(round.Id, Admin, Ct);
         await SetResults(kit, round, (2, 1));
@@ -221,6 +234,53 @@ public class RoundScoringServiceTests
         Assert.True(match.IsClassic);
         Assert.False(match.IsManualMultiplier);
         Assert.Equal(2, match.Multiplier);
+    }
+
+    [Fact]
+    public async Task Championship_classic_doubles_and_is_flagged()
+    {
+        using var db = CreateContext();
+        var kit = Build(db);
+        var user = CreateParticipant(db);
+        var millwall = await db.Teams.FirstAsync(t => t.Name == "Millwall", Ct);
+        var westHam = await db.Teams.FirstAsync(t => t.Name == "West Ham United", Ct);
+
+        var round = await PublishedRound(kit, 1, [(millwall.Id, westHam.Id)],
+            [(Competition.Championship, MatchPhase.Regular)]);
+        await SavePredictions(kit, round, user, (2, 1));
+        await kit.Rounds.LockAsync(round.Id, Admin, Ct);
+        await SetResults(kit, round, (2, 1)); // exact Traditional 3 * 2 = 6
+
+        var results = await kit.Scoring.ScoreRoundAsync(round.Id, Admin, Ct);
+
+        var match = results.Matches.Single();
+        Assert.True(match.IsClassic);
+        Assert.Equal(2, match.Multiplier);
+        Assert.Equal(6, results.Participants.Single(x => x.UserId == user).FinalPoints);
+    }
+
+    [Fact]
+    public async Task Classic_teams_from_different_groups_do_not_pair()
+    {
+        using var db = CreateContext();
+        var kit = Build(db);
+        var user = CreateParticipant(db);
+        var westHam = await db.Teams.FirstAsync(t => t.Name == "West Ham United", Ct);
+
+        // West Ham (Championship group) x Arsenal (Premier League group) in the FA Cup: both
+        // are classic-eligible, but not with each other, so the regular value applies.
+        var round = await PublishedRound(kit, 1, [(westHam.Id, SeedIds.Arsenal)],
+            [(Competition.FACup, MatchPhase.Regular)]);
+        await SavePredictions(kit, round, user, (2, 1));
+        await kit.Rounds.LockAsync(round.Id, Admin, Ct);
+        await SetResults(kit, round, (2, 1));
+
+        var results = await kit.Scoring.ScoreRoundAsync(round.Id, Admin, Ct);
+
+        var match = results.Matches.Single();
+        Assert.False(match.IsClassic);
+        Assert.Equal(1, match.Multiplier);
+        Assert.Equal(3, results.Participants.Single(x => x.UserId == user).FinalPoints);
     }
 
     [Fact]
@@ -331,10 +391,10 @@ public class RoundScoringServiceTests
         {
             Id = Guid.NewGuid(),
             RoundId = round.Id,
-            Competition = Competition.Championship, // multiplier 1
+            Competition = Competition.Championship, // multiplier 1 (no classic pair)
             Phase = MatchPhase.Regular,
-            HomeTeamId = SeedIds.Arsenal,
-            AwayTeamId = SeedIds.Chelsea,
+            HomeTeamId = TestSeed.NeutralPairs[0].Home,
+            AwayTeamId = TestSeed.NeutralPairs[0].Away,
             StartsAt = firstMatch,
             HomeScore = 5,
             AwayScore = 0,

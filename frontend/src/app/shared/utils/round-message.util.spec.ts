@@ -75,6 +75,13 @@ describe('buildRoundMessage', () => {
           startsAt: '2026-05-24T15:00:00Z',
         }),
         match({
+          id: '4',
+          competition: Competition.Championship,
+          homeTeamName: 'Millwall',
+          awayTeamName: 'West Ham United',
+          startsAt: '2026-05-24T17:00:00Z',
+        }),
+        match({
           id: '3',
           competition: Competition.LeagueOne,
           homeTeamName: 'Bolton',
@@ -95,6 +102,7 @@ describe('buildRoundMessage', () => {
     expect(msg).toContain('Arsenal x Chelsea (×2)'); // Big Seven derby
     expect(msg).toContain('*Championship*');
     expect(msg).toContain('Hull x Middlesbrough (Final (Playoff) ×2)');
+    expect(msg).toContain('Millwall x West Ham United (×2)'); // Championship derby
     expect(msg).toContain('*League One*');
     expect(msg).toContain('Bolton x Stockport (×2)');
     expect(msg).toContain('Regras:');

@@ -131,6 +131,19 @@ public class ScoringConfigTeamDto
     public string Name { get; set; } = string.Empty;
     public string ShortName { get; set; } = string.Empty;
     public bool IsClassic { get; set; }
+
+    /// <summary>
+    /// The classic group the team belongs to, or null when it is not a classic. Only pairs
+    /// from the same group count as a classic.
+    /// </summary>
+    public Competition? ClassicCompetition { get; set; }
+}
+
+/// <summary>A team designated as a classic, with the group it belongs to (request).</summary>
+public class ScoringClassicTeamRequest
+{
+    public Guid TeamId { get; set; }
+    public Competition Competition { get; set; }
 }
 
 /// <summary>The full editable scoring ruleset of a season (response).</summary>
@@ -159,5 +172,5 @@ public class ScoringConfigRequest
     public ScoringRulesDto Rules { get; set; } = new();
     public List<ScoringScoreEntryDto> ScoreEntries { get; set; } = new();
     public List<ScoringMultiplierRuleDto> MultiplierRules { get; set; } = new();
-    public List<Guid> ClassicTeamIds { get; set; } = new();
+    public List<ScoringClassicTeamRequest> ClassicTeams { get; set; } = new();
 }
