@@ -14,6 +14,8 @@ export interface SeasonRequest {
   tournamentType: TournamentType;
   allowParticipantsToViewOthersPredictions: boolean;
   allowParticipantsToSubmitPredictions: boolean;
+  /** Offer FA Cup fixtures for this season (England certames only). */
+  faCupEnabled: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

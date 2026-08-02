@@ -88,6 +88,23 @@ public class RoundServiceTests
     }
 
     [Fact]
+    public async Task Round_dtos_carry_the_seasons_fa_cup_toggle()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+
+        Assert.True((await service.GetByIdAsync(round.Id, Ct)).FaCupEnabled);
+
+        db.Seasons.Single(s => s.Id == SeasonId).FaCupEnabled = false;
+        await db.SaveChangesAsync(Ct);
+
+        // Both shapes carry it: the matches screen reads the flag off the round.
+        Assert.False((await service.GetByIdAsync(round.Id, Ct)).FaCupEnabled);
+        Assert.False((await service.GetAllAsync(Ct)).Single(r => r.Id == round.Id).FaCupEnabled);
+    }
+
+    [Fact]
     public async Task Publish_round_with_matches_succeeds()
     {
         using var db = CreateContext();

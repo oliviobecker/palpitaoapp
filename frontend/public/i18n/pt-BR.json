@@ -398,7 +398,9 @@
     "activate": "Ativar",
     "saved": "Temporada salva!",
     "activated": "Temporada ativada!",
-    "typeFixedHelp": "O tipo de certame define os times e as regras disponíveis."
+    "typeFixedHelp": "O tipo de certame define os times e as regras disponíveis.",
+    "faCupEnabled": "Incluir jogos da FA Cup",
+    "faCupEnabledHelp": "Quando desativada, os jogos da FA Cup não aparecem na busca de jogos e não podem ser adicionados às rodadas desta temporada. Os jogos já adicionados não são afetados."
   },
   "adminRounds": {
     "title": "Rodadas",

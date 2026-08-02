@@ -184,6 +184,10 @@ public class AppDbContext : DbContext
             // Prediction settings live on the season (the certame instance).
             e.Property(x => x.AllowParticipantsToViewOthersPredictions).HasDefaultValue(false);
             e.Property(x => x.AllowParticipantsToSubmitPredictions).HasDefaultValue(true);
+            // FaCupEnabled declares no store default; the entity initializer carries it, and
+            // the migration backfills existing rows. (A store default would be safe too: EF
+            // takes the initializer as the property's sentinel, so turning the flag off on
+            // creation is still written explicitly instead of being omitted from the INSERT.)
             ConfigureGroupOwnership<Season>(e);
         });
 

@@ -7,11 +7,11 @@ _Last updated: 2026-06-18 (UI modernization pack — committed on `feat/ui-moder
 | Check | Result |
 |---|---|
 | Backend build (`dotnet build`) | ✅ 0 errors (1 pre-existing xUnit2012 analyzer warning) |
-| Backend tests (`dotnet test`) | ✅ **383** passed, 0 failed |
+| Backend tests (`dotnet test`) | ✅ **466** passed, 0 failed |
 | Frontend build (`ng build` prod) | ✅ success |
 | Frontend lint (`ng lint`) | ✅ 0 errors (24 pre-existing `label-has-associated-control` warnings) |
-| Frontend unit tests (Vitest) | ✅ **43** passed (11 files) |
-| Frontend e2e (Playwright) | ✅ **34** passed |
+| Frontend unit tests (Vitest) | ✅ **73** passed (17 files) |
+| Frontend e2e (Playwright) | ✅ **38** passed |
 | Frontend prod budgets | ✅ within budget (no warnings) |
 | i18n parity | ✅ 509 = 509 (`en-US` / `pt-BR`) |
 | Working tree | Security & performance hardening implemented on `feat/security-hardening-phase1` (pending commit). `main` untouched. |
@@ -198,6 +198,9 @@ overall standings update.
 - **Flávio Rule:** leader gets a 24h (or 12h) special deadline; missing it = lose half the round; no
   prediction = treated as absence; ties apply to all leaders. The starting round is a per-season
   setting (default 16); the World Cup variant still goes by phase.
+- **FA Cup per season:** `Season.FaCupEnabled` (default on, in **/admin/seasons**, England only).
+  Off → FA Cup fixtures are dropped from the fixture search and rejected on manual add/import
+  (`season.faCupDisabled`); matches already in a round keep working and stay editable.
 - **Login/access:** account requires `Status=Approved` + `User.IsActive`; group access additionally
   requires an `Approved` + active `GroupUser`.
 

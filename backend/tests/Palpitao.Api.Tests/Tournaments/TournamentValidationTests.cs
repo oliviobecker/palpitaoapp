@@ -139,4 +139,89 @@ public class TournamentValidationTests
         Assert.Equal(Competition.FifaWorldCup, match.Competition);
         Assert.Equal(MatchPhase.WorldCupGroupStage, match.Phase);
     }
+
+    // --- Per-season FA Cup toggle ------------------------------------------
+
+    private static void DisableFaCup(AppDbContext db)
+    {
+        db.Seasons.Single(s => s.Id == EnglandSeason).FaCupEnabled = false;
+        db.SaveChanges();
+    }
+
+    private static CreateMatchRequest FaCupMatch(AppDbContext db)
+        => Match(TeamId(db, "Arsenal"), TeamId(db, "Chelsea"), Competition.FACup, MatchPhase.Regular);
+
+    [Fact]
+    public async Task England_group_accepts_a_fa_cup_match_while_the_season_allows_it()
+    {
+        using var db = CreateContext();
+        var service = Service(db, SeedIds.DefaultGroup);
+        var round = await service.CreateAsync(new CreateRoundRequest { SeasonId = EnglandSeason, Number = 1 }, SeedIds.AdminUser, Ct);
+
+        var match = await service.AddMatchAsync(round.Id, FaCupMatch(db), SeedIds.AdminUser, Ct);
+
+        Assert.Equal(Competition.FACup, match.Competition);
+    }
+
+    [Fact]
+    public async Task England_group_rejects_a_fa_cup_match_when_the_season_disabled_it()
+    {
+        using var db = CreateContext();
+        var service = Service(db, SeedIds.DefaultGroup);
+        var round = await service.CreateAsync(new CreateRoundRequest { SeasonId = EnglandSeason, Number = 1 }, SeedIds.AdminUser, Ct);
+        DisableFaCup(db);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            service.AddMatchAsync(round.Id, FaCupMatch(db), SeedIds.AdminUser, Ct));
+
+        Assert.Equal("season.faCupDisabled", ex.Key);
+    }
+
+    [Fact]
+    public async Task Turning_a_match_into_a_fa_cup_one_is_rejected_when_disabled()
+    {
+        using var db = CreateContext();
+        var service = Service(db, SeedIds.DefaultGroup);
+        var round = await service.CreateAsync(new CreateRoundRequest { SeasonId = EnglandSeason, Number = 1 }, SeedIds.AdminUser, Ct);
+        var match = await service.AddMatchAsync(
+            round.Id, Match(TeamId(db, "Arsenal"), TeamId(db, "Chelsea"), Competition.PremierLeague, MatchPhase.Regular), SeedIds.AdminUser, Ct);
+        DisableFaCup(db);
+
+        var request = new UpdateMatchRequest
+        {
+            Competition = Competition.FACup,
+            Phase = MatchPhase.Regular,
+            HomeTeamId = match.HomeTeamId,
+            AwayTeamId = match.AwayTeamId,
+            StartsAt = match.StartsAt,
+        };
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            service.UpdateMatchAsync(match.Id, request, SeedIds.AdminUser, Ct));
+
+        Assert.Equal("season.faCupDisabled", ex.Key);
+    }
+
+    [Fact]
+    public async Task A_fa_cup_match_already_in_the_round_stays_editable_after_the_toggle_goes_off()
+    {
+        using var db = CreateContext();
+        var service = Service(db, SeedIds.DefaultGroup);
+        var round = await service.CreateAsync(new CreateRoundRequest { SeasonId = EnglandSeason, Number = 1 }, SeedIds.AdminUser, Ct);
+        var match = await service.AddMatchAsync(round.Id, FaCupMatch(db), SeedIds.AdminUser, Ct);
+        DisableFaCup(db);
+
+        // Turning the competition off must not freeze the matches already in the round:
+        // a wrong kickoff still has to be fixable.
+        var newKickoff = match.StartsAt.AddHours(2);
+        var updated = await service.UpdateMatchAsync(match.Id, new UpdateMatchRequest
+        {
+            Competition = Competition.FACup,
+            Phase = MatchPhase.Regular,
+            HomeTeamId = match.HomeTeamId,
+            AwayTeamId = match.AwayTeamId,
+            StartsAt = newKickoff,
+        }, SeedIds.AdminUser, Ct);
+
+        Assert.Equal(newKickoff, updated.StartsAt);
+    }
 }

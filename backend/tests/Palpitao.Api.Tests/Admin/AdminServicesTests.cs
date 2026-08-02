@@ -69,6 +69,50 @@ public class AdminServicesTests
     }
 
     [Fact]
+    public async Task Create_persists_the_settings_the_admin_turned_off()
+    {
+        using var db = CreateContext();
+        var service = new SeasonService(db, new AuditService(db), new FakeCurrentGroupService());
+
+        var request = Season("2025/2026", active: true);
+        request.AllowParticipantsToSubmitPredictions = false;
+        request.FaCupEnabled = false;
+        var created = await service.CreateAsync(request, Admin, Ct);
+
+        // Both settings default to true, so an insert that skipped them would come back
+        // as true and look like the admin never turned them off. Read them as scalars: a
+        // projection bypasses the change tracker and asserts what reached the database.
+        var stored = await db.Seasons
+            .Where(s => s.Id == created.Id)
+            .Select(s => new { s.AllowParticipantsToSubmitPredictions, s.FaCupEnabled })
+            .SingleAsync(Ct);
+        Assert.False(stored.AllowParticipantsToSubmitPredictions);
+        Assert.False(stored.FaCupEnabled);
+    }
+
+    [Fact]
+    public async Task Fa_cup_toggle_round_trips_and_is_audited()
+    {
+        using var db = CreateContext();
+        var service = new SeasonService(db, new AuditService(db), new FakeCurrentGroupService());
+
+        var created = await service.CreateAsync(Season("2025/2026", active: true), Admin, Ct);
+        Assert.True(created.FaCupEnabled);
+
+        var request = Season("2025/2026", active: true);
+        request.FaCupEnabled = false;
+        var updated = await service.UpdateAsync(created.Id, request, Admin, Ct);
+
+        Assert.False(updated.FaCupEnabled);
+        Assert.False((await db.Seasons.FirstAsync(s => s.Id == created.Id, Ct)).FaCupEnabled);
+        Assert.Contains(db.AuditLogs, a => a.Action == "SeasonUpdated" && a.Details!.Contains("FaCupEnabled"));
+
+        // And back on again.
+        request.FaCupEnabled = true;
+        Assert.True((await service.UpdateAsync(created.Id, request, Admin, Ct)).FaCupEnabled);
+    }
+
+    [Fact]
     public async Task Activating_a_season_deactivates_the_others()
     {
         using var db = CreateContext();

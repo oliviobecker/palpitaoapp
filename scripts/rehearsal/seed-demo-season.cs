@@ -641,8 +641,9 @@ try
     await Exec("UPDATE \"Seasons\" SET \"IsActive\" = false WHERE \"GroupId\" = @g AND \"Id\" <> @s", ("g", groupId), ("s", seasonId));
     await Exec("""
         INSERT INTO "Seasons" ("Id","GroupId","Name","TournamentType","StartDate","EndDate","IsActive",
-                               "AllowParticipantsToViewOthersPredictions","AllowParticipantsToSubmitPredictions","CreatedAt")
-        VALUES (@id, @gid, @name, 'PalpitaoEngland', @start, @end, true, true, true, @created);
+                               "AllowParticipantsToViewOthersPredictions","AllowParticipantsToSubmitPredictions",
+                               "FaCupEnabled","CreatedAt")
+        VALUES (@id, @gid, @name, 'PalpitaoEngland', @start, @end, true, true, true, true, @created);
         """,
         ("id", seasonId), ("gid", groupId), ("name", seasonName),
         ("start", DateOnly.FromDateTime(rounds[0].FirstMatchStartsAt.AddDays(-14))),

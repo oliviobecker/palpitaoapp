@@ -181,6 +181,21 @@ function dateRange(group: AbstractControl): ValidationErrors | null {
             <div class="form-text">{{ 'adminSeasons.typeFixedHelp' | translate }}</div>
           </div>
 
+          @if (form.controls.tournamentType.value === TournamentType.PalpitaoEngland) {
+            <div class="form-check form-switch">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                id="faCup"
+                formControlName="faCupEnabled"
+              />
+              <label class="form-check-label" for="faCup">{{
+                'adminSeasons.faCupEnabled' | translate
+              }}</label>
+              <div class="form-text">{{ 'adminSeasons.faCupEnabledHelp' | translate }}</div>
+            </div>
+          }
+
           <hr class="my-1" />
 
           <div>
@@ -305,6 +320,9 @@ export class AdminSeasons implements OnInit, HasUnsavedChanges {
       tournamentType: [TournamentType.PalpitaoEngland as TournamentType, Validators.required],
       allowParticipantsToSubmitPredictions: [true],
       allowParticipantsToViewOthersPredictions: [false],
+      // England certames only; left on (and hidden) for the World Cup, which never
+      // allows the FA Cup anyway.
+      faCupEnabled: [true],
     },
     { validators: dateRange },
   );
@@ -355,6 +373,7 @@ export class AdminSeasons implements OnInit, HasUnsavedChanges {
       tournamentType: season.tournamentType,
       allowParticipantsToSubmitPredictions: season.allowParticipantsToSubmitPredictions,
       allowParticipantsToViewOthersPredictions: season.allowParticipantsToViewOthersPredictions,
+      faCupEnabled: season.faCupEnabled ?? true,
     });
   }
 
@@ -369,6 +388,7 @@ export class AdminSeasons implements OnInit, HasUnsavedChanges {
       tournamentType: TournamentType.PalpitaoEngland,
       allowParticipantsToSubmitPredictions: true,
       allowParticipantsToViewOthersPredictions: false,
+      faCupEnabled: true,
     });
   }
 

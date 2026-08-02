@@ -19,6 +19,9 @@ public class SeasonDto
     /// <summary>Whether participants submit predictions in the app (false = admin-only).</summary>
     public bool AllowParticipantsToSubmitPredictions { get; set; } = true;
 
+    /// <summary>Whether FA Cup fixtures are offered for this season (England certames only).</summary>
+    public bool FaCupEnabled { get; set; } = true;
+
     /// <summary>
     /// True when participant-submitted predictions already exist in this season — the UI
     /// warns before switching to admin-only.
@@ -44,4 +47,10 @@ public class SeasonRequest
 
     /// <summary>How predictions are submitted: participants in the app (default true) or admin-only.</summary>
     public bool AllowParticipantsToSubmitPredictions { get; set; } = true;
+
+    /// <summary>
+    /// Offer FA Cup fixtures for this season (default true). England certames only; the
+    /// World Cup certame never allows the FA Cup regardless of this flag.
+    /// </summary>
+    public bool FaCupEnabled { get; set; } = true;
 }

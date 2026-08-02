@@ -54,6 +54,9 @@ public class RoundSummaryDto
 
     /// <summary>From the round's season: whether participants submit predictions in the app.</summary>
     public bool AllowParticipantsToSubmitPredictions { get; set; } = true;
+
+    /// <summary>From the round's season: whether FA Cup fixtures may be added to this round.</summary>
+    public bool FaCupEnabled { get; set; } = true;
 }
 
 public class RoundDto
@@ -84,6 +87,9 @@ public class RoundDto
 
     /// <summary>From the round's season: whether participants submit predictions in the app.</summary>
     public bool AllowParticipantsToSubmitPredictions { get; set; } = true;
+
+    /// <summary>From the round's season: whether FA Cup fixtures may be added to this round.</summary>
+    public bool FaCupEnabled { get; set; } = true;
 
     /// <summary>Flávio-rule info for the group message (null when not applicable).</summary>
     public RoundFlavioDto? Flavio { get; set; }

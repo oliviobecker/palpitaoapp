@@ -52,6 +52,7 @@ public class SeasonService : ISeasonService
         TournamentType = s.TournamentType,
         AllowParticipantsToViewOthersPredictions = s.AllowParticipantsToViewOthersPredictions,
         AllowParticipantsToSubmitPredictions = s.AllowParticipantsToSubmitPredictions,
+        FaCupEnabled = s.FaCupEnabled,
         HasParticipantPredictions = _db.Predictions.Any(
             p => p.Source == PredictionSource.Participant
                 && _db.Rounds.Any(r => r.Id == p.RoundId && r.SeasonId == s.Id)),
@@ -75,6 +76,7 @@ public class SeasonService : ISeasonService
                 : TournamentType.PalpitaoEngland,
             AllowParticipantsToViewOthersPredictions = request.AllowParticipantsToViewOthersPredictions,
             AllowParticipantsToSubmitPredictions = request.AllowParticipantsToSubmitPredictions,
+            FaCupEnabled = request.FaCupEnabled,
             CreatedAt = DateTime.UtcNow,
         };
 
@@ -90,6 +92,7 @@ public class SeasonService : ISeasonService
             TournamentType = season.TournamentType.ToString(),
             season.AllowParticipantsToViewOthersPredictions,
             season.AllowParticipantsToSubmitPredictions,
+            season.FaCupEnabled,
         });
         await _db.SaveChangesAsync(ct);
         return Map(season, hasParticipantPredictions: false);
@@ -111,6 +114,7 @@ public class SeasonService : ISeasonService
         // would leave inconsistent data. Ignore any value sent on update.
         season.AllowParticipantsToViewOthersPredictions = request.AllowParticipantsToViewOthersPredictions;
         season.AllowParticipantsToSubmitPredictions = request.AllowParticipantsToSubmitPredictions;
+        season.FaCupEnabled = request.FaCupEnabled;
 
         if (request.IsActive && !season.IsActive)
         {
@@ -124,6 +128,7 @@ public class SeasonService : ISeasonService
             TournamentType = season.TournamentType.ToString(),
             season.AllowParticipantsToViewOthersPredictions,
             season.AllowParticipantsToSubmitPredictions,
+            season.FaCupEnabled,
         });
         await _db.SaveChangesAsync(ct);
         return Map(season, await HasParticipantPredictionsAsync(season.Id, ct));
@@ -177,6 +182,7 @@ public class SeasonService : ISeasonService
         TournamentType = s.TournamentType,
         AllowParticipantsToViewOthersPredictions = s.AllowParticipantsToViewOthersPredictions,
         AllowParticipantsToSubmitPredictions = s.AllowParticipantsToSubmitPredictions,
+        FaCupEnabled = s.FaCupEnabled,
         HasParticipantPredictions = hasParticipantPredictions,
     };
 }
