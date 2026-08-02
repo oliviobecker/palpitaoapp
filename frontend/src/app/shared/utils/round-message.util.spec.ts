@@ -56,7 +56,7 @@ describe('buildRoundMessage', () => {
     expect(msg).toContain(`Palpites até ${expected}`);
   });
 
-  it('renders title, round number, deadline and grouped matches with multipliers', () => {
+  it('renders the name placeholder, round number, deadline and grouped matches with multipliers', () => {
     const msg = buildRoundMessage(
       round([
         match({
@@ -95,7 +95,7 @@ describe('buildRoundMessage', () => {
     // The header is the group/season name passed in (an example group, not the product),
     // in WhatsApp bold like every heading of the message.
     expect(msg).toContain('*Palpitão England 2025/2026*');
-    expect(msg).toContain('Rodada 41');
+    expect(msg).toContain('*Nome*, Rodada 41');
     expect(msg).toMatch(/Palpites até \d{1,2}h\d{2} de \p{L}+ \(\d{2}\/\d{2}\/\d{4}\):/u);
 
     expect(msg).toContain('*Premier League*');
@@ -178,9 +178,18 @@ describe('buildRoundMessage', () => {
     expect(noFlavio).not.toContain('para palpitar');
   });
 
+  it('keeps the name placeholder instead of the round title', () => {
+    // The second line is where the participant writes their own name, so the round's
+    // title must not take it over — it still shows in the rounds list and dashboard.
+    const msg = buildRoundMessage(round([match({})], { title: 'Primeira Rodada' }));
+
+    expect(msg).toContain('*Nome*, Rodada 41');
+    expect(msg).not.toContain('Primeira Rodada');
+  });
+
   it('shows a placeholder when the round has no matches', () => {
     const msg = buildRoundMessage(round([]));
-    expect(msg).toContain('Rodada 41');
+    expect(msg).toContain('*Nome*, Rodada 41');
     expect(msg).toContain('Sem jogos cadastrados ainda.');
     expect(msg).not.toContain('Palpites até');
   });
