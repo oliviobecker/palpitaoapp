@@ -19,6 +19,16 @@ public static class OcrTeamMatcher
         ["spurs"] = "tottenham",
         ["united"] = "manchester united",
         ["city"] = "manchester city",
+
+        // Short names emitted by the copy-ready WhatsApp messages (frontend
+        // shared/utils/team-name.util.ts). Only the ones that are not a substring of
+        // the seeded Team.Name need a row here — "Hull", "West Brom", "Sheffield Wed"
+        // and the rest already resolve through the containment check in TeamMatches.
+        // "sheffield utd" also disambiguates the two Sheffields: a bare "Sheffield"
+        // hits both fixtures, so ResolveMatch would flag it for review.
+        ["wolves"] = "wolverhampton wanderers",
+        ["qpr"] = "queens park rangers",
+        ["sheffield utd"] = "sheffield united",
     };
 
     /// <summary>Resolves a parsed name to a participant: exact match, else a unique substring match.</summary>
@@ -60,14 +70,24 @@ public static class OcrTeamMatcher
             return false;
         }
 
-        var r = Normalize(raw);
-        var t = teamName.Trim().ToLowerInvariant();
-        return r == t || t.Contains(r) || r.Contains(t);
+        var t = Canonical(teamName);
+        var r = Canonical(raw);
+
+        // The raw form is tried before the alias: a Team may itself carry the short
+        // name — fixture feeds ship "Wolves", "Man Utd", "Spurs" and FixtureImportService
+        // creates the row verbatim — and rewriting it to the canonical name would then
+        // stop it matching itself.
+        return Overlaps(r, t) || (TeamAliases.TryGetValue(r, out var alias) && Overlaps(alias, t));
+
+        static bool Overlaps(string a, string b) => a == b || b.Contains(a) || a.Contains(b);
     }
 
-    private static string Normalize(string raw)
-    {
-        var s = raw.Trim().ToLowerInvariant();
-        return TeamAliases.TryGetValue(s, out var alias) ? alias : s;
-    }
+    /// <summary>
+    /// Lowercases and drops what OCR cannot give back: OcrTextParser.CleanTeam keeps
+    /// letters only, so "Brighton &amp; Hove Albion" is read as "Brighton Hove Albion".
+    /// Comparing both sides without the ampersand keeps those clubs matchable.
+    /// </summary>
+    private static string Canonical(string value) => string.Join(
+        ' ',
+        value.ToLowerInvariant().Replace('&', ' ').Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 }
