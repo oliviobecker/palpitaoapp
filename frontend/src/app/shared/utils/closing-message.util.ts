@@ -12,11 +12,16 @@ const COMP_LABEL: Record<Competition, string> = {
 // Feminine number words for the absence legend ("Uma ausência", "Duas ausências"…).
 const ABSENCE_WORDS = ['', 'Uma', 'Duas', 'Três', 'Quatro', 'Cinco', 'Seis', 'Sete', 'Oito'];
 
+// Absence marker. Not a plain "*": that is WhatsApp's bold delimiter, and the stray
+// markers would pair up with each other (and with the headings below) on paste.
+const ABSENCE_MARK = '✱';
+
 /**
  * Builds the WhatsApp-style "round closed" message: the final scores grouped by
  * relevance (knockouts first, then the regular block, then League One), the
  * points earned in the round per participant and the overall ranking with
- * absence markers and eliminations. Plain text, ready to copy.
+ * absence markers and eliminations. Ready to copy — the `*…*` around the headings
+ * is WhatsApp's bold syntax, rendered on paste.
  */
 export function buildClosingMessage(
   roundNumber: number,
@@ -27,11 +32,11 @@ export function buildClosingMessage(
   const lines: string[] = [];
   // Header is the current group/season name (not the product name).
   if (groupTitle.trim()) {
-    lines.push(groupTitle.trim());
+    lines.push(`*${groupTitle.trim()}*`);
   }
   lines.push(`Rodada ${roundNumber}`);
   lines.push('');
-  lines.push('Encerrados:');
+  lines.push('*Encerrados:*');
 
   const finished = results.matches.filter((m) => m.homeScore != null && m.awayScore != null);
   const footnotes: string[] = [];
@@ -39,7 +44,8 @@ export function buildClosingMessage(
   // 1) Knockout / non-regular matches: each as its own labeled block.
   for (const m of finished.filter((m) => m.phase !== MatchPhase.Regular)) {
     lines.push('');
-    lines.push(`${phaseHeader(m.phase)} ${COMP_LABEL[m.competition]} ×${m.multiplier}`.trim());
+    const header = `${phaseHeader(m.phase)} ${COMP_LABEL[m.competition]} ×${m.multiplier}`.trim();
+    lines.push(`*${header}*`);
     lines.push(scoreLine(m));
   }
 
@@ -86,7 +92,7 @@ export function buildClosingMessage(
     .sort((a, b) => b.finalPoints - a.finalPoints || a.name.localeCompare(b.name, 'pt-BR'));
   if (players.length > 0) {
     lines.push('');
-    lines.push(`Pontuação ${roundNumber}`);
+    lines.push(`*Pontuação ${roundNumber}*`);
     lines.push('');
     let i = 0;
     while (i < players.length) {
@@ -106,10 +112,10 @@ export function buildClosingMessage(
     lines.push('');
     lines.push('——');
     lines.push('');
-    lines.push(`Rank ${roundNumber}`);
+    lines.push(`*Rank ${roundNumber}*`);
     lines.push('');
     for (const s of ranked) {
-      const marks = '*'.repeat(s.isEliminated ? 0 : s.absenceCount);
+      const marks = ABSENCE_MARK.repeat(s.isEliminated ? 0 : s.absenceCount);
       const value = s.isEliminated ? 'Eliminado' : formatPoints(s.totalPoints);
       lines.push(`${s.position}. ${s.name}${marks}: ${value}`);
     }
@@ -122,7 +128,7 @@ export function buildClosingMessage(
       lines.push('');
       for (let n = 1; n <= maxAbsence; n++) {
         const word = ABSENCE_WORDS[n] ?? `${n}`;
-        lines.push(`${'*'.repeat(n)} ${word} ausência${n > 1 ? 's' : ''}`);
+        lines.push(`${ABSENCE_MARK.repeat(n)} ${word} ausência${n > 1 ? 's' : ''}`);
       }
     }
   }

@@ -17,6 +17,8 @@ const roundWithMatches = {
     applies: true,
     leaderNames: ['Manoel Neto'],
     deadlineUtc: '2026-05-22T23:59:00Z',
+    windowHours: 24,
+    deadlineCappedByLock: false,
   },
   createdAt: '2026-01-01T00:00:00Z',
   matches: [
@@ -61,12 +63,13 @@ test.describe('Round group message', () => {
 
     await expect(page.getByText('Mensagem para o grupo')).toBeVisible();
     const pre = page.locator('pre');
-    await expect(pre).toContainText('Palpitão England 2025/2026');
+    await expect(pre).toContainText('*Palpitão England 2025/2026*');
     await expect(pre).toContainText('Rodada 41');
+    await expect(pre).toContainText('*Premier League*');
     await expect(pre).toContainText('Arsenal x Chelsea (×2)');
     await expect(pre).toContainText('Bolton x Stockport (×2)');
     await expect(pre).toContainText('Palpites até');
-    await expect(pre).toContainText('Líder @Manoel Neto tem até');
+    await expect(pre).toContainText('*REGRA FLÁVIO:* @Manoel Neto tem até 24 horas para palpitar');
 
     await page.getByRole('button', { name: /Copiar/ }).click();
     await expect(page.locator('.toast-body')).toHaveText('Mensagem copiada!');

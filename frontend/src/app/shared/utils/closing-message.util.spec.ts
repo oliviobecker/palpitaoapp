@@ -104,13 +104,13 @@ describe('buildClosingMessage', () => {
 
   it('renders the header and the Encerrados section', () => {
     // The header is the group/season name passed in (an example group, not the product).
-    expect(text).toContain('Palpitão England 2025/2026');
+    expect(text).toContain('*Palpitão England 2025/2026*');
     expect(text).toContain('Rodada 41');
-    expect(text).toContain('Encerrados:');
+    expect(text).toContain('*Encerrados:*');
   });
 
   it('puts knockout matches in their own labelled block', () => {
-    expect(text).toContain('FINAL Championship ×2');
+    expect(text).toContain('*FINAL Championship ×2*');
     expect(text).toContain('Hull 1 x 0 Middlesbrough');
   });
 
@@ -120,17 +120,18 @@ describe('buildClosingMessage', () => {
   });
 
   it('lists round points and groups tied participants with "e", skipping absentees', () => {
-    expect(text).toContain('Pontuação 41');
+    expect(text).toContain('*Pontuação 41*');
     expect(text).toContain('Edson: 18');
     expect(text).toContain('DeFarias e Vilaça: 3');
     expect(text).not.toContain('Faltoso');
   });
 
   it('renders the ranking with absence markers and eliminations', () => {
-    expect(text).toContain('Rank 41');
+    expect(text).toContain('*Rank 41*');
     expect(text).toContain('1. PL: 478');
-    expect(text).toContain('2. Edson*: 440');
+    // The marker is ✱, not "*": a stray asterisk would pair with the bold delimiters.
+    expect(text).toContain('2. Edson✱: 440');
     expect(text).toContain('3. Flávio: Eliminado');
-    expect(text).toContain('* Uma ausência');
+    expect(text).toContain('✱ Uma ausência');
   });
 });

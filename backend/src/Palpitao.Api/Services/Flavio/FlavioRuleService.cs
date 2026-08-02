@@ -41,11 +41,20 @@ public class FlavioRuleService : IFlavioRuleService
     };
 
     public FlavioDeadline ComputeSpecialDeadline(Round round)
+        => TryCompute(round) ?? throw new BusinessRuleException("flavio.insufficientData");
+
+    /// <summary>
+    /// The special deadline in full (reference, window, raw/effective instants and whether
+    /// the general lock prevailed), or null when the round lacks the data to compute it
+    /// (not published / no first match yet). Non-throwing counterpart of
+    /// <see cref="ComputeSpecialDeadline"/> — for display.
+    /// </summary>
+    public static FlavioDeadline? TryCompute(Round round)
     {
         var reference = round.MirrorPublishedAt ?? round.PublishedAt;
         if (reference is null || round.FirstMatchStartsAt is null)
         {
-            throw new BusinessRuleException("flavio.insufficientData");
+            return null;
         }
 
         var firstMatch = round.FirstMatchStartsAt.Value;
@@ -61,24 +70,9 @@ public class FlavioRuleService : IFlavioRuleService
         return new FlavioDeadline(reference.Value, windowHours, raw, effective, conflict);
     }
 
-    /// <summary>
-    /// Effective special deadline, or null when the round lacks the data to compute
-    /// it (not published / no first match yet). Same rule as
-    /// <see cref="ComputeSpecialDeadline"/>, but non-throwing — for display.
-    /// </summary>
+    /// <summary>Effective special deadline only; see <see cref="TryCompute"/>.</summary>
     public static DateTime? TryComputeEffectiveDeadline(Round round)
-    {
-        var reference = round.MirrorPublishedAt ?? round.PublishedAt;
-        if (reference is null || round.FirstMatchStartsAt is null)
-        {
-            return null;
-        }
-
-        var firstMatch = round.FirstMatchStartsAt.Value;
-        var shortNotice = (firstMatch - reference.Value) < TimeSpan.FromHours(StandardWindowHours);
-        var raw = reference.Value.AddHours(shortNotice ? ShortWindowHours : StandardWindowHours);
-        return raw > firstMatch ? firstMatch : raw;
-    }
+        => TryCompute(round)?.EffectiveDeadlineUtc;
 
     public int ApplyHalfPenalty(int grossPoints) => (int)Math.Floor(grossPoints / 2.0);
 

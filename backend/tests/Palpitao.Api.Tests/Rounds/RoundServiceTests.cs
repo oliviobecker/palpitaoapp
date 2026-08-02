@@ -72,6 +72,14 @@ public class RoundServiceTests
     private static async Task<RoundDto> CreateDraftRound(RoundService service, int number = 1)
         => await service.CreateAsync(new CreateRoundRequest { SeasonId = SeasonId, Number = number, Title = "Rodada" }, ActingUser, Ct);
 
+    /// <summary>Backdates the publication so the Flávio window is deterministic.</summary>
+    private static async Task PublishedAt(AppDbContext db, Guid roundId, DateTime instant)
+    {
+        var round = await db.Rounds.FirstAsync(r => r.Id == roundId, Ct);
+        round.PublishedAt = instant;
+        await db.SaveChangesAsync(Ct);
+    }
+
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -102,6 +110,40 @@ public class RoundServiceTests
         // Both shapes carry it: the matches screen reads the flag off the round.
         Assert.False((await service.GetByIdAsync(round.Id, Ct)).FaCupEnabled);
         Assert.False((await service.GetAllAsync(Ct)).Single(r => r.Id == round.Id).FaCupEnabled);
+    }
+
+    [Fact]
+    public async Task Flavio_block_carries_the_rule_window_and_flags_the_lock_cap()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        // The season's default FlavioFromRound is 16.
+        var round = await CreateDraftRound(service, number: 16);
+        var kickoff = new DateTime(2026, 1, 10, 16, 0, 0, DateTimeKind.Utc);
+        await service.AddMatchAsync(round.Id, Match(SeedIds.Arsenal, SeedIds.Chelsea, kickoff), ActingUser, Ct);
+        await service.PublishAsync(round.Id, ActingUser, Ct);
+
+        // Published three days out: the full 24h window, untouched by the general lock.
+        await PublishedAt(db, round.Id, kickoff.AddDays(-3));
+        var full = (await service.GetByIdAsync(round.Id, Ct)).Flavio;
+        Assert.NotNull(full);
+        Assert.Equal(24, full!.WindowHours);
+        Assert.False(full.DeadlineCappedByLock);
+        Assert.Equal(kickoff.AddDays(-3).AddHours(24), full.DeadlineUtc);
+
+        // Published 20h out: short notice, so the window drops to 12h.
+        await PublishedAt(db, round.Id, kickoff.AddHours(-20));
+        var shortNotice = (await service.GetByIdAsync(round.Id, Ct)).Flavio;
+        Assert.Equal(12, shortNotice!.WindowHours);
+        Assert.False(shortNotice.DeadlineCappedByLock);
+
+        // Published 6h out: the 12h window would run past the kickoff, so the general
+        // lock prevails — the group message must then announce the exact instant.
+        await PublishedAt(db, round.Id, kickoff.AddHours(-6));
+        var capped = (await service.GetByIdAsync(round.Id, Ct)).Flavio;
+        Assert.Equal(12, capped!.WindowHours);
+        Assert.True(capped.DeadlineCappedByLock);
+        Assert.Equal(kickoff, capped.DeadlineUtc);
     }
 
     [Fact]

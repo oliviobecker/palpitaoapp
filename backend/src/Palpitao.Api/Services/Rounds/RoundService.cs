@@ -119,11 +119,14 @@ public class RoundService : IRoundService
                 .ToListAsync(ct);
         }
 
+        var deadline = FlavioRuleService.TryCompute(round);
         return new RoundFlavioDto
         {
             Applies = true,
             LeaderNames = leaderNames,
-            DeadlineUtc = FlavioRuleService.TryComputeEffectiveDeadline(round),
+            DeadlineUtc = deadline?.EffectiveDeadlineUtc,
+            WindowHours = deadline?.WindowHours,
+            DeadlineCappedByLock = deadline?.Conflict ?? false,
         };
     }
 

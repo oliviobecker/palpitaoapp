@@ -142,6 +142,10 @@ export interface RoundFlavio {
   applies: boolean;
   leaderNames: string[];
   deadlineUtc?: string | null;
+  /** The rule's window (24h, or 12h on short notice); null until the round is published. */
+  windowHours?: number | null;
+  /** True when the general lock cut the window short, so the window is not the real limit. */
+  deadlineCappedByLock?: boolean;
 }
 
 export interface ScoutScoreGroup {

@@ -85,16 +85,17 @@ describe('buildRoundMessage', () => {
       'Palpitão England 2025/2026',
     );
 
-    // The header is the group/season name passed in (an example group, not the product).
-    expect(msg).toContain('Palpitão England 2025/2026');
+    // The header is the group/season name passed in (an example group, not the product),
+    // in WhatsApp bold like every heading of the message.
+    expect(msg).toContain('*Palpitão England 2025/2026*');
     expect(msg).toContain('Rodada 41');
     expect(msg).toMatch(/Palpites até \d{1,2}h\d{2} de \p{L}+ \(\d{2}\/\d{2}\/\d{4}\):/u);
 
-    expect(msg).toContain('Premier League');
+    expect(msg).toContain('*Premier League*');
     expect(msg).toContain('Arsenal x Chelsea (×2)'); // Big Seven derby
-    expect(msg).toContain('Championship');
+    expect(msg).toContain('*Championship*');
     expect(msg).toContain('Hull x Middlesbrough (Final (Playoff) ×2)');
-    expect(msg).toContain('League One');
+    expect(msg).toContain('*League One*');
     expect(msg).toContain('Bolton x Stockport (×2)');
     expect(msg).toContain('Regras:');
   });
@@ -114,27 +115,59 @@ describe('buildRoundMessage', () => {
     expect(msg).toContain('Chelsea x Manchester City (Final ×3)');
   });
 
-  it('adds the Flávio leader line when the rule applies', () => {
+  it('announces the rule window on the Flávio line', () => {
     const msg = buildRoundMessage(
       round([match({ homeTeamName: 'Arsenal', awayTeamName: 'Chelsea' })], {
         flavio: {
           applies: true,
           leaderNames: ['Manoel Neto'],
           deadlineUtc: '2026-05-22T23:59:00Z',
+          windowHours: 24,
         },
       }),
     );
-    expect(msg).toMatch(/Líder @Manoel Neto tem até .+ para palpitar\./);
+    expect(msg).toContain('*REGRA FLÁVIO:* @Manoel Neto tem até 24 horas para palpitar');
+  });
+
+  it('prefers the exact deadline when the general lock cut the window short', () => {
+    const msg = buildRoundMessage(
+      round([match({})], {
+        flavio: {
+          applies: true,
+          leaderNames: ['Manoel Neto'],
+          deadlineUtc: '2026-05-22T23:59:00Z',
+          windowHours: 12,
+          deadlineCappedByLock: true,
+        },
+      }),
+    );
+    // Announcing "12 horas" would promise time the leader does not have.
+    expect(msg).not.toContain('12 horas');
+    expect(msg).toMatch(/\*REGRA FLÁVIO:\* @Manoel Neto tem até \d{1,2}h\d{2} de .+ para palpitar/);
+  });
+
+  it('agrees the verb with tied leaders', () => {
+    const msg = buildRoundMessage(
+      round([match({})], {
+        flavio: {
+          applies: true,
+          leaderNames: ['Manoel Neto', 'Edson'],
+          deadlineUtc: '2026-05-22T23:59:00Z',
+          windowHours: 24,
+        },
+      }),
+    );
+    expect(msg).toContain('*REGRA FLÁVIO:* @Manoel Neto, @Edson têm até 24 horas para palpitar');
   });
 
   it('omits the Flávio line when there is no leader or no deadline', () => {
     const noLeader = buildRoundMessage(
       round([match({})], { flavio: { applies: true, leaderNames: [], deadlineUtc: null } }),
     );
-    expect(noLeader).not.toContain('para palpitar.');
+    expect(noLeader).not.toContain('para palpitar');
 
     const noFlavio = buildRoundMessage(round([match({})]));
-    expect(noFlavio).not.toContain('para palpitar.');
+    expect(noFlavio).not.toContain('para palpitar');
   });
 
   it('shows a placeholder when the round has no matches', () => {
