@@ -259,6 +259,7 @@
   </h2>
   <app-match-list
     [matches]="r.matches"
+    [config]="scoringConfig()"
     [editable]="editable()"
     (edit)="edit($event)"
     (remove)="remove($event)"

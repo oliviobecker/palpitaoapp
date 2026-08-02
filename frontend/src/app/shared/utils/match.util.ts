@@ -16,6 +16,23 @@ export function isBigSeven(teamName: string): boolean {
   return BIG_SEVEN.has(teamName);
 }
 
+/** The Championship classic pair — the second classic group of the England certame. */
+export const CHAMPIONSHIP_CLASSICS = new Set<string>(['Millwall', 'West Ham United']);
+
+/**
+ * Both teams belong to the same classic group. The group, not the match's competition,
+ * decides the pair: a Championship pair also counts in the FA Cup, while a team from each
+ * group never pairs.
+ */
+function isClassicPairByName(match: RoundMatch): boolean {
+  const home = match.homeTeamName;
+  const away = match.awayTeamName;
+  return (
+    (isBigSeven(home) && isBigSeven(away)) ||
+    (CHAMPIONSHIP_CLASSICS.has(home) && CHAMPIONSHIP_CLASSICS.has(away))
+  );
+}
+
 /** World champion national teams (WorldCupTitles > 0), by name — mirrors the seed. */
 export const WORLD_CHAMPIONS = new Set<string>([
   'Brazil',
@@ -77,7 +94,7 @@ export function computeMultiplier(match: RoundMatch, config?: ScoringConfig | nu
     return multiplierFromConfig(match, config);
   }
 
-  const derby = isBigSeven(match.homeTeamName) && isBigSeven(match.awayTeamName);
+  const derby = isClassicPairByName(match);
 
   switch (match.competition) {
     case Competition.PremierLeague:
@@ -89,7 +106,7 @@ export function computeMultiplier(match: RoundMatch, config?: ScoringConfig | nu
     case Competition.Championship:
       if (match.phase === MatchPhase.PlayoffSemiFinal || match.phase === MatchPhase.PlayoffFinal)
         return 2;
-      return 1;
+      return derby ? 2 : 1;
     case Competition.LeagueOne:
       return 2;
     case Competition.FifaWorldCup: {
@@ -118,18 +135,30 @@ function multiplierFromConfig(match: RoundMatch, config: ScoringConfig): number 
   return classic ? rule.classicMultiplier : rule.multiplier;
 }
 
-/** Both teams are classic-eligible per the season config (matches the backend by team id). */
+/**
+ * Both teams belong to the same classic group of the season config (matches the backend by
+ * team id). A group-less classic — an older payload — pairs with any other group-less one,
+ * which is how the flat list used to behave.
+ */
 function isClassicFromConfig(match: RoundMatch, config: ScoringConfig): boolean {
-  const classicIds = new Set((config.teams ?? []).filter((t) => t.isClassic).map((t) => t.teamId));
-  return classicIds.has(match.homeTeamId) && classicIds.has(match.awayTeamId);
+  const groups = new Map(
+    (config.teams ?? [])
+      .filter((t) => t.isClassic)
+      .map((t) => [t.teamId, t.classicCompetition ?? null] as const),
+  );
+  if (!groups.has(match.homeTeamId) || !groups.has(match.awayTeamId)) return false;
+  return groups.get(match.homeTeamId) === groups.get(match.awayTeamId);
 }
 
 export function isClassic(match: RoundMatch, config?: ScoringConfig | null): boolean {
   if (isUsableConfig(config)) {
     return isClassicFromConfig(match, config);
   }
-  if (match.competition === Competition.PremierLeague) {
-    return isBigSeven(match.homeTeamName) && isBigSeven(match.awayTeamName);
+  if (
+    match.competition === Competition.PremierLeague ||
+    match.competition === Competition.Championship
+  ) {
+    return isClassicPairByName(match);
   }
   if (match.competition === Competition.FifaWorldCup) {
     return (

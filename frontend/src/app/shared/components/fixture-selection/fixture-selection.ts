@@ -109,7 +109,7 @@ export interface FixtureSelectionState {
                     @if (f.suggestedMultiplier > 1) {
                       <span class="badge text-bg-warning">x{{ f.suggestedMultiplier }}</span>
                     }
-                    @if (f.isBigSevenMatch) {
+                    @if (f.isClassicMatch) {
                       <span class="badge text-bg-danger">{{ 'fixtures.classic' | translate }}</span>
                     }
                     @if (f.isAlreadyAddedToRound) {

@@ -75,6 +75,10 @@ const COMPETITION_ORDER: Competition[] = [
 /** Stable phase order within a competition group. */
 const PHASE_ORDER: MatchPhase[] = [...ENGLAND_PHASES, ...WORLD_CUP_PHASES];
 
+/** Classic groups an admin may fill, per tournament type (mirrors the backend validation). */
+const ENGLAND_CLASSIC_GROUPS: Competition[] = [Competition.PremierLeague, Competition.Championship];
+const WORLD_CUP_CLASSIC_GROUPS: Competition[] = [Competition.FifaWorldCup];
+
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-scoring-rules',
@@ -134,12 +138,25 @@ export class AdminScoringRules implements OnInit, HasUnsavedChanges {
     () => this.config()?.tournamentType === TournamentType.FifaWorldCup,
   );
   protected readonly selectedTeams = computed(() => this.teams().filter((t) => t.isClassic));
+  /** Candidates for any group: a team belongs to at most one, so a selected team is out. */
   protected readonly addableTeams = computed(() => {
     const q = this.teamFilter().trim().toLowerCase();
     return this.teams()
       .filter((t) => !t.isClassic)
       .filter((t) => !q || t.name.toLowerCase().includes(q));
   });
+
+  /**
+   * One section per classic group, in competition order. Only pairs from the same group
+   * count as a classic, so the England certame edits its Premier League and Championship
+   * rivalries separately.
+   */
+  protected readonly classicGroups = computed(() =>
+    (this.isWorldCup() ? WORLD_CUP_CLASSIC_GROUPS : ENGLAND_CLASSIC_GROUPS).map((competition) => ({
+      competition,
+      teams: this.teams().filter((t) => t.isClassic && t.classicCompetition === competition),
+    })),
+  );
 
   /** Multiplier rules grouped by competition, in stable competition/phase order. */
   protected readonly multiplierGroups = computed(() => {
@@ -270,8 +287,13 @@ export class AdminScoringRules implements OnInit, HasUnsavedChanges {
   }
 
   // --- Classic teams -----------------------------------------------------
-  setTeam(teamId: string, isClassic: boolean): void {
-    this.teams.update((list) => list.map((t) => (t.teamId === teamId ? { ...t, isClassic } : t)));
+  /** Moves a team into a classic group, or out of every group when `group` is null. */
+  setTeam(teamId: string, group: Competition | null): void {
+    this.teams.update((list) =>
+      list.map((t) =>
+        t.teamId === teamId ? { ...t, isClassic: group !== null, classicCompetition: group } : t,
+      ),
+    );
     this.markDirty();
   }
 
@@ -361,7 +383,9 @@ export class AdminScoringRules implements OnInit, HasUnsavedChanges {
         (e) => e.category !== ScoreCategory.ExtraUncommon,
       ),
       multiplierRules: this.multiplierRules().map((r) => ({ ...r })),
-      classicTeamIds: this.selectedTeams().map((t) => t.teamId),
+      classicTeams: this.classicGroups().flatMap((g) =>
+        g.teams.map((t) => ({ teamId: t.teamId, competition: g.competition })),
+      ),
     };
 
     this.saving.set(true);

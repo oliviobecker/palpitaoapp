@@ -286,5 +286,5 @@
 
   <!-- Matches -->
   <h2 class="h6 fw-bold mb-2">{{ 'roundDetail.games' | translate }} ({{ r.matches.length }})</h2>
-  <app-match-list [matches]="r.matches" />
+  <app-match-list [matches]="r.matches" [config]="scoringConfig()" />
 }
