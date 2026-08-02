@@ -54,6 +54,7 @@ public class RoundService : IRoundService
                 TournamentType = r.Season!.TournamentType,
                 AllowParticipantsToViewOthersPredictions = r.Season!.AllowParticipantsToViewOthersPredictions,
                 AllowParticipantsToSubmitPredictions = r.Season!.AllowParticipantsToSubmitPredictions,
+                FaCupEnabled = r.Season!.FaCupEnabled,
             })
             .ToListAsync(ct);
     }
@@ -72,11 +73,18 @@ public class RoundService : IRoundService
         var dto = MapRound(round);
         var season = await _db.Seasons
             .Where(s => s.Id == round.SeasonId)
-            .Select(s => new { s.TournamentType, s.AllowParticipantsToViewOthersPredictions, s.AllowParticipantsToSubmitPredictions })
+            .Select(s => new
+            {
+                s.TournamentType,
+                s.AllowParticipantsToViewOthersPredictions,
+                s.AllowParticipantsToSubmitPredictions,
+                s.FaCupEnabled,
+            })
             .FirstAsync(ct);
         dto.TournamentType = season.TournamentType;
         dto.AllowParticipantsToViewOthersPredictions = season.AllowParticipantsToViewOthersPredictions;
         dto.AllowParticipantsToSubmitPredictions = season.AllowParticipantsToSubmitPredictions;
+        dto.FaCupEnabled = season.FaCupEnabled;
         dto.Flavio = await BuildFlavioAsync(round, ct);
         return dto;
     }
@@ -357,7 +365,8 @@ public class RoundService : IRoundService
         var usedOverride = EnsureMatchesEditable(round, request.OverrideLockJustification);
 
         var (competition, phase, startsAt) = ValidateMatchBasics(request);
-        await ValidateCompetitionAndPhaseAsync(round.SeasonId, competition, phase, ct);
+        await ValidateCompetitionAndPhaseAsync(
+            round.SeasonId, competition, phase, ct, wasAlreadyFaCup: match.Competition == Competition.FACup);
         await ValidateTeams(request.HomeTeamId, request.AwayTeamId, ct);
         ValidateManualMultiplier(request.ManualMultiplierOverride, request.ManualMultiplierJustification);
         ValidateLeagueOneLimit(round, competition, request.ManualMultiplierOverride, request.ManualMultiplierJustification, excludeMatchId: match.Id);
@@ -444,21 +453,32 @@ public class RoundService : IRoundService
         return (request.Competition.Value, request.Phase.Value, ToUtc(request.StartsAt.Value));
     }
 
-    /// <summary>Rejects competitions/phases that do not belong to the season's certame
-    /// type (e.g. a Premier League match in a FIFA World Cup season, or vice-versa).</summary>
-    private async Task ValidateCompetitionAndPhaseAsync(Guid seasonId, Competition competition, MatchPhase phase, CancellationToken ct)
+    /// <summary>
+    /// Rejects competitions/phases that do not belong to the season's certame type (e.g. a
+    /// Premier League match in a FIFA World Cup season, or vice-versa), and the FA Cup when
+    /// the season has it turned off. <paramref name="wasAlreadyFaCup"/> exempts a match that
+    /// is already an FA Cup one: turning the toggle off stops new FA Cup matches, it does not
+    /// freeze the matches already in the round (a kickoff still needs fixing).
+    /// </summary>
+    private async Task ValidateCompetitionAndPhaseAsync(
+        Guid seasonId, Competition competition, MatchPhase phase, CancellationToken ct, bool wasAlreadyFaCup = false)
     {
-        var type = await _db.Seasons
+        var season = await _db.Seasons
             .Where(s => s.Id == seasonId)
-            .Select(s => s.TournamentType)
+            .Select(s => new { s.TournamentType, s.FaCupEnabled })
             .FirstAsync(ct);
 
-        if (!TournamentRules.IsCompetitionAllowed(type, competition))
+        if (!TournamentRules.IsCompetitionAllowed(season.TournamentType, competition))
         {
             throw new BusinessRuleException("tournament.competitionNotAllowed");
         }
 
-        if (!TournamentRules.IsPhaseAllowed(type, phase))
+        if (competition == Competition.FACup && !season.FaCupEnabled && !wasAlreadyFaCup)
+        {
+            throw new BusinessRuleException("season.faCupDisabled");
+        }
+
+        if (!TournamentRules.IsPhaseAllowed(season.TournamentType, phase))
         {
             throw new BusinessRuleException("tournament.phaseNotAllowed");
         }

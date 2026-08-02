@@ -63,7 +63,11 @@ in §13 and the Flávio Rule variant in §15):
 
 - **Palpitão England** — `Competition`: Premier League, FA Cup, Championship, League One. The
   **Big Seven** clubs (Arsenal, Chelsea, Liverpool, Manchester City, Manchester United, Newcastle,
-  Tottenham) define the classics. Seeded club catalogue.
+  Tottenham) define the classics. Seeded club catalogue. The **FA Cup is optional per season**
+  (`Season.FaCupEnabled`, on by default, editable in **/admin/seasons**): turning it off hides FA
+  Cup fixtures from the fixture search (§24) and rejects them on manual add and import
+  (`season.faCupDisabled`). Matches already in a round are untouched — they still render, score and
+  refresh results, and stay editable.
 - **FIFA World Cup** — a single `FifaWorldCup` competition with phases group stage → round of
   32 → round of 16 → quarter-final → semi-final → third place → final. Played with **national
   teams**; the seeded former world champions (Brazil, Germany, Argentina, France, Uruguay, Spain,
@@ -546,13 +550,13 @@ That endpoint returns 404 outside `Development` and requires admin.
 ## 22. How to run the tests
 
 ```bash
-# Backend (383 tests — xUnit + SQLite in-memory)
+# Backend (466 tests — xUnit + SQLite in-memory)
 cd backend && dotnet test
 
-# Frontend (Vitest — 43 unit tests)
+# Frontend (Vitest — 73 unit tests)
 cd frontend && npm test -- --watch=false   # run once
 
-# Frontend e2e (Playwright — 34 tests; starts ng serve and mocks the API)
+# Frontend e2e (Playwright — 38 tests; starts ng serve and mocks the API)
 cd frontend && npm run e2e
 ```
 
@@ -581,7 +585,11 @@ alternatives. Switch via `Fixtures:Provider`.
 
 1. In **/admin/rounds/new**, the admin enters name/number, **start date** and **end date**.
 2. Clicks **"Search matches"** → the backend queries the external provider
-   (`POST /api/admin/fixtures/search`) and returns the matches in the period.
+   (`POST /api/admin/fixtures/search`) and returns the matches in the period. The request carries
+   the target season (`seasonId` while creating a round, `roundId` when editing one), so the search
+   only asks the provider for the competitions that season's certame runs — an England season never
+   queries the World Cup, and the FA Cup is left out when the season has it disabled (§1). Without
+   either id the search falls back to every tracked competition.
 3. The matches appear **grouped by date**, with a **checkbox**, filters (competition and search by
    team), **select all**, **clear selection** and a **counter** of selected ones. Each card shows
    the competition, date/time, home × away, classic/suggested-multiplier badges and the source.

@@ -22,7 +22,10 @@ export interface SearchFixturesRequest {
   startDate: string;
   endDate: string;
   competitions?: Competition[];
+  /** Scopes the search to the round's season (and flags fixtures already added to it). */
   roundId?: string | null;
+  /** Scopes the search while creating a round, where no round exists yet. */
+  seasonId?: string | null;
 }
 
 export interface ImportFixtureItem {

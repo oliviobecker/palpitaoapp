@@ -67,6 +67,8 @@ export interface Season {
   allowParticipantsToViewOthersPredictions: boolean;
   /** Whether participants submit predictions in the app (false = admin-only). */
   allowParticipantsToSubmitPredictions: boolean;
+  /** Whether FA Cup fixtures are offered for this season (England certames only). */
+  faCupEnabled: boolean;
   /** True when participant-submitted predictions already exist (warn before disabling). */
   hasParticipantPredictions: boolean;
 }
@@ -185,6 +187,8 @@ export interface Round {
   allowParticipantsToViewOthersPredictions?: boolean;
   /** From the round's season: whether participants submit predictions in the app. */
   allowParticipantsToSubmitPredictions?: boolean;
+  /** From the round's season: whether FA Cup fixtures may be added to this round. */
+  faCupEnabled?: boolean;
 }
 
 export interface RoundSummary {
@@ -205,6 +209,8 @@ export interface RoundSummary {
   allowParticipantsToViewOthersPredictions?: boolean;
   /** From the round's season: whether participants submit predictions in the app. */
   allowParticipantsToSubmitPredictions?: boolean;
+  /** From the round's season: whether FA Cup fixtures may be added to this round. */
+  faCupEnabled?: boolean;
 }
 
 export interface FixtureCandidate {

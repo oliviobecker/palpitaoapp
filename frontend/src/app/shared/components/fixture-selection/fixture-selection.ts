@@ -67,7 +67,7 @@ export interface FixtureSelectionState {
             (change)="setCompetitionFilter($event)"
           >
             <option value="">{{ 'fixtures.allCompetitions' | translate }}</option>
-            @for (c of competitions; track c) {
+            @for (c of competitions(); track c) {
               <option [value]="c">{{ 'fixtures.comp.' + c | translate }}</option>
             }
           </select>
@@ -152,8 +152,6 @@ export class FixtureSelection implements OnChanges {
   @Input() source = '';
   @Output() readonly selectionChange = new EventEmitter<FixtureSelectionState>();
 
-  protected readonly competitions = Object.values(Competition);
-
   private readonly fixtureSignal = signal<FixtureCandidate[]>([]);
   protected readonly selected = signal<Set<string>>(new Set());
   protected readonly filterCompetition = signal<string>('');
@@ -169,6 +167,16 @@ export class FixtureSelection implements OnChanges {
     this.filterTeam.set('');
     this.emit();
   }
+
+  /**
+   * Only the competitions the results actually contain, in the enum's canonical order —
+   * the search is scoped to the season's certame, so offering the whole enum would list
+   * competitions that can never match (another certame's, or a disabled FA Cup).
+   */
+  protected readonly competitions = computed(() => {
+    const present = new Set(this.fixtureSignal().map((f) => f.competition));
+    return Object.values(Competition).filter((c) => present.has(c));
+  });
 
   private readonly filtered = computed(() => {
     const comp = this.filterCompetition();

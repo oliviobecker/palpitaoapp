@@ -27,10 +27,14 @@ public class FixtureImportServiceTests
         public Exception? ThrowOnSearch { get; set; }
         public string SourceName => "FakeSource";
 
+        /// <summary>The competition list of each search, so tests can assert what was asked for.</summary>
+        public List<IReadOnlyList<Competition>> Searches { get; } = new();
+
         public Task<IReadOnlyList<FixtureCandidateDto>> SearchFixturesAsync(
             DateTime startDate, DateTime endDate,
             IReadOnlyList<Competition> competitions, CancellationToken cancellationToken)
         {
+            Searches.Add(competitions);
             if (ThrowOnSearch is not null)
             {
                 throw ThrowOnSearch;
@@ -71,6 +75,13 @@ public class FixtureImportServiceTests
         var current = new FakeCurrentGroupService();
         var scoringConfig = new SeasonScoringConfigService(db, audit, current);
         return new FixtureImportService(db, provider, new ScoringService(), scoringConfig, audit, current, options);
+    }
+
+    /// <summary>Turns the FA Cup off for the seeded season.</summary>
+    private static void DisableFaCup(AppDbContext db)
+    {
+        db.Seasons.Single(s => s.Id == SeasonId).FaCupEnabled = false;
+        db.SaveChanges();
     }
 
     private static Guid CreateDraftRound(AppDbContext db, int number = 1)
@@ -229,6 +240,120 @@ public class FixtureImportServiceTests
         Assert.True(response.Fixtures.Single().IsAlreadyAddedToRound);
     }
 
+    // --- Season scoping ----------------------------------------------------
+    private static SearchFixturesRequest SearchWindow(Guid? seasonId = null, Guid? roundId = null) => new()
+    {
+        StartDate = new DateTime(2026, 8, 15, 0, 0, 0, DateTimeKind.Utc),
+        EndDate = new DateTime(2026, 8, 17, 0, 0, 0, DateTimeKind.Utc),
+        SeasonId = seasonId,
+        RoundId = roundId,
+    };
+
+    private static FakeFixtureProvider EnglandAndCupProvider() => new()
+    {
+        Fixtures =
+        {
+            Fixture("Arsenal", "Chelsea", new DateTime(2026, 8, 15, 13, 30, 0, DateTimeKind.Utc)),
+            Fixture("Luton", "Reading", new DateTime(2026, 8, 16, 15, 0, 0, DateTimeKind.Utc),
+                Competition.FACup, externalId: "ext-cup"),
+            Fixture("Brazil", "Japan", new DateTime(2026, 8, 16, 18, 0, 0, DateTimeKind.Utc),
+                Competition.FifaWorldCup, MatchPhase.WorldCupGroupStage, "ext-wc"),
+        },
+    };
+
+    [Fact]
+    public async Task Search_with_a_season_excludes_the_fa_cup_when_it_is_disabled()
+    {
+        using var db = CreateContext();
+        DisableFaCup(db);
+        var provider = EnglandAndCupProvider();
+        var service = CreateService(db, provider);
+
+        var response = await service.SearchAsync(SearchWindow(seasonId: SeasonId), Admin, Ct);
+
+        Assert.DoesNotContain(response.Fixtures, f => f.Competition == Competition.FACup);
+        Assert.DoesNotContain(Competition.FACup, provider.Searches.Single());
+    }
+
+    [Fact]
+    public async Task Search_with_a_round_excludes_the_fa_cup_when_it_is_disabled()
+    {
+        using var db = CreateContext();
+        var roundId = CreateDraftRound(db);
+        DisableFaCup(db);
+        var provider = EnglandAndCupProvider();
+        var service = CreateService(db, provider);
+
+        var response = await service.SearchAsync(SearchWindow(roundId: roundId), Admin, Ct);
+
+        Assert.DoesNotContain(response.Fixtures, f => f.Competition == Competition.FACup);
+    }
+
+    [Fact]
+    public async Task Search_with_a_season_keeps_the_fa_cup_while_it_is_enabled()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db, EnglandAndCupProvider());
+
+        var response = await service.SearchAsync(SearchWindow(seasonId: SeasonId), Admin, Ct);
+
+        Assert.Contains(response.Fixtures, f => f.Competition == Competition.FACup);
+    }
+
+    [Fact]
+    public async Task Search_with_a_season_drops_the_other_certames_competitions()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db, EnglandAndCupProvider());
+
+        var response = await service.SearchAsync(SearchWindow(seasonId: SeasonId), Admin, Ct);
+
+        // An England season never asks the provider for the World Cup.
+        Assert.DoesNotContain(response.Fixtures, f => f.Competition == Competition.FifaWorldCup);
+    }
+
+    [Fact]
+    public async Task Search_without_a_season_keeps_every_competition()
+    {
+        using var db = CreateContext();
+        DisableFaCup(db);
+        var service = CreateService(db, EnglandAndCupProvider());
+
+        var response = await service.SearchAsync(SearchWindow(), Admin, Ct);
+
+        Assert.Equal(3, response.Fixtures.Count);
+    }
+
+    [Fact]
+    public async Task Search_for_the_fa_cup_alone_returns_nothing_without_calling_the_provider()
+    {
+        using var db = CreateContext();
+        DisableFaCup(db);
+        var provider = EnglandAndCupProvider();
+        var service = CreateService(db, provider);
+
+        var request = SearchWindow(seasonId: SeasonId);
+        request.Competitions.Add(Competition.FACup);
+        var response = await service.SearchAsync(request, Admin, Ct);
+
+        // An empty competition list means "all of them" to the providers, so the search
+        // must stop here instead of reopening everything.
+        Assert.Empty(response.Fixtures);
+        Assert.Empty(provider.Searches);
+    }
+
+    [Fact]
+    public async Task Search_with_an_unknown_season_is_not_found()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db, new FakeFixtureProvider());
+
+        var ex = await Assert.ThrowsAsync<NotFoundException>(() =>
+            service.SearchAsync(SearchWindow(seasonId: Guid.NewGuid()), Admin, Ct));
+
+        Assert.Equal("notFound.season", ex.Key);
+    }
+
     [Fact]
     public async Task Search_failure_is_audited_and_rethrown()
     {
@@ -355,6 +480,26 @@ public class FixtureImportServiceTests
             roundId, new ImportFixturesRequest(), Admin, Ct));
 
         Assert.Equal("fixtures.selectNone", ex.Key);
+    }
+
+    [Fact]
+    public async Task Import_rejects_a_fa_cup_fixture_when_the_season_disabled_it()
+    {
+        using var db = CreateContext();
+        var roundId = CreateDraftRound(db);
+        DisableFaCup(db);
+        var service = CreateService(db, new FakeFixtureProvider());
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => service.ImportAsync(
+            roundId, new ImportFixturesRequest
+            {
+                Fixtures =
+                {
+                    ToImport(Fixture("Luton", "Reading", new DateTime(2026, 8, 15, 13, 30, 0, DateTimeKind.Utc), Competition.FACup)),
+                },
+            }, Admin, Ct));
+
+        Assert.Equal("season.faCupDisabled", ex.Key);
     }
 
     [Fact]

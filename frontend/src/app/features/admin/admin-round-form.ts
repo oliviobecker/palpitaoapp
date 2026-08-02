@@ -251,9 +251,11 @@ export class AdminRoundForm implements OnInit, HasUnsavedChanges {
     this.form.controls.title.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
       this.autoTitle = false;
     });
-    // Re-number sequentially whenever the season changes.
+    // Re-number sequentially whenever the season changes, and refresh the suggestions:
+    // the search is scoped to the season's certame, so they differ per season.
     this.form.controls.seasonId.valueChanges.pipe(takeUntilDestroyed()).subscribe((seasonId) => {
       this.applyNextNumber(seasonId);
+      this.preSearch();
     });
   }
 
@@ -265,14 +267,15 @@ export class AdminRoundForm implements OnInit, HasUnsavedChanges {
         this.rounds.set(Array.isArray(rounds) ? rounds : []);
         const active = seasons.find((s) => s.isActive);
         if (active) {
-          // Cascades: seasonId → next number → auto name.
+          // Cascades: seasonId → next number → auto name → pre-search.
           this.form.patchValue({ seasonId: active.id });
         } else {
           this.applyNextNumber('');
+          // No season to scope by, but the default window (today → +10) is still worth
+          // pre-searching so suggestions are ready.
+          this.preSearch();
         }
       });
-    // Pre-search the default window (today → +10) so suggestions are ready.
-    this.preSearch();
   }
 
   /** Used by the unsaved-changes route guard (fixtures picked or fields edited). */
@@ -301,12 +304,16 @@ export class AdminRoundForm implements OnInit, HasUnsavedChanges {
    */
   private preSearch(): void {
     if (!this.canSearch()) return;
-    const { startDate, endDate } = this.form.getRawValue();
+    const { startDate, endDate, seasonId } = this.form.getRawValue();
     this.searching.set(true);
     this.searchError.set(false);
     this.adminApi
       .searchFixtures(
-        { startDate: `${startDate}T00:00:00`, endDate: `${endDate}T23:59:59` },
+        {
+          startDate: `${startDate}T00:00:00`,
+          endDate: `${endDate}T23:59:59`,
+          seasonId: seasonId || undefined,
+        },
         { silent: true },
       )
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -340,11 +347,15 @@ export class AdminRoundForm implements OnInit, HasUnsavedChanges {
   // --- Search -------------------------------------------------------------
   protected search(): void {
     if (!this.canSearch()) return;
-    const { startDate, endDate } = this.form.getRawValue();
+    const { startDate, endDate, seasonId } = this.form.getRawValue();
     this.searching.set(true);
     this.searchError.set(false);
     this.adminApi
-      .searchFixtures({ startDate: `${startDate}T00:00:00`, endDate: `${endDate}T23:59:59` })
+      .searchFixtures({
+        startDate: `${startDate}T00:00:00`,
+        endDate: `${endDate}T23:59:59`,
+        seasonId: seasonId || undefined,
+      })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {

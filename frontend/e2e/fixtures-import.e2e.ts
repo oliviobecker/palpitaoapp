@@ -119,6 +119,9 @@ test.describe('Round-by-period fixture import', () => {
     await expect(page.getByText('Arsenal')).toBeVisible();
     await expect(page.getByText('Reading')).toBeVisible();
     expect(searched.length).toBeGreaterThanOrEqual(1);
+    // The search is scoped to the season being created for, so the API can drop the
+    // competitions that certame does not run (a disabled FA Cup included).
+    expect(searched.at(-1)).toMatchObject({ seasonId: 's1' });
 
     // Select all -> counter shows 2 selected.
     await page.getByRole('button', { name: 'Selecionar todos' }).click();

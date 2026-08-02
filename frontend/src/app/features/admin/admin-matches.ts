@@ -98,13 +98,19 @@ export class AdminMatches implements OnInit, HasUnsavedChanges {
     [Competition.FifaWorldCup]: 'FIFA World Cup',
   };
 
-  /** Competitions/phases offered depend on the round's season certame type. */
-  protected readonly competitions = computed(() =>
-    competitionsForType(this.round()?.tournamentType).map((value) => ({
-      value,
-      label: AdminMatches.COMPETITION_LABELS[value],
-    })),
-  );
+  /**
+   * Competitions/phases offered depend on the round's season certame type. A season with
+   * the FA Cup turned off drops it — except while editing a match that already is an FA
+   * Cup one, which stays editable (and would render an empty select otherwise).
+   */
+  protected readonly competitions = computed(() => {
+    const round = this.round();
+    const editing = round?.matches?.find((m) => m.id === this.editingId());
+    const dropFaCup = round?.faCupEnabled === false && editing?.competition !== Competition.FACup;
+    return competitionsForType(round?.tournamentType)
+      .filter((value) => !dropFaCup || value !== Competition.FACup)
+      .map((value) => ({ value, label: AdminMatches.COMPETITION_LABELS[value] }));
+  });
   protected readonly phases = computed(() => phasesForType(this.round()?.tournamentType));
   private get isWorldCup(): boolean {
     return this.round()?.tournamentType === TournamentType.FifaWorldCup;

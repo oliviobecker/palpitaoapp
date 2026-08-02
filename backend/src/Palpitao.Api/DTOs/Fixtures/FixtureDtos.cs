@@ -10,14 +10,22 @@ public class SearchFixturesRequest
     public DateTime? EndDate { get; set; }
 
     /// <summary>
-    /// Competitions to include. When empty, all four tracked competitions are used.
+    /// Competitions to include. When empty, every competition the season's certame allows
+    /// is used (or all tracked competitions when neither a round nor a season is given).
     /// </summary>
     public List<Competition> Competitions { get; set; } = new();
 
     /// <summary>
-    /// Optional round being edited; used to flag fixtures already added to it.
+    /// Optional round being edited; used to flag fixtures already added to it and to scope
+    /// the search to its season's certame.
     /// </summary>
     public Guid? RoundId { get; set; }
+
+    /// <summary>
+    /// Optional season to scope the search by, for the round-creation flow where the round
+    /// does not exist yet. Ignored when <see cref="RoundId"/> is given.
+    /// </summary>
+    public Guid? SeasonId { get; set; }
 }
 
 /// <summary>A candidate fixture returned by an <c>IFixtureProvider</c>.</summary>

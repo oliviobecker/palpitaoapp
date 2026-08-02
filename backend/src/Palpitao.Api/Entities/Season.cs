@@ -38,6 +38,14 @@ public class Season : IGroupOwned
     /// </summary>
     public bool AllowParticipantsToSubmitPredictions { get; set; } = true;
 
+    /// <summary>
+    /// England certames only. When false, FA Cup fixtures are hidden from the fixture
+    /// search and rejected on manual add / import for this season's rounds; matches
+    /// already in a round are untouched (they still render, score and refresh results).
+    /// Irrelevant for the World Cup certame, where the FA Cup is never allowed.
+    /// </summary>
+    public bool FaCupEnabled { get; set; } = true;
+
     public DateTime CreatedAt { get; set; }
 
     // Navigation

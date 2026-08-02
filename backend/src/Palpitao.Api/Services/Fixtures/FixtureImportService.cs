@@ -65,10 +65,23 @@ public class FixtureImportService : IFixtureImportService
             throw new BusinessRuleException("fixtures.endBeforeStart");
         }
 
-        // Only competitions the system tracks (ignore the rest).
-        var competitions = request.Competitions.Count > 0
+        // Only competitions the system tracks (ignore the rest), scoped to the season's
+        // certame when we know it — so an England search never queries the World Cup and
+        // the FA Cup disappears once the season turns it off.
+        var requested = request.Competitions.Count > 0
             ? request.Competitions.Distinct().ToList()
             : Enum.GetValues<Competition>().ToList();
+
+        var competitions = await ScopeToSeasonAsync(requested, request, ct);
+        if (competitions.Count == 0)
+        {
+            // An empty list means "every competition" to the providers, so nothing may be
+            // sent downstream: the only correct answer here is no fixtures at all.
+            _audit.Add(actingUserId, "FixturesSearched", nameof(Round), request.RoundId?.ToString(),
+                new { request.StartDate, request.EndDate, competitions, source = _provider.SourceName, found = 0 });
+            await _db.SaveChangesAsync(ct);
+            return new SearchFixturesResponse { Source = _provider.SourceName };
+        }
 
         IReadOnlyList<FixtureCandidateDto> candidates;
         try
@@ -132,6 +145,40 @@ public class FixtureImportService : IFixtureImportService
         return new SearchFixturesResponse { Source = _provider.SourceName, Fixtures = ordered };
     }
 
+    /// <summary>
+    /// Narrows the requested competitions to the ones the target season's certame allows,
+    /// dropping the FA Cup when the season has it turned off. The season comes from the
+    /// round being edited, or from <c>SeasonId</c> in the round-creation flow (where no
+    /// round exists yet). Without either, the request is left untouched.
+    /// </summary>
+    private async Task<List<Competition>> ScopeToSeasonAsync(
+        List<Competition> requested, SearchFixturesRequest request, CancellationToken ct)
+    {
+        // Both queries run through the tenant query filter, so another group's id is
+        // simply not found.
+        var season = request.RoundId is Guid roundId
+            ? await _db.Rounds
+                .Where(r => r.Id == roundId)
+                .Select(r => new { r.Season!.TournamentType, r.Season!.FaCupEnabled })
+                .FirstOrDefaultAsync(ct) ?? throw new NotFoundException("notFound.round")
+            : request.SeasonId is Guid seasonId
+                ? await _db.Seasons
+                    .Where(s => s.Id == seasonId)
+                    .Select(s => new { s.TournamentType, s.FaCupEnabled })
+                    .FirstOrDefaultAsync(ct) ?? throw new NotFoundException("notFound.season")
+                : null;
+
+        if (season is null)
+        {
+            return requested;
+        }
+
+        var allowed = TournamentRules.AllowedCompetitions(season.TournamentType)
+            .Where(c => season.FaCupEnabled || c != Competition.FACup);
+
+        return requested.Intersect(allowed).ToList();
+    }
+
     // -----------------------------------------------------------------------
     // Import
     // -----------------------------------------------------------------------
@@ -157,18 +204,23 @@ public class FixtureImportService : IFixtureImportService
         }
 
         // Reject fixtures whose competition/phase do not match the season's certame
-        // type (e.g. a Premier League fixture into a FIFA World Cup round).
-        var tournamentType = await _db.Seasons
+        // type (e.g. a Premier League fixture into a FIFA World Cup round), and FA Cup
+        // fixtures when the season has the competition turned off.
+        var season = await _db.Seasons
             .Where(s => s.Id == round.SeasonId)
-            .Select(s => s.TournamentType)
+            .Select(s => new { s.TournamentType, s.FaCupEnabled })
             .FirstAsync(ct);
         foreach (var item in selected)
         {
-            if (!TournamentRules.IsCompetitionAllowed(tournamentType, item.Competition))
+            if (!TournamentRules.IsCompetitionAllowed(season.TournamentType, item.Competition))
             {
                 throw new BusinessRuleException("tournament.competitionNotAllowed");
             }
-            if (!TournamentRules.IsPhaseAllowed(tournamentType, item.Phase))
+            if (item.Competition == Competition.FACup && !season.FaCupEnabled)
+            {
+                throw new BusinessRuleException("season.faCupDisabled");
+            }
+            if (!TournamentRules.IsPhaseAllowed(season.TournamentType, item.Phase))
             {
                 throw new BusinessRuleException("tournament.phaseNotAllowed");
             }

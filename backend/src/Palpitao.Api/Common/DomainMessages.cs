@@ -251,6 +251,9 @@ public static class DomainMessages
 
             // Seasons.
             ["season.endBeforeStart"] = ("A data final não pode ser anterior à data inicial.", "The end date cannot be earlier than the start date."),
+            ["season.faCupDisabled"] = (
+                "A FA Cup está desativada nesta temporada.",
+                "The FA Cup is disabled for this season."),
 
             // Scoring configuration (admin-editable ruleset).
             ["scoring.basePointsNegative"] = (
