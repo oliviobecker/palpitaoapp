@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Palpitao.Api.Controllers;
 using Palpitao.Api.Data;
+using Palpitao.Api.Services.Ocr;
 using Xunit;
 
 namespace Palpitao.Api.Tests.Health;
@@ -23,8 +24,14 @@ public class HealthControllerTests
         return db;
     }
 
-    private static HealthController CreateController(AppDbContext db) =>
-        new(db, NullLogger<HealthController>.Instance);
+    private sealed class StubOcrEngine(params string[] missing) : IOcrEngine
+    {
+        public string ExtractText(byte[] image, string language) => string.Empty;
+        public IReadOnlyList<string> MissingLanguages(string language) => missing;
+    }
+
+    private static HealthController CreateController(AppDbContext db, IOcrEngine? ocr = null) =>
+        new(db, ocr ?? new StubOcrEngine(), NullLogger<HealthController>.Instance);
 
     [Fact]
     public void Liveness_returns_ok()
@@ -50,6 +57,33 @@ public class HealthControllerTests
 
         var result = Assert.IsType<ObjectResult>(await CreateController(db).Database(Ct));
         Assert.Equal(503, result.StatusCode);
+    }
+
+    [Fact]
+    public void Ocr_readiness_returns_ok_when_every_language_model_is_present()
+    {
+        using var db = CreateContext();
+        var result = Assert.IsType<OkObjectResult>(CreateController(db).Ocr());
+        Assert.Equal(200, result.StatusCode);
+    }
+
+    [Fact]
+    public void Ocr_readiness_returns_503_naming_the_missing_models()
+    {
+        using var db = CreateContext();
+        var controller = CreateController(db, new StubOcrEngine("por"));
+
+        var result = Assert.IsType<ObjectResult>(controller.Ocr());
+
+        Assert.Equal(503, result.StatusCode);
+
+        var properties = result.Value!.GetType().GetProperties();
+        var missing = properties.Single(p => p.Name == "missing").GetValue(result.Value);
+        Assert.Equal(["por"], Assert.IsAssignableFrom<IReadOnlyList<string>>(missing));
+
+        // Language codes are safe to hand out; the tessdata path is not — it goes to the engine's
+        // log instead, because this endpoint is anonymous.
+        Assert.Equal(["status", "missing"], properties.Select(p => p.Name));
     }
 
     [Fact]

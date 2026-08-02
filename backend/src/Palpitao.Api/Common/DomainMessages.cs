@@ -234,9 +234,14 @@ public static class DomainMessages
                 "There are duplicate candidates (same participant and match). Adjust or discard them before confirming."),
             ["ocr.batchAlreadyConfirmed"] = ("Esta importação já foi confirmada.", "This import has already been confirmed."),
             ["ocr.batchNotReviewable"] = ("Esta importação não está disponível para confirmação.", "This import is not available for confirmation."),
+            // Generic on purpose: this one is raised by a blanket catch, so it must not name a
+            // cause it cannot know. A missing model reports itself through ocr.tessdataMissing.
             ["ocr.processFailed"] = (
-                "Não foi possível processar a imagem com OCR. Verifique os arquivos de idioma (tessdata).",
-                "Could not process the image with OCR. Check the language files (tessdata)."),
+                "Não foi possível processar a imagem. Tente outra foto ou lance os palpites manualmente.",
+                "Could not process the image. Try another photo or enter the predictions manually."),
+            ["ocr.tessdataMissing"] = (
+                "O servidor está sem o modelo de idioma do OCR. Avise o administrador do sistema.",
+                "The OCR language model is missing on the server. Contact the system administrator."),
 
             // Tournament type (certame) validation.
             ["tournament.competitionNotAllowed"] = (

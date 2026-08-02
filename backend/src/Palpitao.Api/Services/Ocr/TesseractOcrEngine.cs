@@ -29,6 +29,27 @@ public class TesseractOcrEngine : IOcrEngine
         _logger = logger;
     }
 
+    public IReadOnlyList<string> MissingLanguages(string language)
+    {
+        var missing = language
+            .Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(code => !File.Exists(Path.Combine(_tessdataPath, $"{code}.traineddata")))
+            .ToArray();
+
+        if (missing.Length > 0)
+        {
+            // The path is logged here and nowhere else: this is the one place that knows it, and
+            // both callers (the import preflight and /health/ocr) need it in the log without
+            // putting a server path in an HTTP response.
+            _logger.LogWarning(
+                "Modelos de OCR ausentes ({Missing}) em {TessdataPath}. Veja Ocr:TessdataPath.",
+                string.Join(", ", missing),
+                _tessdataPath);
+        }
+
+        return missing;
+    }
+
     public string ExtractText(byte[] image, string language)
     {
         using var engine = new TesseractEngine(_tessdataPath, language, EngineMode.Default);
