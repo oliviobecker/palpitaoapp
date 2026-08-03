@@ -256,6 +256,25 @@ Seed dev admin: `admin@palpitao.local` / `Admin@123`.
   switch to keep the admin's own groups). Both paths run the same portable
   `scripts/reset-db-keep-admin.sql`.
 
+**Scoped deletes (`scripts/delete-{group,season,rounds}.sql`)** — for removing one tenant, one
+season or a season's rounds without wiping the database. There is **no delete endpoint in the app**
+for any of the three, so this is the only route. Pick the narrowest one: `delete-rounds` empties a
+season, `delete-season` drops a season inside a group, `delete-group` takes the whole tenant.
+
+- Each runs **dry-run by default** (`v_dry_run := true`): every `DELETE` really executes, the true
+  row counts print, then the block `RAISE`s and rolls back. Flip to `false` to commit. So the
+  foreign-key order is proven against the target database before anything is lost.
+- The order matters and is not obvious: five FKs into `"Groups"` are **`Restrict`**, so a plain
+  `DELETE FROM "Groups"` fails; `PredictionScores.RoundMatchId` is `Restrict` while its `RoundId` is
+  `Cascade`, so scores must precede matches; and `AuditLogs.GroupId` has **no FK at all**, so those
+  rows orphan themselves unless deleted explicitly.
+- `delete-rounds` also resets `Standings` and `GroupUser.IsEliminated` by default — both are
+  season-scoped, so deleting rounds otherwise leaves the standings screen showing points from rounds
+  that no longer exist (`v_reset_standings := false` if you would rather hit *Recalcular* in the UI).
+- Group/season names are matched ignoring case, padding and **dash style** (`-` vs `–` vs `—`): the
+  names are typed in the UI and copied by eye, and an en dash is invisible on screen but never
+  compares equal. A miss lists every existing group/season so the right name can be copied.
+
 **Rehearsal season on staging (`scripts/rehearsal/`):** Actions → *Seed rehearsal season (STAGING
 ONLY)* (`.github/workflows/seed-rehearsal-staging.yml`) seeds a full, already-played English 2025/26
 season (real fixtures + real final scores from the frozen feeds in `scripts/rehearsal/fixtures/`),
