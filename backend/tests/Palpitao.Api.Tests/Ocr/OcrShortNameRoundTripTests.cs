@@ -20,6 +20,11 @@ namespace Palpitao.Api.Tests.Ocr;
 /// entry there means adding one here, and a row in the
 /// <see cref="Palpitao.Api.Common.FootballReference"/> alias map when the short name is
 /// not a substring of the full name.
+///
+/// One documented exception: the frontend also shortens "Liverpool FC", the spelling the
+/// fixture feed uses rather than a seeded club. It has no row here because every full name
+/// below must exist in the catalogue; that spelling is covered by
+/// <c>PredictionImportServiceTests</c> instead.
 /// </summary>
 public class OcrShortNameRoundTripTests
 {
@@ -53,6 +58,7 @@ public class OcrShortNameRoundTripTests
         ("Mansfield Town", "Mansfield"),
         ("Milton Keynes Dons", "MK Dons"),
         ("Norwich City", "Norwich"),
+        ("Nottingham Forest", "Nottingham"),
         ("Oxford United", "Oxford"),
         ("Peterborough United", "Peterborough"),
         ("Plymouth Argyle", "Plymouth"),

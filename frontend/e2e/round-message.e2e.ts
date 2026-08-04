@@ -49,6 +49,20 @@ const roundWithMatches = {
       isFinished: false,
     },
     {
+      id: 'm5',
+      roundId: 'r7',
+      competition: 'PremierLeague',
+      phase: 'Regular',
+      homeTeamId: 't9',
+      // The spelling the fixture feed uses, alongside a club the group asked to shorten.
+      homeTeamName: 'Liverpool FC',
+      awayTeamId: 't10',
+      awayTeamName: 'Nottingham Forest',
+      startsAt: '2026-05-23T18:00:00Z',
+      order: 4,
+      isFinished: false,
+    },
+    {
       id: 'm2',
       roundId: 'r7',
       competition: 'Championship',
@@ -95,6 +109,9 @@ test.describe('Round group message', () => {
     await expect(pre).toContainText('Arsenal x Chelsea (×2)');
     // The full names come from the API; the message prints them short.
     await expect(pre).toContainText('Wolves x Leeds');
+    await expect(pre).toContainText('Liverpool x Nottingham');
+    await expect(pre).not.toContainText('Liverpool FC');
+    await expect(pre).not.toContainText('Nottingham Forest');
     await expect(pre).toContainText('*Championship*');
     await expect(pre).toContainText('Millwall x West Ham (×2)');
     await expect(pre).toContainText('Bolton x Stockport (×2)');

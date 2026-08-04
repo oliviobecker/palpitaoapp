@@ -447,6 +447,28 @@ public class FixtureImportServiceTests
     }
 
     [Fact]
+    public async Task Import_reuses_the_seeded_club_when_the_feed_adds_the_fc_suffix()
+    {
+        using var db = CreateContext();
+        var roundId = CreateDraftRound(db);
+        var service = CreateService(db, new FakeFixtureProvider());
+
+        var result = await service.ImportAsync(roundId, new ImportFixturesRequest
+        {
+            Fixtures =
+            {
+                // OneFootball ships "Liverpool FC"; without the alias this created a second
+                // Liverpool row, which is how the group ended up seeing the suffix.
+                ToImport(Fixture("Liverpool FC", "Chelsea", new DateTime(2026, 8, 15, 13, 30, 0, DateTimeKind.Utc))),
+            },
+        }, Admin, Ct);
+
+        Assert.Equal(0, result.CreatedTeamCount);
+        Assert.Equal(1, await db.Teams.CountAsync(t => t.Name == "Liverpool"));
+        Assert.Empty(await db.Teams.Where(t => t.Name == "Liverpool FC").ToListAsync());
+    }
+
+    [Fact]
     public async Task Import_creates_big_seven_team_when_new()
     {
         using var db = CreateContext();

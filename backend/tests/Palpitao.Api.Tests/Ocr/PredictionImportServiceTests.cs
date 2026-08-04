@@ -237,6 +237,25 @@ public class PredictionImportServiceTests
     }
 
     [Fact]
+    public void Feed_named_liverpool_still_matches_the_short_name_the_message_prints()
+    {
+        // The feed spells it "Liverpool FC" and FixtureImportService stores that verbatim,
+        // so a round can carry either spelling. The message prints "Liverpool" for both
+        // (frontend team-name.util.ts), and that has to come back to this match.
+        var matches = new List<RoundMatch>
+        {
+            new() { Id = Match1, HomeTeam = new Team { Name = "Liverpool FC" }, AwayTeam = new Team { Name = "Chelsea" } },
+        };
+
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), "João\nLiverpool 2 x 1 Chelsea", matches, Participants());
+
+        var c = Assert.Single(candidates);
+        Assert.Equal(Match1, c.RoundMatchId);
+        Assert.False(c.NeedsReview);
+    }
+
+    [Fact]
     public void Ampersand_club_matches_even_though_ocr_drops_the_symbol()
     {
         // CleanTeam keeps letters only, so the seeded "Brighton & Hove Albion" is read

@@ -40,12 +40,19 @@ export const TEAM_SHORT_NAMES: Readonly<Record<string, string>> = {
   'Leeds United': 'Leeds',
   'Leicester City': 'Leicester',
   'Lincoln City': 'Lincoln',
+  // Not a seeded club: the fixture feed spells Liverpool this way and the import creates
+  // the row verbatim, so the message would print the suffix the group asked us to drop.
+  // `FootballReference.NameAliases` stops new rows appearing; this keeps the existing one
+  // reading right. (Hence no row in OcrShortNameRoundTripTests, which seeds from the
+  // catalogue.)
+  'Liverpool FC': 'Liverpool',
   'Luton Town': 'Luton',
   'Manchester City': 'Man City',
   'Manchester United': 'Man Utd',
   'Mansfield Town': 'Mansfield',
   'Milton Keynes Dons': 'MK Dons',
   'Norwich City': 'Norwich',
+  'Nottingham Forest': 'Nottingham',
   'Oxford United': 'Oxford',
   'Peterborough United': 'Peterborough',
   'Plymouth Argyle': 'Plymouth',
@@ -61,8 +68,9 @@ export const TEAM_SHORT_NAMES: Readonly<Record<string, string>> = {
   'Wigan Athletic': 'Wigan',
   'Wolverhampton Wanderers': 'Wolves',
   'Wycombe Wanderers': 'Wycombe',
-  // Left alone on purpose: Notts County (bare "Notts" reads as Nottingham Forest) and
-  // Bristol City (Bristol alone is ambiguous while Bristol Rovers exists in the pyramid).
+  // Left alone on purpose: Notts County (bare "Notts" is the other Nottingham club, and
+  // now that Forest prints as "Nottingham" the two must stay clearly apart) and Bristol
+  // City (Bristol alone is ambiguous while Bristol Rovers exists in the pyramid).
 };
 
 const normalize = (name: string) => name.trim().replace(/\s+/g, ' ').toLowerCase();
