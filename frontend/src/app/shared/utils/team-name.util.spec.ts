@@ -12,6 +12,14 @@ describe('shortTeamName', () => {
     expect(shortTeamName('West Bromwich Albion')).toBe('West Brom');
     expect(shortTeamName('AFC Wimbledon')).toBe('Wimbledon');
     expect(shortTeamName('Brighton & Hove Albion')).toBe('Brighton');
+    expect(shortTeamName('Nottingham Forest')).toBe('Nottingham');
+  });
+
+  it('drops the suffix the fixture feed adds to Liverpool', () => {
+    // The feed ships "Liverpool FC" and the import stores it verbatim, so the club can sit
+    // in the catalogue under either spelling; both must print without the suffix.
+    expect(shortTeamName('Liverpool FC')).toBe('Liverpool');
+    expect(shortTeamName('Liverpool')).toBe('Liverpool');
   });
 
   it('passes unknown names through verbatim', () => {
@@ -28,7 +36,7 @@ describe('shortTeamName', () => {
 
   it('keeps clubs that are already short as they are', () => {
     // Notts County and Bristol City stay long on purpose — see the table's comment.
-    for (const name of ['Arsenal', 'Tottenham', 'Nottingham Forest', 'Notts County']) {
+    for (const name of ['Arsenal', 'Tottenham', 'Crystal Palace', 'Notts County']) {
       expect(shortTeamName(name)).toBe(name);
     }
   });

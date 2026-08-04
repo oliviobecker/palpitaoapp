@@ -12,6 +12,7 @@ public class FootballReferenceTests
     [InlineData("Spurs", "tottenham")]
     [InlineData("Brighton", "brighton & hove albion")]
     [InlineData("Nott'm Forest", "nottingham forest")]
+    [InlineData("Liverpool FC", "liverpool")]
     [InlineData("MK Dons", "milton keynes dons")]
     [InlineData("  Man   Utd  ", "manchester united")]
     public void Canonical_resolves_external_name_variants(string input, string expected)
@@ -41,6 +42,17 @@ public class FootballReferenceTests
             Assert.Equal(canonical, FootballReference.Canonical(canonical));
         }
     }
+
+    /// <summary>
+    /// The Big Seven set is keyed on the normalized name, not the canonical one, so a
+    /// spelling the feed uses has to be listed explicitly or the club silently stops
+    /// counting as a classic (no ×2 suggested for a Liverpool fixture).
+    /// </summary>
+    [Theory]
+    [InlineData("Liverpool")]
+    [InlineData("Liverpool FC")]
+    public void Big_seven_recognises_the_feed_spellings(string name)
+        => Assert.True(FootballReference.IsBigSeven(name));
 
     /// <summary>Keys must already be normalized, otherwise the lookup can never hit.</summary>
     [Fact]
