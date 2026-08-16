@@ -1,0 +1,111 @@
+<app-page-header [title]="'ocrAliases.title' | translate">
+  <div trail class="page-trail">
+    <a routerLink="/admin">Admin</a> · {{ 'ocrAliases.title' | translate }}
+  </div>
+</app-page-header>
+
+<p class="text-muted small">{{ 'ocrAliases.subtitle' | translate }}</p>
+
+<div class="card mb-3">
+  <div class="card-body p-3">
+    <h2 class="h6 fw-bold mb-2">{{ 'ocrAliases.addTitle' | translate }}</h2>
+    <form class="row g-2 align-items-end" (ngSubmit)="create()">
+      <div class="col-12 col-sm-5">
+        <label class="form-label small mb-1" for="alias-raw">
+          {{ 'ocrAliases.alias' | translate }}
+        </label>
+        <input
+          id="alias-raw"
+          class="form-control form-control-sm"
+          [(ngModel)]="newAlias"
+          name="aliasRaw"
+          [placeholder]="'ocrAliases.aliasPlaceholder' | translate"
+          [disabled]="creating()"
+        />
+      </div>
+      <div class="col-12 col-sm-5">
+        <label class="form-label small mb-1" for="alias-user">
+          {{ 'ocrAliases.participant' | translate }}
+        </label>
+        <select
+          id="alias-user"
+          class="form-select form-select-sm"
+          [(ngModel)]="newUserId"
+          name="userId"
+          [disabled]="creating()"
+        >
+          <option [ngValue]="null">{{ 'ocrAliases.pickParticipant' | translate }}</option>
+          @for (p of participants(); track p.id) {
+            <option [ngValue]="p.id">{{ p.name }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-12 col-sm-2 d-grid">
+        <button
+          type="submit"
+          class="btn btn-primary btn-sm"
+          [disabled]="creating() || !newAlias.trim() || !newUserId"
+        >
+          @if (creating()) {
+            <span class="spinner-border spinner-border-sm me-1"></span>
+          }
+          {{ 'ocrAliases.add' | translate }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+@if (loading()) {
+  <app-skeleton-list [count]="4" />
+} @else if (error()) {
+  <app-error-state (retry)="load()" />
+} @else if (aliases().length === 0) {
+  <app-empty-state icon="tag" [message]="'ocrAliases.empty' | translate" />
+} @else {
+  <div class="card">
+    <div class="card-body p-3">
+      <div class="input-group input-group-sm mb-2 oa-search">
+        <span class="input-group-text"><app-icon name="search" [size]="14" /></span>
+        <input
+          class="form-control"
+          [value]="search()"
+          (input)="search.set($any($event.target).value)"
+          [placeholder]="'ocrAliases.search' | translate"
+          [attr.aria-label]="'ocrAliases.search' | translate"
+        />
+      </div>
+
+      @for (a of visible(); track a.id) {
+        <div class="oa-row">
+          <div class="oa-row__name">
+            {{ a.aliasRaw }}
+            <small class="text-body-secondary">{{ a.updatedAt | date: 'short' }}</small>
+          </div>
+          <select
+            class="form-select form-select-sm oa-row__select"
+            [disabled]="busyId() === a.id"
+            (change)="repoint(a, $any($event.target).value)"
+            [attr.aria-label]="'ocrAliases.participant' | translate"
+          >
+            @for (p of participants(); track p.id) {
+              <option [value]="p.id" [selected]="p.id === a.userId">{{ p.name }}</option>
+            }
+          </select>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-danger"
+            [disabled]="busyId() === a.id"
+            (click)="remove(a)"
+            [attr.aria-label]="'ocrAliases.remove' | translate"
+            [title]="'ocrAliases.remove' | translate"
+          >
+            <app-icon name="trash-2" [size]="14" />
+          </button>
+        </div>
+      } @empty {
+        <p class="text-muted small mb-0">{{ 'ocrAliases.noMatch' | translate }}</p>
+      }
+    </div>
+  </div>
+}

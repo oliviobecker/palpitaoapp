@@ -222,6 +222,13 @@ export class Admin implements OnInit {
       link: '/admin/teams',
     },
     {
+      icon: 'tag',
+      tile: 'icon-tile--violet',
+      title: 'adminDash.aliases',
+      sub: 'adminDash.aliasesSub',
+      link: '/admin/ocr-aliases',
+    },
+    {
       icon: 'users',
       tile: 'icon-tile--teal',
       title: 'adminDash.participants',

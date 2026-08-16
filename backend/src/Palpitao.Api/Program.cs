@@ -192,6 +192,7 @@ builder.Services.AddScoped<ISeasonService, SeasonService>();
 builder.Services.AddScoped<IUserAdminService, UserAdminService>();
 builder.Services.AddScoped<IAdminPredictionService, AdminPredictionService>();
 builder.Services.AddScoped<IPredictionImportService, PredictionImportService>();
+builder.Services.AddScoped<IOcrAliasService, OcrAliasService>();
 builder.Services.AddScoped<IOcrService, OcrService>();
 builder.Services.AddSingleton<IOcrEngine, TesseractOcrEngine>();
 // Uploaded images live in Postgres, so their footprint is capped per round and swept by age.

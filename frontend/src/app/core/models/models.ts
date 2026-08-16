@@ -376,6 +376,22 @@ export interface OcrBatchSummary {
   confirmedAt?: string | null;
 }
 
+/**
+ * A name OCR import has been taught to read as a participant — learned when an admin confirms a
+ * batch after correcting a name, or added by hand on the admin screen.
+ */
+export interface OcrParticipantAlias {
+  id: string;
+  /** Normalized lookup key (lowercased, accent-folded) — what a screenshot has to hit. */
+  alias: string;
+  /** The name as written/read, which is what the admin recognises. */
+  aliasRaw: string;
+  userId: string;
+  userName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PredictionCoverageParticipant {
   userId: string;
   name: string;

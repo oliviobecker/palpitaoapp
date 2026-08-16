@@ -132,6 +132,11 @@ export const routes: Routes = [
               import('./features/admin/admin-ocr-history').then((m) => m.AdminOcrHistory),
           },
           {
+            path: 'ocr-aliases',
+            loadComponent: () =>
+              import('./features/admin/admin-ocr-aliases').then((m) => m.AdminOcrAliases),
+          },
+          {
             path: 'scoring',
             canDeactivate: [unsavedChangesGuard],
             loadComponent: () =>

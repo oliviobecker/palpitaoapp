@@ -9,6 +9,7 @@ import {
   ImportFixturesResponse,
   OcrBatch,
   OcrBatchSummary,
+  OcrParticipantAlias,
   Participant,
   PredictionCoverage,
   RefreshResultsResponse,
@@ -215,6 +216,24 @@ export class AdminService {
 
   cancelOcr(batchId: string): Observable<void> {
     return this.http.post<void>(`${this.base}/ocr-imports/${batchId}/cancel`, {});
+  }
+
+  // --- OCR participant aliases --------------------------------------------
+  listOcrAliases(): Observable<OcrParticipantAlias[]> {
+    return this.http.get<OcrParticipantAlias[]>(`${this.base}/ocr-aliases`);
+  }
+
+  createOcrAlias(aliasRaw: string, userId: string): Observable<OcrParticipantAlias> {
+    return this.http.post<OcrParticipantAlias>(`${this.base}/ocr-aliases`, { aliasRaw, userId });
+  }
+
+  /** Only the participant can change — the alias text is keyed and immutable. */
+  updateOcrAlias(id: string, userId: string): Observable<OcrParticipantAlias> {
+    return this.http.put<OcrParticipantAlias>(`${this.base}/ocr-aliases/${id}`, { userId });
+  }
+
+  deleteOcrAlias(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/ocr-aliases/${id}`);
   }
 
   // --- External fixtures (round-by-period import) -------------------------

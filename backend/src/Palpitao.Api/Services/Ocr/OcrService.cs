@@ -23,6 +23,7 @@ public class OcrService : IOcrService
     private readonly AppDbContext _db;
     private readonly IOcrEngine _engine;
     private readonly IPredictionImportService _import;
+    private readonly IOcrAliasService _aliases;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
     private readonly OcrStorageOptions _storage;
@@ -32,6 +33,7 @@ public class OcrService : IOcrService
         AppDbContext db,
         IOcrEngine engine,
         IPredictionImportService import,
+        IOcrAliasService aliases,
         IAuditService audit,
         ICurrentGroupService current,
         IOptions<OcrStorageOptions> storage,
@@ -40,6 +42,7 @@ public class OcrService : IOcrService
         _db = db;
         _engine = engine;
         _import = import;
+        _aliases = aliases;
         _audit = audit;
         _current = current;
         _storage = storage.Value;
@@ -165,7 +168,7 @@ public class OcrService : IOcrService
 
             var participants = await GroupQueries.ActiveParticipants(_db, groupId)
                 .ToListAsync(ct);
-            var aliases = await _import.GetParticipantAliasesAsync(groupId, ct);
+            var aliases = await _aliases.GetForGroupAsync(groupId, ct);
 
             var candidates = _import.BuildCandidates(
                 batch.Id, roundId, text, round.Matches.ToList(), participants, aliases);

@@ -1,3 +1,5 @@
+using Palpitao.Api.Entities;
+
 namespace Palpitao.Api.Common;
 
 /// <summary>
@@ -88,6 +90,7 @@ public static class DomainMessages
             ["notFound.ocrBatch"] = ("Importação não encontrada.", "Import not found."),
             ["notFound.ocrCandidate"] = ("Candidato não encontrado.", "Candidate not found."),
             ["notFound.ocrImage"] = ("Nenhuma imagem armazenada para esta importação.", "No image stored for this import."),
+            ["notFound.ocrAlias"] = ("Apelido não encontrado.", "Alias not found."),
 
             // Common.
             ["common.justificationRequired"] = ("A justificativa é obrigatória.", "A justification is required."),
@@ -256,6 +259,13 @@ public static class DomainMessages
             ["ocr.tessdataMissing"] = (
                 "O servidor está sem o modelo de idioma do OCR. Avise o administrador do sistema.",
                 "The OCR language model is missing on the server. Contact the system administrator."),
+            ["ocr.aliasEmpty"] = ("Informe o apelido.", "Enter the alias."),
+            ["ocr.aliasTooLong"] = (
+                $"O apelido deve ter no máximo {OcrParticipantAlias.MaxAliasLength} caracteres.",
+                $"The alias must be at most {OcrParticipantAlias.MaxAliasLength} characters."),
+            ["ocr.aliasAlreadyExists"] = (
+                "Este apelido já está cadastrado. Edite o apelido existente na lista.",
+                "This alias already exists. Edit the existing one in the list."),
 
             // Tournament type (certame) validation.
             ["tournament.competitionNotAllowed"] = (

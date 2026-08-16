@@ -144,8 +144,10 @@ public class OcrServiceTests
 
         var engine = new FakeOcrEngine { Result = "João\nArsenal 2x1 Chelsea" };
         var current = new FakeCurrentGroupService();
-        var import = new PredictionImportService(db, new AuditService(db), current);
-        var service = new OcrService(db, engine, import, new AuditService(db), current, Storage(), NullLogger<OcrService>.Instance);
+        var aliases = new OcrAliasService(db, new AuditService(db), current);
+        var import = new PredictionImportService(db, new AuditService(db), current, aliases);
+        var service = new OcrService(
+            db, engine, import, aliases, new AuditService(db), current, Storage(), NullLogger<OcrService>.Instance);
 
         var batch = await service.ProcessAsync(round.Id, "palpites.png", PngBytes(1, 2, 3), "por", Admin, Ct);
 
@@ -166,8 +168,10 @@ public class OcrServiceTests
         OcrStorageOptions? storage = null)
     {
         current ??= new FakeCurrentGroupService();
+        var aliases = new OcrAliasService(db, new AuditService(db), current);
         return new OcrService(
-            db, engine ?? new FakeOcrEngine(), new PredictionImportService(db, new AuditService(db), current),
+            db, engine ?? new FakeOcrEngine(),
+            new PredictionImportService(db, new AuditService(db), current, aliases), aliases,
             new AuditService(db), current, Storage(storage), NullLogger<OcrService>.Instance);
     }
 

@@ -1,0 +1,42 @@
+.oa-search {
+  max-width: 22rem;
+}
+
+.oa-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--bs-border-color);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.oa-row__name {
+  // Takes the slack so the participant and delete controls line up down the list, instead of
+  // each row placing them relative to how long its own alias happens to be.
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  small {
+    margin-left: 0.35rem;
+  }
+}
+
+.oa-row__select {
+  width: auto;
+  min-width: 9.5rem;
+  flex: 0 0 auto;
+
+  // Fixed from tablet up so the participant column lines up down the list; on a phone it stays
+  // content-sized, where a fixed width would squeeze the alias next to it.
+  @media (min-width: 576px) {
+    width: 12rem;
+  }
+}
