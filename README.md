@@ -537,6 +537,13 @@ is only fixed once. Only names the matcher could not resolve on its own are stor
 every row bearing that name agreed on the same participant; a later confirmation re-points an alias
 that turned out to be wrong.
 
+They are not a black box: **Admin → Apelidos** (`/admin/ocr-aliases`) lists what the group has
+learned, re-points an alias at another participant, deletes one, and teaches one by hand before any
+screenshot has needed it. The alias text itself is immutable — it is the normalized key the lookup
+runs on, so changing it means deleting and creating. `OcrAliasService` owns the table for both the
+import and the screen, which is what keeps the normalization and the one-meaning-per-group rule in
+a single place.
+
 ### Limitations and why review is needed
 
 OCR is heuristic: it depends on the image quality and the text format. The parser recognizes

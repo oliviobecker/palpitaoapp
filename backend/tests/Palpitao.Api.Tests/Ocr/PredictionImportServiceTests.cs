@@ -19,7 +19,16 @@ public class PredictionImportServiceTests
     private static readonly Guid Match1 = Guid.Parse("55555555-5555-5555-5555-555555555501");
     private static readonly Guid Match2 = Guid.Parse("55555555-5555-5555-5555-555555555502");
 
-    private static PredictionImportService PureService() => new(null!, null!, null!);
+    /// <summary>Parsing/matching only — nothing it touches reaches the database.</summary>
+    private static PredictionImportService PureService() => new(null!, null!, null!, null!);
+
+    /// <summary>The real thing, wired to a context: needed by ConfirmAsync and alias learning.</summary>
+    private static PredictionImportService ImportService(AppDbContext db)
+    {
+        var current = new FakeCurrentGroupService();
+        var audit = new AuditService(db);
+        return new PredictionImportService(db, audit, current, new OcrAliasService(db, audit, current));
+    }
 
     private static List<RoundMatch> Matches() =>
     [
@@ -681,7 +690,7 @@ public class PredictionImportServiceTests
         var (roundId, matchId, _) = SeedRound(db);
         var pl = SeedParticipant(db, "PL");
         var batchId = SeedBatchWithCandidates(db, roundId, (matchId, pl, "Paraguaio"));
-        var service = new PredictionImportService(db, new AuditService(db), new FakeCurrentGroupService());
+        var service = ImportService(db);
 
         await service.ConfirmAsync(batchId, Admin, Ct);
 
@@ -702,7 +711,7 @@ public class PredictionImportServiceTests
         var (roundId, matchId, _) = SeedRound(db);
         var pl = SeedParticipant(db, "PL");
         var batchId = SeedBatchWithCandidates(db, roundId, (matchId, pl, "PL"));
-        var service = new PredictionImportService(db, new AuditService(db), new FakeCurrentGroupService());
+        var service = ImportService(db);
 
         await service.ConfirmAsync(batchId, Admin, Ct);
 
@@ -720,7 +729,7 @@ public class PredictionImportServiceTests
         var second = SeedParticipant(db, "Flavio");
         var batchId = SeedBatchWithCandidates(
             db, roundId, (matchId, first, "Paraguaio"), (matchId, second, "Paraguaio"));
-        var service = new PredictionImportService(db, new AuditService(db), new FakeCurrentGroupService());
+        var service = ImportService(db);
 
         await service.ConfirmAsync(batchId, Admin, Ct);
 
@@ -736,7 +745,7 @@ public class PredictionImportServiceTests
         var (roundId, matchId, _) = SeedRound(db);
         var wrong = SeedParticipant(db, "PL");
         var right = SeedParticipant(db, "Flavio");
-        var service = new PredictionImportService(db, new AuditService(db), new FakeCurrentGroupService());
+        var service = ImportService(db);
 
         await service.ConfirmAsync(SeedBatchWithCandidates(db, roundId, (matchId, wrong, "nAc")), Admin, Ct);
         await service.ConfirmAsync(SeedBatchWithCandidates(db, roundId, (matchId, right, "nAc")), Admin, Ct);
@@ -888,7 +897,7 @@ public class PredictionImportServiceTests
         using var db = CreateContext();
         var (roundId, matchId, userId) = SeedRound(db);
         var batchId = SeedBatch(db, roundId, matchId, userId, 2, 1);
-        var service = new PredictionImportService(db, new AuditService(db), new FakeCurrentGroupService());
+        var service = ImportService(db);
 
         await service.ConfirmAsync(batchId, Admin, Ct);
 
@@ -905,7 +914,7 @@ public class PredictionImportServiceTests
         using var db = CreateContext();
         var (roundId, matchId, _) = SeedRound(db);
         var batchId = SeedBatch(db, roundId, matchId, userId: null, home: 2, away: 1); // no participant
-        var service = new PredictionImportService(db, new AuditService(db), new FakeCurrentGroupService());
+        var service = ImportService(db);
 
         await Assert.ThrowsAsync<BusinessRuleException>(() => service.ConfirmAsync(batchId, Admin, Ct));
     }
@@ -916,7 +925,7 @@ public class PredictionImportServiceTests
         using var db = CreateContext();
         var (roundId, matchId, userId) = SeedRound(db);
         var batchId = SeedBatch(db, roundId, matchId, userId, 2, 1);
-        var service = new PredictionImportService(db, new AuditService(db), new FakeCurrentGroupService());
+        var service = ImportService(db);
         await service.ConfirmAsync(batchId, Admin, Ct);
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => service.ConfirmAsync(batchId, Admin, Ct));
@@ -943,7 +952,7 @@ public class PredictionImportServiceTests
             UpdatedAt = DateTime.UtcNow,
         });
         db.SaveChanges();
-        var service = new PredictionImportService(db, new AuditService(db), new FakeCurrentGroupService());
+        var service = ImportService(db);
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => service.ConfirmAsync(batchId, Admin, Ct));
         Assert.Equal("ocr.duplicateCandidates", ex.Key);

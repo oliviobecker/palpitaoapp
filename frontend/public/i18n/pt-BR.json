@@ -302,6 +302,8 @@
     "participantsSub": "Jogadores da temporada",
     "teams": "Catálogo de times",
     "teamsSub": "Revise divisões e sincronize elencos",
+    "aliases": "Apelidos do OCR",
+    "aliasesSub": "Nomes que a importação por imagem já sabe reconhecer",
     "scoringRules": "Regras de pontuação",
     "scoringRulesSub": "Multiplicadores e categorias",
     "registrationRequests": "Solicitações de cadastro",
@@ -626,6 +628,7 @@
     "scoring": "Pontuação",
     "teams": "Times",
     "participants": "Participantes",
+    "aliases": "Apelidos",
     "requests": "Solicitações",
     "audit": "Auditoria"
   },
@@ -743,6 +746,24 @@
     "statusConfirmed": "Confirmada",
     "statusFailed": "Falhou",
     "statusCancelled": "Cancelada"
+  },
+  "ocrAliases": {
+    "title": "Apelidos do OCR",
+    "subtitle": "Nomes que a importação por imagem já sabe reconhecer. São aprendidos quando você corrige o participante ao confirmar uma importação — e podem ser cadastrados aqui antes disso.",
+    "empty": "Nenhum apelido ainda. Corrija o participante ao confirmar uma importação e ele aparece aqui.",
+    "noMatch": "Nenhum apelido encontrado.",
+    "search": "Buscar apelido ou participante",
+    "alias": "Apelido",
+    "aliasPlaceholder": "Como aparece na imagem (ex.: Paraguaio)",
+    "participant": "Participante",
+    "pickParticipant": "Selecione o participante",
+    "addTitle": "Cadastrar apelido",
+    "add": "Cadastrar",
+    "added": "\"{{alias}}\" agora aponta para {{name}}.",
+    "updated": "\"{{alias}}\" agora aponta para {{name}}.",
+    "remove": "Excluir",
+    "removed": "Apelido excluído.",
+    "confirmRemove": "Excluir o apelido \"{{alias}}\"? A próxima importação volta a pedir revisão para esse nome."
   },
   "language": {
     "label": "Idioma",

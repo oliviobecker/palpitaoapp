@@ -163,6 +163,21 @@ overall standings update.
   `catch` that records the failure re-saved the same tracked entities — so it failed again and the
   admin got an opaque 500 instead of "could not read this image".
 
+**Admin screen for the learned aliases (this session)**
+- New tab **Admin → Apelidos** (`/admin/ocr-aliases`): lists what the group has learned, re-points an
+  alias at another participant, deletes one, and teaches one by hand before any screenshot needs it.
+  Closes the loop opened by the alias learning — a wrong mapping no longer waits for the next import
+  to be corrected.
+- **`OcrAliasService` now owns `OcrParticipantAliases`** for both the import (`GetForGroupAsync`,
+  `LearnAsync`, moved out of `PredictionImportService`) and the screen (list/create/update/delete),
+  so the normalization and the one-meaning-per-group rule live in one place. `LearnAsync` still
+  enqueues on the caller's unit of work — aliases and the predictions they describe land together.
+- Rules: the alias **text is immutable** (it is the normalized lookup key — delete and create
+  instead); a duplicate is rejected (`ocr.aliasAlreadyExists`) rather than silently re-pointed,
+  since the existing row is already on screen; the target must be on the group's roster
+  (eliminated members included, as an alias may predate the elimination).
+- No migration — the table shipped with the learning itself.
+
 ## 4. Pending / not implemented (roadmap)
 
 - **Server-side autosave** of predictions (current draft is client-side only; needs partial/incremental
@@ -170,8 +185,6 @@ overall standings update.
 - **Batch import** of predictions across participants (grid or CSV) — deferred by request.
 - OCR: async processing queue if image volume ever grows (Tesseract still runs on the request
   thread). Storing the uploaded image is **done** — see "Stored OCR images" above.
-- OCR: no admin screen for the learned participant aliases yet — a wrong one is corrected by
-  confirming the next import against the right person, which re-points it.
 - Public create-group requires a **new** email (existing user creating another group not supported).
 - `AdminSentryController` (diagnostics) still uses the global role.
 - Real secrets must be configured via env/user-secrets/GitHub Secrets; rotate the 3 once-public secrets.

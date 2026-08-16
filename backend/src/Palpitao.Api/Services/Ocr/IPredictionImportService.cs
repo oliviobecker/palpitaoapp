@@ -35,14 +35,8 @@ public interface IPredictionImportService
 
     /// <summary>
     /// Confirms a reviewed batch, saving candidates as Source = AdminOcr and learning the
-    /// participant names the admin had to correct, so the next import resolves them itself.
+    /// participant names the admin had to correct (via <see cref="IOcrAliasService"/>), so the
+    /// next import resolves them itself.
     /// </summary>
     Task ConfirmAsync(Guid batchId, Guid adminId, CancellationToken ct);
-
-    /// <summary>
-    /// The group's confirmed participant aliases, keyed by
-    /// <see cref="OcrTeamMatcher.NormalizeAlias"/> and ready for
-    /// <see cref="BuildCandidates"/>.
-    /// </summary>
-    Task<IReadOnlyDictionary<string, Guid>> GetParticipantAliasesAsync(Guid groupId, CancellationToken ct);
 }

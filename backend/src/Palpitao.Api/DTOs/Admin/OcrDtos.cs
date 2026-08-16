@@ -60,3 +60,35 @@ public class UpdateOcrCandidateRequest
     public int? PredictedAwayScore { get; set; }
     public string? ReviewNotes { get; set; }
 }
+
+/// <summary>A name confirmed for a participant, as shown on the admin screen.</summary>
+public class OcrParticipantAliasDto
+{
+    public Guid Id { get; set; }
+
+    /// <summary>Normalized lookup key — shown only as a hint of what actually matches.</summary>
+    public string Alias { get; set; } = string.Empty;
+
+    /// <summary>The name as it was written/read, which is what the admin recognises.</summary>
+    public string AliasRaw { get; set; } = string.Empty;
+
+    public Guid UserId { get; set; }
+    public string UserName { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+
+public class CreateOcrParticipantAliasRequest
+{
+    public string AliasRaw { get; set; } = string.Empty;
+    public Guid UserId { get; set; }
+}
+
+/// <summary>
+/// Only the participant can be re-pointed. Changing the text would re-key the row against the
+/// unique (GroupId, Alias) index — delete and create instead.
+/// </summary>
+public class UpdateOcrParticipantAliasRequest
+{
+    public Guid UserId { get; set; }
+}

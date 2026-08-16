@@ -302,6 +302,8 @@
     "participantsSub": "Season players",
     "teams": "Team catalogue",
     "teamsSub": "Review divisions and sync rosters",
+    "aliases": "OCR aliases",
+    "aliasesSub": "Names the image import already knows how to read",
     "scoringRules": "Scoring rules",
     "scoringRulesSub": "Multipliers and categories",
     "registrationRequests": "Registration requests",
@@ -626,6 +628,7 @@
     "scoring": "Scoring",
     "teams": "Teams",
     "participants": "Participants",
+    "aliases": "Aliases",
     "requests": "Requests",
     "audit": "Audit"
   },
@@ -743,6 +746,24 @@
     "statusConfirmed": "Confirmed",
     "statusFailed": "Failed",
     "statusCancelled": "Cancelled"
+  },
+  "ocrAliases": {
+    "title": "OCR aliases",
+    "subtitle": "Names the image import already knows how to read. They are learned when you correct the participant while confirming an import — and can be added here beforehand.",
+    "empty": "No aliases yet. Correct the participant when confirming an import and it shows up here.",
+    "noMatch": "No alias found.",
+    "search": "Search alias or participant",
+    "alias": "Alias",
+    "aliasPlaceholder": "As it appears in the image (e.g. Paraguaio)",
+    "participant": "Participant",
+    "pickParticipant": "Select the participant",
+    "addTitle": "Add alias",
+    "add": "Add",
+    "added": "\"{{alias}}\" now points to {{name}}.",
+    "updated": "\"{{alias}}\" now points to {{name}}.",
+    "remove": "Delete",
+    "removed": "Alias deleted.",
+    "confirmRemove": "Delete the alias \"{{alias}}\"? The next import will ask for review on that name again."
   },
   "language": {
     "label": "Language",
