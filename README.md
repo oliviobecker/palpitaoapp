@@ -512,9 +512,30 @@ the sender uses. `Ocr:Preprocess = false` disables the whole pass.
 
 Name matching is strict first (exact, then containment, then the alias map). Only when *nothing*
 matched does it retry allowing **one wrong character** — `Coventy` → `Coventry City`, `Joao` →
-`João` — and only when that retry finds exactly one fixture. A name that already matched two
-fixtures stays ambiguous; the tolerance never breaks a tie. `OcrShortNameRoundTripTests` sweeps the
-whole seeded catalogue to prove no two clubs collide under that budget.
+`João` — and only when that retry finds exactly one fixture. That retry also goes *through* the
+alias map, because the short names the group message prints are nowhere near their club by edit
+distance: `Weolves` is one edit from `Wolves`, which is how it reaches Wolverhampton Wanderers. A
+name that already matched two fixtures stays ambiguous; the tolerance never breaks a tie.
+`OcrShortNameRoundTripTests` sweeps the whole seeded catalogue to prove no two clubs collide under
+that budget, and that no alias reaches a club that is not its own.
+
+**Reading a WhatsApp screenshot.** What surrounds the scores is furniture, and the parser is built
+to ignore it: the clock stamped on every screenshot (`Cardiff 1x2 Wrexham 17:35`) is stripped before
+anything else — its colon otherwise reads as `Name: content` and swallows the fixture — as are the
+emphasis markers and quotes around a name (`*Flavio*`, `"Paraguaio"`), the day separators (`Hoje`)
+and the app's own vocabulary. The participant is read from `PALPITES <nome>` (the line the group
+actually writes, ALL-CAPS included) or from `<Nome>, Rodada N`, where the comma is optional — the
+season title in that same shape is rejected rather than filed as a person. A score whose zeros OCR
+returned as the letter `O` on **both** sides is accepted when it stands alone as its own token
+(`Norwich O x O West Brom`), while `Arsenal x Leeds` — where the same letters are stolen from the
+ends of two club names — stays rejected.
+
+**Learned participant aliases.** When an admin confirms a batch after correcting who a name belongs
+to, that correction is remembered per group (`OcrParticipantAliases`) and consulted on the next
+import, so a nickname the roster does not carry (`Paraguaio` → `PL`) or a stable piece of OCR junk
+is only fixed once. Only names the matcher could not resolve on its own are stored, and only when
+every row bearing that name agreed on the same participant; a later confirmation re-points an alias
+that turned out to be wrong.
 
 ### Limitations and why review is needed
 

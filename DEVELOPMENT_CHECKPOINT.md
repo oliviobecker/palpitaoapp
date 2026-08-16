@@ -138,13 +138,40 @@ overall standings update.
   `OcrImageRetentionBackgroundService` (Postgres advisory lock, single-runner). Pruning removes
   **only the bytes** — batches, candidates and audit survive. Expect ~1 GB/season/group otherwise.
 
+**Reading real WhatsApp screenshots (this session)**
+- Diagnosed from production: no image had actually failed OCR. The two red "Falhou" cards were
+  imports the admin had **discarded** (`CancelAsync` stored `Failed`), and the real problem was the
+  parser losing the participant, so every card had to be fixed by hand.
+- **Parser** (`OcrTextParser`): strips the screenshot clock before anything else (its colon read as
+  `Name: content` and ate the last fixture of the block), makes the comma optional in
+  `<Nome>, Rodada N` (while rejecting the season title in that same shape), reads `PALPITES <nome>`
+  including ALL-CAPS, strips WhatsApp emphasis/quotes around a name, ignores the app's own
+  vocabulary (`Hoje`, `Palpites`, …), accepts a letter-`O` score pair when it stands alone as its
+  own token, and tries every score pair on a line rather than only the first.
+- **Matcher**: the one-edit tier now also bridges through `FootballReference.Aliases`, so `Weolves`
+  → `Wolves` → Wolverhampton Wanderers. Guarded by a catalogue-wide sweep.
+- **`OcrBatchStatus.Cancelled`** split from `Failed`, so a discarded import no longer reads as a
+  broken one (rows cancelled before this keep `Failed`; string column, no data migration).
+- **Batch participant selector** on the review screen: files every candidate against one person
+  through the existing per-candidate autosave — one screenshot is one person's predictions.
+- **Learned aliases** (`OcrParticipantAliases`, group-scoped): a correction the admin makes on
+  confirm is remembered and used on the next import (`Paraguaio` → `PL`). Only names the matcher
+  could not resolve itself, only when every row bearing that name agreed, and a later confirmation
+  re-points a mapping learned from junk.
+- **Truncation**: `MatchTextRaw`/`ParticipantNameRaw` are clamped to their column widths in
+  `BuildCandidates`. An over-long line failed the insert *inside* the import's `try`, and the
+  `catch` that records the failure re-saved the same tracked entities — so it failed again and the
+  admin got an opaque 500 instead of "could not read this image".
+
 ## 4. Pending / not implemented (roadmap)
 
 - **Server-side autosave** of predictions (current draft is client-side only; needs partial/incremental
   save on the backend).
 - **Batch import** of predictions across participants (grid or CSV) — deferred by request.
-- OCR: store the uploaded image (`StoredFilePath` is never set) for later re-processing; async
-  processing queue if image volume ever grows.
+- OCR: async processing queue if image volume ever grows (Tesseract still runs on the request
+  thread). Storing the uploaded image is **done** — see "Stored OCR images" above.
+- OCR: no admin screen for the learned participant aliases yet — a wrong one is corrected by
+  confirming the next import against the right person, which re-points it.
 - Public create-group requires a **new** email (existing user creating another group not supported).
 - `AdminSentryController` (diagnostics) still uses the global role.
 - Real secrets must be configured via env/user-secrets/GitHub Secrets; rotate the 3 once-public secrets.
