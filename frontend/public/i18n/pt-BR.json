@@ -691,6 +691,9 @@
     "participant": "Participante",
     "match": "Jogo",
     "noParticipant": "Sem participante",
+    "batchParticipant": "Participante desta imagem",
+    "batchParticipantHint": "aplica a todos os candidatos abaixo",
+    "detectedName": "nome lido: {{name}}",
     "noMatch": "Sem jogo",
     "confirm": "Confirmar importação",
     "cancel": "Cancelar importação",
@@ -738,7 +741,8 @@
     "statusProcessed": "Processada",
     "statusReviewed": "Revisada",
     "statusConfirmed": "Confirmada",
-    "statusFailed": "Falhou"
+    "statusFailed": "Falhou",
+    "statusCancelled": "Cancelada"
   },
   "language": {
     "label": "Idioma",

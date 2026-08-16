@@ -165,8 +165,10 @@ public class OcrService : IOcrService
 
             var participants = await GroupQueries.ActiveParticipants(_db, groupId)
                 .ToListAsync(ct);
+            var aliases = await _import.GetParticipantAliasesAsync(groupId, ct);
 
-            var candidates = _import.BuildCandidates(batch.Id, roundId, text, round.Matches.ToList(), participants);
+            var candidates = _import.BuildCandidates(
+                batch.Id, roundId, text, round.Matches.ToList(), participants, aliases);
             _db.OcrPredictionCandidates.AddRange(candidates);
 
             _audit.Add(adminId, "OcrImportProcessed", nameof(OcrImportBatch), batch.Id.ToString(),
@@ -362,7 +364,7 @@ public class OcrService : IOcrService
     {
         var batch = await GetEditableBatchAsync(batchId, ct);
 
-        batch.Status = OcrBatchStatus.Failed;
+        batch.Status = OcrBatchStatus.Cancelled;
         _audit.Add(adminId, "OcrImportCancelled", nameof(OcrImportBatch), batch.Id.ToString(), null);
         await _db.SaveChangesAsync(ct);
     }

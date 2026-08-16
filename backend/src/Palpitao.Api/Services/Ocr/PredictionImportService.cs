@@ -33,14 +33,15 @@ public class PredictionImportService : IPredictionImportService
         Guid roundId,
         string text,
         IReadOnlyList<RoundMatch> matches,
-        IReadOnlyList<User> participants)
+        IReadOnlyList<User> participants,
+        IReadOnlyDictionary<string, Guid>? participantAliases = null)
     {
         var now = DateTime.UtcNow;
         var candidates = new List<OcrPredictionCandidate>();
 
         foreach (var parsed in OcrTextParser.Parse(text))
         {
-            var userId = OcrTeamMatcher.ResolveParticipant(parsed.ParticipantName, participants);
+            var userId = OcrTeamMatcher.ResolveParticipant(parsed.ParticipantName, participants, participantAliases);
             var roundMatchId = OcrTeamMatcher.ResolveMatch(parsed.HomeTeamRaw, parsed.AwayTeamRaw, matches);
 
             var confidence = (userId is not null ? 0.5 : 0.0) + (roundMatchId is not null ? 0.5 : 0.0);
@@ -52,9 +53,14 @@ public class PredictionImportService : IPredictionImportService
                 OcrImportBatchId = batchId,
                 RoundId = roundId,
                 UserId = userId,
-                ParticipantNameRaw = parsed.ParticipantName,
+                // Truncated, not trusted: these carry raw OCR output, and a noisy screenshot
+                // produces lines longer than any real fixture. An over-long value fails the
+                // insert inside the import's try, and the catch that records the failure saves
+                // the very same tracked entities — so it fails again and the admin gets an
+                // opaque 500 instead of "could not read this image".
+                ParticipantNameRaw = Clamp(parsed.ParticipantName, OcrPredictionCandidate.MaxParticipantNameLength),
                 RoundMatchId = roundMatchId,
-                MatchTextRaw = parsed.MatchText,
+                MatchTextRaw = Clamp(parsed.MatchText, OcrPredictionCandidate.MaxMatchTextLength),
                 PredictedHomeScore = parsed.HomeScore,
                 PredictedAwayScore = parsed.AwayScore,
                 Confidence = confidence,
@@ -66,6 +72,16 @@ public class PredictionImportService : IPredictionImportService
 
         return candidates;
     }
+
+    private static string? Clamp(string? value, int max) =>
+        value is not null && value.Length > max ? value[..max] : value;
+
+    public async Task<IReadOnlyDictionary<string, Guid>> GetParticipantAliasesAsync(
+        Guid groupId, CancellationToken ct) =>
+        await _db.OcrParticipantAliases
+            .AsNoTracking()
+            .Where(a => a.GroupId == groupId)
+            .ToDictionaryAsync(a => a.Alias, a => a.UserId, ct);
 
     public async Task ConfirmAsync(Guid batchId, Guid adminId, CancellationToken ct)
     {
@@ -140,9 +156,74 @@ public class PredictionImportService : IPredictionImportService
         batch.Status = OcrBatchStatus.Confirmed;
         batch.ConfirmedAt = now;
 
+        var learned = await LearnParticipantAliasesAsync(batch, groupId, adminId, now, ct);
+
         _audit.Add(adminId, "OcrImportConfirmed", nameof(OcrImportBatch), batch.Id.ToString(),
-            new { batch.RoundId, count = batch.Candidates.Count });
+            new { batch.RoundId, count = batch.Candidates.Count, aliases = learned });
 
         await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Records the names this batch had to be corrected on. The admin has just told us who
+    /// "Paraguaio" is by filing the rows against them; remembering it is the difference between
+    /// fixing the same screenshot format once and fixing it every round.
+    ///
+    /// Only names the matcher could not already resolve on its own are stored, and only when
+    /// every row bearing that name agrees on the participant — one image can carry two people,
+    /// and a name that pointed at both would be a coin flip on the next import.
+    /// </summary>
+    private async Task<int> LearnParticipantAliasesAsync(
+        OcrImportBatch batch, Guid groupId, Guid adminId, DateTime now, CancellationToken ct)
+    {
+        var participants = await GroupQueries.ActiveParticipants(_db, groupId).ToListAsync(ct);
+
+        var unanimous = batch.Candidates
+            .Where(c => !string.IsNullOrWhiteSpace(c.ParticipantNameRaw) && c.UserId is not null)
+            .GroupBy(c => OcrTeamMatcher.NormalizeAlias(c.ParticipantNameRaw!), StringComparer.Ordinal)
+            .Where(g => g.Select(c => c.UserId!.Value).Distinct().Count() == 1)
+            .Select(g => (Key: g.Key, UserId: g.First().UserId!.Value, Raw: g.First().ParticipantNameRaw!))
+            .Where(x => x.Key.Length > 0
+                && OcrTeamMatcher.ResolveParticipant(x.Raw, participants) != x.UserId)
+            .ToList();
+
+        if (unanimous.Count == 0)
+        {
+            return 0;
+        }
+
+        var keys = unanimous.Select(x => x.Key).ToList();
+        var stored = await _db.OcrParticipantAliases
+            .Where(a => a.GroupId == groupId && keys.Contains(a.Alias))
+            .ToDictionaryAsync(a => a.Alias, ct);
+
+        foreach (var (key, userId, raw) in unanimous)
+        {
+            if (stored.TryGetValue(key, out var existing))
+            {
+                // The latest correction wins: an alias learned from junk that turns out to
+                // belong to somebody else is re-pointed rather than left wrong forever.
+                existing.UserId = userId;
+                existing.AliasRaw = raw;
+                existing.UpdatedAt = now;
+                continue;
+            }
+
+            _db.OcrParticipantAliases.Add(new OcrParticipantAlias
+            {
+                Id = Guid.NewGuid(),
+                GroupId = groupId,
+                UserId = userId,
+                Alias = key,
+                AliasRaw = raw,
+                CreatedAt = now,
+                UpdatedAt = now,
+            });
+        }
+
+        _audit.Add(adminId, "OcrParticipantAliasesLearned", nameof(OcrImportBatch), batch.Id.ToString(),
+            new { aliases = unanimous.Select(x => new { x.Raw, x.UserId }).ToList() });
+
+        return unanimous.Count;
     }
 }

@@ -90,6 +90,59 @@ test.describe('Admin OCR import', () => {
     expect(confirmed).toBe(true);
   });
 
+  test('files every candidate against one participant from the batch selector', async ({
+    page,
+  }) => {
+    // What the admin actually needs when OCR misreads the name on a WhatsApp screenshot:
+    // pick the person once instead of on all twelve cards.
+    await seedAuth(page, 'pt-BR');
+
+    const unresolved = {
+      ...batch,
+      candidates: batch.candidates.map((c) => ({
+        ...c,
+        userId: null,
+        participantNameRaw: 'nAc',
+        confidence: 0.5,
+        needsReview: true,
+      })),
+    };
+    const saved: string[] = [];
+    await installApi(page, [
+      { method: 'GET', match: path('/rounds/r1'), respond: () => ({ json: round }) },
+      { method: 'GET', match: path('/admin/users'), respond: () => ({ json: participants }) },
+      {
+        method: 'POST',
+        match: path('/admin/rounds/r1/predictions/import-image'),
+        respond: () => ({ json: unresolved }),
+      },
+      {
+        method: 'PUT',
+        match: (p) => /\/admin\/ocr-imports\/b1\/candidates\/(c1|c2)$/.test(p),
+        respond: (req) => {
+          saved.push(req.url().split('/').pop()!);
+          return { json: batch };
+        },
+      },
+    ]);
+
+    await page.goto('/admin/rounds/r1/import-predictions');
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles({ name: 'palpites.png', mimeType: 'image/png', buffer: pngBytes });
+    await page.getByRole('button', { name: 'Processar imagem' }).click();
+
+    // The name OCR read is shown, and nothing is filed yet.
+    await expect(page.getByText('nome lido: nAc')).toBeVisible();
+    await expect(page.getByText('2 para revisar')).toBeVisible();
+
+    await page.selectOption('#ocr-batch-participant', { label: 'João Silva' });
+
+    // Both cards saved through the normal per-candidate autosave.
+    await expect.poll(() => saved.slice().sort()).toEqual(['c1', 'c2']);
+    await expect(page.getByRole('button', { name: 'Confirmar importação' })).toBeEnabled();
+  });
+
   test('shows an error toast when no file was selected', async ({ page }) => {
     await seedAuth(page, 'pt-BR');
     await installApi(page, [

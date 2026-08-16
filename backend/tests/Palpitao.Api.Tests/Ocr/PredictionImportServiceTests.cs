@@ -196,6 +196,9 @@ public class PredictionImportServiceTests
     // would confidently store a prediction nobody made.
     [InlineData("Arsenal x Chelsea")]
     [InlineData("Liverpool x Manchester City")]
+    // The dangerous one: "l x L" are both letter look-alikes, so this is the line the
+    // isolated-pair allowance below must keep rejecting.
+    [InlineData("Arsenal x Leeds")]
     public void Parser_ignores_a_line_left_without_a_score(string line)
     {
         var candidates = PureService().BuildCandidates(
@@ -365,6 +368,214 @@ public class PredictionImportServiceTests
         Assert.Equal((0, 3), (parsed[4].HomeScore, parsed[4].AwayScore)); // Iraque O(=0) x 3
     }
 
+    /// <summary>
+    /// The 12 Championship fixtures of the round the group actually imported, spelled the way
+    /// the fixture feed stores them — so the short names the screenshots carry ("Wolves",
+    /// "West Brom", "Sheffield Utd", "QPR") have to travel the alias path to get back here.
+    /// </summary>
+    private static List<RoundMatch> ChampionshipRound() =>
+    [
+        Fixture("Wolverhampton Wanderers", "Blackburn Rovers"),
+        Fixture("Bolton Wanderers", "Preston North End"),
+        Fixture("Charlton Athletic", "Derby County"),
+        Fixture("Middlesbrough", "Lincoln City"),
+        Fixture("Norwich City", "West Bromwich Albion"),
+        Fixture("Portsmouth", "Queens Park Rangers"),
+        Fixture("Stoke City", "Swansea City"),
+        Fixture("Bristol City", "Millwall"),
+        Fixture("Sheffield United", "Birmingham City"),
+        Fixture("Watford", "Southampton"),
+        Fixture("Burnley", "West Ham United"),
+        Fixture("Cardiff City", "Wrexham"),
+    ];
+
+    private static RoundMatch Fixture(string home, string away) => new()
+    {
+        Id = Guid.NewGuid(),
+        HomeTeam = new Team { Name = home },
+        AwayTeam = new Team { Name = away },
+    };
+
+    [Fact]
+    public void Parser_reads_the_whatsapp_screenshot_headed_by_the_participant_and_the_round()
+    {
+        // Verbatim Tesseract output of an image the group imported (batch a57e21ca). Everything
+        // here used to go wrong at once: the name sat behind a WhatsApp bold marker and had no
+        // comma before "Rodada", "Norwich O x O" lost both zeros to the letter O, the last line
+        // carried a clock, and "Weolves" was one letter off.
+        var text =
+            "Palpitao England 2026/2027\n" +
+            "*Flavio Rodada 1 (RODADA TESTE\n" +
+            "NAÃO PONTUA PRO PALPITAO)\n" +
+            "\n" +
+            "Palpites até 14h59 de sexta-feira\n" +
+            "(14/08/2026):\n" +
+            "\n" +
+            "Championship\n" +
+            "\n" +
+            "Weolves 3 x 2 Blackburn\n" +
+            "\n" +
+            "Bolton O x 2 Preston\n" +
+            "\n" +
+            "Charlton 4 x 1 Derby\n" +
+            "Middlesbrough 2 x 2 Lincoln\n" +
+            "Norwich O x O West Brom\n" +
+            "Portsmouth 2 x 1 QPR\n" +
+            "\n" +
+            "Stoke 1 x O Swansea\n" +
+            "\n" +
+            "Bristol City O x 1 Millwall\n" +
+            "Sheffield Utd 1 x 2 Birmingham\n" +
+            "Watford 2 x O Southampton\n" +
+            "Burnley O x 2 West Ham\n" +
+            "Cardiff 1x 3 Wrexham 01:06 Z\n";
+
+        List<User> participants = [new() { Id = Guid.NewGuid(), Name = "Flavio", Role = UserRole.Participant }];
+        var candidates = PureService()
+            .BuildCandidates(Guid.NewGuid(), Guid.NewGuid(), text, ChampionshipRound(), participants);
+
+        Assert.Equal(12, candidates.Count);
+        Assert.All(candidates, c => Assert.Equal("Flavio", c.ParticipantNameRaw));
+        Assert.All(candidates, c => Assert.Equal(participants[0].Id, c.UserId));
+        Assert.All(candidates, c => Assert.NotNull(c.RoundMatchId));
+        Assert.All(candidates, c => Assert.False(c.NeedsReview));
+
+        var norwich = Assert.Single(candidates, c => c.MatchTextRaw!.StartsWith("Norwich", StringComparison.Ordinal));
+        Assert.Equal(0, norwich.PredictedHomeScore);
+        Assert.Equal(0, norwich.PredictedAwayScore);
+
+        var cardiff = Assert.Single(candidates, c => c.MatchTextRaw!.StartsWith("Cardiff", StringComparison.Ordinal));
+        Assert.Equal(1, cardiff.PredictedHomeScore);
+        Assert.Equal(3, cardiff.PredictedAwayScore);
+    }
+
+    [Fact]
+    public void Parser_reads_the_screenshot_whose_name_only_follows_a_palpites_prefix()
+    {
+        // Batch 78a9fcb6: the chat header above the scores is pure OCR noise, and the only
+        // usable name is the ALL-CAPS "PALPITES PL" the group writes. "nAc" (junk) and
+        // "Paraguaio" (a nickname) both look like names and both used to win.
+        var text =
+            "12:32 B * SE\n" +
+            "ÃL )\n" +
+            "ALAFCA\n" +
+            "nAc\n" +
+            "Palpitão England 26/27 v\n" +
+            "Bruno, De Farias, Dr. Flavio Cr...\n" +
+            "X4 REGRAS:\n" +
+            "U-ULZ\n" +
+            "\"Paraguaio\"\n" +
+            "Palpitão England 2026/2027\n" +
+            "— Rodada 1\n" +
+            "PALPITES PL\n" +
+            "Wolves 2x0 Blackburn\n" +
+            "Bolton 2x1 Preston\n" +
+            "Charlton 1x0 Derby\n" +
+            "Middlesbrough 3x1 Lincoln\n" +
+            "Norwich 1x1 West Brom\n" +
+            "Portsmouth 1x2 QPR\n" +
+            "Stoke 1x2 Swansea\n" +
+            "Bristol City 2x0 Millwall\n" +
+            "Sheffield Utd 2x1 Birmingham\n" +
+            "Watford Ox2 Southampton\n" +
+            "Burnley 2x1 West Ham\n" +
+            "Cardiff 1x2 Wrexham 17:35 ,\n";
+
+        List<User> participants = [new() { Id = Guid.NewGuid(), Name = "PL", Role = UserRole.Participant }];
+        var candidates = PureService()
+            .BuildCandidates(Guid.NewGuid(), Guid.NewGuid(), text, ChampionshipRound(), participants);
+
+        Assert.Equal(12, candidates.Count);
+        Assert.All(candidates, c => Assert.Equal("PL", c.ParticipantNameRaw));
+        Assert.All(candidates, c => Assert.False(c.NeedsReview));
+    }
+
+    [Theory]
+    // The group writes the name behind this prefix, in whatever casing it feels like.
+    [InlineData("PALPITES Felippe", "Felippe")]
+    [InlineData("Palpites do Edson", "Edson")]
+    [InlineData("palpite da Ana", "Ana")]
+    public void Parser_reads_the_name_behind_a_palpites_prefix(string header, string expected)
+    {
+        var parsed = Assert.Single(PureService().Parse($"{header}\nArsenal 2x1 Chelsea"));
+        Assert.Equal(expected, parsed.ParticipantName);
+    }
+
+    [Theory]
+    // WhatsApp's own furniture, sitting right above a block of scores.
+    [InlineData("Hoje")]
+    [InlineData("Ontem")]
+    [InlineData("Palpites")]
+    [InlineData("Palpitão")]
+    public void Parser_does_not_mistake_the_apps_own_vocabulary_for_the_participant(string noise)
+    {
+        var parsed = Assert.Single(PureService().Parse($"João\n{noise}\nArsenal 2x1 Chelsea"));
+        Assert.Equal("João", parsed.ParticipantName);
+    }
+
+    [Theory]
+    // The comma is optional and the emphasis markers are stripped...
+    [InlineData("*Flavio Rodada 1 (RODADA TESTE", "Flavio")]
+    [InlineData("Gilberto, Rodada 2 (1a fase de grupos)", "Gilberto")]
+    [InlineData("_Ana_ - Rodada 3", "Ana")]
+    // ...but the season title the app itself prints above the fixtures is not a person.
+    [InlineData("Palpitão England 2026/2027 — Rodada 1", null)]
+    public void Parser_reads_the_round_header_without_taking_the_title_for_a_name(
+        string header, string? expected)
+    {
+        var parsed = Assert.Single(PureService().Parse($"{header}\nArsenal 2x1 Chelsea"));
+        Assert.Equal(expected, parsed.ParticipantName);
+    }
+
+    [Fact]
+    public void Parser_reads_a_score_whose_zeros_ocr_both_returned_as_letters()
+    {
+        // "O x O" stands alone as its own token, unlike the letters stolen from the ends of two
+        // team names in "Arsenal x Leeds" — which stays rejected (see the theory above).
+        var parsed = Assert.Single(PureService().Parse("João\nArsenal O x O Chelsea"));
+
+        Assert.Equal(0, parsed.HomeScore);
+        Assert.Equal(0, parsed.AwayScore);
+        Assert.Equal("Arsenal", parsed.HomeTeamRaw);
+        Assert.Equal("Chelsea", parsed.AwayTeamRaw);
+    }
+
+    [Theory]
+    // The clock WhatsApp stamps on a screenshot, glued to the last fixture of the block. The
+    // colon used to read as "Name: content" and swallowed the whole line.
+    [InlineData("Cardiff 1x2 Wrexham 17:35 ,")]
+    [InlineData("Cardiff 1x 2 Wrexham 01:06 Z")]
+    [InlineData("12:32 Cardiff 1x2 Wrexham")]
+    public void Parser_ignores_the_clock_stamped_on_the_screenshot(string line)
+    {
+        var matches = new List<RoundMatch> { Fixture("Cardiff City", "Wrexham") };
+
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), $"João\n{line}", matches, Participants());
+
+        var c = Assert.Single(candidates);
+        Assert.Equal(matches[0].Id, c.RoundMatchId);
+        Assert.Equal(1, c.PredictedHomeScore);
+        Assert.Equal(2, c.PredictedAwayScore);
+    }
+
+    [Theory]
+    // One letter wrong in a short name the group message prints. Canonical() is an exact-key
+    // lookup, so without the alias bridge "Weolves" never reaches Wolverhampton Wanderers.
+    [InlineData("Weolves")]
+    [InlineData("Wolvess")]
+    public void Parser_tolerates_a_wrong_letter_in_a_short_name(string mangled)
+    {
+        var matches = new List<RoundMatch> { Fixture("Wolverhampton Wanderers", "Blackburn Rovers") };
+
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), $"João\n{mangled} 3 x 2 Blackburn", matches, Participants());
+
+        var c = Assert.Single(candidates);
+        Assert.Equal(matches[0].Id, c.RoundMatchId);
+        Assert.False(c.NeedsReview);
+    }
+
     [Theory]
     // Flag glyphs fused onto the away team (prefix junk).
     [InlineData("Time 1 x 0 ak=Noruega", "Noruega")]
@@ -391,6 +602,147 @@ public class PredictionImportServiceTests
         var parsed = Assert.Single(PureService().Parse($"Ana\n{line}"));
         Assert.Equal(home, parsed.HomeTeamRaw);
         Assert.Equal(away, parsed.AwayTeamRaw);
+    }
+
+    [Fact]
+    public void Candidate_text_is_truncated_to_what_the_columns_hold()
+    {
+        // OCR on a noisy screenshot can glue a whole paragraph onto one fixture, and the match
+        // text is stored verbatim in a 300-wide column. An over-long insert fails inside the
+        // import's try — where the catch that records the failure re-saves the very same tracked
+        // entities and fails again, turning a readable "could not read this image" into an
+        // opaque 500. (The participant name has its own bound: the parser refuses anything over
+        // 40 characters as a name, so that column is only ever defended, never filled.)
+        var text = $"João\nArsenal 2 x 1 {new string('b', 400)}";
+
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), text, Matches(), Participants());
+
+        var c = Assert.Single(candidates);
+        Assert.Equal(OcrPredictionCandidate.MaxMatchTextLength, c.MatchTextRaw!.Length);
+        Assert.StartsWith("Arsenal 2 x 1 bbb", c.MatchTextRaw, StringComparison.Ordinal);
+        Assert.True(c.ParticipantNameRaw!.Length <= OcrPredictionCandidate.MaxParticipantNameLength);
+    }
+
+    [Fact]
+    public void A_learned_alias_resolves_the_participant_on_the_next_import()
+    {
+        // "Paraguaio" is the nickname the group writes; the roster says "PL". Nothing about the
+        // two strings matches, so only a confirmed alias can bridge them.
+        var pl = new User { Id = Guid.NewGuid(), Name = "PL", Role = UserRole.Participant };
+        var aliases = new Dictionary<string, Guid> { [OcrTeamMatcher.NormalizeAlias("Paraguaio")] = pl.Id };
+
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), "Paraguaio\nArsenal 2x1 Chelsea", Matches(), [pl], aliases);
+
+        var c = Assert.Single(candidates);
+        Assert.Equal(pl.Id, c.UserId);
+        Assert.False(c.NeedsReview);
+        Assert.Equal(1.0, c.Confidence);
+    }
+
+    [Theory]
+    // The stored key is normalized, so casing, accents and stray spacing all still hit it. An
+    // ALL-CAPS line is not among them: the parser refuses to read one as a name at all (that is
+    // what keeps OCR noise from stealing the participant), unless it follows "PALPITES".
+    [InlineData("paraguaio")]
+    [InlineData("Paraguaio")]
+    [InlineData("Paraguáio")]
+    [InlineData("PALPITES PARAGUAIO")]
+    public void A_learned_alias_ignores_casing_and_spacing(string written)
+    {
+        var pl = new User { Id = Guid.NewGuid(), Name = "PL", Role = UserRole.Participant };
+        var aliases = new Dictionary<string, Guid> { [OcrTeamMatcher.NormalizeAlias("  Paraguaio ")] = pl.Id };
+
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), $"{written}\nArsenal 2x1 Chelsea", Matches(), [pl], aliases);
+
+        Assert.Equal(pl.Id, Assert.Single(candidates).UserId);
+    }
+
+    [Fact]
+    public void A_learned_alias_is_ignored_once_the_participant_leaves_the_roster()
+    {
+        var gone = Guid.NewGuid();
+        var aliases = new Dictionary<string, Guid> { [OcrTeamMatcher.NormalizeAlias("Paraguaio")] = gone };
+
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), "Paraguaio\nArsenal 2x1 Chelsea", Matches(), Participants(), aliases);
+
+        var c = Assert.Single(candidates);
+        Assert.Null(c.UserId);
+        Assert.True(c.NeedsReview);
+    }
+
+    [Fact]
+    public async Task Confirm_learns_the_name_the_admin_had_to_correct()
+    {
+        using var db = CreateContext();
+        var (roundId, matchId, _) = SeedRound(db);
+        var pl = SeedParticipant(db, "PL");
+        var batchId = SeedBatchWithCandidates(db, roundId, (matchId, pl, "Paraguaio"));
+        var service = new PredictionImportService(db, new AuditService(db), new FakeCurrentGroupService());
+
+        await service.ConfirmAsync(batchId, Admin, Ct);
+
+        var alias = await db.OcrParticipantAliases.SingleAsync();
+        Assert.Equal(OcrTeamMatcher.NormalizeAlias("Paraguaio"), alias.Alias);
+        Assert.Equal("Paraguaio", alias.AliasRaw);
+        Assert.Equal(pl, alias.UserId);
+        Assert.Equal(SeedIds.DefaultGroup, alias.GroupId);
+        Assert.Contains(await db.AuditLogs.ToListAsync(), a => a.Action == "OcrParticipantAliasesLearned");
+    }
+
+    [Fact]
+    public async Task Confirm_does_not_learn_a_name_the_matcher_already_reads()
+    {
+        // Nothing was corrected here, so there is nothing to remember — and storing it would
+        // pin a roster name that is free to change.
+        using var db = CreateContext();
+        var (roundId, matchId, _) = SeedRound(db);
+        var pl = SeedParticipant(db, "PL");
+        var batchId = SeedBatchWithCandidates(db, roundId, (matchId, pl, "PL"));
+        var service = new PredictionImportService(db, new AuditService(db), new FakeCurrentGroupService());
+
+        await service.ConfirmAsync(batchId, Admin, Ct);
+
+        Assert.Empty(await db.OcrParticipantAliases.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Confirm_does_not_learn_a_name_two_participants_shared()
+    {
+        // One image can carry two people. A name filed against both is a coin flip next time,
+        // so it is better forgotten than guessed.
+        using var db = CreateContext();
+        var (roundId, matchId, _) = SeedRound(db);
+        var first = SeedParticipant(db, "PL");
+        var second = SeedParticipant(db, "Flavio");
+        var batchId = SeedBatchWithCandidates(
+            db, roundId, (matchId, first, "Paraguaio"), (matchId, second, "Paraguaio"));
+        var service = new PredictionImportService(db, new AuditService(db), new FakeCurrentGroupService());
+
+        await service.ConfirmAsync(batchId, Admin, Ct);
+
+        Assert.Empty(await db.OcrParticipantAliases.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Confirm_repoints_an_alias_that_turned_out_to_belong_to_someone_else()
+    {
+        // An alias learned from OCR junk must be correctable: the newest confirmation wins
+        // rather than leaving the group with a permanently wrong mapping.
+        using var db = CreateContext();
+        var (roundId, matchId, _) = SeedRound(db);
+        var wrong = SeedParticipant(db, "PL");
+        var right = SeedParticipant(db, "Flavio");
+        var service = new PredictionImportService(db, new AuditService(db), new FakeCurrentGroupService());
+
+        await service.ConfirmAsync(SeedBatchWithCandidates(db, roundId, (matchId, wrong, "nAc")), Admin, Ct);
+        await service.ConfirmAsync(SeedBatchWithCandidates(db, roundId, (matchId, right, "nAc")), Admin, Ct);
+
+        var alias = await db.OcrParticipantAliases.SingleAsync();
+        Assert.Equal(right, alias.UserId);
     }
 
     [Fact]
@@ -426,6 +778,74 @@ public class PredictionImportServiceTests
         });
         db.SaveChanges();
         return db;
+    }
+
+    /// <summary>An approved, active participant of the default group — what the alias learning
+    /// reads through <c>GroupQueries.ActiveParticipants</c>, so the plain User row is not enough.</summary>
+    private static Guid SeedParticipant(AppDbContext db, string name)
+    {
+        var id = Guid.NewGuid();
+        db.Users.Add(new User
+        {
+            Id = id,
+            Name = name,
+            Email = $"{id}@x.com",
+            PasswordHash = "x",
+            Role = UserRole.Participant,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+        });
+        db.GroupUsers.Add(new GroupUser
+        {
+            Id = Guid.NewGuid(),
+            GroupId = SeedIds.DefaultGroup,
+            UserId = id,
+            Role = GroupRole.Participant,
+            Status = GroupUserStatus.Approved,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        });
+        db.SaveChanges();
+        return id;
+    }
+
+    /// <summary>A reviewed batch whose candidates are already filed against a participant —
+    /// the state the admin leaves behind just before pressing Confirm.</summary>
+    private static Guid SeedBatchWithCandidates(
+        AppDbContext db, Guid roundId, params (Guid MatchId, Guid UserId, string Raw)[] candidates)
+    {
+        var batch = new OcrImportBatch
+        {
+            Id = Guid.NewGuid(),
+            RoundId = roundId,
+            UploadedByUserId = Admin,
+            OriginalFileName = "x.png",
+            LanguageUsed = "por",
+            Status = OcrBatchStatus.Reviewed,
+            CreatedAt = DateTime.UtcNow,
+        };
+        db.OcrImportBatches.Add(batch);
+        foreach (var (matchId, userId, raw) in candidates)
+        {
+            db.OcrPredictionCandidates.Add(new OcrPredictionCandidate
+            {
+                Id = Guid.NewGuid(),
+                OcrImportBatchId = batch.Id,
+                RoundId = roundId,
+                UserId = userId,
+                ParticipantNameRaw = raw,
+                RoundMatchId = matchId,
+                PredictedHomeScore = 2,
+                PredictedAwayScore = 1,
+                NeedsReview = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            });
+        }
+
+        db.SaveChanges();
+        return batch.Id;
     }
 
     private static (Guid RoundId, Guid MatchId, Guid UserId) SeedRound(AppDbContext db)

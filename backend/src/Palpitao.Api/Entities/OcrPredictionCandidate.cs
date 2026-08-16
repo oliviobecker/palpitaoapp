@@ -3,6 +3,17 @@ namespace Palpitao.Api.Entities;
 /// <summary>A single prediction candidate extracted by OCR, pending admin review.</summary>
 public class OcrPredictionCandidate
 {
+    /// <summary>
+    /// Column widths of the two free-text fields, which hold whatever OCR produced. The
+    /// producer truncates to these (see <c>PredictionImportService.BuildCandidates</c>) — a
+    /// noisy screenshot can yield a line far longer than any real fixture, and an over-long
+    /// value fails the insert, which the import's own error handler then cannot recover from.
+    /// </summary>
+    public const int MaxParticipantNameLength = 200;
+
+    /// <inheritdoc cref="MaxParticipantNameLength"/>
+    public const int MaxMatchTextLength = 300;
+
     public Guid Id { get; set; }
 
     public Guid OcrImportBatchId { get; set; }

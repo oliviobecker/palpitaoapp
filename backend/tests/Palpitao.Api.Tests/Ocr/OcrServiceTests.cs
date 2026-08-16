@@ -227,6 +227,22 @@ public class OcrServiceTests
     }
 
     [Fact]
+    public async Task Cancel_marks_the_batch_cancelled_not_failed()
+    {
+        // Cancelling used to store Failed, so the import history showed a red "Falhou" on images
+        // the admin had simply discarded and re-sent — and a genuine OCR failure was
+        // indistinguishable from them.
+        using var db = CreateContext();
+        var (batchId, _, _, _) = SeedBatchWithCandidate(db);
+        var service = CreateService(db);
+
+        await service.CancelAsync(batchId, Admin, Ct);
+
+        var batch = await db.OcrImportBatches.FindAsync([batchId], Ct);
+        Assert.Equal(OcrBatchStatus.Cancelled, batch!.Status);
+    }
+
+    [Fact]
     public async Task Cancel_rejected_after_confirmation()
     {
         using var db = CreateContext();

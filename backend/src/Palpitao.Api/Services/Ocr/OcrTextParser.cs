@@ -33,9 +33,28 @@ public static partial class OcrTextParser
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRun();
 
-    // Header with the participant's name, e.g. "Gilberto, Rodada 2 (1a fase de grupos)".
-    [GeneratedRegex(@"^(.+?),\s*rodada\b", RegexOptions.IgnoreCase)]
+    // The clock WhatsApp stamps on every screenshot ("17:35", "01:06 Z", the status bar's
+    // "12:32"). Two digits after the colon, so a "2:1" score is left alone. Removed before
+    // anything else looks at the line: SplitNameAndContent treats a colon as "Name: content",
+    // so a trailing timestamp otherwise swallows the whole fixture line.
+    [GeneratedRegex(@"(?<!\d)\d{1,2}:\d{2}(?!\d)")]
+    private static partial Regex ClockTime();
+
+    // Header with the participant's name, e.g. "Gilberto, Rodada 2 (1a fase de grupos)" or
+    // "*Flavio Rodada 1 (RODADA TESTE". The separator is optional: WhatsApp bold markers and
+    // OCR both eat the comma often enough that requiring it loses the name outright.
+    [GeneratedRegex(@"^(.+?)\s*[,\-–—]?\s*rodada\b", RegexOptions.IgnoreCase)]
     private static partial Regex ParticipantHeader();
+
+    // "PALPITES Felippe", "Palpites do Edson", "PALPITES PL" — the line the group actually
+    // writes above a block of scores. The name after the prefix is taken as-is (it is often
+    // ALL-CAPS, which LooksLikeName alone rejects).
+    [GeneratedRegex(@"^palpites?\s+(?:d[oea]\s+)?(.+)$", RegexOptions.IgnoreCase)]
+    private static partial Regex PredictionsHeader();
+
+    // WhatsApp emphasis markers and quotes wrapped around a name: *Flavio*, _Edson_, "Paraguaio".
+    [GeneratedRegex(@"[*_~""“”'‘’]")]
+    private static partial Regex NameDecoration();
 
     public static IReadOnlyList<ParsedPrediction> Parse(string text)
     {
@@ -78,23 +97,51 @@ public static partial class OcrTextParser
                 continue;
             }
 
-            // Otherwise it may be a participant name. A "Nome, Rodada N (...)"
-            // header is a strong signal; a plain clean name overrides too. Garbled
-            // OCR lines (symbols, digits, ALL-CAPS noise) are ignored so they do
-            // not steal the participant context from the real matches.
-            var header = ParticipantHeader().Match(line);
-            if (header.Success)
+            // Otherwise it may be a participant name. "PALPITES <nome>" and "<Nome>, Rodada N"
+            // are strong signals; a plain clean name overrides too. Garbled OCR lines (symbols,
+            // digits, ALL-CAPS noise) are ignored so they do not steal the participant context
+            // from the real matches.
+            if (TryReadParticipantName(line) is { } participant)
             {
-                currentName = header.Groups[1].Value.Trim();
-            }
-            else if (LooksLikeName(line))
-            {
-                currentName = line;
+                currentName = participant;
             }
         }
 
         return result;
     }
+
+    /// <summary>
+    /// Reads the participant a line announces, or null when the line is not a name. Tried in
+    /// order of how strong the signal is: the "PALPITES &lt;nome&gt;" prefix the group writes, the
+    /// "&lt;Nome&gt;, Rodada N" header the app's own message prints, then a bare clean name.
+    /// </summary>
+    private static string? TryReadParticipantName(string line)
+    {
+        var predictions = PredictionsHeader().Match(line);
+        if (predictions.Success)
+        {
+            // The prefix already establishes that a name follows, so an ALL-CAPS one is fine
+            // ("PALPITES PL"): only the shape is checked, not the casing.
+            var candidate = NormalizeName(predictions.Groups[1].Value);
+            return IsNameShaped(candidate) ? candidate : null;
+        }
+
+        var header = ParticipantHeader().Match(line);
+        if (header.Success)
+        {
+            // Checked, not trusted: "Palpitão England 2026/2027 — Rodada 1" also matches the
+            // header, and filing every fixture against a season title helps nobody.
+            var candidate = NormalizeName(header.Groups[1].Value);
+            return LooksLikeName(candidate) ? candidate : null;
+        }
+
+        var plain = NormalizeName(line);
+        return LooksLikeName(plain) ? plain : null;
+    }
+
+    /// <summary>Strips the WhatsApp emphasis markers and quotes that wrap a name.</summary>
+    private static string NormalizeName(string value) =>
+        WhitespaceRun().Replace(NameDecoration().Replace(value, " "), " ").Trim();
 
     /// <summary>
     /// Competition headings the copy-ready message prints above each block of fixtures
@@ -114,18 +161,39 @@ public static partial class OcrTextParser
     };
 
     /// <summary>
-    /// True for plain participant names ("João", "Pedro Silva"): letters and
-    /// spaces only, at least one lowercase letter, up to four words. Filters out
-    /// titles, timestamps, competition headings and garbled OCR lines.
+    /// Words that are name-shaped but never a person: the app's own vocabulary and the day
+    /// separators WhatsApp prints between messages. Without this, "Hoje" sits right above a
+    /// block of scores and quietly becomes the participant they are filed against.
     /// </summary>
-    private static bool LooksLikeName(string line)
+    private static readonly HashSet<string> NoiseNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        if (line.Length is < 2 or > 40 || CompetitionHeadings.Contains(line))
+        "Palpite", "Palpites", "Palpitão", "Palpitao", "FanPicks",
+        "Hoje", "Ontem", "Today", "Yesterday",
+        "Mensagem", "Message", "Regras", "Rules",
+    };
+
+    /// <summary>
+    /// True for plain participant names ("João", "Pedro Silva"): name-shaped and with at least
+    /// one lowercase letter. The casing rule is what keeps ALL-CAPS OCR noise from stealing the
+    /// participant context — it is dropped only after an explicit "PALPITES" prefix, which has
+    /// already established that a name follows.
+    /// </summary>
+    private static bool LooksLikeName(string line) =>
+        IsNameShaped(line) && line.Any(char.IsLower);
+
+    /// <summary>
+    /// Shape check shared by both name paths: letters and spaces only, 2–40 characters, up to
+    /// four words, and not one of the headings/vocabulary words that are name-shaped by accident.
+    /// </summary>
+    private static bool IsNameShaped(string line)
+    {
+        if (line.Length is < 2 or > 40
+            || CompetitionHeadings.Contains(line)
+            || NoiseNames.Contains(line))
         {
             return false;
         }
 
-        var hasLower = false;
         var words = 1;
         foreach (var c in line)
         {
@@ -139,11 +207,9 @@ public static partial class OcrTextParser
             {
                 return false;
             }
-
-            hasLower |= char.IsLower(c);
         }
 
-        return hasLower && words <= 4;
+        return words <= 4;
     }
 
     /// <summary>
@@ -269,7 +335,8 @@ public static partial class OcrTextParser
     private static string CleanLine(string raw)
     {
         var withoutSymbols = SymbolNoise().Replace(raw, " ");
-        return WhitespaceRun().Replace(withoutSymbols, " ").Trim();
+        var withoutClock = ClockTime().Replace(withoutSymbols, " ");
+        return WhitespaceRun().Replace(withoutClock, " ").Trim();
     }
 
     private static (string? Name, string? Content) SplitNameAndContent(string line)
@@ -291,12 +358,18 @@ public static partial class OcrTextParser
 
     private static ParsedPrediction? TryParseMatch(string text)
     {
-        var a = ScorePair().Match(text);
-        if (a.Success
-            && HasRealDigit(a.Groups[1].Value, a.Groups[2].Value)
-            && ParseScore(a.Groups[1].Value) is { } homeA
-            && ParseScore(a.Groups[2].Value) is { } awayA)
+        // Every score pair is tried, not just the first: OCR noise ahead of the real score
+        // ("Cardiff 1x 3 Wrexham 01 06 Z" once the clock is stripped, "B * SE" glued to a line)
+        // otherwise consumes the only attempt and the whole fixture is lost.
+        foreach (Match a in ScorePair().Matches(text))
         {
+            if (!IsScorePair(text, a)
+                || ParseScore(a.Groups[1].Value) is not { } homeA
+                || ParseScore(a.Groups[2].Value) is not { } awayA)
+            {
+                continue;
+            }
+
             var home = CleanTeam(text[..a.Index]);
             var away = CleanTeam(text[(a.Index + a.Length)..]);
             if (home.Length >= 2 && away.Length >= 2)
@@ -322,14 +395,30 @@ public static partial class OcrTextParser
     }
 
     /// <summary>
-    /// True when at least one side of a score pair is an actual digit. Both sides
-    /// being letter look-alikes means the "score" is almost certainly two team names
-    /// around the message template's own separator: a line returned unedited
-    /// ("Arsenal x Leeds") otherwise reads as "Arsena" 1 x 1 "eeds", and both halves
-    /// still resolve, so a made-up 1x1 would be imported without review.
+    /// True when a matched pair is really a score and not two team names around the message
+    /// template's own separator. A line returned unedited ("Arsenal x Leeds") otherwise reads
+    /// as "Arsena" 1 x 1 "eeds" — both halves still resolve, so a made-up 1x1 would be imported
+    /// without review.
+    ///
+    /// A real digit on either side settles it. Failing that, the pair must stand alone as its own
+    /// token ("Norwich O x O West Brom", where OCR read both zeros as the letter O): the
+    /// characters flanking it are then spaces or the line's edge, whereas the letters stolen from
+    /// "Arsenal"/"Leeds" are glued to the rest of their word.
     /// </summary>
-    private static bool HasRealDigit(string left, string right) =>
-        left.Any(char.IsAsciiDigit) || right.Any(char.IsAsciiDigit);
+    private static bool IsScorePair(string text, Match pair)
+    {
+        if (pair.Groups[1].Value.Any(char.IsAsciiDigit) || pair.Groups[2].Value.Any(char.IsAsciiDigit))
+        {
+            return true;
+        }
+
+        var before = pair.Index - 1;
+        var after = pair.Index + pair.Length;
+        return (before < 0 || !IsWordChar(text[before]))
+            && (after >= text.Length || !IsWordChar(text[after]));
+
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c);
+    }
 
     /// <summary>
     /// Canonicalises a score token, mapping common OCR letter look-alikes to

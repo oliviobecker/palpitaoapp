@@ -29,6 +29,19 @@ const MAX_FILE_MB = 10;
 const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp'];
 const SAVE_DEBOUNCE_MS = 600;
 
+/**
+ * The participant every candidate already points at, or null when they disagree (or none is
+ * resolved). Drives the batch-wide selector: one screenshot is one person's predictions, so when
+ * OCR misreads the name the admin fixes it once instead of on all twelve cards.
+ */
+export function commonParticipantId(candidates: readonly OcrCandidate[]): string | null {
+  if (candidates.length === 0) {
+    return null;
+  }
+  const first = candidates[0].userId ?? null;
+  return first !== null && candidates.every((c) => (c.userId ?? null) === first) ? first : null;
+}
+
 /** Client-side mirror of the backend file rules, so a bad file fails before the upload. */
 export function validateOcrFile(name: string, size: number): 'invalidFormat' | 'tooLarge' | null {
   const lower = name.toLowerCase();
@@ -182,6 +195,8 @@ export class AdminOcrImport implements OnInit {
   protected readonly storedPreviewUrl = signal<string | null>(null);
   protected readonly dragOver = signal(false);
   protected readonly saveStates = signal<Record<string, SaveState>>({});
+  /** Participant applied to the whole batch (null = the cards disagree, or none is resolved). */
+  protected readonly batchParticipant = signal<string | null>(null);
   protected language = 'por';
   protected roundId = '';
 
@@ -196,6 +211,10 @@ export class AdminOcrImport implements OnInit {
   /** True while any candidate edit is unsaved (debounce pending, in flight or failed). */
   protected readonly hasUnsavedEdits = computed(() =>
     Object.values(this.saveStates()).some((s) => s !== 'saved'),
+  );
+  /** The name OCR read off the image, shown as a hint next to the batch selector. */
+  protected readonly detectedName = computed(
+    () => this.batch()?.candidates.find((c) => c.participantNameRaw)?.participantNameRaw ?? null,
   );
 
   ngOnInit(): void {
@@ -234,6 +253,7 @@ export class AdminOcrImport implements OnInit {
   private applyBatch(b: OcrBatch): void {
     this.batch.set(b);
     this.saveStates.set({});
+    this.batchParticipant.set(commonParticipantId(b.candidates));
     if (b.hasImage && !this.localPreviewUrl()) {
       this.ocrImages
         .load(b.id)
@@ -343,6 +363,28 @@ export class AdminOcrImport implements OnInit {
     return this.saveStates()[id];
   }
 
+  /**
+   * Files every candidate against one participant. Each card still saves through the normal
+   * debounced autosave, so the existing per-card state, retry and "unsaved edits" guard all
+   * keep working — no batch endpoint needed.
+   */
+  applyParticipantToAll(userId: string | null): void {
+    this.batchParticipant.set(userId);
+    const b = this.batch();
+    if (!b) {
+      return;
+    }
+    // Two passes: every card is retargeted before the first save is scheduled, so the
+    // re-derivation inside scheduleSave never sees a half-applied batch.
+    const changed = b.candidates.filter((c) => (c.userId ?? null) !== userId);
+    for (const c of changed) {
+      c.userId = userId;
+    }
+    changed.forEach((c) => this.scheduleSave(c));
+    // The cards bind to the same objects, but the mutation above is invisible to OnPush.
+    this.batch.set({ ...b, candidates: [...b.candidates] });
+  }
+
   confidencePct(c: OcrCandidate): number {
     return Math.round((c.confidence ?? 0) * 100);
   }
@@ -363,6 +405,12 @@ export class AdminOcrImport implements OnInit {
 
   /** Debounced autosave: every edit lands on the server without a per-card save button. */
   scheduleSave(c: OcrCandidate, delay = SAVE_DEBOUNCE_MS): void {
+    // A per-card participant change can agree with (or break) the batch-wide pick, so the
+    // selector above is re-derived rather than left showing a stale name.
+    const candidates = this.batch()?.candidates;
+    if (candidates) {
+      this.batchParticipant.set(commonParticipantId(candidates));
+    }
     this.setSaveState(c.id, 'pending');
     const existing = this.saveTimers.get(c.id);
     if (existing) {
