@@ -20,13 +20,29 @@ public interface IPredictionImportService
     /// Turns parsed lines into review candidates, matching participants and
     /// matches; ambiguous/unresolved items are flagged with NeedsReview = true.
     /// </summary>
+    /// <param name="participantAliases">
+    /// Names this group's admins have already confirmed for a participant, keyed by
+    /// <see cref="OcrTeamMatcher.NormalizeAlias"/> (see <see cref="ConfirmAsync"/>). Optional:
+    /// without it the resolution is exactly what it always was.
+    /// </param>
     IReadOnlyList<OcrPredictionCandidate> BuildCandidates(
         Guid batchId,
         Guid roundId,
         string text,
         IReadOnlyList<RoundMatch> matches,
-        IReadOnlyList<User> participants);
+        IReadOnlyList<User> participants,
+        IReadOnlyDictionary<string, Guid>? participantAliases = null);
 
-    /// <summary>Confirms a reviewed batch, saving candidates as Source = AdminOcr.</summary>
+    /// <summary>
+    /// Confirms a reviewed batch, saving candidates as Source = AdminOcr and learning the
+    /// participant names the admin had to correct, so the next import resolves them itself.
+    /// </summary>
     Task ConfirmAsync(Guid batchId, Guid adminId, CancellationToken ct);
+
+    /// <summary>
+    /// The group's confirmed participant aliases, keyed by
+    /// <see cref="OcrTeamMatcher.NormalizeAlias"/> and ready for
+    /// <see cref="BuildCandidates"/>.
+    /// </summary>
+    Task<IReadOnlyDictionary<string, Guid>> GetParticipantAliasesAsync(Guid groupId, CancellationToken ct);
 }

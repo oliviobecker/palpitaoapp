@@ -87,6 +87,31 @@ test.describe('Admin OCR import history', () => {
     await expect(dialog).toBeHidden();
   });
 
+  test('shows a discarded import as cancelled, not as a failure', async ({ page }) => {
+    // A batch the admin discarded used to be stored (and shown) as Failed, which read as if
+    // the OCR had broken on an image that was simply re-sent.
+    await seedAuth(page, 'pt-BR');
+    const cancelled = [
+      { ...summaries[0], id: 'b3', status: 'Cancelled', originalFileName: 'descartada.png' },
+    ];
+    await installApi(page, [
+      { method: 'GET', match: path('/rounds/r1'), respond: () => ({ json: round }) },
+      {
+        method: 'GET',
+        match: path('/admin/rounds/r1/ocr-imports'),
+        respond: () => ({ json: cancelled }),
+      },
+    ]);
+
+    await page.goto('/admin/rounds/r1/import-history');
+
+    await expect(page.getByText('descartada.png')).toBeVisible();
+    await expect(page.getByText('Cancelada')).toBeVisible();
+    await expect(page.getByText('Falhou')).toBeHidden();
+    // A cancelled batch cannot be reopened for review.
+    await expect(page.getByRole('link', { name: 'Revisar' })).toBeHidden();
+  });
+
   test('shows an empty state when the round has no imports', async ({ page }) => {
     await seedAuth(page, 'pt-BR');
     await installApi(page, [

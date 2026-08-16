@@ -164,6 +164,8 @@ export class AdminOcrHistory implements OnInit {
 
   /** A batch that was never confirmed or cancelled can still be reopened for review. */
   isReviewable(batch: OcrBatchSummary): boolean {
-    return batch.status !== 'Confirmed' && batch.status !== 'Failed';
+    return (
+      batch.status !== 'Confirmed' && batch.status !== 'Failed' && batch.status !== 'Cancelled'
+    );
   }
 }

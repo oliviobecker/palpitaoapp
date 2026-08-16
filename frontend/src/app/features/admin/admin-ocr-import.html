@@ -134,6 +134,33 @@
         }
       </div>
 
+      @if (b.candidates.length > 0) {
+        <div class="card mb-2">
+          <div class="card-body py-2 px-3">
+            <label class="form-label small fw-semibold mb-1" for="ocr-batch-participant">
+              {{ 'ocr.batchParticipant' | translate }}
+            </label>
+            <select
+              id="ocr-batch-participant"
+              class="form-select form-select-sm"
+              [ngModel]="batchParticipant()"
+              (ngModelChange)="applyParticipantToAll($event)"
+            >
+              <option [ngValue]="null">{{ 'ocr.noParticipant' | translate }}</option>
+              @for (p of participants(); track p.id) {
+                <option [ngValue]="p.id">{{ p.name }}</option>
+              }
+            </select>
+            <small class="text-muted">
+              {{ 'ocr.batchParticipantHint' | translate }}
+              @if (detectedName(); as name) {
+                · {{ 'ocr.detectedName' | translate: { name } }}
+              }
+            </small>
+          </div>
+        </div>
+      }
+
       <div class="vstack gap-2">
         @for (c of b.candidates; track c.id) {
           <div class="card" [class.border-warning]="c.needsReview">

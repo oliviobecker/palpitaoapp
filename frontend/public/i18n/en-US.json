@@ -691,6 +691,9 @@
     "participant": "Participant",
     "match": "Match",
     "noParticipant": "No participant",
+    "batchParticipant": "Participant in this image",
+    "batchParticipantHint": "applies to every candidate below",
+    "detectedName": "name read: {{name}}",
     "noMatch": "No match",
     "confirm": "Confirm import",
     "cancel": "Cancel import",
@@ -738,7 +741,8 @@
     "statusProcessed": "Processed",
     "statusReviewed": "Reviewed",
     "statusConfirmed": "Confirmed",
-    "statusFailed": "Failed"
+    "statusFailed": "Failed",
+    "statusCancelled": "Cancelled"
   },
   "language": {
     "label": "Language",

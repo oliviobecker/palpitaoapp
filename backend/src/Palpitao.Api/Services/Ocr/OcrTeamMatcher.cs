@@ -31,12 +31,32 @@ public static class OcrTeamMatcher
         ["city"] = "manchester city",
     };
 
-    /// <summary>Resolves a parsed name to a participant: exact match, else a unique substring match.</summary>
-    public static Guid? ResolveParticipant(string? name, IReadOnlyList<User> participants)
+    /// <summary>
+    /// Resolves a parsed name to a participant: a previously confirmed alias, then an exact
+    /// match, then a unique substring match, then a one-edit fuzzy match.
+    /// </summary>
+    /// <param name="aliases">
+    /// Names an admin has already confirmed for this group, keyed by <see cref="NormalizeAlias"/>.
+    /// Checked first and trusted outright: it is a human decision, not a guess, so it beats a
+    /// substring match that would otherwise pick a different member with a similar name.
+    /// </param>
+    public static Guid? ResolveParticipant(
+        string? name,
+        IReadOnlyList<User> participants,
+        IReadOnlyDictionary<string, Guid>? aliases = null)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
             return null;
+        }
+
+        if (aliases is not null
+            && aliases.TryGetValue(NormalizeAlias(name), out var aliased)
+            // Only while that participant is still on the roster handed in — a member who left
+            // the group must not keep absorbing rows.
+            && participants.Any(p => p.Id == aliased))
+        {
+            return aliased;
         }
 
         var exact = participants.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
@@ -112,10 +132,36 @@ public static class OcrTeamMatcher
         // stop it matching itself.
         return Overlaps(r, t)
             || Overlaps(Comparable(FootballReference.Canonical(raw)), t)
-            || (TeamAliases.TryGetValue(r, out var alias) && Overlaps(alias, t));
+            || (TeamAliases.TryGetValue(r, out var alias) && Overlaps(alias, t))
+            || (fuzzy && MatchesThroughShortName(r, t));
 
         bool Overlaps(string a, string b) =>
             a == b || b.Contains(a) || a.Contains(b) || (fuzzy && Fuzzy(a, b));
+    }
+
+    /// <summary>
+    /// Last resort: the raw name is one edit from a short name the group message prints, whose
+    /// club is the one on the card. Canonical() is an exact-key lookup, so "Weolves" never
+    /// becomes "wolverhampton wanderers" — and comparing "weolves" to the full name directly is
+    /// far past a one-edit budget. Going through the alias key bridges the two.
+    /// </summary>
+    private static bool MatchesThroughShortName(string raw, string teamName)
+    {
+        foreach (var (shortName, fullName) in FootballReference.Aliases)
+        {
+            if (!Fuzzy(raw, shortName))
+            {
+                continue;
+            }
+
+            var canonical = Comparable(fullName);
+            if (canonical == teamName || teamName.Contains(canonical) || canonical.Contains(teamName))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -179,6 +225,13 @@ public static class OcrTeamMatcher
 
         return false;
     }
+
+    /// <summary>
+    /// Lookup key for a learned participant alias: lowercased, accent-folded and with runs of
+    /// whitespace collapsed, so "Paraguaio", "paraguaio" and "PARAGUAIO " are one entry. Used on
+    /// both sides — writing the alias and reading it back — so the two can never drift.
+    /// </summary>
+    public static string NormalizeAlias(string value) => Fold(value);
 
     /// <summary>Lowercases and strips accents, so "Joao" and "João" compare equal.</summary>
     private static string Fold(string value)

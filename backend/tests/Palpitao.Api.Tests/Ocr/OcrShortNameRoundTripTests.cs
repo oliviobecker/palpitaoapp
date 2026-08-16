@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Palpitao.Api.Common;
 using Palpitao.Api.Data;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Services.Ocr;
@@ -162,6 +163,42 @@ public class OcrShortNameRoundTripTests
         }
 
         Assert.Empty(collisions);
+    }
+
+    [Fact]
+    public void Every_alias_resolves_to_its_own_club_and_to_no_other()
+    {
+        // The fuzzy tier reaches a club through the alias map (so "Weolves" can find
+        // Wolverhampton Wanderers, which is nowhere near it by edit distance). That bridge is
+        // only safe while each alias points at exactly one club: with its own club present the
+        // alias must find it, and with that club removed it must find nobody rather than
+        // dragging the name onto a neighbour.
+        var wrong = new List<string>();
+        foreach (var (alias, canonical) in FootballReference.Aliases)
+        {
+            if (!SeededTeamNames.Value.Contains(canonical, StringComparer.OrdinalIgnoreCase))
+            {
+                continue; // A spelling only the fixture feed uses; it has no seeded club.
+            }
+
+            var (matches, idByName) = RoundOfEveryClub(clubAtHome: true);
+            var seeded = idByName.Keys.First(n => string.Equals(n, canonical, StringComparison.OrdinalIgnoreCase));
+            var resolved = OcrTeamMatcher.ResolveMatch(alias, OpponentName, matches);
+            if (resolved != idByName[seeded])
+            {
+                var other = idByName.FirstOrDefault(kv => kv.Value == resolved).Key ?? "nobody";
+                wrong.Add($"'{alias}' resolved to '{other}' instead of '{seeded}'");
+            }
+
+            var (without, idsWithout) = RoundOfEveryClub(clubAtHome: true, except: seeded);
+            var stray = OcrTeamMatcher.ResolveMatch(alias, OpponentName, without);
+            if (stray is not null)
+            {
+                wrong.Add($"'{alias}' fuzzy-matched '{idsWithout.First(kv => kv.Value == stray).Key}'");
+            }
+        }
+
+        Assert.Empty(wrong);
     }
 
     [Fact]

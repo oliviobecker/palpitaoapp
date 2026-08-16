@@ -48,6 +48,7 @@ public class AppDbContext : DbContext
     public DbSet<OcrImportBatch> OcrImportBatches => Set<OcrImportBatch>();
     public DbSet<OcrImportImage> OcrImportImages => Set<OcrImportImage>();
     public DbSet<OcrPredictionCandidate> OcrPredictionCandidates => Set<OcrPredictionCandidate>();
+    public DbSet<OcrParticipantAlias> OcrParticipantAliases => Set<OcrParticipantAlias>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
@@ -76,6 +77,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Standing>().HasQueryFilter(e => CurrentGroupId == null || e.GroupId == CurrentGroupId);
         modelBuilder.Entity<RoundParticipantResult>().HasQueryFilter(e => CurrentGroupId == null || e.GroupId == CurrentGroupId);
         modelBuilder.Entity<SeasonScoringConfig>().HasQueryFilter(e => CurrentGroupId == null || e.GroupId == CurrentGroupId);
+        modelBuilder.Entity<OcrParticipantAlias>().HasQueryFilter(e => CurrentGroupId == null || e.GroupId == CurrentGroupId);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -432,14 +434,30 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<OcrPredictionCandidate>(e =>
         {
-            e.Property(x => x.ParticipantNameRaw).HasMaxLength(200);
-            e.Property(x => x.MatchTextRaw).HasMaxLength(300);
+            e.Property(x => x.ParticipantNameRaw)
+                .HasMaxLength(OcrPredictionCandidate.MaxParticipantNameLength);
+            e.Property(x => x.MatchTextRaw).HasMaxLength(OcrPredictionCandidate.MaxMatchTextLength);
             e.Property(x => x.ReviewNotes).HasMaxLength(500);
             e.HasIndex(x => x.OcrImportBatchId);
 
             e.HasOne(x => x.Batch)
                 .WithMany(b => b.Candidates)
                 .HasForeignKey(x => x.OcrImportBatchId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<OcrParticipantAlias>(e =>
+        {
+            e.Property(x => x.Alias).HasMaxLength(OcrParticipantAlias.MaxAliasLength).IsRequired();
+            e.Property(x => x.AliasRaw).HasMaxLength(OcrParticipantAlias.MaxAliasLength).IsRequired();
+            // One meaning per alias per group: re-confirming the same name against a different
+            // participant updates the row instead of leaving two answers to the same question.
+            e.HasIndex(x => new { x.GroupId, x.Alias }).IsUnique();
+            ConfigureGroupOwnership<OcrParticipantAlias>(e);
+
+            e.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
