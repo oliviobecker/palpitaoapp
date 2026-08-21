@@ -65,14 +65,8 @@ public static partial class OcrTextParser
         }
 
         string? currentName = null;
-        foreach (var rawLine in text.Replace("\r", string.Empty).Split('\n'))
+        foreach (var line in ReadLines(text))
         {
-            var line = CleanLine(rawLine);
-            if (line.Length == 0)
-            {
-                continue;
-            }
-
             // "Name: content" / "Name - content"
             var (name, content) = SplitNameAndContent(line);
             if (name is not null && content is not null)
@@ -111,6 +105,77 @@ public static partial class OcrTextParser
     }
 
     /// <summary>
+    /// Cleans every line and re-joins a fixture the chat bubble broke in two
+    /// ("Birmingham 2 x 0" / "Bristol City"). The orphan half is not merely a lost fixture: it is
+    /// name-shaped, so it becomes the participant and every row below it is filed against a club.
+    /// Only the away side is looked for below, which is the way a bubble wraps: the tail of the
+    /// line is what moves down.
+    /// </summary>
+    private static List<string> ReadLines(string text)
+    {
+        var lines = text.Replace("\r", string.Empty)
+            .Split('\n')
+            .Select(CleanLine)
+            .Where(l => l.Length > 0)
+            .ToList();
+
+        var joined = new List<string>(lines.Count);
+        for (var i = 0; i < lines.Count; i++)
+        {
+            // Checked, not assumed: the halves are glued together only when the result really
+            // reads as a fixture, so a stray score above an unrelated line leaves both alone.
+            if (i + 1 < lines.Count
+                && HasDanglingScore(lines[i])
+                && CanCompleteFixture(lines[i + 1])
+                && TryParseMatch($"{lines[i]} {lines[i + 1]}") is not null)
+            {
+                joined.Add($"{lines[i]} {lines[i + 1]}");
+                i++;
+                continue;
+            }
+
+            joined.Add(lines[i]);
+        }
+
+        return joined;
+    }
+
+    /// <summary>
+    /// True when a line carries a real score and a home team but no away team: the top half of a
+    /// fixture the bubble wrapped. A line that already parses whole is never a candidate.
+    /// </summary>
+    private static bool HasDanglingScore(string line)
+    {
+        if (TryParseMatch(line) is not null)
+        {
+            return false;
+        }
+
+        foreach (Match pair in ScorePair().Matches(line))
+        {
+            if (IsScorePair(line, pair)
+                && ParseScore(pair.Groups[1].Value) is not null
+                && ParseScore(pair.Groups[2].Value) is not null
+                && CleanTeam(line[..pair.Index]).Length >= 2)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// True when a line may be the tail of the fixture above it. A competition heading or an
+    /// explicit name header announces the next block instead, and swallowing one would cost the
+    /// participant every row below it, which is the very thing this pass exists to prevent.
+    /// </summary>
+    private static bool CanCompleteFixture(string line) =>
+        !PredictionsHeader().IsMatch(line)
+        && !ParticipantHeader().IsMatch(line)
+        && !CompetitionHeadings.Contains(NormalizeName(line));
+
+    /// <summary>
     /// Reads the participant a line announces, or null when the line is not a name. Tried in
     /// order of how strong the signal is: the "PALPITES &lt;nome&gt;" prefix the group writes, the
     /// "&lt;Nome&gt;, Rodada N" header the app's own message prints, then a bare clean name.
@@ -121,8 +186,10 @@ public static partial class OcrTextParser
         if (predictions.Success)
         {
             // The prefix already establishes that a name follows, so an ALL-CAPS one is fine
-            // ("PALPITES PL"): only the shape is checked, not the casing.
-            var candidate = NormalizeName(predictions.Groups[1].Value);
+            // ("PALPITES PL"): only the shape is checked, not the casing. The round rides on
+            // that same line often enough ("PALPITES PL, Rodada 1") that it has to come off
+            // first: left in, its comma and digit fail the shape check and the header is lost.
+            var candidate = NormalizeName(StripRoundTail(predictions.Groups[1].Value));
             return IsNameShaped(candidate) ? candidate : null;
         }
 
@@ -137,6 +204,17 @@ public static partial class OcrTextParser
 
         var plain = NormalizeName(line);
         return LooksLikeName(plain) ? plain : null;
+    }
+
+    /// <summary>
+    /// Drops a "... Rodada N" tail from a name, through the very regex that reads the round header
+    /// so where the round starts stays defined in one place. Returns the value untouched when the
+    /// line carries no round.
+    /// </summary>
+    private static string StripRoundTail(string value)
+    {
+        var header = ParticipantHeader().Match(value);
+        return header.Success ? header.Groups[1].Value : value;
     }
 
     /// <summary>Strips the WhatsApp emphasis markers and quotes that wrap a name.</summary>

@@ -499,11 +499,146 @@ public class PredictionImportServiceTests
         Assert.All(candidates, c => Assert.False(c.NeedsReview));
     }
 
+    [Fact]
+    public void Parser_reads_the_screenshot_whose_header_carries_the_name_and_the_round_together()
+    {
+        // The round the group actually posted. Two things used to go wrong at once: the only
+        // usable name is behind "PALPITES" with the round glued to it, so the parser fell back on
+        // the sender's contact name at the top of the bubble ("Pedro Rodrigues", nobody on the
+        // roster); and the bubble broke two fixtures onto a second line, which cost the fixture
+        // and handed the participant to a club for every row below it.
+        var text =
+            "Pedro Rodrigues\n" +
+            "Palpitao England 2026/2027\n" +
+            "PALPITES PL, Rodada 1\n" +
+            "\n" +
+            "Palpites até 14h59 de sexta-feira (21/08/2026):\n" +
+            "\n" +
+            "Premier League\n" +
+            "Arsenal 4x0 Coventry\n" +
+            "Hull 1x0 Man Utd\n" +
+            "Everton 1 x 0 Crystal Palace\n" +
+            "Ipswich 1 x 0 Sunderland\n" +
+            "Nottingham 2x0 Leeds\n" +
+            "Brentford 0 x 2 Tottenham\n" +
+            "Brighton 1 x 0 Aston Villa\n" +
+            "Man City 5x1 Bournemouth\n" +
+            "Newcastle 2 x 4 Liverpool\n" +
+            "Fulham 0 x 2 Chelsea\n" +
+            "\n" +
+            "Championship\n" +
+            "Lincoln 2x1 Portsmouth\n" +
+            "Millwall 1 x 0 Norwich\n" +
+            "Birmingham 2 x 0\n" +
+            "Bristol City\n" +
+            "Blackburn 0 x 2 Middlesbrough\n" +
+            "Derby 1 x 0 Cardiff\n" +
+            "Preston 2 x 1 Wolves\n" +
+            "QPR 2 x 0\n" +
+            "Bolton\n" +
+            "Southampton 2 x 1 Stoke\n" +
+            "Swansea 1 x 0 Sheffield Utd\n" +
+            "West Ham 2 x 1 Charlton\n" +
+            "Wrexham 2 x 2 Watford\n" +
+            "West Brom 2 x 0 Burnley\n" +
+            "\n" +
+            "League One\n" +
+            "Leicester 2 x 0 Burton (x2) 8:51 AM\n" +
+            "Como vou tirar print dessa merda? 8:51 AM";
+
+        List<User> participants = [new() { Id = Guid.NewGuid(), Name = "PL", Role = UserRole.Participant }];
+        var candidates = PureService()
+            .BuildCandidates(Guid.NewGuid(), Guid.NewGuid(), text, PalpitaoEnglandRound(), participants);
+
+        Assert.Equal(23, candidates.Count);
+        Assert.All(candidates, c => Assert.Equal("PL", c.ParticipantNameRaw));
+        Assert.All(candidates, c => Assert.False(c.NeedsReview));
+
+        // The two the bubble broke in half, back in one piece.
+        var birmingham = Assert.Single(
+            candidates, c => c.MatchTextRaw!.StartsWith("Birmingham", StringComparison.Ordinal));
+        Assert.Equal((2, 0), (birmingham.PredictedHomeScore, birmingham.PredictedAwayScore));
+
+        var qpr = Assert.Single(candidates, c => c.MatchTextRaw!.StartsWith("QPR", StringComparison.Ordinal));
+        Assert.Equal((2, 0), (qpr.PredictedHomeScore, qpr.PredictedAwayScore));
+    }
+
+    [Fact]
+    public void Parser_rejoins_a_fixture_the_bubble_wrapped_onto_a_second_line()
+    {
+        var parsed = Assert.Single(PureService().Parse("Birmingham 2 x 0\nBristol City"));
+
+        Assert.Equal("Birmingham", parsed.HomeTeamRaw);
+        Assert.Equal("Bristol City", parsed.AwayTeamRaw);
+        Assert.Equal((2, 0), (parsed.HomeScore, parsed.AwayScore));
+    }
+
+    [Fact]
+    public void A_wrapped_away_team_does_not_become_the_participant()
+    {
+        // The orphan half is name-shaped, so it used to be read as a person - taking every
+        // fixture below it away from the participant the screenshot is actually about.
+        var parsed = PureService().Parse("João\nBirmingham 2 x 0\nBristol City\nDerby 1x0 Cardiff");
+
+        Assert.Equal(2, parsed.Count);
+        Assert.All(parsed, p => Assert.Equal("João", p.ParticipantName));
+    }
+
+    [Theory]
+    // The line under a dangling score is glued to it only when it is really the other half of the
+    // fixture. A name header or a competition heading announces the next block instead, and
+    // swallowing one would cost the participant every row below it.
+    [InlineData("PALPITES PL")]
+    [InlineData("Championship")]
+    public void Parser_does_not_glue_a_header_onto_a_dangling_score(string header)
+    {
+        var parsed = Assert.Single(
+            PureService().Parse($"Birmingham 2 x 0\n{header}\nArsenal 2x1 Chelsea"));
+
+        Assert.Equal("Arsenal", parsed.HomeTeamRaw);
+    }
+
+    /// <summary>
+    /// The 23 fixtures of that round, spelled the way the fixture feed stores them - so every
+    /// short name the screenshot prints ("Man Utd", "Nottingham", "QPR", "Sheffield Utd",
+    /// "West Brom") has to travel the alias path to get back here.
+    /// </summary>
+    private static List<RoundMatch> PalpitaoEnglandRound() =>
+    [
+        Fixture("Arsenal", "Coventry City"),
+        Fixture("Hull City", "Manchester United"),
+        Fixture("Everton", "Crystal Palace"),
+        Fixture("Ipswich Town", "Sunderland"),
+        Fixture("Nottingham Forest", "Leeds United"),
+        Fixture("Brentford", "Tottenham"),
+        Fixture("Brighton & Hove Albion", "Aston Villa"),
+        Fixture("Manchester City", "Bournemouth"),
+        Fixture("Newcastle", "Liverpool"),
+        Fixture("Fulham", "Chelsea"),
+        Fixture("Lincoln City", "Portsmouth"),
+        Fixture("Millwall", "Norwich City"),
+        Fixture("Birmingham City", "Bristol City"),
+        Fixture("Blackburn Rovers", "Middlesbrough"),
+        Fixture("Derby County", "Cardiff City"),
+        Fixture("Preston North End", "Wolverhampton Wanderers"),
+        Fixture("Queens Park Rangers", "Bolton Wanderers"),
+        Fixture("Southampton", "Stoke City"),
+        Fixture("Swansea City", "Sheffield United"),
+        Fixture("West Ham United", "Charlton Athletic"),
+        Fixture("Wrexham", "Watford"),
+        Fixture("West Bromwich Albion", "Burnley"),
+        Fixture("Leicester City", "Burton Albion"),
+    ];
+
     [Theory]
     // The group writes the name behind this prefix, in whatever casing it feels like.
     [InlineData("PALPITES Felippe", "Felippe")]
     [InlineData("Palpites do Edson", "Edson")]
     [InlineData("palpite da Ana", "Ana")]
+    // ...and often with the round riding on the same line, which is not part of the name.
+    [InlineData("PALPITES PL, Rodada 1", "PL")]
+    [InlineData("PALPITES Felippe, Rodada 3", "Felippe")]
+    [InlineData("Palpites do Edson - Rodada 2", "Edson")]
     public void Parser_reads_the_name_behind_a_palpites_prefix(string header, string expected)
     {
         var parsed = Assert.Single(PureService().Parse($"{header}\nArsenal 2x1 Chelsea"));

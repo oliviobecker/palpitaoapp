@@ -524,11 +524,20 @@ to ignore it: the clock stamped on every screenshot (`Cardiff 1x2 Wrexham 17:35`
 anything else — its colon otherwise reads as `Name: content` and swallows the fixture — as are the
 emphasis markers and quotes around a name (`*Flavio*`, `"Paraguaio"`), the day separators (`Hoje`)
 and the app's own vocabulary. The participant is read from `PALPITES <nome>` (the line the group
-actually writes, ALL-CAPS included) or from `<Nome>, Rodada N`, where the comma is optional — the
-season title in that same shape is rejected rather than filed as a person. A score whose zeros OCR
-returned as the letter `O` on **both** sides is accepted when it stands alone as its own token
+actually writes, ALL-CAPS included) or from `<Nome>, Rodada N`, where the comma is optional. The two
+arrive combined often enough (`PALPITES PL, Rodada 1`) that the round is peeled off before the name
+is judged — left in, its comma and digit fail the shape check and the header is lost, so the sender's
+contact name at the top of the bubble wins instead. The season title in that same shape is rejected
+rather than filed as a person. A score whose zeros OCR returned as the letter `O` on **both** sides
+is accepted when it stands alone as its own token
 (`Norwich O x O West Brom`), while `Arsenal x Leeds` — where the same letters are stolen from the
 ends of two club names — stays rejected.
+
+A fixture the bubble wrapped onto a second line (`Birmingham 2 x 0` / `Bristol City`) is stitched
+back together before anything reads the lines, and only when the two halves really form a fixture.
+The orphan half is not merely a lost row: it is name-shaped, so left alone it becomes the
+participant and takes every fixture below it with it. A competition heading or a `PALPITES` line
+sitting under a dangling score is never swallowed.
 
 **Learned participant aliases.** When an admin confirms a batch after correcting who a name belongs
 to, that correction is remembered per group (`OcrParticipantAliases`) and consulted on the next
