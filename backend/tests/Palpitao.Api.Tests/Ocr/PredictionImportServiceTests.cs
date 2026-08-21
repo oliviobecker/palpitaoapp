@@ -502,11 +502,13 @@ public class PredictionImportServiceTests
     [Fact]
     public void Parser_reads_the_screenshot_whose_header_carries_the_name_and_the_round_together()
     {
-        // The round the group actually posted. Two things used to go wrong at once: the only
-        // usable name is behind "PALPITES" with the round glued to it, so the parser fell back on
-        // the sender's contact name at the top of the bubble ("Pedro Rodrigues", nobody on the
-        // roster); and the bubble broke two fixtures onto a second line, which cost the fixture
-        // and handed the participant to a club for every row below it.
+        // Verbatim engine output for the round the group actually posted, once the untouched
+        // image was allowed to compete with the binarized ones. Two things used to go wrong at
+        // once: the only usable name is behind "PALPITES" with the round glued to it, so the
+        // parser fell back on the sender's contact name at the top of the bubble ("Pedro
+        // Rodrigues", nobody on the roster); and the bubble broke two fixtures onto a second line
+        // ("Birmingham 2 x 0" / "Bristol City", "QPR2x0" / "Bolton"), which cost the fixture and
+        // handed the participant to a club for every row below it.
         var text =
             "Pedro Rodrigues\n" +
             "Palpitao England 2026/2027\n" +
@@ -515,36 +517,43 @@ public class PredictionImportServiceTests
             "Palpites até 14h59 de sexta-feira (21/08/2026):\n" +
             "\n" +
             "Premier League\n" +
-            "Arsenal 4x0 Coventry\n" +
+            "\n" +
+            "“Arsenal 4x0 Coventry\n" +
+            "\n" +
             "Hull 1x0 Man Utd\n" +
+            "\n" +
             "Everton 1 x 0 Crystal Palace\n" +
-            "Ipswich 1 x 0 Sunderland\n" +
+            "Ipswich 1 x 0 Sundertand\n" +
             "Nottingham 2x0 Leeds\n" +
             "Brentford 0 x 2 Tottenham\n" +
-            "Brighton 1 x 0 Aston Villa\n" +
+            "Brighton 1 x O Aston Villa\n" +
             "Man City 5x1 Bournemouth\n" +
-            "Newcastle 2 x 4 Liverpool\n" +
+            "Newocastle 2 x 4 Liverpool\n" +
             "Fulham 0 x 2 Chelsea\n" +
             "\n" +
             "Championship\n" +
             "Lincoln 2x1 Portsmouth\n" +
-            "Millwall 1 x 0 Norwich\n" +
+            "Millwall 1 x O Norwich\n" +
             "Birmingham 2 x 0\n" +
+            "\n" +
             "Bristol City\n" +
-            "Blackburn 0 x 2 Middlesbrough\n" +
-            "Derby 1 x 0 Cardiff\n" +
+            "Blackbum 0 x 2 Middlesbrough\n" +
+            "Derby 1 x 0 Cardiff.\n" +
             "Preston 2 x 1 Wolves\n" +
-            "QPR 2 x 0\n" +
+            "QPR2x0\n" +
+            "\n" +
             "Bolton\n" +
             "Southampton 2 x 1 Stoke\n" +
-            "Swansea 1 x 0 Sheffield Utd\n" +
-            "West Ham 2 x 1 Charlton\n" +
+            "Swansea 1 x O Sheffield Utd\n" +
+            "West Ham 2 x 1 Chariton\n" +
             "Wrexham 2 x 2 Watford\n" +
-            "West Brom 2 x 0 Burnley\n" +
+            "\n" +
+            "West Brom 2 x O Bumley\n" +
             "\n" +
             "League One\n" +
-            "Leicester 2 x 0 Burton (x2) 8:51 AM\n" +
-            "Como vou tirar print dessa merda? 8:51 AM";
+            "Leicester 2 x O Burton (x2) 851Am\n" +
+            "\n" +
+            "Como vou tirar print dessa merda? ; -. ,,,";
 
         List<User> participants = [new() { Id = Guid.NewGuid(), Name = "PL", Role = UserRole.Participant }];
         var candidates = PureService()
@@ -552,15 +561,26 @@ public class PredictionImportServiceTests
 
         Assert.Equal(23, candidates.Count);
         Assert.All(candidates, c => Assert.Equal("PL", c.ParticipantNameRaw));
-        Assert.All(candidates, c => Assert.False(c.NeedsReview));
 
-        // The two the bubble broke in half, back in one piece.
+        // The two the bubble broke in half, back in one piece and resolved.
         var birmingham = Assert.Single(
             candidates, c => c.MatchTextRaw!.StartsWith("Birmingham", StringComparison.Ordinal));
         Assert.Equal((2, 0), (birmingham.PredictedHomeScore, birmingham.PredictedAwayScore));
+        Assert.False(birmingham.NeedsReview);
 
         var qpr = Assert.Single(candidates, c => c.MatchTextRaw!.StartsWith("QPR", StringComparison.Ordinal));
         Assert.Equal((2, 0), (qpr.PredictedHomeScore, qpr.PredictedAwayScore));
+        Assert.False(qpr.NeedsReview);
+
+        // Twenty resolve outright. The three that do not are the honest ones, and the point of
+        // pinning them here is that none is a silent guess:
+        //   "Blackbum" and "Bumley" are two edits from their clubs (m->r plus an inserted n), and
+        //   the budget is deliberately one — Barnsley/Burnley are two apart, so widening it would
+        //   merge real clubs. "851Am" is the bubble's clock with its colon eaten, and CleanTeam
+        //   keeps "Am" because it is Title-case, so the away side reads "Burton x Am".
+        Assert.Equal(
+            ["Blackbum 0 x 2 Middlesbrough", "West Brom 2 x O Bumley", "Leicester 2 x O Burton (x2) 851Am"],
+            candidates.Where(c => c.NeedsReview).Select(c => c.MatchTextRaw));
     }
 
     [Fact]
@@ -596,6 +616,82 @@ public class PredictionImportServiceTests
             PureService().Parse($"Birmingham 2 x 0\n{header}\nArsenal 2x1 Chelsea"));
 
         Assert.Equal("Arsenal", parsed.HomeTeamRaw);
+    }
+
+    [Fact]
+    public void Parser_replays_the_ocr_output_the_group_actually_got_back()
+    {
+        // Verbatim "Texto extraido" of the batch, dark-mode screenshot, language "por". Tesseract
+        // dropped ~20 of the 23 fixtures outright -- that is an engine problem, not a parsing one,
+        // and this fixture exists to pin what the parser does with the little that survives.
+        // The headings came back misspelled ("Championshio", "Leaque One"), which is exactly the
+        // shape of a person's name, and they used to take the participant away from PL.
+        var text =
+            "Ó PesoRotigues\n" +
+            "Palpitao England 2026/2027\n" +
+            "PALPITES PL, Rodada 1\n" +
+            "\n" +
+            "Palpites até 14h59 de serta feira (21/08/2026):\n" +
+            "\n" +
+            "Brentford O x 2 Tottenham\n" +
+            "\n" +
+            "Championshio\n" +
+            "Lincoin 2x1 Portemouih\n" +
+            "\n" +
+            "Leaque One\n" +
+            "Leicester 2 x O Burion (X2) E51 AM\n" +
+            "\n" +
+            "Como vou tirar print dessa merda? » -. ..)\n" +
+            "\n" +
+            "-n";
+
+        var pl = new User { Id = Guid.NewGuid(), Name = "PL", Role = UserRole.Participant };
+        var candidates = PureService()
+            .BuildCandidates(Guid.NewGuid(), Guid.NewGuid(), text, PalpitaoEnglandRound(), [pl]);
+
+        Assert.Equal(3, candidates.Count);
+        Assert.All(candidates, c => Assert.Equal("PL", c.ParticipantNameRaw));
+        Assert.All(candidates, c => Assert.Equal(pl.Id, c.UserId));
+
+        // Brentford and Leicester resolve ("Burion" is one edit from Burton Albion); "Portemouih"
+        // is two edits from Portsmouth, past the budget, so that one stays for the admin.
+        var review = Assert.Single(candidates, c => c.NeedsReview);
+        Assert.StartsWith("Lincoin", review.MatchTextRaw!, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_misread_heading_does_not_take_the_participant_from_an_announced_name()
+    {
+        var parsed = Assert.Single(
+            PureService().Parse("PALPITES PL\nChampionshio\nArsenal 2x1 Chelsea"));
+
+        Assert.Equal("PL", parsed.ParticipantName);
+    }
+
+    [Fact]
+    public void An_announced_name_still_wins_over_a_bare_one_read_before_it()
+    {
+        var parsed = Assert.Single(
+            PureService().Parse("Ó PesoRotigues\nPALPITES PL\nArsenal 2x1 Chelsea"));
+
+        Assert.Equal("PL", parsed.ParticipantName);
+    }
+
+    [Fact]
+    public void A_dangling_score_does_not_swallow_the_fixture_under_it()
+    {
+        // "Arsenal 4x0" lost its away team to OCR. Gluing the next line onto it reads as a
+        // fixture ("Arsenal 4 x 0 Hull x Man Utd"), so the count stays the same while a real
+        // fixture is replaced by an invented one -- which is why this asserts the teams.
+        var parsed = PureService()
+            .Parse("João\nArsenal 4x0\nHull 1x0 Man Utd\nEverton 1 x 0 Crystal Palace");
+
+        Assert.Equal(2, parsed.Count);
+        Assert.All(parsed, p => Assert.Equal("João", p.ParticipantName));
+
+        Assert.Equal("Hull", parsed[0].HomeTeamRaw);
+        Assert.Equal("Man Utd", parsed[0].AwayTeamRaw);
+        Assert.Equal("Everton", parsed[1].HomeTeamRaw);
     }
 
     /// <summary>

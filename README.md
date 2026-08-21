@@ -503,12 +503,22 @@ codes when they are not).
 
 ### How a screenshot is read
 
-Before recognition the image is turned grayscale, **enlarged** towards ~1100px wide (capped at 4×)
-and binarized. A phone screenshot of a single chat bubble arrives ~300px wide with ~9px glyphs,
-which Tesseract reads as noise; larger screenshots are left alone. The page is then read **twice —
-as-is and inverted** — and the reading Tesseract is more confident about wins, because a dark-mode
-bubble is white-on-dark, the reverse of what it expects, and nothing in the bytes says which theme
-the sender uses. `Ocr:Preprocess = false` disables the whole pass.
+The page is read **three times** — the original bytes, a preprocessed copy, and that copy inverted
+— and the reading Tesseract is most confident about wins. Preprocessing turns the image grayscale,
+**enlarges** it towards ~1100px wide (capped at 4×) and binarizes it, because a phone screenshot of
+a single chat bubble arrives ~300px wide with ~9px glyphs, which Tesseract otherwise reads as noise;
+larger screenshots are left alone. The inverted copy is there because a dark-mode bubble is
+white-on-dark, the reverse of what Tesseract expects, and nothing in the bytes says which theme the
+sender uses.
+
+**The original competes on purpose.** Binarization is a lossy bet, and on a dark-mode screenshot
+whose text is grey on near-black a global Otsu threshold flattens most of the page into the
+background. Measured on a 391×712 dark-mode screenshot: the original read every one of its 23
+fixtures at 83% confidence, the binarized copy one at 66%, and the binarized-and-inverted copy
+three at 67%. While only the prepared copies competed, that import came back with **three** rows
+out of twenty-three and looked like a parser bug. The log names every candidate and its confidence
+for exactly this reason — when an import comes back short, that line says which variant won and by
+how much. `Ocr:Preprocess = false` drops the two prepared candidates.
 
 Name matching is strict first (exact, then containment, then the alias map). Only when *nothing*
 matched does it retry allowing **one wrong character** — `Coventy` → `Coventry City`, `Joao` →

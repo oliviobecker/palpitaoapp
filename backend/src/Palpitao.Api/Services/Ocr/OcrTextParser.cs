@@ -65,6 +65,7 @@ public static partial class OcrTextParser
         }
 
         string? currentName = null;
+        var announced = false;
         foreach (var line in ReadLines(text))
         {
             // "Name: content" / "Name - content"
@@ -92,12 +93,18 @@ public static partial class OcrTextParser
             }
 
             // Otherwise it may be a participant name. "PALPITES <nome>" and "<Nome>, Rodada N"
-            // are strong signals; a plain clean name overrides too. Garbled OCR lines (symbols,
-            // digits, ALL-CAPS noise) are ignored so they do not steal the participant context
-            // from the real matches.
-            if (TryReadParticipantName(line) is { } participant)
+            // announce one outright; a plain clean name is only taken until one of those does.
+            // Garbled OCR lines (symbols, digits, ALL-CAPS noise) are ignored so they do not
+            // steal the participant context from the real matches.
+            if (TryReadParticipantName(line) is { } participant
+                && (participant.Announced || !announced))
             {
-                currentName = participant;
+                // A bare line never overrides a name the message announced outright. OCR turns
+                // headings and club names into something name-shaped ("Championshio", "Leaque
+                // One", "Bristol City"), and letting one of those win costs every fixture below
+                // it -- and, on confirm, teaches the group a junk alias for a club.
+                currentName = participant.Name;
+                announced |= participant.Announced;
             }
         }
 
@@ -153,10 +160,7 @@ public static partial class OcrTextParser
 
         foreach (Match pair in ScorePair().Matches(line))
         {
-            if (IsScorePair(line, pair)
-                && ParseScore(pair.Groups[1].Value) is not null
-                && ParseScore(pair.Groups[2].Value) is not null
-                && CleanTeam(line[..pair.Index]).Length >= 2)
+            if (IsRealScore(line, pair) && CleanTeam(line[..pair.Index]).Length >= 2)
             {
                 return true;
             }
@@ -165,22 +169,41 @@ public static partial class OcrTextParser
         return false;
     }
 
+    /// <summary>True when the line carries a score of its own, wherever it sits.</summary>
+    private static bool HasScore(string line) =>
+        ScorePair().Matches(line).Any(pair => IsRealScore(line, pair));
+
+    /// <summary>A matched pair that is really a score: it is a pair, and both sides parse.</summary>
+    private static bool IsRealScore(string line, Match pair) =>
+        IsScorePair(line, pair)
+        && ParseScore(pair.Groups[1].Value) is not null
+        && ParseScore(pair.Groups[2].Value) is not null;
+
     /// <summary>
-    /// True when a line may be the tail of the fixture above it. A competition heading or an
-    /// explicit name header announces the next block instead, and swallowing one would cost the
-    /// participant every row below it, which is the very thing this pass exists to prevent.
+    /// True when a line may be the tail of the fixture above it: the top half carries the score,
+    /// so the bottom half must carry none. Without that rule a line OCR left without its away
+    /// team swallows the next fixture whole, costing a good row and inventing a wrong one. A
+    /// competition heading or a name header announces the next block instead, and swallowing one
+    /// would cost the participant every row below it -- the very thing this pass exists to stop.
     /// </summary>
     private static bool CanCompleteFixture(string line) =>
-        !PredictionsHeader().IsMatch(line)
+        !HasScore(line)
+        && !PredictionsHeader().IsMatch(line)
         && !ParticipantHeader().IsMatch(line)
         && !CompetitionHeadings.Contains(NormalizeName(line));
 
     /// <summary>
-    /// Reads the participant a line announces, or null when the line is not a name. Tried in
+    /// A participant a line names, and whether the line announced it outright (the "PALPITES"
+    /// prefix or the round header) rather than merely being name-shaped.
+    /// </summary>
+    private readonly record struct ParticipantLine(string Name, bool Announced);
+
+    /// <summary>
+    /// Reads the participant a line names, or null when the line is not a name. Tried in
     /// order of how strong the signal is: the "PALPITES &lt;nome&gt;" prefix the group writes, the
     /// "&lt;Nome&gt;, Rodada N" header the app's own message prints, then a bare clean name.
     /// </summary>
-    private static string? TryReadParticipantName(string line)
+    private static ParticipantLine? TryReadParticipantName(string line)
     {
         var predictions = PredictionsHeader().Match(line);
         if (predictions.Success)
@@ -190,7 +213,7 @@ public static partial class OcrTextParser
             // that same line often enough ("PALPITES PL, Rodada 1") that it has to come off
             // first: left in, its comma and digit fail the shape check and the header is lost.
             var candidate = NormalizeName(StripRoundTail(predictions.Groups[1].Value));
-            return IsNameShaped(candidate) ? candidate : null;
+            return IsNameShaped(candidate) ? new ParticipantLine(candidate, true) : null;
         }
 
         var header = ParticipantHeader().Match(line);
@@ -199,11 +222,11 @@ public static partial class OcrTextParser
             // Checked, not trusted: "Palpitão England 2026/2027 — Rodada 1" also matches the
             // header, and filing every fixture against a season title helps nobody.
             var candidate = NormalizeName(header.Groups[1].Value);
-            return LooksLikeName(candidate) ? candidate : null;
+            return LooksLikeName(candidate) ? new ParticipantLine(candidate, true) : null;
         }
 
         var plain = NormalizeName(line);
-        return LooksLikeName(plain) ? plain : null;
+        return LooksLikeName(plain) ? new ParticipantLine(plain, false) : null;
     }
 
     /// <summary>

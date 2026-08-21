@@ -66,21 +66,36 @@ public class TesseractOcrEngine : IOcrEngine
             return Read(engine, pix, "original").Text;
         }
 
+        // The untouched image competes too. Preprocessing is tuned for a bubble so small that
+        // Tesseract reads it as noise, but binarization is a lossy bet: on a dark-mode screenshot
+        // whose text is grey on near-black, a global Otsu threshold flattens most of the page into
+        // the background. Measured on the screenshot that prompted this (391x712, dark mode):
+        // original 83% and every fixture, binarized 66% and one, binarized+inverted 67% and three.
+        // Reading only the prepared variants is what threw the other twenty away.
+        var original = Read(engine, pix, "original");
+        var best = original;
+
         var prepared = Preprocess(pix);
         try
         {
-            var best = Read(engine, prepared, "normal");
+            var normal = Read(engine, prepared, "prepared");
+            if (normal.Confidence > best.Confidence)
+            {
+                best = normal;
+            }
 
             // Tesseract expects dark text on a light background. A dark-mode chat screenshot is
             // the opposite, and binarization keeps it that way — so read the inverse too and let
             // the engine's own confidence pick. Which one wins depends on the sender's theme,
             // which we cannot know from the bytes.
             var inverted = Invert(prepared);
+            float? invertedConfidence = null;
             if (inverted is not null)
             {
                 try
                 {
-                    var alternative = Read(engine, inverted, "inverted");
+                    var alternative = Read(engine, inverted, "prepared+inverted");
+                    invertedConfidence = alternative.Confidence;
                     if (alternative.Confidence > best.Confidence)
                     {
                         best = alternative;
@@ -92,9 +107,17 @@ public class TesseractOcrEngine : IOcrEngine
                 }
             }
 
+            // Every candidate, not just the winner: when an import comes back short the first
+            // question is which variant won and by how much, and this answers it in one line.
             _logger.LogInformation(
-                "OCR: variante {Variant} escolhida (confiança {Confidence:P0}), {Width}x{Height}px.",
-                best.Variant, best.Confidence, prepared.Width, prepared.Height);
+                "OCR: variante {Variant} escolhida. original {Original:P0}, prepared {Prepared:P0}, "
+                    + "prepared+inverted {Inverted:P0}; {Width}x{Height}px preparados.",
+                best.Variant,
+                original.Confidence,
+                normal.Confidence,
+                invertedConfidence ?? 0f,
+                prepared.Width,
+                prepared.Height);
 
             return best.Text;
         }
