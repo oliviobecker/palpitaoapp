@@ -90,6 +90,74 @@ public class PredictionImportServiceTests
     }
 
     [Theory]
+    // "rn" and "m" are the same few pixels at screenshot resolution, and this group's clubs are
+    // full of them. Every one of these is two edits from its club — one past the budget — and the
+    // budget cannot be widened, because Barnsley and Burnley are two edits apart too. Seven rows
+    // across ten real screenshots died here before the folding.
+    [InlineData("Blackbum", "Blackburn Rovers")]
+    [InlineData("Bumley", "Burnley")]
+    [InlineData("Boumesmouth", "Bournemouth")]
+    public void Parser_reads_the_rn_that_ocr_returned_as_an_m(string mangled, string club)
+    {
+        List<RoundMatch> matches =
+        [
+            new() { Id = Match1, HomeTeam = new Team { Name = "Arsenal" }, AwayTeam = new Team { Name = club } },
+        ];
+
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), $"João\nArsenal 3 x 1 {mangled}", matches, Participants());
+
+        var c = Assert.Single(candidates);
+        Assert.Equal(Match1, c.RoundMatchId);
+        Assert.False(c.NeedsReview);
+    }
+
+    [Fact]
+    public void The_rn_folding_still_keeps_barnsley_and_burnley_apart()
+    {
+        // The pair the edit budget exists to protect. Neither carries an m, so the folding never
+        // touches them — but the guard belongs next to the change that could have broken it.
+        List<RoundMatch> matches =
+        [
+            new() { Id = Match1, HomeTeam = new Team { Name = "Arsenal" }, AwayTeam = new Team { Name = "Barnsley" } },
+            new() { Id = Match2, HomeTeam = new Team { Name = "Chelsea" }, AwayTeam = new Team { Name = "Burnley" } },
+        ];
+
+        var candidates = PureService().BuildCandidates(
+            Guid.NewGuid(), Guid.NewGuid(), "João\nArsenal 3 x 1 Burnley", matches, Participants());
+
+        // "Arsenal x Burnley" is not on the card at all, and no near-miss may invent it.
+        Assert.Null(Assert.Single(candidates).RoundMatchId);
+    }
+
+    [Fact]
+    public void Parser_reads_a_score_whose_separator_ocr_returned_twice()
+    {
+        // "Millwall 2xX1 Norwich" — one glyph read as two, on two of the ten screenshots.
+        var parsed = Assert.Single(PureService().Parse("João\nMillwall 2xX1 Norwich"));
+
+        Assert.Equal("Millwall", parsed.HomeTeamRaw);
+        Assert.Equal("Norwich", parsed.AwayTeamRaw);
+        Assert.Equal((2, 1), (parsed.HomeScore, parsed.AwayScore));
+    }
+
+    [Theory]
+    // The round keyword gets one wrong character too. "Feunppe, Kodada 1" is a real header: a
+    // capital R read as a K used to throw the participant away entirely, leaving the admin with
+    // no name to correct and nothing for the group to learn.
+    // One character *substituted*, which is what OCR does — first, middle or last. An inserted or
+    // dropped letter is not covered on purpose: "Rodadas" is a different word, not a misread one.
+    [InlineData("Feunppe, Kodada 1", "Feunppe")]
+    [InlineData("Gilberto, Rodadn 2", "Gilberto")]
+    [InlineData("Ana - Roduda 3", "Ana")]
+    public void Parser_reads_a_round_header_whose_keyword_ocr_mangled(string header, string expected)
+    {
+        var parsed = Assert.Single(PureService().Parse($"{header}\nArsenal 2x1 Chelsea"));
+
+        Assert.Equal(expected, parsed.ParticipantName);
+    }
+
+    [Theory]
     [InlineData("Premier League")]
     [InlineData("Championship")]
     [InlineData("League One")]
@@ -572,14 +640,12 @@ public class PredictionImportServiceTests
         Assert.Equal((2, 0), (qpr.PredictedHomeScore, qpr.PredictedAwayScore));
         Assert.False(qpr.NeedsReview);
 
-        // Twenty resolve outright. The three that do not are the honest ones, and the point of
-        // pinning them here is that none is a silent guess:
-        //   "Blackbum" and "Bumley" are two edits from their clubs (m->r plus an inserted n), and
-        //   the budget is deliberately one — Barnsley/Burnley are two apart, so widening it would
-        //   merge real clubs. "851Am" is the bubble's clock with its colon eaten, and CleanTeam
-        //   keeps "Am" because it is Title-case, so the away side reads "Burton x Am".
+        // "Blackbum" and "Bumley" resolve through the rn/m folding, which is the confusion
+        // Tesseract makes on every one of this group's screenshots. What is left is the bubble's
+        // clock with its colon eaten: CleanTeam keeps "Am" because it is Title-case, so the away
+        // side reads "Burton x Am" and no fixture fits. Marked for review, never guessed at.
         Assert.Equal(
-            ["Blackbum 0 x 2 Middlesbrough", "West Brom 2 x O Bumley", "Leicester 2 x O Burton (x2) 851Am"],
+            ["Leicester 2 x O Burton (x2) 851Am"],
             candidates.Where(c => c.NeedsReview).Select(c => c.MatchTextRaw));
     }
 

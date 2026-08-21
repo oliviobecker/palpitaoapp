@@ -192,8 +192,8 @@ public static class OcrTeamMatcher
     /// </summary>
     private static bool Fuzzy(string a, string b)
     {
-        var x = Fold(a);
-        var y = Fold(b);
+        var x = Ligature(Fold(a));
+        var y = Ligature(Fold(b));
         if (x.Length == 0 || y.Length == 0)
         {
             return false;
@@ -232,6 +232,20 @@ public static class OcrTeamMatcher
     /// both sides — writing the alias and reading it back — so the two can never drift.
     /// </summary>
     public static string NormalizeAlias(string value) => Fold(value);
+
+    /// <summary>
+    /// Collapses the one confusion Tesseract makes constantly on these names: "rn" and "m" are
+    /// the same handful of pixels at screenshot resolution, so it returns "Blackbum" for
+    /// Blackburn, "Bumley" for Burnley and "Boumesmouth" for Bournemouth. Each of those is two
+    /// edits from its club — delete the r, swap the n — which is exactly one past the budget, and
+    /// widening the budget instead would merge Barnsley into Burnley. Rewriting every m as rn on
+    /// both sides makes the pair identical without giving anything else more room: it is a
+    /// normalisation, like accent folding, not a guess.
+    ///
+    /// Only for comparison. <see cref="NormalizeAlias"/> deliberately does not do this — it is the
+    /// stored key of a learned alias, and rewriting it would orphan every alias already in a group.
+    /// </summary>
+    private static string Ligature(string value) => value.Replace("m", "rn", StringComparison.Ordinal);
 
     /// <summary>Lowercases and strips accents, so "Joao" and "João" compare equal.</summary>
     private static string Fold(string value)

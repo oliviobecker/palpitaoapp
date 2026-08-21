@@ -520,6 +520,15 @@ out of twenty-three and looked like a parser bug. The log names every candidate 
 for exactly this reason — when an import comes back short, that line says which variant won and by
 how much. `Ocr:Preprocess = false` drops the two prepared candidates.
 
+Before any comparison, **`m` is rewritten as `rn`** on both sides. Those are the same handful of
+pixels at screenshot resolution, so Tesseract returns `Blackbum`, `Bumley` and `Boumesmouth` for
+Blackburn, Burnley and Bournemouth — each two edits from its club, one past the budget, and the
+budget cannot grow because Barnsley and Burnley are two edits apart as well. Rewriting both sides
+makes the pair identical without giving anything else more room; it is a normalisation, like accent
+folding, not a guess. Across ten real screenshots of one round it recovered seven rows. The learned
+alias key deliberately does **not** get this treatment — it is stored, and rewriting it would orphan
+every alias a group already has.
+
 Name matching is strict first (exact, then containment, then the alias map). Only when *nothing*
 matched does it retry allowing **one wrong character** — `Coventy` → `Coventry City`, `Joao` →
 `João` — and only when that retry finds exactly one fixture. That retry also goes *through* the
@@ -533,21 +542,32 @@ that budget, and that no alias reaches a club that is not its own.
 to ignore it: the clock stamped on every screenshot (`Cardiff 1x2 Wrexham 17:35`) is stripped before
 anything else — its colon otherwise reads as `Name: content` and swallows the fixture — as are the
 emphasis markers and quotes around a name (`*Flavio*`, `"Paraguaio"`), the day separators (`Hoje`)
-and the app's own vocabulary. The participant is read from `PALPITES <nome>` (the line the group
-actually writes, ALL-CAPS included) or from `<Nome>, Rodada N`, where the comma is optional. The two
-arrive combined often enough (`PALPITES PL, Rodada 1`) that the round is peeled off before the name
-is judged — left in, its comma and digit fail the shape check and the header is lost, so the sender's
-contact name at the top of the bubble wins instead. The season title in that same shape is rejected
-rather than filed as a person. A score whose zeros OCR returned as the letter `O` on **both** sides
-is accepted when it stands alone as its own token
-(`Norwich O x O West Brom`), while `Arsenal x Leeds` — where the same letters are stolen from the
-ends of two club names — stays rejected.
+and the app's own vocabulary.
+
+The participant is read from `PALPITES <nome>` (the line the group actually writes, ALL-CAPS
+included) or from `<Nome>, Rodada N`, where the comma is optional and the keyword itself may carry
+one wrong character — `Feunppe, Kodada 1` is a real header, and a capital R read as a K used to
+throw the whole name away. The two arrive combined often enough (`PALPITES PL, Rodada 1`) that the
+round is peeled off before the name is judged; left in, its comma and digit fail the shape check and
+the header is lost, so the sender's contact name at the top of the bubble wins instead. The season
+title in that same shape is rejected rather than filed as a person.
+
+A **bare** name-shaped line only stands until one of those two announces a name. OCR returns
+`Championshio`, `Leaque One` and `Premier Leaque` for the headings, which are exactly the shape of a
+person, and each one used to take the participant away for every row below it — and to be learned as
+a permanent group alias on confirm.
+
+A score whose zeros OCR returned as the letter `O` on **both** sides is accepted when it stands
+alone as its own token (`Norwich O x O West Brom`), while `Arsenal x Leeds` — where the same letters
+are stolen from the ends of two club names — stays rejected. The separator may come back doubled
+(`Millwall 2xX1 Norwich`): that is one glyph read twice, not two scores.
 
 A fixture the bubble wrapped onto a second line (`Birmingham 2 x 0` / `Bristol City`) is stitched
-back together before anything reads the lines, and only when the two halves really form a fixture.
-The orphan half is not merely a lost row: it is name-shaped, so left alone it becomes the
-participant and takes every fixture below it with it. A competition heading or a `PALPITES` line
-sitting under a dangling score is never swallowed.
+back together before anything reads the lines, and only when the two halves really form a fixture —
+the top half carries the score, so the bottom half must carry none. The orphan half is not merely a
+lost row: it is name-shaped, so left alone it becomes the participant and takes every fixture below
+it with it. A competition heading or a `PALPITES` line sitting under a dangling score is never
+swallowed.
 
 **Learned participant aliases.** When an admin confirms a batch after correcting who a name belongs
 to, that correction is remembered per group (`OcrParticipantAliases`) and consulted on the next

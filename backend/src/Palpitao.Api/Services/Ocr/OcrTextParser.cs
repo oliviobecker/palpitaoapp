@@ -12,8 +12,9 @@ public static partial class OcrTextParser
     // A score pair "d x d" found anywhere in a line. Single OCR-tolerant digit
     // on each side (letters like O→0, I/l→1, S→5, B→8 are canonicalised by
     // ParseScore). Matching anywhere lets us cope with flag/emoji junk that OCR
-    // injects around the score (e.g. "Bélgica R 2x 1 == Egito").
-    [GeneratedRegex(@"([0-9OoQqDIiLlSsBbZzGg])\s*[xX×:\-–]\s*([0-9OoQqDIiLlSsBbZzGg])")]
+    // injects around the score (e.g. "Bélgica R 2x 1 == Egito"). The separator may come back
+    // doubled ("Millwall 2xX1 Norwich"), which is one glyph read twice, not two scores.
+    [GeneratedRegex(@"([0-9OoQqDIiLlSsBbZzGg])\s*[xX×:\-–]{1,2}\s*([0-9OoQqDIiLlSsBbZzGg])")]
     private static partial Regex ScorePair();
 
     // "Arsenal 2 Chelsea 1", "Liverpool 1 City 1" (no separator, fallback).
@@ -43,7 +44,14 @@ public static partial class OcrTextParser
     // Header with the participant's name, e.g. "Gilberto, Rodada 2 (1a fase de grupos)" or
     // "*Flavio Rodada 1 (RODADA TESTE". The separator is optional: WhatsApp bold markers and
     // OCR both eat the comma often enough that requiring it loses the name outright.
-    [GeneratedRegex(@"^(.+?)\s*[,\-–—]?\s*rodada\b", RegexOptions.IgnoreCase)]
+    //
+    // The keyword itself gets one wrong character, spelled out rather than fuzzy-matched because
+    // it is a fixed six-letter word: OCR returned "Feunppe, Kodada 1" for a real header, and a
+    // capital R read as a K threw the whole name away. "odada" anchors it — nothing else spells
+    // that, so the extra room costs nothing.
+    [GeneratedRegex(
+        @"^(.+?)\s*[,\-–—]?\s*(?:rodada|\wodada|r\wdada|ro\wada|rod\wda|roda\wa|rodad\w)\b",
+        RegexOptions.IgnoreCase)]
     private static partial Regex ParticipantHeader();
 
     // "PALPITES Felippe", "Palpites do Edson", "PALPITES PL" — the line the group actually
