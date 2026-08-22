@@ -59,6 +59,7 @@ public class TemporaryStandingDto
 public class TemporaryStandingsDto
 {
     public Guid RoundId { get; set; }
+    public int RoundNumber { get; set; }
     public bool IsTemporary { get; set; } = true;
     public RoundStatus RoundStatus { get; set; }
     public DateTime? LastUpdatedAt { get; set; }

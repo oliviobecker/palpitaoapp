@@ -10,14 +10,18 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { TemporaryStandings } from '../../core/models/models';
+import { ToastService } from '../../core/notifications/toast.service';
+import { GroupContextService } from '../../core/services/group-context.service';
 import { RoundsService } from '../../core/services/rounds.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
+import { copyToClipboard } from '../../shared/utils/clipboard.util';
+import { buildTemporaryStandingsMessage } from '../../shared/utils/temporary-standings-message.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -87,6 +91,23 @@ import { Loading } from '../../shared/components/loading/loading';
             </div>
           }
         </div>
+
+        <!-- Copy-ready text for the group. Below the standings: they are what the page is for. -->
+        <div class="card mt-3">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h2 class="h6 fw-bold mb-0">{{ 'temporaryStandings.groupMessage' | translate }}</h2>
+              <button class="btn btn-sm btn-primary" type="button" (click)="copy()">
+                <app-icon name="copy" [size]="14" /> {{ 'roundDetail.copy' | translate }}
+              </button>
+            </div>
+            <pre
+              class="small mb-0 p-2 copy-message rounded"
+              style="white-space: pre-wrap; word-break: break-word"
+              >{{ message() }}</pre
+            >
+          </div>
+        </div>
       }
     }
   `,
@@ -95,12 +116,21 @@ export class TemporaryStandingsView implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly roundsApi = inject(RoundsService);
   private readonly auth = inject(AuthService);
+  private readonly group = inject(GroupContextService);
+  private readonly toast = inject(ToastService);
+  private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
   protected readonly error = signal(false);
   protected readonly data = signal<TemporaryStandings | null>(null);
   private readonly myId = computed(() => this.auth.currentUser()?.id ?? null);
+  protected readonly message = computed(() => {
+    const d = this.data();
+    return d && d.standings.length > 0
+      ? buildTemporaryStandingsMessage(d, this.group.groupName() ?? '')
+      : '';
+  });
   private roundId = '';
 
   ngOnInit(): void {
@@ -128,5 +158,12 @@ export class TemporaryStandingsView implements OnInit {
 
   isMe(userId: string): boolean {
     return this.myId() === userId;
+  }
+
+  async copy(): Promise<void> {
+    const ok = await copyToClipboard(this.message());
+    this.toast.success(
+      this.translate.instant(ok ? 'roundDetail.copied' : 'roundDetail.copyFailed'),
+    );
   }
 }
