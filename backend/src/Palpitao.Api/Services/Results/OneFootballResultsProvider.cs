@@ -15,8 +15,10 @@ namespace Palpitao.Api.Services.Results;
 /// Results provider backed by the same OneFootball web-experience API used to import
 /// fixtures (<c>.../competition/{slug}/fixtures</c> and <c>.../results</c>). For each
 /// competition present in the round it fetches the cards and reads the live/final
-/// scores and status, keyed by the <c>onefootball-{matchId}</c> external id stored at
-/// import (falling back to team names). One GET per tab, clear user-agent, timeout —
+/// scores and status, keyed by the <c>onefootball-{matchId}</c> external id (falling back
+/// to team names — the id is only stored on a match once a refresh has matched it).
+/// Neither tab is authoritative: "results" also lists not-yet-played fixtures, so the two
+/// are merged and the best-informed card wins. One GET per tab, clear user-agent, timeout —
 /// no login, no token. Enabled when <c>ResultsProvider:Provider = "OneFootball"</c> and
 /// <c>Enabled = true</c>; otherwise the manual flow keeps working.
 /// </summary>
@@ -65,8 +67,9 @@ public class OneFootballResultsProvider : IResultsProvider
     {
         var competitions = round.Matches.Select(m => m.Competition).Distinct().ToList();
 
-        var results = new List<ExternalMatchResultDto>();
-        var seen = new HashSet<string>();
+        // Both tabs list the same match — and "results" also carries not-yet-played cards — so we
+        // merge on the match key and keep the best-informed card instead of the first one read.
+        var byKey = new Dictionary<string, ExternalMatchResultDto>(StringComparer.OrdinalIgnoreCase);
         var requested = 0;
         var failures = 0;
 
@@ -84,7 +87,7 @@ public class OneFootballResultsProvider : IResultsProvider
                 try
                 {
                     var root = await FetchAsync($"{slug}/{tab}", cancellationToken);
-                    ParseInto(results, seen, root);
+                    ParseInto(byKey, root, competition);
                 }
                 catch (BusinessRuleException)
                 {
@@ -98,7 +101,7 @@ public class OneFootballResultsProvider : IResultsProvider
             throw new BusinessRuleException("results.fetchFailed");
         }
 
-        return results;
+        return byKey.Values.ToList();
     }
 
     private async Task<JsonElement> FetchAsync(string path, CancellationToken ct)
@@ -138,7 +141,8 @@ public class OneFootballResultsProvider : IResultsProvider
         }
     }
 
-    private static void ParseInto(List<ExternalMatchResultDto> acc, HashSet<string> seen, JsonElement root)
+    private void ParseInto(
+        Dictionary<string, ExternalMatchResultDto> acc, JsonElement root, Competition competition)
     {
         if (root.ValueKind != JsonValueKind.Object && root.ValueKind != JsonValueKind.Array)
         {
@@ -161,26 +165,52 @@ public class OneFootballResultsProvider : IResultsProvider
                 ? mid.ToString()
                 : GetString(card, "link");
             var externalId = matchId is null ? null : $"onefootball-{matchId}";
-            // Dedupe on whatever key we have so the two tabs don't double-report.
-            var dedupe = externalId ?? $"{home}|{away}";
-            if (!seen.Add(dedupe))
-            {
-                continue;
-            }
+            var key = externalId ?? $"{competition}|{home}|{away}";
 
             var (homeScore, awayScore) = ReadScores(card);
-            acc.Add(new ExternalMatchResultDto
+            var candidate = new ExternalMatchResultDto
             {
                 ExternalMatchId = externalId,
                 ExternalMatchUrl = GetString(card, "link"),
+                Competition = competition,
                 HomeTeamName = home!.Trim(),
                 AwayTeamName = away!.Trim(),
                 HomeScore = homeScore,
                 AwayScore = awayScore,
                 Status = ReadStatus(card, homeScore, awayScore),
-            });
+            };
+
+            if (!acc.TryGetValue(key, out var existing) || IsBetterInformed(candidate, existing))
+            {
+                acc[key] = candidate;
+            }
         }
     }
+
+    /// <summary>
+    /// Which of two cards for the same match to keep. The tabs overlap and a competition page can
+    /// also embed a thin "next match" card, so the one that knows the most about the game wins —
+    /// whichever order we happened to read them in.
+    /// </summary>
+    private static bool IsBetterInformed(ExternalMatchResultDto candidate, ExternalMatchResultDto existing)
+    {
+        var rank = Rank(candidate);
+        var current = Rank(existing);
+        return rank != current
+            ? rank > current
+            : HasScores(candidate) && !HasScores(existing);
+    }
+
+    private static int Rank(ExternalMatchResultDto result) => result.Status switch
+    {
+        MatchStatus.Finished => 4,
+        MatchStatus.InProgress => 3,
+        MatchStatus.Postponed or MatchStatus.Cancelled => 2,
+        _ => 1,
+    };
+
+    private static bool HasScores(ExternalMatchResultDto result)
+        => result.HomeScore is not null && result.AwayScore is not null;
 
     /// <summary>Reads the home/away scores from the common OneFootball shapes:
     /// flat <c>homeScore</c>/<c>awayScore</c>, nested <c>homeTeam.score</c>, or a
@@ -214,23 +244,29 @@ public class OneFootballResultsProvider : IResultsProvider
             ? GetInt(team, "score")
             : null;
 
-    private static MatchStatus ReadStatus(JsonElement card, int? homeScore, int? awayScore)
+    /// <summary>
+    /// Reads the card's state. <c>period</c> ("PRE_MATCH", "SECOND_HALF", "FULL_TIME") is the only
+    /// field the web-experience cards actually carry; the others are kept as a defence against
+    /// other OneFootball shapes. <c>timePeriod</c> holds the running clock ("66'") while the match
+    /// is being played, so it settles a label the table does not know yet.
+    /// </summary>
+    private MatchStatus ReadStatus(JsonElement card, int? homeScore, int? awayScore)
     {
-        var raw = (GetString(card, "status")
+        var raw = GetString(card, "period")
+            ?? GetString(card, "status")
             ?? GetString(card, "matchStatus")
-            ?? GetString(card, "period")
-            ?? GetString(card, "state")
-            ?? string.Empty).Trim().ToLowerInvariant();
+            ?? GetString(card, "state");
 
-        return raw switch
+        var status = MatchStatusParser.Parse(
+            raw, homeScore, awayScore, GetString(card, "timePeriod"), out var unknownLabel);
+
+        if (unknownLabel)
         {
-            "inprogress" or "in_progress" or "live" or "playing" or "1h" or "2h" or "ht" => MatchStatus.InProgress,
-            "finished" or "ft" or "fulltime" or "full_time" or "ended" or "aet" or "pen" => MatchStatus.Finished,
-            "postponed" or "susp" or "suspended" => MatchStatus.Postponed,
-            "cancelled" or "canceled" or "abandoned" => MatchStatus.Cancelled,
-            "" when homeScore is not null && awayScore is not null => MatchStatus.Finished,
-            _ => MatchStatus.NotStarted,
-        };
+            _logger.LogWarning(
+                "Unknown OneFootball match state {State}; read as {Status}.", raw, status);
+        }
+
+        return status;
     }
 
     // --- JSON walking (mirrors the OneFootball fixture provider) -------------

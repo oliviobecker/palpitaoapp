@@ -7,6 +7,13 @@ public class ExternalMatchResultDto
 {
     public string? ExternalMatchId { get; set; }
     public string? ExternalMatchUrl { get; set; }
+
+    /// <summary>
+    /// Competition the row was read from, when the provider knows it. Two clubs can meet in more
+    /// than one competition, so this keeps a cup tie from being matched onto the league fixture.
+    /// </summary>
+    public Competition? Competition { get; set; }
+
     public string HomeTeamName { get; set; } = string.Empty;
     public string AwayTeamName { get; set; } = string.Empty;
     public int? HomeScore { get; set; }
@@ -22,6 +29,13 @@ public class RefreshResultsResponse
     public string Provider { get; set; } = string.Empty;
     public bool ProviderEnabled { get; set; }
     public int UpdatedMatches { get; set; }
+
+    /// <summary>
+    /// Matches in the round the provider had nothing for — usually a club spelled differently by
+    /// the source. Zero when no external provider is active.
+    /// </summary>
+    public int UnmatchedMatches { get; set; }
+
     public int FinishedMatches { get; set; }
     public int InProgressMatches { get; set; }
     public int NotStartedMatches { get; set; }

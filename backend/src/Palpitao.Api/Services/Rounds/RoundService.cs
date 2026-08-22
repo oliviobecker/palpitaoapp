@@ -638,6 +638,8 @@ public class RoundService : IRoundService
         HomeScore = m.HomeScore,
         AwayScore = m.AwayScore,
         IsFinished = m.IsFinished,
+        Status = m.Status,
+        LastResultUpdatedAt = m.LastResultUpdatedAt,
         ManualMultiplierOverride = m.ManualMultiplierOverride,
         ManualMultiplierJustification = m.ManualMultiplierJustification,
     };

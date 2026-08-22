@@ -37,6 +37,7 @@ export const round = {
       startsAt: '2999-01-01T18:00:00Z',
       order: 0,
       isFinished: false,
+      status: 'NotStarted',
     },
     {
       id: 'm2',
@@ -50,6 +51,7 @@ export const round = {
       startsAt: '2999-01-01T20:00:00Z',
       order: 1,
       isFinished: false,
+      status: 'NotStarted',
     },
   ],
 };

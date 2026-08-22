@@ -27,6 +27,10 @@ const publishedRound = {
       startsAt: '2026-05-23T13:30:00Z',
       order: 0,
       isFinished: false,
+      // Being played right now: the round detail must say so, not treat it as upcoming.
+      status: 'InProgress',
+      homeScore: 3,
+      awayScore: 0,
     },
   ],
 };
@@ -50,6 +54,7 @@ test.describe('Results refresh + temporary standings', () => {
               provider: 'Manual',
               providerEnabled: false,
               updatedMatches: 0,
+              unmatchedMatches: 0,
               finishedMatches: 1,
               inProgressMatches: 1,
               notStartedMatches: 0,
@@ -70,6 +75,9 @@ test.describe('Results refresh + temporary standings', () => {
     expect(refreshCalls).toHaveLength(1);
     // Summary card shows the counts.
     await expect(page.getByText(/Finalizados:/)).toBeVisible();
+    // …and the match itself is marked as being played, with the score so far.
+    await expect(page.getByText('Ao vivo')).toBeVisible();
+    await expect(page.getByText('3 - 0')).toBeVisible();
   });
 
   test('participant sees the temporary standings with the warning banner', async ({ page }) => {

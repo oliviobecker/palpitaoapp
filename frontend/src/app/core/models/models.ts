@@ -148,6 +148,8 @@ export interface RefreshResultsResponse {
   provider: string;
   providerEnabled: boolean;
   updatedMatches: number;
+  /** Matches of the round the provider had nothing for — usually a club it spells differently. */
+  unmatchedMatches: number;
   finishedMatches: number;
   inProgressMatches: number;
   notStartedMatches: number;

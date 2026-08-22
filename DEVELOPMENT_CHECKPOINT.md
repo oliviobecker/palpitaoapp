@@ -342,9 +342,7 @@ the real API and asserts the result. Phases: `all | seed | score | verify | rese
    instead of the leader at that point. README §16 currently claims it is idempotent.
    Same root cause makes re-scoring a single middle round unfaithful; `reopen` + re-score is only
    correct for the highest-numbered scored round.
-2. **`ResultsUpdateService.cs:170` hardcodes `ResultSource = "ConfiguredWebsite"`** regardless of
-   which provider ran, so a OneFootball refresh mislabels every match it touches.
-3. **`AdminMatches.remove()` sends no justification** (`admin-matches.ts:446`) while
+2. **`AdminMatches.remove()` sends no justification** (`admin-matches.ts:446`) while
    `MatchesService.remove()` supports one — deleting a match on a closed round always 422s from the UI.
 
 ## 8. Recommended next steps

@@ -133,6 +133,13 @@
     "Scored": "Scored",
     "Cancelled": "Cancelled"
   },
+  "matchStatus": {
+    "NotStarted": "Not started",
+    "InProgress": "Live",
+    "Finished": "Finished",
+    "Postponed": "Postponed",
+    "Cancelled": "Cancelled"
+  },
   "phase": {
     "Regular": "Regular phase",
     "PlayoffSemiFinal": "Semifinal (Playoff)",
@@ -261,7 +268,9 @@
     "updated": "Updated",
     "finished": "Finished",
     "inProgress": "In progress",
-    "notStarted": "Not started"
+    "notStarted": "Not started",
+    "unmatched": "Not matched",
+    "unmatchedHint": "The provider had nothing for these matches — check the club name against the catalogue."
   },
   "standings": {
     "title": "Standings",

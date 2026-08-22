@@ -273,7 +273,16 @@
             ><app-icon name="refresh-cw" [size]="14" /> {{ 'results.updated' | translate }}:
             <b>{{ rs.updatedMatches }}</b></span
           >
+          @if (rs.unmatchedMatches > 0) {
+            <span class="text-warning-emphasis"
+              ><app-icon name="triangle-alert" [size]="14" /> {{ 'results.unmatched' | translate }}:
+              <b>{{ rs.unmatchedMatches }}</b></span
+            >
+          }
         </div>
+        @if (rs.unmatchedMatches > 0) {
+          <p class="small text-muted mb-0 mt-1">{{ 'results.unmatchedHint' | translate }}</p>
+        }
       </div>
     </div>
   }

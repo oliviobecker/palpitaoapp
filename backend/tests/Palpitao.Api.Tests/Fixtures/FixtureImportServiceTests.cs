@@ -424,6 +424,74 @@ public class FixtureImportServiceTests
         Assert.Equal(1, await db.RoundMatches.CountAsync(m => m.RoundId == roundId));
     }
 
+    /// <summary>
+    /// The id is what lets the results refresh join on the provider's own numbering instead of on
+    /// both sides spelling the club the same way.
+    /// </summary>
+    [Fact]
+    public async Task Import_keeps_the_provider_id_on_the_match()
+    {
+        using var db = CreateContext();
+        var roundId = CreateDraftRound(db);
+        var service = CreateService(db, new FakeFixtureProvider());
+
+        await service.ImportAsync(roundId, new ImportFixturesRequest
+        {
+            Fixtures =
+            {
+                ToImport(Fixture("Arsenal", "Chelsea", new DateTime(2026, 8, 15, 13, 30, 0, DateTimeKind.Utc),
+                    externalId: "onefootball-2693565")),
+            },
+        }, Admin, Ct);
+
+        var match = await db.RoundMatches.FirstAsync(m => m.RoundId == roundId);
+        Assert.Equal("onefootball-2693565", match.ExternalMatchId);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Import_leaves_the_id_unset_when_the_source_has_none(string externalId)
+    {
+        using var db = CreateContext();
+        var roundId = CreateDraftRound(db);
+        var service = CreateService(db, new FakeFixtureProvider());
+
+        await service.ImportAsync(roundId, new ImportFixturesRequest
+        {
+            Fixtures =
+            {
+                ToImport(Fixture("Arsenal", "Chelsea", new DateTime(2026, 8, 15, 13, 30, 0, DateTimeKind.Utc),
+                    externalId: externalId)),
+            },
+        }, Admin, Ct);
+
+        var match = await db.RoundMatches.FirstAsync(m => m.RoundId == roundId);
+        Assert.Null(match.ExternalMatchId);
+    }
+
+    /// <summary>The id only ever serves as a join key, so an oversized one is dropped rather than
+    /// blowing up against the column width.</summary>
+    [Fact]
+    public async Task Import_drops_an_id_that_would_not_fit_the_column()
+    {
+        using var db = CreateContext();
+        var roundId = CreateDraftRound(db);
+        var service = CreateService(db, new FakeFixtureProvider());
+
+        await service.ImportAsync(roundId, new ImportFixturesRequest
+        {
+            Fixtures =
+            {
+                ToImport(Fixture("Arsenal", "Chelsea", new DateTime(2026, 8, 15, 13, 30, 0, DateTimeKind.Utc),
+                    externalId: new string('x', 121))),
+            },
+        }, Admin, Ct);
+
+        var match = await db.RoundMatches.FirstAsync(m => m.RoundId == roundId);
+        Assert.Null(match.ExternalMatchId);
+    }
+
     [Fact]
     public async Task Import_creates_missing_teams_with_big_seven_flag()
     {
