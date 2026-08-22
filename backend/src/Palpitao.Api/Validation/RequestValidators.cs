@@ -193,7 +193,8 @@ public class EliminateRequestValidator : AbstractValidator<EliminateRequest>
 {
     public EliminateRequestValidator()
         => RuleFor(x => x.Justification).NotEmpty().MinimumLength(3)
-            .WithMessage("validation.justification.required");
+            .WithMessage("validation.justification.required")
+            .MaximumLength(500).WithMessage("validation.justification.tooLong");
 }
 
 public class AbsenceOverrideRequestValidator : AbstractValidator<AbsenceOverrideRequest>
@@ -202,7 +203,8 @@ public class AbsenceOverrideRequestValidator : AbstractValidator<AbsenceOverride
     {
         RuleFor(x => x.UserId).NotEmpty().WithMessage("validation.participant.required");
         RuleFor(x => x.Justification).NotEmpty().MinimumLength(3)
-            .WithMessage("validation.justification.required");
+            .WithMessage("validation.justification.required")
+            .MaximumLength(500).WithMessage("validation.justification.tooLong");
     }
 }
 
@@ -210,5 +212,6 @@ public class ReactivateRequestValidator : AbstractValidator<ReactivateRequest>
 {
     public ReactivateRequestValidator()
         => RuleFor(x => x.Justification).NotEmpty().MinimumLength(3)
-            .WithMessage("validation.justification.required");
+            .WithMessage("validation.justification.required")
+            .MaximumLength(500).WithMessage("validation.justification.tooLong");
 }

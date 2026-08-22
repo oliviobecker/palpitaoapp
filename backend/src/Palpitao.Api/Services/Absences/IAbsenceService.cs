@@ -25,7 +25,24 @@ public interface IAbsenceService
 
     Task ApplyOverrideAsync(Guid roundId, AbsenceOverrideRequest request, Guid actingUserId, CancellationToken ct);
 
-    Task ReactivateAsync(Guid userId, string justification, Guid actingUserId, CancellationToken ct);
+    /// <summary>
+    /// Rounds of the group's active season that already closed for predictions (Locked or
+    /// Scored) where the participant did not complete their predictions and is not already
+    /// forced absent — i.e. what an admin can record them absent for when (re)activating them.
+    /// </summary>
+    Task<IReadOnlyList<AbsenceCandidateRoundDto>> GetAbsenceCandidateRoundsAsync(Guid userId, CancellationToken ct);
+
+    /// <summary>
+    /// Stages <c>IsAbsent = true</c> overrides for the given rounds <b>without saving</b>, so the
+    /// caller commits them in the same transaction as its own changes (all services share the
+    /// request-scoped <c>AppDbContext</c>). Every id is validated against
+    /// <see cref="GetAbsenceCandidateRoundsAsync"/>; ineligible ids are rejected.
+    /// </summary>
+    Task StageAbsenceOverridesAsync(
+        Guid userId, IReadOnlyCollection<Guid> roundIds, string justification, Guid actingUserId, CancellationToken ct);
+
+    Task ReactivateAsync(
+        Guid userId, string justification, IReadOnlyCollection<Guid>? absentRoundIds, Guid actingUserId, CancellationToken ct);
 
     Task<IReadOnlyList<AbsenceDto>> GetUserAbsencesAsync(Guid userId, CancellationToken ct);
 

@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { SKIP_ERROR_TOAST } from '../interceptors/http-context';
 import {
   Absence,
+  AbsenceCandidateRound,
   AuditLog,
   ImportFixturesResponse,
   OcrBatch,
@@ -105,8 +106,8 @@ export class AdminService {
     return this.http.put<Participant>(`${this.base}/users/${id}`, request);
   }
 
-  activateParticipant(id: string): Observable<void> {
-    return this.http.post<void>(`${this.base}/users/${id}/activate`, {});
+  activateParticipant(id: string, absentRoundIds: string[] = []): Observable<void> {
+    return this.http.post<void>(`${this.base}/users/${id}/activate`, { absentRoundIds });
   }
 
   deactivateParticipant(id: string): Observable<void> {
@@ -117,8 +118,22 @@ export class AdminService {
     return this.http.post<void>(`${this.base}/users/${id}/eliminate`, { justification });
   }
 
-  reactivate(id: string, justification: string): Observable<void> {
-    return this.http.post<void>(`${this.base}/users/${id}/reactivate`, { justification });
+  reactivate(id: string, justification: string, absentRoundIds: string[] = []): Observable<void> {
+    return this.http.post<void>(`${this.base}/users/${id}/reactivate`, {
+      justification,
+      absentRoundIds,
+    });
+  }
+
+  /**
+   * Rounds that closed while the participant was out. Passive pre-check for the
+   * (re)activation dialog: a failure here must not block the action, so no error toast.
+   */
+  getAbsenceCandidateRounds(userId: string): Observable<AbsenceCandidateRound[]> {
+    return this.http.get<AbsenceCandidateRound[]>(
+      `${this.base}/users/${userId}/absence-candidates`,
+      { context: new HttpContext().set(SKIP_ERROR_TOAST, true) },
+    );
   }
 
   getUserAbsences(userId: string): Observable<Absence[]> {

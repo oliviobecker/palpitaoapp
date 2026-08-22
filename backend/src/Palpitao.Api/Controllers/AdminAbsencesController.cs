@@ -34,10 +34,16 @@ public class AdminAbsencesController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("users/{userId:guid}/absence-candidates")]
+    public async Task<ActionResult<IReadOnlyList<AbsenceCandidateRoundDto>>> AbsenceCandidates(
+        Guid userId, CancellationToken ct)
+        => Ok(await _absences.GetAbsenceCandidateRoundsAsync(userId, ct));
+
     [HttpPost("users/{userId:guid}/reactivate")]
     public async Task<IActionResult> Reactivate(Guid userId, ReactivateRequest request, CancellationToken ct)
     {
-        await _absences.ReactivateAsync(userId, request.Justification, User.GetUserId(), ct);
+        await _absences.ReactivateAsync(
+            userId, request.Justification, request.AbsentRoundIds, User.GetUserId(), ct);
         return NoContent();
     }
 }

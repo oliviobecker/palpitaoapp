@@ -4,8 +4,10 @@ using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Admin;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
+using Palpitao.Api.Services.Absences;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Services.Localization;
 
 namespace Palpitao.Api.Services.Users;
 
@@ -14,12 +16,21 @@ public class UserAdminService : IUserAdminService
     private readonly AppDbContext _db;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
+    private readonly IAbsenceService _absences;
+    private readonly ILocalizationService _messages;
 
-    public UserAdminService(AppDbContext db, IAuditService audit, ICurrentGroupService current)
+    public UserAdminService(
+        AppDbContext db,
+        IAuditService audit,
+        ICurrentGroupService current,
+        IAbsenceService absences,
+        ILocalizationService messages)
     {
         _db = db;
         _audit = audit;
         _current = current;
+        _absences = absences;
+        _messages = messages;
     }
 
     public async Task<IReadOnlyList<ParticipantDto>> ListParticipantsAsync(CancellationToken ct)
@@ -153,12 +164,24 @@ public class UserAdminService : IUserAdminService
         };
     }
 
-    public async Task SetActiveAsync(Guid id, bool active, Guid actingUserId, CancellationToken ct)
+    public async Task SetActiveAsync(
+        Guid id, bool active, IReadOnlyCollection<Guid>? absentRoundIds, Guid actingUserId, CancellationToken ct)
     {
         var (_, membership) = await LoadParticipantAsync(id, ct);
         // Per-group deactivation only; the global account is untouched.
         membership.IsActive = active;
         _audit.Add(actingUserId, active ? "ParticipantActivated" : "ParticipantDeactivated", nameof(GroupUser), id.ToString(), null);
+
+        // Deactivating never records absences, so the list is ignored outright. The
+        // justification is resolved server-side: it is an audit artefact, not client input.
+        if (active && absentRoundIds is { Count: > 0 })
+        {
+            await _absences.StageAbsenceOverridesAsync(
+                id, absentRoundIds, _messages.Get("absence.autoOnActivate"), actingUserId, ct);
+        }
+
+        // One commit: the flag, the override rows and every audit row. All services share the
+        // request-scoped AppDbContext, so a single SaveChanges is a single transaction.
         await _db.SaveChangesAsync(ct);
     }
 

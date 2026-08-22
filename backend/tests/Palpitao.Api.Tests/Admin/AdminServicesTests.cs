@@ -131,7 +131,7 @@ public class AdminServicesTests
     public async Task Create_participant_hashes_password_and_rejects_duplicate_email()
     {
         using var db = CreateContext();
-        var service = new UserAdminService(db, new AuditService(db), new FakeCurrentGroupService());
+        var service = TestServices.UserAdmin(db);
 
         var created = await service.CreateAsync(
             new CreateParticipantRequest { Name = "João", Email = "joao@palpitao.local", Password = "Senha@123" }, Admin, Ct);

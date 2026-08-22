@@ -32,3 +32,9 @@ public class EliminateRequest
 {
     public string Justification { get; set; } = string.Empty;
 }
+
+public class ActivateParticipantRequest
+{
+    /// <summary>Rodadas encerradas em que o participante deve constar ausente.</summary>
+    public List<Guid> AbsentRoundIds { get; set; } = [];
+}

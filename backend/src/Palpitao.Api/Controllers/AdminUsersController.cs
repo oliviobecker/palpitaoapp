@@ -32,16 +32,16 @@ public class AdminUsersController : ControllerBase
         => Ok(await _users.UpdateAsync(id, request, User.GetUserId(), ct));
 
     [HttpPost("{id:guid}/activate")]
-    public async Task<IActionResult> Activate(Guid id, CancellationToken ct)
+    public async Task<IActionResult> Activate(Guid id, ActivateParticipantRequest? request, CancellationToken ct)
     {
-        await _users.SetActiveAsync(id, true, User.GetUserId(), ct);
+        await _users.SetActiveAsync(id, true, request?.AbsentRoundIds, User.GetUserId(), ct);
         return NoContent();
     }
 
     [HttpPost("{id:guid}/deactivate")]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
     {
-        await _users.SetActiveAsync(id, false, User.GetUserId(), ct);
+        await _users.SetActiveAsync(id, false, null, User.GetUserId(), ct);
         return NoContent();
     }
 

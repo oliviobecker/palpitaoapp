@@ -1,7 +1,9 @@
 using Palpitao.Api.Data;
+using Palpitao.Api.Services.Absences;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Scoring;
+using Palpitao.Api.Services.Users;
 
 namespace Palpitao.Api.Tests.TestSupport;
 
@@ -16,4 +18,23 @@ public static class TestServices
     /// </summary>
     public static SeasonScoringConfigService ScoringConfig(AppDbContext db, ICurrentGroupService? current = null)
         => new(db, new AuditService(db), current ?? new FakeCurrentGroupService());
+
+    /// <summary>The real <see cref="AbsenceService"/> wired to the given (or default) group.</summary>
+    public static AbsenceService Absences(AppDbContext db, ICurrentGroupService? current = null)
+    {
+        var group = current ?? new FakeCurrentGroupService();
+        return new AbsenceService(db, new AuditService(db), group, ScoringConfig(db, group));
+    }
+
+    /// <summary>
+    /// The real <see cref="UserAdminService"/>. It shares the <paramref name="db"/> with the
+    /// <see cref="AbsenceService"/> it delegates to, mirroring the request-scoped wiring that
+    /// makes activation + absence overrides commit in one transaction.
+    /// </summary>
+    public static UserAdminService UserAdmin(AppDbContext db, ICurrentGroupService? current = null)
+    {
+        var group = current ?? new FakeCurrentGroupService();
+        return new UserAdminService(
+            db, new AuditService(db), group, Absences(db, group), new FakeLocalizationService());
+    }
 }
