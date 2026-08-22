@@ -9,6 +9,7 @@ const scout: RoundScout = {
   matches: [
     {
       roundMatchId: 'm1',
+      startsAt: '2026-08-22T14:00:00Z',
       homeTeamName: 'Man United',
       awayTeamName: 'Man City',
       groups: [
@@ -32,7 +33,13 @@ describe('buildScoutMessage', () => {
       ...scout,
       matches: [
         scout.matches[0],
-        { roundMatchId: 'm2', homeTeamName: 'Arsenal', awayTeamName: 'Chelsea', groups: [] },
+        {
+          roundMatchId: 'm2',
+          startsAt: '2026-08-22T14:00:00Z',
+          homeTeamName: 'Arsenal',
+          awayTeamName: 'Chelsea',
+          groups: [],
+        },
       ],
     };
     const text = buildScoutMessage(two);
@@ -47,6 +54,7 @@ describe('buildScoutMessage', () => {
       matches: [
         {
           roundMatchId: 'm1',
+          startsAt: '2026-08-22T14:00:00Z',
           homeTeamName: 'Sheffield United',
           awayTeamName: 'Sheffield Wednesday',
           groups: [],
@@ -59,7 +67,15 @@ describe('buildScoutMessage', () => {
   it('shows a placeholder when a match has no predictions', () => {
     const empty: RoundScout = {
       ...scout,
-      matches: [{ roundMatchId: 'm1', homeTeamName: 'A', awayTeamName: 'B', groups: [] }],
+      matches: [
+        {
+          roundMatchId: 'm1',
+          startsAt: '2026-08-22T14:00:00Z',
+          homeTeamName: 'A',
+          awayTeamName: 'B',
+          groups: [],
+        },
+      ],
     };
     expect(buildScoutMessage(empty)).toContain('- (sem palpites)');
   });

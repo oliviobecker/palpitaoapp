@@ -78,7 +78,7 @@ public class ScoutServiceTests
         return id;
     }
 
-    private static async Task<RoundDto> PublishedRound(Kit kit, int number, int matches = 1)
+    private static async Task<RoundDto> PublishedRound(Kit kit, int number, int matches = 1, int[]? hourOffsets = null)
     {
         var round = await kit.Rounds.CreateAsync(new CreateRoundRequest { SeasonId = SeasonId, Number = number }, Admin, Ct);
         for (var i = 0; i < matches; i++)
@@ -89,7 +89,7 @@ public class ScoutServiceTests
                 Phase = MatchPhase.Regular,
                 HomeTeamId = Pairs[i].Home,
                 AwayTeamId = Pairs[i].Away,
-                StartsAt = Future.AddHours(i),
+                StartsAt = Future.AddHours(hourOffsets?[i] ?? i),
             }, Admin, Ct);
         }
 
@@ -175,5 +175,19 @@ public class ScoutServiceTests
         Assert.Equal(2, scout.Matches.Count);
         Assert.All(scout.Matches, m => Assert.Empty(m.Groups));
         Assert.Equal(1, scout.RoundNumber);
+    }
+
+    [Fact]
+    public async Task Scout_orders_matches_by_kickoff()
+    {
+        using var db = CreateContext();
+        var kit = Build(db);
+        // Added in reverse: the match created first is the one that kicks off last.
+        var round = await PublishedRound(kit, 1, matches: 2, hourOffsets: new[] { 5, 1 });
+
+        var scout = await kit.Scout.GetRoundScoutAsync(round.Id, Ct);
+
+        Assert.Equal(new[] { "Liverpool", "Arsenal" }, scout.Matches.Select(m => m.HomeTeamName));
+        Assert.True(scout.Matches[0].StartsAt < scout.Matches[1].StartsAt);
     }
 }

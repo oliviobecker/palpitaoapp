@@ -18,6 +18,9 @@ public class ScoutMatchDto
     public string HomeTeamName { get; set; } = string.Empty;
     public string AwayTeamName { get; set; } = string.Empty;
 
+    /// <summary>Kickoff (UTC).</summary>
+    public DateTime StartsAt { get; set; }
+
     /// <summary>Distinct predicted scorelines, each with the participants who chose it.</summary>
     public List<ScoutScoreGroupDto> Groups { get; set; } = new();
 }
