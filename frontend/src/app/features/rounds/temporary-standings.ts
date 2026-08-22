@@ -73,6 +73,11 @@ import { buildTemporaryStandingsMessage } from '../../shared/utils/temporary-sta
                           'common.you' | translate
                         }}</span>
                       }
+                      @if (s.willBeAbsent) {
+                        <span class="badge text-bg-secondary ms-1">{{
+                          'temporaryStandings.absent' | translate
+                        }}</span>
+                      }
                     </div>
                     <div class="small text-muted">
                       {{ 'temporaryStandings.official' | translate }}:

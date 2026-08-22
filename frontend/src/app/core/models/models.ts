@@ -167,6 +167,8 @@ export interface TemporaryStanding {
   projectedTotalPoints: number;
   computedMatches: number;
   remainingMatches: number;
+  /** Heading for an absence when the round is scored. Projection: nothing was applied yet. */
+  willBeAbsent: boolean;
 }
 
 export interface TemporaryStandings {

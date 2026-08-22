@@ -3,6 +3,7 @@ using Palpitao.Api.Services.Absences;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Scoring;
+using Palpitao.Api.Services.Standings;
 using Palpitao.Api.Services.Users;
 
 namespace Palpitao.Api.Tests.TestSupport;
@@ -24,6 +25,17 @@ public static class TestServices
     {
         var group = current ?? new FakeCurrentGroupService();
         return new AbsenceService(db, new AuditService(db), group, ScoringConfig(db, group));
+    }
+
+    /// <summary>
+    /// The real <see cref="TemporaryStandingsService"/>, sharing its <see cref="AbsenceService"/>
+    /// with the caller's context so overrides staged in the test are visible to the absent flag.
+    /// </summary>
+    public static TemporaryStandingsService TemporaryStandings(AppDbContext db, ICurrentGroupService? current = null)
+    {
+        var group = current ?? new FakeCurrentGroupService();
+        return new TemporaryStandingsService(
+            db, new ScoringService(), ScoringConfig(db, group), group, Absences(db, group));
     }
 
     /// <summary>

@@ -4,6 +4,7 @@ using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Results;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
+using Palpitao.Api.Services.Absences;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Scoring;
 
@@ -15,13 +16,20 @@ public class TemporaryStandingsService : ITemporaryStandingsService
     private readonly IScoringService _scoring;
     private readonly ISeasonScoringConfigService _config;
     private readonly ICurrentGroupService _current;
+    private readonly IAbsenceService _absences;
 
-    public TemporaryStandingsService(AppDbContext db, IScoringService scoring, ISeasonScoringConfigService config, ICurrentGroupService current)
+    public TemporaryStandingsService(
+        AppDbContext db,
+        IScoringService scoring,
+        ISeasonScoringConfigService config,
+        ICurrentGroupService current,
+        IAbsenceService absences)
     {
         _db = db;
         _scoring = scoring;
         _config = config;
         _current = current;
+        _absences = absences;
     }
 
     public async Task<TemporaryStandingsDto> GetTemporaryStandingsAsync(Guid roundId, CancellationToken ct)
@@ -69,12 +77,22 @@ public class TemporaryStandingsService : ITemporaryStandingsService
             .Where(p => p.RoundId == roundId)
             .ToListAsync(ct);
 
-        var participantIds = predictions.Select(p => p.UserId).Distinct().ToList();
+        // The whole roster, not just whoever predicted: someone with no predictions has to
+        // show up on zero, which is exactly the signal that they are heading for an absence.
         // Active, non-eliminated participants of this round's group (per-group flags).
         var participants = await GroupQueries.ActiveParticipants(_db, round.GroupId)
-            .Where(u => participantIds.Contains(u.Id))
             .Select(u => new { u.Id, u.Name })
             .ToListAsync(ct);
+
+        // "Absent" is only true once nobody can submit any more -- before the general lock a
+        // participant on zero can still send their predictions. Who counts as absent comes
+        // from the absence service itself (overrides win), so this label can never drift
+        // from what scoring will actually do.
+        var predictionsClosed = round.Status is RoundStatus.Locked or RoundStatus.Scored
+            || (round.PredictionDeadlineUtc is { } deadline && DateTime.UtcNow > deadline);
+        var absentees = predictionsClosed
+            ? (await _absences.DetectAbsenteesAsync(round.Id, ct)).ToHashSet()
+            : [];
 
         var officialTotals = await _db.Standings
             .Where(s => s.SeasonId == round.SeasonId)
@@ -116,12 +134,14 @@ public class TemporaryStandingsService : ITemporaryStandingsService
                 ProjectedTotalPoints = official + points,
                 ComputedMatches = computedMatches,
                 RemainingMatches = remainingMatches,
+                WillBeAbsent = absentees.Contains(participant.Id),
             });
         }
 
         var position = 1;
         foreach (var row in rows
             .OrderByDescending(r => r.RoundTemporaryPoints)
+            .ThenBy(r => r.WillBeAbsent)
             .ThenByDescending(r => r.ProjectedTotalPoints)
             .ThenBy(r => r.Name))
         {

@@ -11,6 +11,9 @@ import { TemporaryStandings } from '../../core/models/models';
  * round* (see TemporaryStandingsService) — so the number in parentheses is a
  * projected *total*, never a projected position. The legend says as much; do not
  * re-sort here or the two readings get mixed up.
+ *
+ * A participant heading for an absence gets a “— Ausente” marker. The “pode mudar”
+ * caveat below already frames it as provisional, so it needs no extra legend.
  */
 export function buildTemporaryStandingsMessage(data: TemporaryStandings, groupTitle = ''): string {
   const lines: string[] = [];
@@ -30,7 +33,11 @@ export function buildTemporaryStandingsMessage(data: TemporaryStandings, groupTi
 
   lines.push('');
   for (const s of data.standings) {
-    lines.push(`${s.position}. ${s.name}: +${s.roundTemporaryPoints} (${s.projectedTotalPoints})`);
+    // Portuguese literal like the rest of this file: it is WhatsApp content, not UI copy.
+    const mark = s.willBeAbsent ? ' — Ausente' : '';
+    lines.push(
+      `${s.position}. ${s.name}: +${s.roundTemporaryPoints} (${s.projectedTotalPoints})${mark}`,
+    );
   }
 
   lines.push('');

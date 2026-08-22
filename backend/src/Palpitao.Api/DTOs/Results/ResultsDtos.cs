@@ -54,6 +54,13 @@ public class TemporaryStandingDto
     public int ProjectedTotalPoints { get; set; }
     public int ComputedMatches { get; set; }
     public int RemainingMatches { get; set; }
+
+    /// <summary>
+    /// O participante não completou os palpites e o prazo já fechou, então ele entra como
+    /// ausente quando a rodada for pontuada. É projeção, não fato consumado: nenhuma punição
+    /// ou eliminação foi aplicada aqui, e os pontos calculados não são zerados.
+    /// </summary>
+    public bool WillBeAbsent { get; set; }
 }
 
 public class TemporaryStandingsDto

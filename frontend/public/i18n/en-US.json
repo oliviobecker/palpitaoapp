@@ -527,6 +527,7 @@
     "remaining": "Remaining matches",
     "lastUpdated": "Last updated",
     "empty": "No results yet to compute the temporary standings.",
+    "absent": "Absent",
     "groupMessage": "Group message"
   },
   "scout": {
