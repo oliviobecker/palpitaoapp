@@ -27,6 +27,7 @@ import { Countdown } from '../../shared/components/countdown/countdown';
 import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
+import { MatchStatusBadge } from '../../shared/components/match-status-badge/match-status-badge';
 import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
 import { PageHeader } from '../../shared/components/page-header/page-header';
 import {
@@ -54,6 +55,7 @@ import {
     ErrorState,
     Icon,
     Loading,
+    MatchStatusBadge,
     MultiplierBadge,
     PageHeader,
   ],

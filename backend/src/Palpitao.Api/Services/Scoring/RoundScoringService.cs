@@ -67,7 +67,7 @@ public class RoundScoringService : IRoundScoringService
         match.IsFinished = true;
         // A manually entered result counts as finished for the temporary standings.
         match.Status = MatchStatus.Finished;
-        match.ResultSource = "Manual";
+        match.ResultSource = RoundMatch.ManualResultSource;
         match.LastResultUpdatedAt = DateTime.UtcNow;
 
         _audit.Add(actingUserId, "MatchResultEntered", nameof(RoundMatch), match.Id.ToString(),

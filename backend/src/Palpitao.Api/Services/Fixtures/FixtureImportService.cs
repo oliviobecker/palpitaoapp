@@ -277,6 +277,9 @@ public class FixtureImportService : IFixtureImportService
                 AwayTeamId = away.Id,
                 StartsAt = startsAt,
                 Order = round.Matches.Count + imported,
+                // Keeping the provider's id turns the results refresh into an exact join instead
+                // of a bet on both sides spelling the clubs the same way.
+                ExternalMatchId = ExternalId(item.ExternalId),
                 CreatedAt = DateTime.UtcNow,
             };
             // Set navigation so the dedupe key reflects newly added rows too.
@@ -343,6 +346,20 @@ public class FixtureImportService : IFixtureImportService
             new { team.Name, team.IsBigSevenClub });
         return team;
     }
+
+    /// <summary>
+    /// The id the admin's client echoed back from the fixture search. It is only ever used as a
+    /// join key, so an empty or oversized value is simply dropped — the results refresh then falls
+    /// back to matching by team name, as it did before ids were stored.
+    /// </summary>
+    private static string? ExternalId(string? value)
+    {
+        var trimmed = value?.Trim();
+        return string.IsNullOrEmpty(trimmed) || trimmed.Length > ExternalMatchIdMaxLength ? null : trimmed;
+    }
+
+    /// <summary>Matches <c>RoundMatch.ExternalMatchId</c>'s column width.</summary>
+    private const int ExternalMatchIdMaxLength = 120;
 
     // Canonical (not Normalize): this key compares provider spellings against the
     // stored team names, so "Wolves" must dedupe against "Wolverhampton Wanderers".

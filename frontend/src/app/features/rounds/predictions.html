@@ -71,6 +71,7 @@
             <!-- Header: competition | phase | multiplier | time -->
             <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
               <app-competition-badge [competition]="m.competition" />
+              <app-match-status-badge [status]="m.status" />
               @if (m.phase !== 'Regular') {
                 <span class="badge text-bg-light border">{{ 'phase.' + m.phase | translate }}</span>
               }

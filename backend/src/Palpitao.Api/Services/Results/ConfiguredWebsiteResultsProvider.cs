@@ -103,15 +103,17 @@ public class ConfiguredWebsiteResultsProvider : IResultsProvider
                 continue;
             }
 
+            var homeScore = GetInt(item, "homeScore");
+            var awayScore = GetInt(item, "awayScore");
             list.Add(new ExternalMatchResultDto
             {
                 ExternalMatchId = GetString(item, "externalMatchId") ?? GetString(item, "id"),
                 ExternalMatchUrl = GetString(item, "url"),
                 HomeTeamName = home.Trim(),
                 AwayTeamName = away.Trim(),
-                HomeScore = GetInt(item, "homeScore"),
-                AwayScore = GetInt(item, "awayScore"),
-                Status = ParseStatus(GetString(item, "status")),
+                HomeScore = homeScore,
+                AwayScore = awayScore,
+                Status = MatchStatusParser.Parse(GetString(item, "status"), homeScore, awayScore),
             });
         }
 
@@ -135,14 +137,4 @@ public class ConfiguredWebsiteResultsProvider : IResultsProvider
             _ => null,
         };
     }
-
-    private static MatchStatus ParseStatus(string? raw)
-        => (raw ?? string.Empty).Trim().ToLowerInvariant() switch
-        {
-            "inprogress" or "in_progress" or "live" or "playing" => MatchStatus.InProgress,
-            "finished" or "ft" or "fulltime" or "full_time" or "ended" => MatchStatus.Finished,
-            "postponed" => MatchStatus.Postponed,
-            "cancelled" or "canceled" => MatchStatus.Cancelled,
-            _ => MatchStatus.NotStarted,
-        };
 }

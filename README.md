@@ -877,28 +877,60 @@ risk of stale snapshots; the results are already persisted on the `RoundMatch`.
 
 ### Results provider
 
-The `IResultsProvider` abstraction (isolated, no domain rules). Default **`ManualResultsProvider`**
-(`Enabled=false`): fetches nothing externally — results come from **manual entry** (the results
-screen, which now marks the match as `Finished`), and the refresh only recomputes the temporary
-standings. When no external provider is active, the endpoint responds with a clear message ("No
-external results provider is active…") **without breaking**.
+The `IResultsProvider` abstraction (isolated, no domain rules). Shipped default is
+**`OneFootballResultsProvider`** (`appsettings.json` → `ResultsProvider: { "Provider":
+"OneFootball", "Enabled": true }`), which reads the same undocumented web-experience API used to
+import fixtures. For each competition in the round it fetches **both** tabs —
+`.../competition/{slug}/fixtures` and `.../results` — because neither is authoritative: `results`
+also lists not-yet-played fixtures, and a live match shows up under `fixtures`. The same match
+appears on both, so the cards are merged and the **best-informed** one wins.
 
-To integrate an external site/API, configure (`appsettings.json` → `ResultsProvider`, or env
-`ResultsProvider__<Field>`):
+A card's state lives in `period` (`PRE_MATCH`, `FIRST_HALF`, `HALF_TIME`, `SECOND_HALF`,
+`FULL_TIME`, `FULL_TIME_PENALTIES`, `ABANDONED`, …) with the running clock in `timePeriod` (`"66'"`
+while live, `"Full time"` once played). `Services/Results/MatchStatusParser` maps that onto
+`MatchStatus` for every provider: labels are normalised to letters and digits, and a label it does
+not know falls back to the clock, then to the presence of a full scoreline.
+
+**`ManualResultsProvider`** (`Provider` set to anything else, or `Enabled=false`) fetches nothing
+externally — results come from **manual entry** (the results screen, which marks the match as
+`Finished`), and the refresh only recomputes the temporary standings. When no external provider is
+active, the endpoint responds with a clear message ("No external results provider is active…")
+**without breaking**. A manually entered result is never overwritten by a provider: it is the
+pool's source of truth.
+
+To integrate a different external site/API, configure (`appsettings.json` → `ResultsProvider`, or
+env `ResultsProvider__<Field>`):
 
 ```json
 "ResultsProvider": { "Provider": "ConfiguredWebsite", "BaseUrl": "https://…", "Enabled": true, "TimeoutSeconds": 15 }
 ```
 
 The `ConfiguredWebsiteResultsProvider` makes **one GET** (timeout + user-agent) expecting
-`{ "results": [ { "homeTeam", "awayTeam", "homeScore", "awayScore", "status", "externalMatchId?", "url?" } ] }`
-and matches by `externalMatchId` or team names; if the structure changes, it fails with
-`results.fetchFailed` (friendly message) and the manual flow continues.
+`{ "results": [ { "homeTeam", "awayTeam", "homeScore", "awayScore", "status", "externalMatchId?", "url?" } ] }`;
+if the structure changes, it fails with `results.fetchFailed` (friendly message) and the manual
+flow continues.
+
+#### Matching a row to a match in the round
+
+1. **By external id.** The fixture import stores the provider's id (`onefootball-{matchId}`,
+   `fixturedownload-…`, …) on the `RoundMatch`, so this is an exact join that does not care how
+   either side spells the clubs.
+2. **By team name**, through `FootballReference.Canonical` (so "Wolves" finds "Wolverhampton
+   Wanderers"), for matches added by hand. Two extra conditions keep it honest: the **competition**
+   has to agree — the same two clubs meet in the league and in the cup — and a match already
+   carrying an id **from the same source** is off limits, since a row that only agrees on the names
+   is a different game.
+
+Matches nothing resolved to are counted as `unmatchedMatches` in the refresh response, listed in
+the `ResultsRefreshed` audit entry, and shown to the admin — a silent gap here used to be
+indistinguishable from "the match has not started".
 
 ### Match status (`MatchStatus`)
 
 `NotStarted` · `InProgress` · `Finished` · `Postponed` · `Cancelled`. Only `InProgress`/`Finished`
-with a score enter the temporary standings; `Postponed`/`Cancelled` are ignored.
+with a score enter the temporary standings; `Postponed`/`Cancelled` are ignored. The status rides
+on `MatchDto`, so the round's match list shows an **Ao vivo / Live** pill with the score so far
+while the match is being played.
 
 ### How to test
 
@@ -913,9 +945,13 @@ with a score enter the temporary standings; `Postponed`/`Cancelled` are ignored.
 
 ### Current limitations
 
-- Without `ResultsProvider:Enabled=true` + `BaseUrl`, **there is no automatic fetch** — the results
-  are manual. The `ConfiguredWebsiteResultsProvider` is a generic base (JSON contract above), not an
-  integration with a specific site.
+- With `ResultsProvider:Enabled=false` (or a provider name that is not `OneFootball` /
+  `ConfiguredWebsite`), **there is no automatic fetch** — the results are manual. The
+  `ConfiguredWebsiteResultsProvider` is a generic base (JSON contract above), not an integration
+  with a specific site.
+- A match added **by hand** (not imported from a provider) has no external id, so it is joined by
+  team name — a spelling the source does not share leaves it out of the refresh, and it shows up in
+  the summary's **"Sem correspondência"** count.
 - The temporary standings include participants with at least one prediction in the round; whoever
   didn't predict appears only in the official scoring (with an absence), not in the preview.
 

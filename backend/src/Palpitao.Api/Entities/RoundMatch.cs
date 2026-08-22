@@ -29,8 +29,15 @@ public class RoundMatch
     /// <summary>Live status (NotStarted/InProgress/Finished/Postponed/Cancelled).</summary>
     public MatchStatus Status { get; set; } = MatchStatus.NotStarted;
 
-    /// <summary>Where the current result came from (e.g. "Manual", "ConfiguredWebsite").</summary>
+    /// <summary>
+    /// Where the current result came from: <see cref="ManualResultSource"/> for an admin's entry,
+    /// otherwise the name of the results provider that wrote it.
+    /// </summary>
     public string? ResultSource { get; set; }
+
+    /// <summary>A result an admin typed in — the pool's source of truth, never overwritten by a
+    /// results provider.</summary>
+    public const string ManualResultSource = "Manual";
 
     /// <summary>Identifier of the match on the external results source, when known.</summary>
     public string? ExternalMatchId { get; set; }

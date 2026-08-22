@@ -43,6 +43,8 @@ public class MatchDto
     public int? HomeScore { get; set; }
     public int? AwayScore { get; set; }
     public bool IsFinished { get; set; }
+    public MatchStatus Status { get; set; } = MatchStatus.NotStarted;
+    public DateTime? LastResultUpdatedAt { get; set; }
     public int? ManualMultiplierOverride { get; set; }
     public string? ManualMultiplierJustification { get; set; }
 }

@@ -151,16 +151,35 @@ public class ResultsServiceTests
         await kit.Predictions.SavePredictionsAsync(round.Id, user, new SavePredictionsRequest { Predictions = items }, false, Ct);
     }
 
-    private static async Task SetLive(AppDbContext db, Guid matchId, MatchStatus status, int? home = null, int? away = null)
+    private static async Task SetLive(
+        AppDbContext db, Guid matchId, MatchStatus status, int? home = null, int? away = null, string? source = null)
     {
         var m = await db.RoundMatches.FirstAsync(x => x.Id == matchId);
         m.Status = status;
         m.HomeScore = home;
         m.AwayScore = away;
         m.IsFinished = status == MatchStatus.Finished;
+        m.ResultSource = source ?? m.ResultSource;
         m.LastResultUpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
     }
+
+    private static async Task SetExternalId(AppDbContext db, Guid matchId, string externalId)
+    {
+        var m = await db.RoundMatches.FirstAsync(x => x.Id == matchId);
+        m.ExternalMatchId = externalId;
+        await db.SaveChangesAsync();
+    }
+
+    private static ExternalMatchResultDto ExternalResult(MatchStatus status, int? home = null, int? away = null)
+        => new()
+        {
+            HomeTeamName = TestSeed.NeutralPairNames[0].Home,
+            AwayTeamName = TestSeed.NeutralPairNames[0].Away,
+            HomeScore = home,
+            AwayScore = away,
+            Status = status,
+        };
 
     // -----------------------------------------------------------------------
     // Refresh
@@ -237,6 +256,243 @@ public class ResultsServiceTests
         Assert.Equal(MatchStatus.Finished, match.Status);
         Assert.Equal(2, match.HomeScore);
         Assert.True(match.IsFinished);
+    }
+
+    /// <summary>
+    /// The reported bug in the four counters the admin screen shows: a match being played must
+    /// come back as "em andamento", not as one more "não iniciado" carrying a scoreline.
+    /// </summary>
+    [Fact]
+    public async Task Refresh_reports_a_live_match_as_in_progress()
+    {
+        using var db = CreateContext();
+        var kit = Build(db, providerEnabled: true);
+        var round = await PublishedRound(kit, 1, (Competition.PremierLeague, MatchPhase.Regular));
+        kit.Provider.Results.Add(ExternalResult(MatchStatus.InProgress, 3, 0));
+
+        var response = await kit.Refresh.RefreshAsync(round.Id, Admin, Ct);
+
+        Assert.Equal(1, response.InProgressMatches);
+        Assert.Equal(0, response.NotStartedMatches);
+        Assert.Equal(0, response.FinishedMatches);
+        var match = await db.RoundMatches.FirstAsync(m => m.RoundId == round.Id);
+        Assert.Equal(MatchStatus.InProgress, match.Status);
+        Assert.Equal(3, match.HomeScore);
+        Assert.False(match.IsFinished);
+    }
+
+    [Fact]
+    public async Task Refresh_does_not_demote_a_live_match_to_not_started()
+    {
+        using var db = CreateContext();
+        var kit = Build(db, providerEnabled: true);
+        var round = await PublishedRound(kit, 1, (Competition.PremierLeague, MatchPhase.Regular));
+        await SetLive(db, round.Matches[0].Id, MatchStatus.InProgress, 1, 0);
+        kit.Provider.Results.Add(ExternalResult(MatchStatus.NotStarted));
+
+        var response = await kit.Refresh.RefreshAsync(round.Id, Admin, Ct);
+
+        Assert.Equal(0, response.UpdatedMatches);
+        var match = await db.RoundMatches.FirstAsync(m => m.RoundId == round.Id);
+        Assert.Equal(MatchStatus.InProgress, match.Status);
+        Assert.Equal(1, match.HomeScore);
+    }
+
+    /// <summary>
+    /// The background refresh runs every few minutes over every open round, so a feed that still
+    /// lists the fixture as upcoming must not undo what an admin typed in.
+    /// </summary>
+    [Fact]
+    public async Task Refresh_does_not_overturn_a_manually_entered_result()
+    {
+        using var db = CreateContext();
+        var kit = Build(db, providerEnabled: true);
+        var round = await PublishedRound(kit, 1, (Competition.PremierLeague, MatchPhase.Regular));
+        await SetLive(db, round.Matches[0].Id, MatchStatus.Finished, 2, 1, RoundMatch.ManualResultSource);
+        kit.Provider.Results.Add(ExternalResult(MatchStatus.InProgress, 1, 0));
+
+        await kit.Refresh.RefreshAsync(round.Id, Admin, Ct);
+
+        var match = await db.RoundMatches.FirstAsync(m => m.RoundId == round.Id);
+        Assert.Equal(MatchStatus.Finished, match.Status);
+        Assert.True(match.IsFinished);
+        Assert.Equal(2, match.HomeScore);
+        Assert.Equal(1, match.AwayScore);
+        Assert.Equal(RoundMatch.ManualResultSource, match.ResultSource);
+    }
+
+    [Fact]
+    public async Task Refresh_counts_only_matches_that_actually_changed()
+    {
+        using var db = CreateContext();
+        var kit = Build(db, providerEnabled: true);
+        var round = await PublishedRound(kit, 1, (Competition.PremierLeague, MatchPhase.Regular));
+        kit.Provider.Results.Add(ExternalResult(MatchStatus.Finished, 2, 1));
+
+        var first = await kit.Refresh.RefreshAsync(round.Id, Admin, Ct);
+        var second = await kit.Refresh.RefreshAsync(round.Id, Admin, Ct);
+
+        Assert.Equal(1, first.UpdatedMatches);
+        Assert.Equal(0, second.UpdatedMatches);
+    }
+
+    [Fact]
+    public async Task Refresh_records_the_provider_that_wrote_the_result()
+    {
+        using var db = CreateContext();
+        var kit = Build(db, providerEnabled: true);
+        var round = await PublishedRound(kit, 1, (Competition.PremierLeague, MatchPhase.Regular));
+        kit.Provider.Results.Add(ExternalResult(MatchStatus.Finished, 2, 1));
+
+        await kit.Refresh.RefreshAsync(round.Id, Admin, Ct);
+
+        var match = await db.RoundMatches.FirstAsync(m => m.RoundId == round.Id);
+        Assert.Equal(kit.Provider.Name, match.ResultSource);
+    }
+
+    /// <summary>
+    /// Ties the status back to what the admin actually looks at: the temporary standings only
+    /// count InProgress/Finished matches, so a misread live match is missing from them too.
+    /// </summary>
+    [Fact]
+    public async Task Refresh_feeds_a_live_match_into_the_temporary_standings()
+    {
+        using var db = CreateContext();
+        var kit = Build(db, providerEnabled: true);
+        var user = CreateParticipant(db, "João");
+        var round = await PublishedRound(kit, 1, (Competition.Championship, MatchPhase.Regular));
+        await SavePredictions(kit, round, user, (1, 0));
+        kit.Provider.Results.Add(ExternalResult(MatchStatus.InProgress, 1, 0));
+
+        await kit.Refresh.RefreshAsync(round.Id, Admin, Ct);
+        var temp = await kit.Temp.GetTemporaryStandingsAsync(round.Id, Ct);
+
+        Assert.Equal(1, temp.ComputedMatches);
+        Assert.Equal(3, temp.Standings.Single().RoundTemporaryPoints); // 1x0 exact = 3
+    }
+
+    // -----------------------------------------------------------------------
+    // Matching an external row to a match in the round
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// The point of storing the provider's id at import: the join stops depending on both sides
+    /// spelling the club the same way.
+    /// </summary>
+    [Fact]
+    public async Task Refresh_matches_by_external_id_when_the_names_disagree()
+    {
+        using var db = CreateContext();
+        var kit = Build(db, providerEnabled: true);
+        var round = await PublishedRound(kit, 1, (Competition.PremierLeague, MatchPhase.Regular));
+        await SetExternalId(db, round.Matches[0].Id, "onefootball-901");
+        kit.Provider.Results.Add(new ExternalMatchResultDto
+        {
+            ExternalMatchId = "onefootball-901",
+            HomeTeamName = "a club the catalogue spells differently",
+            AwayTeamName = "and so is this one",
+            HomeScore = 2,
+            AwayScore = 1,
+            Status = MatchStatus.Finished,
+        });
+
+        var response = await kit.Refresh.RefreshAsync(round.Id, Admin, Ct);
+
+        Assert.Equal(1, response.UpdatedMatches);
+        Assert.Equal(0, response.UnmatchedMatches);
+        var match = await db.RoundMatches.FirstAsync(m => m.RoundId == round.Id);
+        Assert.Equal(2, match.HomeScore);
+    }
+
+    /// <summary>The same two clubs meet in the league and in the cup; the names alone would put
+    /// the cup result on the league fixture.</summary>
+    [Fact]
+    public async Task Refresh_does_not_apply_a_row_from_another_competition()
+    {
+        using var db = CreateContext();
+        var kit = Build(db, providerEnabled: true);
+        var round = await PublishedRound(kit, 1, (Competition.PremierLeague, MatchPhase.Regular));
+        var row = ExternalResult(MatchStatus.Finished, 4, 0);
+        row.Competition = Competition.FACup;
+        kit.Provider.Results.Add(row);
+
+        var response = await kit.Refresh.RefreshAsync(round.Id, Admin, Ct);
+
+        Assert.Equal(0, response.UpdatedMatches);
+        Assert.Equal(1, response.UnmatchedMatches);
+        var match = await db.RoundMatches.FirstAsync(m => m.RoundId == round.Id);
+        Assert.Null(match.HomeScore);
+    }
+
+    [Fact]
+    public async Task Refresh_does_not_let_a_name_only_row_take_a_match_already_identified()
+    {
+        using var db = CreateContext();
+        var kit = Build(db, providerEnabled: true);
+        var round = await PublishedRound(kit, 1, (Competition.PremierLeague, MatchPhase.Regular));
+        await SetExternalId(db, round.Matches[0].Id, "onefootball-901");
+        var row = ExternalResult(MatchStatus.Finished, 4, 0);
+        row.ExternalMatchId = "onefootball-902"; // same source, another game
+        kit.Provider.Results.Add(row);
+
+        await kit.Refresh.RefreshAsync(round.Id, Admin, Ct);
+
+        var match = await db.RoundMatches.FirstAsync(m => m.RoundId == round.Id);
+        Assert.Null(match.HomeScore);
+        Assert.Equal("onefootball-901", match.ExternalMatchId);
+    }
+
+    /// <summary>
+    /// An id left by a different fixture source says nothing about this feed's numbering, so it
+    /// must not block the name fallback.
+    /// </summary>
+    [Fact]
+    public async Task Refresh_still_matches_by_name_when_the_stored_id_is_from_another_source()
+    {
+        using var db = CreateContext();
+        var kit = Build(db, providerEnabled: true);
+        var round = await PublishedRound(kit, 1, (Competition.PremierLeague, MatchPhase.Regular));
+        await SetExternalId(db, round.Matches[0].Id, "fixturedownload-epl-2026-12");
+        var row = ExternalResult(MatchStatus.Finished, 2, 1);
+        row.ExternalMatchId = "onefootball-901";
+        kit.Provider.Results.Add(row);
+
+        await kit.Refresh.RefreshAsync(round.Id, Admin, Ct);
+
+        var match = await db.RoundMatches.FirstAsync(m => m.RoundId == round.Id);
+        Assert.Equal(2, match.HomeScore);
+    }
+
+    /// <summary>
+    /// A match the feed never mentioned looks exactly like one that has not kicked off yet, so it
+    /// gets its own counter instead of hiding among the "not started".
+    /// </summary>
+    [Fact]
+    public async Task Refresh_reports_matches_the_provider_had_nothing_for()
+    {
+        using var db = CreateContext();
+        var kit = Build(db, providerEnabled: true);
+        var round = await PublishedRound(kit, 1,
+            (Competition.PremierLeague, MatchPhase.Regular),
+            (Competition.PremierLeague, MatchPhase.Regular));
+        kit.Provider.Results.Add(ExternalResult(MatchStatus.Finished, 2, 1));
+
+        var response = await kit.Refresh.RefreshAsync(round.Id, Admin, Ct);
+
+        Assert.Equal(1, response.UnmatchedMatches);
+        Assert.Contains(db.AuditLogs, a => a.Action == "ResultsRefreshed" && a.Details!.Contains("unmatched"));
+    }
+
+    [Fact]
+    public async Task Refresh_reports_no_unmatched_matches_without_a_provider()
+    {
+        using var db = CreateContext();
+        var kit = Build(db, providerEnabled: false);
+        var round = await PublishedRound(kit, 1, (Competition.PremierLeague, MatchPhase.Regular));
+
+        var response = await kit.Refresh.RefreshAsync(round.Id, Admin, Ct);
+
+        Assert.Equal(0, response.UnmatchedMatches);
     }
 
     [Fact]

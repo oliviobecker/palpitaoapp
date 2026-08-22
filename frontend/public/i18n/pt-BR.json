@@ -133,6 +133,13 @@
     "Scored": "Pontuada",
     "Cancelled": "Cancelada"
   },
+  "matchStatus": {
+    "NotStarted": "Não iniciado",
+    "InProgress": "Ao vivo",
+    "Finished": "Encerrado",
+    "Postponed": "Adiado",
+    "Cancelled": "Cancelado"
+  },
   "phase": {
     "Regular": "Fase regular",
     "PlayoffSemiFinal": "Semifinal (Playoff)",
@@ -261,7 +268,9 @@
     "updated": "Atualizados",
     "finished": "Finalizados",
     "inProgress": "Em andamento",
-    "notStarted": "Não iniciados"
+    "notStarted": "Não iniciados",
+    "unmatched": "Sem correspondência",
+    "unmatchedHint": "O provedor não trouxe essas partidas — confira se o nome do time confere com o do catálogo."
   },
   "standings": {
     "title": "Classificação",
