@@ -732,6 +732,11 @@ kickoff)** and the
 matches grouped by competition with their multipliers/phases — plus a **Copy** button that works
 even on mobile (Clipboard API with fallback). Just copy and paste it into the group.
 
+**Closing message.** Once the round is scored, the same card offers the **closing** text: final
+scores, points earned in the round and the overall rank. When the season's public standings link is
+published (§28) it ends with a deep link to that round's audit, so the group receives the numbers
+and the way to verify them in a single paste.
+
 **Short team names.** The messages print the clubs the way the group says them —
 `Wolverhampton Wanderers` → `Wolves`, `Queens Park Rangers` → `QPR`, `Manchester United` →
 `Man Utd`, `Preston North End` → `Preston` — from the table in
@@ -1059,7 +1064,89 @@ justifications).
 - **As participant, setting off:** the **"View predictions"** button does not appear; hitting
   `/rounds/{id}/mirror` directly shows the "no permission" message, and the API returns **403**.
 
-## 28. Prediction submission modes
+## 28. Public standings link
+
+Each **season** carries an auto-generated **public key** — 12 uppercase hex characters, shown as
+`A7C3-9F2E-4BD8` and stored unhyphenated — that addresses a **read-only standings and scoring
+audit** requiring no account:
+
+```
+/p/A7C3-9F2E-4BD8                                  → overall standings
+/p?key=A7C39F2E4BD8                                → same, key via query string
+/p/A7C3-9F2E-4BD8?rodada=18                        → that round's breakdown
+/p/A7C3-9F2E-4BD8?rodada=18&participante=<userId>  → with that participant expanded
+```
+
+**Publishing is off by default.** Every season has a key, but `Season.PublicStandingsEnabled`
+starts `false` and the link answers **404** until an admin turns it on in *Admin → Seasons*. So
+deploying this feature exposes nothing on its own. The admin can also **regenerate** the key
+(`POST /api/seasons/{id}/public-key/regenerate`), which kills the previously shared link
+immediately; both actions are audited (`SeasonUpdated`, `SeasonPublicKeyRegenerated`).
+
+**What the link shows.** Two tabs:
+
+- **Geral** — the official standings (position, name, points, rounds, absences, penalties,
+  eliminated), with the podium and the same name tiles as the in-app screen. Opening a row reveals
+  the gap to the leader and to the row above, plus a **round-by-round history** (one chip per
+  scored round, showing the points, absence and Flávio markers); pressing a chip deep-links into
+  that round's breakdown for that participant.
+- **Rodada** — a round, sliced two ways. *Por participante* gives each player's per-match
+  breakdown; *Por jogo* transposes it to show, for one match, what everybody predicted and scored,
+  best first. The pivot is client-side — the round payload already carries both sides.
+
+Every match line prints the prediction, the category (§12), `base points × multiplier = points`,
+and the rule context — classic pair, manual multiplier override, phase (§13) — plus absence and
+Flávio Rule (§15) markers. A reader can mark one row as their own; the choice is kept in that
+browser's `localStorage` and never leaves the device.
+
+**What it never shows.** Only **closed** rounds (`Locked`/`Scored`) appear; `Draft`, `Published`
+and `Cancelled` are invisible and requesting them returns 404. Predictions are therefore never
+readable while they could still be copied. A `Scored` round reports exactly what the scoring pass
+persisted (so the Flávio halving and absence penalties stay visible); a `Locked` round is computed
+live from the results so far and flagged `isPartial`, without absences, elimination or the Flávio
+Rule — the same rule as the temporary standings (§25). No e-mail, no admin justification text.
+
+⚠️ **Relation to §27.** Publishing the link makes the predictions of closed rounds readable by
+anyone holding it, **regardless of `AllowParticipantsToViewOthersPredictions`** — an audit that
+hides the prediction explains nothing. The admin screen states this in full before the toggle.
+
+**Staying out of search.** Three layers, because each covers a different thing: `robots.txt`
+disallows `/p/`, the page itself sets a `noindex, nofollow` robots **meta tag** while it is open
+(that is what de-indexes a URL somebody already pasted somewhere public — a crawler indexes the
+HTML document, never the XHR), and the API responses carry `X-Robots-Tag` for completeness.
+
+The Open Graph tags in `index.html` are deliberately **generic** (product name, product line,
+`og-cover.jpg`) and name no group, season or participant: the messaging crawler that builds the
+paste preview does not run JS and could never see a season anyway, and a card that carried names
+would give away exactly what `noindex` protects.
+
+**Getting the link to people.** Copying it out of *Admin → Seasons* is not where it is needed. When
+a round is scored, the copy-ready WhatsApp closing message (§24) ends with a deep link to that
+round's audit — `…/p/<key>?rodada=N` — so the group gets the numbers and the way to check them in
+the same paste. The admin card also shows the full URL and offers **Pré-visualizar**, which opens
+the public page in a new tab before anything is shared.
+
+**Endpoints** (all anonymous, rate-limited per IP via `RateLimiting:Public`, and served with
+`X-Robots-Tag: noindex, nofollow`):
+
+| Endpoint | Returns |
+|---|---|
+| `GET /api/public/seasons/{key}` | group and season names, visible rounds, base-points ruleset |
+| `GET /api/public/seasons/{key}/standings` | the official standings, each row with its scored-round history |
+| `GET /api/public/seasons/{key}/rounds/{number}` | that round's per-participant breakdown |
+
+An unknown key, a malformed key and an unpublished season all return the **same 404**, so probing
+cannot tell them apart.
+
+**Multi-tenant note.** These endpoints carry `[IgnoreRequestGroup]`, so `RequestGroupContext`
+reports no request group even if a signed-in browser sends `X-Group-Id` (which would otherwise
+filter the season away and 404 a perfectly good link). With no request group the EF global filter
+matches *every* group rather than none (§26), so `PublicStandingsService` derives the tenant from
+the season the key resolved to and scopes every query explicitly, with `IgnoreQueryFilters()`.
+The frontend also marks these calls `SKIP_TENANT_HEADERS` so neither the token nor the group is
+sent at all.
+
+## 29. Prediction submission modes
 
 Each **season** chooses **how predictions are entered**, via a per-season boolean
 `Season.AllowParticipantsToSubmitPredictions` (kept as a simple boolean for consistency with the other
@@ -1106,7 +1193,7 @@ admin-only mode.
 - **Admin manual:** **/admin/rounds/{id}/manual-predictions** works in either mode (source `AdminManual`).
 - **OCR:** **/admin/rounds/{id}/import-predictions** works in either mode (source `AdminOcr`).
 
-## 29. Security and secret configuration
+## 30. Security and secret configuration
 
 This repository is public: **never** commit real secrets. The versioned files
 (`appsettings*.json`, `.env.example`) carry only **placeholders**.
@@ -1146,7 +1233,7 @@ Beyond secret hygiene, the backend applies defence-in-depth controls:
 - **Consistent errors** — all error responses carry a `traceId` for log/Sentry correlation; health
   endpoints don't leak exception types or migration names.
 
-## 30. Continuous integration and deployment
+## 31. Continuous integration and deployment
 
 GitHub Actions workflows live in `.github/workflows/`:
 
@@ -1223,7 +1310,7 @@ optionally passing a `ref`) as a fallback. It targets the `production` environme
 > [release-please](https://github.com/googleapis/release-please), which opens a "release PR" you merge
 > when ready — that merge creates the tag and triggers the same production deploy.
 
-## 31. License
+## 32. License
 
 Distributed under the **Apache 2.0** license — see [LICENSE](LICENSE). In short: free use,
 modification and distribution (including commercial), keeping the copyright notice and the license,

@@ -8,6 +8,27 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0d6efd" />
+
+    <!-- Link preview. The public standings link (/p/<key>) is meant to be pasted into a
+         WhatsApp group, and the unfurl is the whole first impression. Deliberately generic:
+         the crawler does not run JS, so it can never see a season anyway, and a card that
+         named the group or a participant would leak exactly what `noindex` protects.
+         The image path is root-relative; if a crawler ever refuses it, make it absolute
+         with the deployed origin. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="FanPicks" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:title" content="Palpitão · classificação do bolão" />
+    <meta
+      property="og:description"
+      content="A classificação do bolão e a pontuação de cada jogo, aberta para conferir."
+    />
+    <meta property="og:image" content="/og-cover.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Palpitão" />
+    <meta name="twitter:card" content="summary_large_image" />
     <script>
       // Apply the saved (or OS) theme before first paint to avoid a flash of the
       // light theme. ThemeService takes over once Angular boots. Keep in sync with

@@ -1,5 +1,6 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Palpitao.Api.Common;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Groups;
@@ -95,12 +96,14 @@ public class AppDbContext : DbContext
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         StampCurrentGroup();
+        StampPublicKeys();
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
         StampCurrentGroup();
+        StampPublicKeys();
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
@@ -122,6 +125,24 @@ public class AppDbContext : DbContext
             if (entry.State == EntityState.Added && entry.Entity.GroupId == Guid.Empty)
             {
                 entry.Entity.GroupId = groupId;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Mints a public key for newly added seasons that do not carry one. The key is unique
+    /// and required, so an unset value is not merely incomplete -- the second such season
+    /// would collide on the unique index. Stamping here makes the invariant hold for every
+    /// write path (service, seeding, tests, future importers) instead of only the one that
+    /// remembered. Never overwrites a key that was set explicitly.
+    /// </summary>
+    private void StampPublicKeys()
+    {
+        foreach (var entry in ChangeTracker.Entries<Season>())
+        {
+            if (entry.State == EntityState.Added && string.IsNullOrEmpty(entry.Entity.PublicKey))
+            {
+                entry.Entity.PublicKey = PublicKeyGenerator.Generate();
             }
         }
     }
@@ -190,6 +211,11 @@ public class AppDbContext : DbContext
             // the migration backfills existing rows. (A store default would be safe too: EF
             // takes the initializer as the property's sentinel, so turning the flag off on
             // creation is still written explicitly instead of being omitted from the INSERT.)
+            // Public standings link: the key is the whole credential, so it is unique across
+            // every group (a lookup by key has no tenant context to scope it with).
+            e.Property(x => x.PublicKey).HasMaxLength(32).IsRequired();
+            e.HasIndex(x => x.PublicKey).IsUnique();
+            e.Property(x => x.PublicStandingsEnabled).HasDefaultValue(false);
             ConfigureGroupOwnership<Season>(e);
         });
 

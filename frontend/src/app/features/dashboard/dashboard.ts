@@ -33,6 +33,7 @@ import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Icon } from '../../shared/components/icon/icon';
 import { Skeleton } from '../../shared/components/skeleton/skeleton';
 import { deadlinePassed, predictionDeadlineIso } from '../../shared/utils/deadline.util';
+import { avatarColor, initials } from '../../shared/utils/avatar.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -122,22 +123,8 @@ export class Dashboard implements OnInit, OnDestroy {
     return this.predictionMap().get(matchId);
   }
 
-  /** Two-letter initials for the standings avatar. */
-  initials(name: string): string {
-    const parts = name.trim().split(/\s+/);
-    const first = parts[0]?.[0] ?? '';
-    const last = parts.length > 1 ? (parts[parts.length - 1][0] ?? '') : '';
-    return (first + last).toUpperCase();
-  }
-
-  /** Deterministic colour per name for the avatar. */
-  avatarColor(name: string): string {
-    let hash = 0;
-    for (const ch of name) {
-      hash = (hash * 31 + ch.charCodeAt(0)) % 360;
-    }
-    return `hsl(${hash}, 52%, 45%)`;
-  }
+  protected readonly initials = initials;
+  protected readonly avatarColor = avatarColor;
 
   ngOnInit(): void {
     this.timer = setInterval(() => this.now.set(Date.now()), 1000);

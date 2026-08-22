@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Palpitao.Api.Auth;
 using Palpitao.Api.DTOs.Scoring;
@@ -57,6 +57,12 @@ public class SeasonsController : ControllerBase
     [RequireGroupAdmin]
     public async Task<ActionResult<SeasonDto>> Activate(Guid id, CancellationToken ct)
         => Ok(await _seasons.SetActiveAsync(id, User.GetUserId(), ct));
+
+    /// <summary>Mints a new public standings key; the previously shared link stops working.</summary>
+    [HttpPost("{id:guid}/public-key/regenerate")]
+    [RequireGroupAdmin]
+    public async Task<ActionResult<SeasonDto>> RegeneratePublicKey(Guid id, CancellationToken ct)
+        => Ok(await _seasons.RegeneratePublicKeyAsync(id, User.GetUserId(), ct));
 
     [HttpGet("{seasonId:guid}/standings")]
     public async Task<ActionResult<IReadOnlyList<StandingDto>>> Standings(Guid seasonId, CancellationToken ct)

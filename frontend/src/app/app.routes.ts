@@ -17,6 +17,18 @@ export const routes: Routes = [
     path: 'create-group',
     loadComponent: () => import('./features/auth/create-group').then((m) => m.CreateGroup),
   },
+  // Public standings link: no guard, no Shell, no session. The key comes from the path
+  // (/p/:key) or the query string (/p?key=...), so a pasted link works either way.
+  {
+    path: 'p',
+    loadComponent: () =>
+      import('./features/public/public-standings').then((m) => m.PublicStandings),
+  },
+  {
+    path: 'p/:key',
+    loadComponent: () =>
+      import('./features/public/public-standings').then((m) => m.PublicStandings),
+  },
   {
     path: 'select-group',
     canActivate: [authGuard],
