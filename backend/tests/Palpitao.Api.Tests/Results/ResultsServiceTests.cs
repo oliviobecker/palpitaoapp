@@ -91,7 +91,7 @@ public class ResultsServiceTests
         var provider = new FakeResultsProvider { IsEnabled = providerEnabled };
         return new Kit(
             new ResultsUpdateService(db, provider, audit, current),
-            new TemporaryStandingsService(db, scoring, scoringConfig, current),
+            TestServices.TemporaryStandings(db, current),
             new RoundScoringService(db, scoring, scoringConfig, new AbsenceService(db, audit, current, TestServices.ScoringConfig(db, current)), new FlavioRuleService(db), standings, audit, current),
             new RoundService(db, audit, current, TestServices.ScoringConfig(db, current)),
             new PredictionsService(db, audit, current),

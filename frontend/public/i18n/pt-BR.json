@@ -526,6 +526,7 @@
     "computed": "Jogos computados",
     "remaining": "Jogos restantes",
     "lastUpdated": "Última atualização",
+    "absent": "Ausente",
     "empty": "Ainda não há resultados para calcular a classificação temporária.",
     "groupMessage": "Mensagem para o grupo"
   },

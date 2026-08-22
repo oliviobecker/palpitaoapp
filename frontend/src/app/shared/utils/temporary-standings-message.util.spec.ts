@@ -13,6 +13,7 @@ function row(partial: Partial<TemporaryStanding>): TemporaryStanding {
     projectedTotalPoints: 0,
     computedMatches: 17,
     remainingMatches: 6,
+    willBeAbsent: false,
     ...partial,
   };
 }
@@ -139,6 +140,28 @@ describe('buildTemporaryStandingsMessage', () => {
     const text = buildTemporaryStandingsMessage(standings({ lastUpdatedAt: null }));
     expect(text).not.toContain('atualizado');
     expect(text).toContain('17 jogos computados · 6 restantes');
+  });
+
+  it('marks whoever is heading for an absence, leaving the other lines untouched', () => {
+    const text = buildTemporaryStandingsMessage(
+      standings({
+        standings: [
+          row({
+            position: 1,
+            userId: 'u1',
+            name: 'Bruno Vilaça',
+            roundTemporaryPoints: 15,
+            projectedTotalPoints: 476,
+          }),
+          row({ position: 2, userId: 'u9', name: 'João Paulo', willBeAbsent: true }),
+        ],
+      }),
+    );
+
+    expect(text).toContain('2. João Paulo: +0 (0) — Ausente');
+    // The format the group already knows must not shift for everyone else.
+    expect(text).toContain('1. Bruno Vilaça: +15 (476)');
+    expect(text).not.toContain('1. Bruno Vilaça: +15 (476) —');
   });
 
   it('says so when there is nothing to rank yet', () => {
