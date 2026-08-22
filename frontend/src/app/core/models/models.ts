@@ -200,6 +200,7 @@ export interface ScoutMatch {
   roundMatchId: string;
   homeTeamName: string;
   awayTeamName: string;
+  startsAt: string;
   groups: ScoutScoreGroup[];
 }
 

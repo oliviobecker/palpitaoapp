@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -23,7 +24,7 @@ import { buildMatchScoutMessage } from '../../shared/utils/scout-message.util';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-round-scout',
-  imports: [RouterLink, FormsModule, TranslatePipe, EmptyState, Icon, Loading],
+  imports: [RouterLink, FormsModule, DatePipe, TranslatePipe, EmptyState, Icon, Loading],
   template: `
     <div class="mb-3">
       <div class="page-trail">
@@ -46,7 +47,8 @@ import { buildMatchScoutMessage } from '../../shared/utils/scout-message.util';
             <select id="scout-match" class="form-select" [(ngModel)]="selectedMatchId">
               @for (m of matches(); track m.roundMatchId) {
                 <option [value]="m.roundMatchId">
-                  {{ m.homeTeamName }} × {{ m.awayTeamName }}
+                  {{ m.startsAt | date: 'dd/MM HH:mm' }} · {{ m.homeTeamName }} ×
+                  {{ m.awayTeamName }}
                 </option>
               }
             </select>

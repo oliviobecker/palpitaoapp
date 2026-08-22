@@ -50,13 +50,15 @@ public class ScoutService : IScoutService
             RoundTitle = round.Title,
         };
 
-        foreach (var match in round.Matches.OrderBy(m => m.Order).ThenBy(m => m.StartsAt))
+        // Chronological: the admin reads the scout in the order the games kick off.
+        foreach (var match in round.Matches.OrderBy(m => m.StartsAt).ThenBy(m => m.Order))
         {
             var matchDto = new ScoutMatchDto
             {
                 RoundMatchId = match.Id,
                 HomeTeamName = match.HomeTeam?.Name ?? string.Empty,
                 AwayTeamName = match.AwayTeam?.Name ?? string.Empty,
+                StartsAt = match.StartsAt,
             };
 
             if (byMatch.TryGetValue(match.Id, out var matchPredictions))
