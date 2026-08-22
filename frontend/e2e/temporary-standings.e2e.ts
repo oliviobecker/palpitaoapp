@@ -35,6 +35,46 @@ const publishedRound = {
   ],
 };
 
+// Ranked by the points earned in *this* round, so the runner-up sits on the bigger
+// projected total — the group message must keep this order, not the projected one.
+const temporaryStandings = {
+  roundId: 'r8',
+  roundNumber: 12,
+  isTemporary: true,
+  roundStatus: 'Published',
+  lastUpdatedAt: '2026-05-22T20:30:00Z',
+  computedMatches: 1,
+  remainingMatches: 0,
+  standings: [
+    {
+      position: 1,
+      userId: 'u1',
+      name: 'João Silva',
+      roundTemporaryPoints: 18,
+      currentOfficialTotalPoints: 120,
+      projectedTotalPoints: 138,
+      computedMatches: 1,
+      remainingMatches: 0,
+    },
+    {
+      position: 2,
+      userId: 'u2',
+      name: 'Maria Souza',
+      roundTemporaryPoints: 5,
+      currentOfficialTotalPoints: 300,
+      projectedTotalPoints: 305,
+      computedMatches: 1,
+      remainingMatches: 0,
+    },
+  ],
+};
+
+const temporaryStandingsRoute = {
+  method: 'GET' as const,
+  match: path('/rounds/r8/temporary-standings'),
+  respond: () => ({ json: temporaryStandings }),
+};
+
 test.describe('Results refresh + temporary standings', () => {
   test('admin refreshes results and sees the summary', async ({ page }) => {
     await seedAuth(page, 'pt-BR');
@@ -82,42 +122,44 @@ test.describe('Results refresh + temporary standings', () => {
 
   test('participant sees the temporary standings with the warning banner', async ({ page }) => {
     await seedAuth(page, 'pt-BR');
-    await installApi(page, [
-      {
-        method: 'GET',
-        match: path('/rounds/r8/temporary-standings'),
-        respond: () => ({
-          json: {
-            roundId: 'r8',
-            isTemporary: true,
-            roundStatus: 'Published',
-            lastUpdatedAt: '2026-05-22T20:30:00Z',
-            computedMatches: 1,
-            remainingMatches: 0,
-            standings: [
-              {
-                position: 1,
-                userId: 'u1',
-                name: 'João Silva',
-                roundTemporaryPoints: 18,
-                currentOfficialTotalPoints: 120,
-                projectedTotalPoints: 138,
-                computedMatches: 1,
-                remainingMatches: 0,
-              },
-            ],
-          },
-        }),
-      },
-    ]);
+    await installApi(page, [temporaryStandingsRoute]);
 
     await page.goto('/rounds/r8/temporary-standings');
 
     await expect(
       page.getByText('Classificação temporária — os pontos podem mudar até o fim da rodada.'),
     ).toBeVisible();
-    await expect(page.getByText('João Silva')).toBeVisible();
-    await expect(page.getByText('+18')).toBeVisible();
-    await expect(page.getByText('Oficial: 120 · Projetada: 138')).toBeVisible();
+    // Scoped to the list: the copy-ready message below repeats the same names and points.
+    const list = page.locator('.vstack');
+    await expect(list.getByText('João Silva')).toBeVisible();
+    await expect(list.getByText('+18')).toBeVisible();
+    await expect(list.getByText('Oficial: 120 · Projetada: 138')).toBeVisible();
+  });
+
+  test('participant copies the temporary standings as a group message', async ({
+    page,
+    context,
+  }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await seedAuth(page, 'pt-BR');
+    await installApi(page, [temporaryStandingsRoute]);
+
+    await page.goto('/rounds/r8/temporary-standings');
+
+    const pre = page.locator('pre');
+    await expect(pre).toContainText('*Palpitão England 2025/2026*');
+    await expect(pre).toContainText('Rodada 12 — parcial');
+    await expect(pre).toContainText('1. João Silva: +18 (138)');
+    await expect(pre).toContainText('2. Maria Souza: +5 (305)');
+    await expect(pre).toContainText('(x) = total projetado no geral');
+    await expect(pre).toContainText('1 jogo computado · 0 restantes');
+
+    await page.getByRole('button', { name: /Copiar/ }).click();
+    await expect(page.locator('.toast-body')).toHaveText('Mensagem copiada!');
+
+    const clip = await page.evaluate(() => navigator.clipboard.readText());
+    expect(clip).toContain('Rodada 12 — parcial');
+    // The message keeps the round ranking, not the projected-total one.
+    expect(clip).toMatch(/1\. João Silva: \+18 \(138\)[\s\S]*2\. Maria Souza: \+5 \(305\)/);
   });
 });

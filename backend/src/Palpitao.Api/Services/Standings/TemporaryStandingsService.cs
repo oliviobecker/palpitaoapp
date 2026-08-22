@@ -48,6 +48,7 @@ public class TemporaryStandingsService : ITemporaryStandingsService
         var dto = new TemporaryStandingsDto
         {
             RoundId = round.Id,
+            RoundNumber = round.Number,
             IsTemporary = true,
             RoundStatus = round.Status,
             LastUpdatedAt = round.ResultsUpdatedAt

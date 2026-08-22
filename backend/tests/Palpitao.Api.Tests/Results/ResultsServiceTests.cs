@@ -590,6 +590,7 @@ public class ResultsServiceTests
 
         var temp = await kit.Temp.GetTemporaryStandingsAsync(round.Id, Ct);
 
+        Assert.Equal(1, temp.RoundNumber);
         Assert.Equal(5, temp.Standings.Single().RoundTemporaryPoints); // 2x2 medium exact = 5
     }
 
@@ -611,6 +612,7 @@ public class ResultsServiceTests
         Assert.Equal(0, temp.ComputedMatches);
         Assert.Equal(0, temp.RemainingMatches); // both dismissed
         Assert.Empty(temp.Standings);
+        Assert.Equal(1, temp.RoundNumber); // carried on the early-return path too
     }
 
     [Fact]

@@ -526,7 +526,8 @@
     "computed": "Computed matches",
     "remaining": "Remaining matches",
     "lastUpdated": "Last updated",
-    "empty": "No results yet to compute the temporary standings."
+    "empty": "No results yet to compute the temporary standings.",
+    "groupMessage": "Group message"
   },
   "scout": {
     "title": "Scout",

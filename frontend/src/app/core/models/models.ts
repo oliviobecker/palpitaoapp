@@ -171,6 +171,7 @@ export interface TemporaryStanding {
 
 export interface TemporaryStandings {
   roundId: string;
+  roundNumber: number;
   isTemporary: boolean;
   roundStatus: RoundStatus;
   lastUpdatedAt?: string | null;

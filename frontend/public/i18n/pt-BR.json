@@ -526,7 +526,8 @@
     "computed": "Jogos computados",
     "remaining": "Jogos restantes",
     "lastUpdated": "Última atualização",
-    "empty": "Ainda não há resultados para calcular a classificação temporária."
+    "empty": "Ainda não há resultados para calcular a classificação temporária.",
+    "groupMessage": "Mensagem para o grupo"
   },
   "scout": {
     "title": "Scout",
