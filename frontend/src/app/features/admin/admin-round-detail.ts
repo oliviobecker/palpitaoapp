@@ -315,6 +315,21 @@ export class AdminRoundDetail implements OnInit {
       .subscribe({ next: () => this.after('roundDetail.reopened') });
   }
 
+  /** Undo of an early/accidental lock: steps the round back to Published. */
+  async unlock(r: Round): Promise<void> {
+    const ok = await this.confirm.ask(this.translate.instant('roundDetail.confirmUnlock'), {
+      title: this.translate.instant('roundDetail.unlock'),
+      confirmText: this.translate.instant('roundDetail.unlock'),
+    });
+    if (!ok) {
+      return;
+    }
+    this.api
+      .unlock(r.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: () => this.after('roundDetail.unlocked') });
+  }
+
   refreshResults(round: Round): void {
     this.refreshing.set(true);
     this.adminApi

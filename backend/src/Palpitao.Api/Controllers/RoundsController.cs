@@ -94,6 +94,19 @@ public class RoundsController : ControllerBase
     public async Task<ActionResult<RoundDto>> Reopen(Guid id, CancellationToken ct)
         => Ok(await _rounds.ReopenAsync(id, User.GetUserId(), ct));
 
+    [HttpPost("{id:guid}/unlock")]
+    [RequireGroupAdmin]
+    public async Task<ActionResult<RoundDto>> Unlock(Guid id, CancellationToken ct)
+    {
+        var round = await _rounds.UnlockAsync(id, User.GetUserId(), ct);
+        SentrySdk.AddBreadcrumb("Round unlocked.", "rounds", data: new Dictionary<string, string>
+        {
+            ["roundId"] = round.Id.ToString(),
+            ["number"] = round.Number.ToString(),
+        });
+        return Ok(round);
+    }
+
     [HttpPost("{roundId:guid}/matches")]
     [RequireGroupAdmin]
     public async Task<ActionResult<MatchDto>> AddMatch(Guid roundId, CreateMatchRequest request, CancellationToken ct)

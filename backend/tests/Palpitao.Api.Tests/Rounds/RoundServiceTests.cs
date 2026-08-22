@@ -252,6 +252,39 @@ public class RoundServiceTests
     }
 
     [Fact]
+    public async Task Unlock_locked_round_returns_to_published()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+        await service.AddMatchAsync(round.Id, Match(SeedIds.Arsenal, SeedIds.Chelsea, new DateTime(2025, 8, 10, 14, 0, 0, DateTimeKind.Utc)), ActingUser, Ct);
+        await service.PublishAsync(round.Id, ActingUser, Ct);
+        var locked = await service.LockAsync(round.Id, ActingUser, Ct);
+        Assert.NotNull(locked.LockedAt);
+
+        var unlocked = await service.UnlockAsync(round.Id, ActingUser, Ct);
+
+        Assert.Equal(RoundStatus.Published, unlocked.Status);
+        Assert.Null(unlocked.LockedAt);
+        // Publication data stays frozen so the deadline and the Flavio target do not move.
+        Assert.Equal(locked.FirstMatchStartsAt, unlocked.FirstMatchStartsAt);
+        Assert.Equal(locked.PublishedAt, unlocked.PublishedAt);
+    }
+
+    [Fact]
+    public async Task Unlock_non_locked_round_is_rejected()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.UnlockAsync(round.Id, ActingUser, Ct));
+
+        Assert.Contains("desbloqueadas", ex.Message);
+    }
+
+    [Fact]
     public async Task Cannot_add_match_to_locked_round_without_override()
     {
         using var db = CreateContext();

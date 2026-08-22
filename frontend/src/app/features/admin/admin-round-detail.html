@@ -157,6 +157,12 @@
               <app-icon name="undo-2" [size]="16" /> {{ 'roundDetail.reopen' | translate }}
             </button>
           }
+          @if (r.status === RoundStatus.Locked) {
+            <button class="btn btn-outline-warning" (click)="unlock(r)">
+              <app-icon name="lock-open" [size]="16" /> {{ 'roundDetail.unlock' | translate }}
+            </button>
+            <p class="text-muted small mb-0">{{ 'roundDetail.unlockHint' | translate }}</p>
+          }
         </div>
       }
 
