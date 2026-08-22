@@ -46,6 +46,20 @@ public class Season : IGroupOwned
     /// </summary>
     public bool FaCupEnabled { get; set; } = true;
 
+    /// <summary>
+    /// Credential of the public standings link (12 uppercase hex characters, stored
+    /// unhyphenated). Auto-generated on creation and regenerable by a group admin, which
+    /// immediately invalidates the previous link. Unique across every group.
+    /// </summary>
+    public string PublicKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Whether <see cref="PublicKey"/> actually resolves. Off by default: a season always
+    /// has a key, but the public link stays dead until an admin deliberately publishes it,
+    /// so existing seasons are not exposed by the mere act of deploying this feature.
+    /// </summary>
+    public bool PublicStandingsEnabled { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     // Navigation

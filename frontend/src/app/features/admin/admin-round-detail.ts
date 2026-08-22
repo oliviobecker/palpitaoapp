@@ -11,15 +11,22 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { forkJoin } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 import { RoundStatus } from '../../core/models/enums';
-import { PredictionCoverage, Round, RoundMatch, ScoringConfig } from '../../core/models/models';
+import {
+  PredictionCoverage,
+  Round,
+  RoundMatch,
+  ScoringConfig,
+  Season,
+} from '../../core/models/models';
 import { ConfirmService } from '../../core/notifications/confirm.service';
 import { ToastService } from '../../core/notifications/toast.service';
 import { AdminService } from '../../core/services/admin.service';
 import { GroupContextService } from '../../core/services/group-context.service';
 import { RoundsService } from '../../core/services/rounds.service';
 import { ScoringConfigService } from '../../core/services/scoring-config.service';
+import { SeasonsService } from '../../core/services/seasons.service';
 import { StandingsService } from '../../core/services/standings.service';
 import { RefreshResultsResponse } from '../../core/models/models';
 import { Icon } from '../../shared/components/icon/icon';
@@ -30,6 +37,7 @@ import { RoundStatusBadge } from '../../shared/components/round-status-badge/rou
 import { Skeleton } from '../../shared/components/skeleton/skeleton';
 import { buildRoundMessage } from '../../shared/utils/round-message.util';
 import { buildClosingMessage } from '../../shared/utils/closing-message.util';
+import { publicStandingsUrl } from '../../shared/utils/public-link.util';
 import { AdminRoundMessages } from './admin-round-messages';
 import { RoundStepper } from './round-stepper';
 
@@ -81,6 +89,7 @@ export class AdminRoundDetail implements OnInit {
   private readonly api = inject(RoundsService);
   private readonly adminApi = inject(AdminService);
   private readonly standingsApi = inject(StandingsService);
+  private readonly seasonsApi = inject(SeasonsService);
   private readonly scoringApi = inject(ScoringConfigService);
   protected readonly group = inject(GroupContextService);
   private readonly toast = inject(ToastService);
@@ -186,13 +195,29 @@ export class AdminRoundDetail implements OnInit {
     forkJoin({
       results: this.api.getResults(round.id),
       standings: this.standingsApi.getStandings(round.seasonId),
+      // The public link belongs in the message, not buried in the season settings: this is
+      // the one moment the whole group is looking. list() avoids a new endpoint, and a
+      // failure here must not cost the admin the message itself.
+      seasons: this.seasonsApi.list().pipe(catchError(() => of([] as Season[]))),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ results, standings }) =>
+        next: ({ results, standings, seasons }) => {
+          const season = seasons.find((s) => s.id === round.seasonId);
+          const link =
+            season?.publicStandingsEnabled && season.publicKey
+              ? publicStandingsUrl(season.publicKey, round.number)
+              : '';
           this.closing.set(
-            buildClosingMessage(round.number, results, standings, this.group.groupName() ?? ''),
-          ),
+            buildClosingMessage(
+              round.number,
+              results,
+              standings,
+              this.group.groupName() ?? '',
+              link,
+            ),
+          );
+        },
         error: () => this.closing.set(''),
       });
   }

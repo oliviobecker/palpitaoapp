@@ -70,6 +70,10 @@ export interface Season {
   allowParticipantsToSubmitPredictions: boolean;
   /** Whether FA Cup fixtures are offered for this season (England certames only). */
   faCupEnabled: boolean;
+  /** Credential of the public standings link (12 hex chars, unhyphenated). Admin-only. */
+  publicKey: string;
+  /** Whether the public link resolves. Off until an admin publishes it. */
+  publicStandingsEnabled: boolean;
   /** True when participant-submitted predictions already exist (warn before disabling). */
   hasParticipantPredictions: boolean;
 }
@@ -481,6 +485,81 @@ export interface RoundResults {
   status: RoundStatus;
   matches: RoundResultMatch[];
   participants: RoundResultParticipant[];
+}
+
+// ---------------------------------------------------------------------------
+// Public standings link (no session; addressed by a season's public key)
+// ---------------------------------------------------------------------------
+
+export interface PublicRoundSummary {
+  number: number;
+  title?: string | null;
+  status: RoundStatus;
+  startDate?: string | null;
+  endDate?: string | null;
+  /** False while the round is only locked: its points are still provisional. */
+  isScored: boolean;
+}
+
+/** Base points per category, as configured for the season. */
+export interface PublicRuleset {
+  columnOnly: number;
+  traditional: number;
+  medium: number;
+  uncommon: number;
+  extraUncommon: number;
+}
+
+/** One scored round in a participant's history, as shown when a standings row opens. */
+export interface PublicStandingRound {
+  number: number;
+  points: number;
+  wasAbsent: boolean;
+  flavioRuleApplied: boolean;
+}
+
+/** Like {@link Standing}, plus the round-by-round history behind the accumulated total. */
+export interface PublicStandingRow extends Standing {
+  rounds: PublicStandingRound[];
+}
+
+export interface PublicSeason {
+  groupName: string;
+  seasonName: string;
+  tournamentType: TournamentType;
+  rounds: PublicRoundSummary[];
+  ruleset: PublicRuleset;
+}
+
+/** Like {@link MatchScore}, plus the prediction the points came from. */
+export interface PublicMatchScore extends MatchScore {
+  predictedHomeScore?: number | null;
+  predictedAwayScore?: number | null;
+}
+
+export interface PublicParticipantScore {
+  userId: string;
+  name: string;
+  grossPoints: number;
+  finalPoints: number;
+  penaltyPoints: number;
+  wasAbsent: boolean;
+  wasEliminated: boolean;
+  flavioRuleApplied: boolean;
+  matchScores: PublicMatchScore[];
+}
+
+export interface PublicRound {
+  number: number;
+  title?: string | null;
+  status: RoundStatus;
+  /** Locked but not scored: computed live, without absences/Flávio/elimination. */
+  isPartial: boolean;
+  computedMatches: number;
+  remainingMatches: number;
+  lastUpdatedAt?: string | null;
+  matches: RoundResultMatch[];
+  participants: PublicParticipantScore[];
 }
 
 export interface MirrorParticipant {
