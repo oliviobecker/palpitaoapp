@@ -15,6 +15,7 @@ public interface IRoundService
     Task<RoundDto> LockAsync(Guid roundId, Guid actingUserId, CancellationToken ct);
     Task<RoundDto> CancelAsync(Guid roundId, Guid actingUserId, CancellationToken ct);
     Task<RoundDto> ReopenAsync(Guid roundId, Guid actingUserId, CancellationToken ct);
+    Task<RoundDto> UnlockAsync(Guid roundId, Guid actingUserId, CancellationToken ct);
 
     Task<MatchDto> AddMatchAsync(Guid roundId, CreateMatchRequest request, Guid actingUserId, CancellationToken ct);
     Task<MatchDto> UpdateMatchAsync(Guid matchId, UpdateMatchRequest request, Guid actingUserId, CancellationToken ct);

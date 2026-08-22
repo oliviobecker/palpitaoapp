@@ -318,6 +318,29 @@ public class RoundService : IRoundService
         return await GetByIdAsync(round.Id, ct);
     }
 
+    public async Task<RoundDto> UnlockAsync(Guid roundId, Guid actingUserId, CancellationToken ct)
+    {
+        var round = await LoadRoundWithMatches(roundId, ct);
+
+        if (round.Status != RoundStatus.Locked)
+        {
+            throw new BusinessRuleException("round.onlyLockedUnlocked");
+        }
+
+        // Undo of an early/accidental lock: the round steps back to Published, so matches
+        // become editable again and predictions reopen. The publication data stays frozen
+        // (FirstMatchStartsAt and the Flavio target were captured at publication and must
+        // not move), which means the general deadline still holds: past it, only the admin
+        // can still register predictions, using the justified override.
+        round.Status = RoundStatus.Published;
+        round.LockedAt = null;
+
+        _audit.Add(actingUserId, "RoundUnlocked", nameof(Round), round.Id.ToString(), null);
+        await _db.SaveChangesAsync(ct);
+
+        return await GetByIdAsync(round.Id, ct);
+    }
+
     // -----------------------------------------------------------------------
     // Matches
     // -----------------------------------------------------------------------

@@ -47,7 +47,7 @@ name, not the app's name.
 
 ## 1. Overview
 
-- **Rounds** created manually by the admin, with the lifecycle `Draft → Published → Locked → Scored` (or `Cancelled`), driven by a **guided stepper** (one action per step); a Scored round can be **reopened** back to Locked.
+- **Rounds** created manually by the admin, with the lifecycle `Draft → Published → Locked → Scored` (or `Cancelled`), driven by a **guided stepper** (one action per step); a Scored round can be **reopened** back to Locked, and a Locked round can be **unlocked** back to Published (undo of an early lock — the publication data, and therefore the deadline, stays frozen).
 - **Predictions** of the score per match, editable while the round is open; the deadline is **one minute before** the first match kickoff.
 - **Prediction mirror** released once predictions close (or live from publication, per season setting).
 - **Scoring** by column/exact score, with **multipliers** by competition/phase/classic (§13).
