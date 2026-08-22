@@ -178,6 +178,17 @@ public class AbsenceService : IAbsenceService
     public async Task ApplyOverrideAsync(Guid roundId, AbsenceOverrideRequest request, Guid actingUserId, CancellationToken ct)
     {
         var groupId = await _current.GetGroupIdAsync(ct);
+        await StageOverrideAsync(groupId, roundId, request, actingUserId, ct);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Upsert + audit staged on the shared DbContext, without saving, so a caller can commit
+    /// it together with its own changes in a single transaction.
+    /// </summary>
+    private async Task StageOverrideAsync(
+        Guid groupId, Guid roundId, AbsenceOverrideRequest request, Guid actingUserId, CancellationToken ct)
+    {
         var roundExists = await _db.Rounds.AnyAsync(r => r.Id == roundId && r.GroupId == groupId, ct);
         if (!roundExists)
         {
@@ -216,10 +227,129 @@ public class AbsenceService : IAbsenceService
 
         _audit.Add(actingUserId, "AbsenceOverride", nameof(Round), roundId.ToString(),
             new { request.UserId, request.IsAbsent, request.Justification });
-        await _db.SaveChangesAsync(ct);
     }
 
-    public async Task ReactivateAsync(Guid userId, string justification, Guid actingUserId, CancellationToken ct)
+    public async Task<IReadOnlyList<AbsenceCandidateRoundDto>> GetAbsenceCandidateRoundsAsync(
+        Guid userId, CancellationToken ct)
+        => await LoadCandidatesAsync(await _current.GetGroupIdAsync(ct), userId, ct);
+
+    /// <summary>
+    /// Rounds the participant can be recorded absent for. Takes the group id so callers that
+    /// already resolved it (and are mid-transaction) do not resolve it twice.
+    /// </summary>
+    private async Task<List<AbsenceCandidateRoundDto>> LoadCandidatesAsync(
+        Guid groupId, Guid userId, CancellationToken ct)
+    {
+        // AllParticipants, not ActiveParticipants: the participant is inactive or eliminated
+        // by definition here -- that is exactly why the admin is (re)activating them.
+        var isMember = await GroupQueries.AllParticipants(_db, groupId).AnyAsync(u => u.Id == userId, ct);
+        if (!isMember)
+        {
+            throw new NotFoundException("notFound.participant");
+        }
+
+        var seasonId = await _db.Seasons
+            .Where(s => s.IsActive && s.GroupId == groupId)
+            .Select(s => (Guid?)s.Id)
+            .FirstOrDefaultAsync(ct);
+        if (seasonId is null)
+        {
+            return [];
+        }
+
+        // Locked/Scored only: a Published round still accepts predictions (the participant
+        // can simply submit them), and Draft/Cancelled rounds never score.
+        var rounds = await _db.Rounds
+            .Where(r => r.SeasonId == seasonId
+                && (r.Status == RoundStatus.Locked || r.Status == RoundStatus.Scored))
+            .OrderBy(r => r.Number)
+            .Select(r => new
+            {
+                r.Id,
+                r.Number,
+                r.Title,
+                r.Status,
+                MatchCount = r.Matches.Count,
+                PredictionCount = _db.Predictions.Count(p => p.RoundId == r.Id && p.UserId == userId),
+                ForcedAbsent = _db.AbsenceOverrides
+                    .Where(o => o.RoundId == r.Id && o.UserId == userId)
+                    .Select(o => (bool?)o.IsAbsent)
+                    .FirstOrDefault(),
+            })
+            .ToListAsync(ct);
+
+        // A round with no matches drops out on its own (0 < 0 is false).
+        return rounds
+            .Where(r => r.PredictionCount < r.MatchCount && r.ForcedAbsent != true)
+            .Select(r => new AbsenceCandidateRoundDto
+            {
+                RoundId = r.Id,
+                Number = r.Number,
+                Title = r.Title,
+                Status = r.Status,
+                MatchCount = r.MatchCount,
+                PredictionCount = r.PredictionCount,
+                // An override currently marking them present is surfaced rather than hidden:
+                // confirming replaces it, and hiding the conflict would be worse.
+                HasPresentOverride = r.ForcedAbsent == false,
+            })
+            .ToList();
+    }
+
+    public async Task StageAbsenceOverridesAsync(
+        Guid userId, IReadOnlyCollection<Guid> roundIds, string justification, Guid actingUserId, CancellationToken ct)
+        => await StageAbsenceOverridesCoreAsync(
+            await _current.GetGroupIdAsync(ct), userId, roundIds, justification, actingUserId, ct);
+
+    private async Task StageAbsenceOverridesCoreAsync(
+        Guid groupId, Guid userId, IReadOnlyCollection<Guid> roundIds, string justification,
+        Guid actingUserId, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(justification))
+        {
+            throw new BusinessRuleException("common.justificationRequired");
+        }
+
+        // Distinct is required: two identical ids would each miss the other's unsaved insert
+        // and violate the unique (RoundId, UserId) index at SaveChanges.
+        var requested = roundIds.Distinct().ToList();
+        if (requested.Count == 0)
+        {
+            return;
+        }
+
+        // Already forced absent -> nothing to stage, so a retry or a double submit is a no-op.
+        var alreadyAbsent = await _db.AbsenceOverrides
+            .Where(o => o.UserId == userId && o.IsAbsent && requested.Contains(o.RoundId))
+            .Select(o => o.RoundId)
+            .ToListAsync(ct);
+
+        var candidates = (await LoadCandidatesAsync(groupId, userId, ct))
+            .Select(c => c.RoundId)
+            .ToHashSet();
+
+        foreach (var roundId in requested.Except(alreadyAbsent))
+        {
+            // Not a candidate: another tenant's round, one not closed for predictions, one
+            // outside the active season, or predictions that arrived in the meantime. The
+            // generic message leaks nothing about the other cases.
+            if (!candidates.Contains(roundId))
+            {
+                throw new BusinessRuleException("absence.roundNotEligible");
+            }
+
+            await StageOverrideAsync(groupId, roundId, new AbsenceOverrideRequest
+            {
+                UserId = userId,
+                IsAbsent = true,
+                Justification = justification,
+            }, actingUserId, ct);
+        }
+    }
+
+    public async Task ReactivateAsync(
+        Guid userId, string justification, IReadOnlyCollection<Guid>? absentRoundIds,
+        Guid actingUserId, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(justification))
         {
@@ -234,8 +364,18 @@ public class AbsenceService : IAbsenceService
         membership.IsEliminated = false;
         membership.IsActive = true;
 
+        // Safe before the save: candidate resolution reads rounds/predictions/overrides,
+        // never the membership flags, so there is no read-your-own-writes hazard.
+        if (absentRoundIds is { Count: > 0 })
+        {
+            await StageAbsenceOverridesCoreAsync(
+                groupId, userId, absentRoundIds, justification, actingUserId, ct);
+        }
+
         _audit.Add(actingUserId, "ParticipantReactivated", nameof(User), userId.ToString(),
-            new { justification });
+            new { justification, absentRounds = absentRoundIds?.Count ?? 0 });
+
+        // One commit: membership flags + override rows + every audit row.
         await _db.SaveChangesAsync(ct);
     }
 

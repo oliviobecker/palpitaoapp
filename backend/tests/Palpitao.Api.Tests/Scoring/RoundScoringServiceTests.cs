@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
+using Palpitao.Api.DTOs.Absences;
 using Palpitao.Api.DTOs.Matches;
 using Palpitao.Api.DTOs.Predictions;
 using Palpitao.Api.DTOs.Rounds;
@@ -300,6 +301,42 @@ public class RoundScoringServiceTests
         var p = results.Participants.Single(x => x.UserId == user);
         Assert.Equal(3, p.MatchScores[0].Multiplier);
         Assert.Equal(9, p.FinalPoints);
+    }
+
+    [Fact]
+    public async Task Absence_override_zeroes_the_round_and_survives_a_season_recalculation()
+    {
+        using var db = CreateContext();
+        var kit = Build(db);
+        var absences = TestServices.Absences(db);
+        var user = CreateParticipant(db);
+
+        // Complete predictions and an exact hit: only the override can make this participant
+        // absent, so the assertions below cannot pass by accident.
+        var round = await PublishedRound(kit, 1);
+        await SavePredictions(kit, round, user, (1, 0));
+        await kit.Rounds.LockAsync(round.Id, Admin, Ct);
+        await SetResults(kit, round, (1, 0));
+
+        await absences.ApplyOverrideAsync(round.Id, new AbsenceOverrideRequest
+        {
+            UserId = user,
+            IsAbsent = true,
+            Justification = "Ativado depois do fechamento da rodada.",
+        }, Admin, Ct);
+
+        var results = await kit.Scoring.ScoreRoundAsync(round.Id, Admin, Ct);
+        var scored = results.Participants.Single(x => x.UserId == user);
+        Assert.True(scored.WasAbsent);
+        Assert.Equal(0, scored.FinalPoints);
+
+        // A recalculation wipes Absence rows but not AbsenceOverrides, so the admin's
+        // decision is re-derived instead of being silently dropped.
+        await kit.Scoring.RecalculateSeasonAsync(SeasonId, Admin, Ct);
+
+        var stored = db.RoundParticipantResults.Single(r => r.RoundId == round.Id && r.UserId == user);
+        Assert.True(stored.WasAbsent);
+        Assert.Equal(0, stored.FinalPoints);
     }
 
     [Fact]

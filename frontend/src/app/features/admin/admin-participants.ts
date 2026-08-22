@@ -11,9 +11,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { Observable, catchError, of } from 'rxjs';
 import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
-import { Absence, Participant } from '../../core/models/models';
-import { ConfirmService } from '../../core/notifications/confirm.service';
+import { Absence, AbsenceCandidateRound, Participant } from '../../core/models/models';
+import { ConfirmChoice, ConfirmService } from '../../core/notifications/confirm.service';
 import { ToastService } from '../../core/notifications/toast.service';
 import { AdminService } from '../../core/services/admin.service';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
@@ -22,6 +23,15 @@ import { FormField } from '../../shared/components/form-field/form-field';
 import { Icon } from '../../shared/components/icon/icon';
 import { PageHeader } from '../../shared/components/page-header/page-header';
 import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
+
+/**
+ * Whether a candidate round starts out ticked. A locked round's absence lands on its own at
+ * scoring time, so it is the safe default; a scored round needs a deliberate re-score, and a
+ * round the participant was excused from needs a deliberate reversal.
+ */
+export function isPreselectedAbsence(round: AbsenceCandidateRound): boolean {
+  return !round.requiresRescore && !round.hasPresentOverride;
+}
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -322,13 +332,40 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
   }
 
   setActive(p: Participant, active: boolean): void {
-    const call = active ? this.api.activateParticipant(p.id) : this.api.deactivateParticipant(p.id);
-    call.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () =>
-        this.afterAction(
-          active ? 'adminParticipants.activatedMsg' : 'adminParticipants.deactivatedMsg',
-        ),
-    });
+    if (!active) {
+      // Deactivating never records absences, so it stays a one-click action.
+      this.api
+        .deactivateParticipant(p.id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({ next: () => this.afterAction('adminParticipants.deactivatedMsg') });
+      return;
+    }
+    this.candidates(p.id).subscribe({ next: (rounds) => void this.confirmActivate(p, rounds) });
+  }
+
+  /**
+   * With nothing to record, activation stays a one-click action; otherwise the admin picks
+   * which of the rounds that closed while they were out should count as an absence.
+   */
+  private async confirmActivate(p: Participant, rounds: AbsenceCandidateRound[]): Promise<void> {
+    let absentRoundIds: string[] = [];
+    if (rounds.length > 0) {
+      const answer = await this.confirm.askWithChoices(
+        this.translate.instant('adminParticipants.confirmActivateAbsences', { name: p.name }),
+        rounds.map((r) => this.toChoice(r)),
+        {
+          title: this.translate.instant('adminParticipants.activate'),
+          confirmText: this.translate.instant('adminParticipants.activate'),
+          choicesLabel: this.translate.instant('adminParticipants.absentRoundsLabel'),
+        },
+      );
+      if (answer === null) return;
+      absentRoundIds = answer.choiceIds;
+    }
+    this.api
+      .activateParticipant(p.id, absentRoundIds)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: () => this.afterAction('adminParticipants.activatedMsg') });
   }
 
   async eliminate(p: Participant): Promise<void> {
@@ -348,20 +385,54 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
       .subscribe({ next: () => this.afterAction('adminParticipants.eliminatedMsg') });
   }
 
-  async reactivate(p: Participant): Promise<void> {
-    const justification = await this.confirm.askWithInput(
+  reactivate(p: Participant): void {
+    this.candidates(p.id).subscribe({ next: (rounds) => void this.confirmReactivate(p, rounds) });
+  }
+
+  /** The justification is always required, so this dialog opens even with no candidates. */
+  private async confirmReactivate(p: Participant, rounds: AbsenceCandidateRound[]): Promise<void> {
+    const answer = await this.confirm.askWithChoices(
       this.translate.instant('adminParticipants.confirmReactivate', { name: p.name }),
+      rounds.map((r) => this.toChoice(r)),
       {
         title: this.translate.instant('adminParticipants.reactivate'),
         confirmText: this.translate.instant('adminParticipants.reactivate'),
+        choicesLabel: this.translate.instant('adminParticipants.absentRoundsLabel'),
+        withInput: true,
         inputLabel: this.translate.instant('adminParticipants.promptReactivate'),
       },
     );
-    if (justification === null) return;
+    if (answer === null) return;
     this.api
-      .reactivate(p.id, justification)
+      .reactivate(p.id, answer.text, answer.choiceIds)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ next: () => this.afterAction('adminParticipants.reactivatedMsg') });
+  }
+
+  /** catchError before takeUntilDestroyed, so the empty fallback still reaches the subscriber. */
+  private candidates(userId: string): Observable<AbsenceCandidateRound[]> {
+    return this.api.getAbsenceCandidateRounds(userId).pipe(
+      catchError(() => of<AbsenceCandidateRound[]>([])),
+      takeUntilDestroyed(this.destroyRef),
+    );
+  }
+
+  private toChoice(r: AbsenceCandidateRound): ConfirmChoice {
+    return {
+      id: r.roundId,
+      label: r.title
+        ? this.translate.instant('adminParticipants.absentRoundOptionTitled', {
+            number: r.number,
+            title: r.title,
+          })
+        : this.translate.instant('adminParticipants.absentRoundOption', { number: r.number }),
+      hint: r.hasPresentOverride
+        ? this.translate.instant('adminParticipants.absentRoundHasPresentOverride')
+        : r.requiresRescore
+          ? this.translate.instant('adminParticipants.absentRoundNeedsRescore')
+          : undefined,
+      checked: isPreselectedAbsence(r),
+    };
   }
 
   toggleAbsences(p: Participant): void {

@@ -323,6 +323,20 @@ export interface Absence {
   createdAt: string;
 }
 
+/** A closed round the participant can be recorded absent for when they are (re)activated. */
+export interface AbsenceCandidateRound {
+  roundId: string;
+  number: number;
+  title?: string | null;
+  status: RoundStatus;
+  matchCount: number;
+  predictionCount: number;
+  /** Already scored: the absence only lands after a re-score or a season recalculation. */
+  requiresRescore: boolean;
+  /** An override currently marks the participant present for this round. */
+  hasPresentOverride: boolean;
+}
+
 export interface Participant {
   id: string;
   name: string;

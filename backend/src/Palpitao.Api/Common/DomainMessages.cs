@@ -125,12 +125,21 @@ public static class DomainMessages
             ["validation.match.required"] = ("O jogo é obrigatório.", "The match is required."),
             ["validation.score.negative"] = ("O placar não pode ser negativo.", "The score cannot be negative."),
             ["validation.justification.required"] = ("A justificativa é obrigatória.", "A justification is required."),
+            ["validation.justification.tooLong"] = ("A justificativa deve ter no máximo 500 caracteres.", "The justification must be at most 500 characters."),
 
             // Users.
             ["user.emailExists"] = ("Já existe um usuário com esse e-mail.", "A user with this e-mail already exists."),
 
             // Participant state.
             ["participant.inactive"] = ("Participante inativo.", "Inactive participant."),
+
+            // Absences recorded when a participant is (re)activated after a round closed.
+            ["absence.autoOnActivate"] = (
+                "Ausência registrada automaticamente na ativação do participante.",
+                "Absence recorded automatically when the participant was activated."),
+            ["absence.roundNotEligible"] = (
+                "Uma das rodadas selecionadas não pode receber ausência para este participante. Recarregue a tela.",
+                "One of the selected rounds cannot record an absence for this participant. Reload the screen."),
 
             // Rounds.
             ["round.duplicateNumber"] = ("Já existe uma rodada com esse número nesta temporada.", "A round with this number already exists in this season."),

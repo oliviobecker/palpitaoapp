@@ -7,6 +7,7 @@ import {
   inject,
   signal,
   viewChild,
+  viewChildren,
 } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ConfirmService } from '../../../core/notifications/confirm.service';
@@ -35,6 +36,34 @@ import { ConfirmService } from '../../../core/notifications/confirm.service';
             </div>
             <div class="modal-body">
               <p class="mb-0">{{ confirm.state().message }}</p>
+              @if (confirm.state().choices.length) {
+                <fieldset class="mt-3">
+                  <legend class="form-label fs-6 mb-2">{{ confirm.state().choicesLabel }}</legend>
+                  <div class="vstack gap-2">
+                    @for (choice of confirm.state().choices; track choice.id) {
+                      <div class="form-check">
+                        <input
+                          #choiceEl
+                          type="checkbox"
+                          class="form-check-input"
+                          [id]="'confirm-dialog-choice-' + choice.id"
+                          [checked]="checked().has(choice.id)"
+                          (change)="toggleChoice(choice.id)"
+                        />
+                        <label
+                          class="form-check-label"
+                          [for]="'confirm-dialog-choice-' + choice.id"
+                        >
+                          {{ choice.label }}
+                          @if (choice.hint) {
+                            <small class="d-block text-warning-emphasis">{{ choice.hint }}</small>
+                          }
+                        </label>
+                      </div>
+                    }
+                  </div>
+                </fieldset>
+              }
               @if (confirm.state().withInput) {
                 <div class="mt-3">
                   <label for="confirm-dialog-input" class="form-label">
@@ -62,7 +91,7 @@ import { ConfirmService } from '../../../core/notifications/confirm.service';
                 [class.btn-danger]="confirm.state().danger"
                 [class.btn-primary]="!confirm.state().danger"
                 [disabled]="!canConfirm()"
-                (click)="confirm.confirm(inputValue())"
+                (click)="confirm.confirm(inputValue(), [...checked()])"
               >
                 {{ confirm.state().confirmText }}
               </button>
@@ -79,8 +108,20 @@ export class ConfirmDialog {
   private readonly dialog = viewChild<ElementRef<HTMLElement>>('dialog');
   private readonly confirmBtn = viewChild<ElementRef<HTMLButtonElement>>('confirmBtn');
   private readonly inputEl = viewChild<ElementRef<HTMLTextAreaElement>>('inputEl');
+  private readonly choiceEls = viewChildren<ElementRef<HTMLInputElement>>('choiceEl');
 
   protected readonly inputValue = signal('');
+  protected readonly checked = signal<ReadonlySet<string>>(new Set());
+
+  protected toggleChoice(id: string): void {
+    const next = new Set(this.checked());
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    this.checked.set(next);
+  }
 
   protected readonly canConfirm = computed(() => {
     const state = this.confirm.state();
@@ -100,9 +141,13 @@ export class ConfirmDialog {
         if (!this.lastFocused) {
           this.lastFocused = document.activeElement as HTMLElement | null;
           this.inputValue.set('');
+          this.checked.set(new Set(state.choices.filter((c) => c.checked).map((c) => c.id)));
         }
+        // Land on the first thing the user has to fill in, never past it.
         if (state.withInput && input) {
           input.nativeElement.focus();
+        } else if (this.choiceEls().length) {
+          this.choiceEls()[0].nativeElement.focus();
         } else if (btn) {
           btn.nativeElement.focus();
         }
@@ -124,8 +169,10 @@ export class ConfirmDialog {
       return;
     }
     const focusables = Array.from(
-      this.dialog()?.nativeElement.querySelectorAll<HTMLElement>('button, textarea') ?? [],
-    ).filter((el) => !(el as HTMLButtonElement).disabled);
+      this.dialog()?.nativeElement.querySelectorAll<HTMLElement>(
+        'button, textarea, input, select, a[href], [tabindex]:not([tabindex="-1"])',
+      ) ?? [],
+    ).filter((el) => !(el as HTMLButtonElement | HTMLInputElement).disabled);
     if (focusables.length === 0) {
       return;
     }

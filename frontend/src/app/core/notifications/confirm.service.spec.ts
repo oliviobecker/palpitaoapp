@@ -42,6 +42,56 @@ describe('ConfirmService', () => {
     await expect(result).resolves.toBeNull();
   });
 
+  it('resolves the ticked ids when a choices confirmation is confirmed', async () => {
+    const svc = new ConfirmService();
+    const result = svc.askWithChoices(
+      'Activate John?',
+      [
+        { id: 'r1', label: 'Round 1', checked: true },
+        { id: 'r2', label: 'Round 2' },
+      ],
+      { choicesLabel: 'Record as absent in:' },
+    );
+
+    expect(svc.state().choices).toHaveLength(2);
+    expect(svc.state().choicesLabel).toBe('Record as absent in:');
+    expect(svc.state().withInput).toBe(false);
+    svc.confirm(undefined, ['r1']);
+
+    await expect(result).resolves.toEqual({ text: '', choiceIds: ['r1'] });
+    expect(svc.state().open).toBe(false);
+  });
+
+  it('treats an empty selection as a deliberate confirmation, not a cancel', async () => {
+    const svc = new ConfirmService();
+    const result = svc.askWithChoices('Activate John?', [{ id: 'r1', label: 'Round 1' }]);
+    svc.confirm(undefined, []);
+
+    await expect(result).resolves.toEqual({ text: '', choiceIds: [] });
+  });
+
+  it('resolves null when a choices confirmation is cancelled', async () => {
+    const svc = new ConfirmService();
+    const result = svc.askWithChoices('Activate John?', [{ id: 'r1', label: 'Round 1' }]);
+    svc.cancel();
+
+    await expect(result).resolves.toBeNull();
+  });
+
+  it('combines the checkbox list with a justification textarea', async () => {
+    const svc = new ConfirmService();
+    const result = svc.askWithChoices('Reactivate John?', [{ id: 'r1', label: 'Round 1' }], {
+      withInput: true,
+      inputLabel: 'Justification',
+    });
+
+    expect(svc.state().withInput).toBe(true);
+    expect(svc.state().choices).toHaveLength(1);
+    svc.confirm('  back in  ', ['r1']);
+
+    await expect(result).resolves.toEqual({ text: 'back in', choiceIds: ['r1'] });
+  });
+
   it('carries the danger flag and texts into the state', () => {
     const svc = new ConfirmService();
     void svc.askWithInput('Eliminate John?', {
