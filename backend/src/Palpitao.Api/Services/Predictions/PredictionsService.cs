@@ -208,8 +208,9 @@ public class PredictionsService : IPredictionsService
             {
                 UserId = participant.Id,
                 Name = participant.Name,
-                // Absent when the participant did not predict every match of the round.
-                IsAbsent = userPredictions.Count < matches.Count,
+                // Same definition as AbsenceService: absent = nothing sent (README §14).
+                // An incomplete set is present and simply scores 0 on what it skipped.
+                IsAbsent = userPredictions.Count == 0,
                 IsEliminated = participant.IsEliminated,
                 // Filled by the Flávio rule module (later phase).
                 FlavioRuleApplied = false,

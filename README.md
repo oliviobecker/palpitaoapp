@@ -382,8 +382,17 @@ There is also a per-match **manual multiplier override** (requires a justificati
 
 ## 14. Absence rules
 
-Absent = an active participant who did not submit **all** the round's required predictions (the
-admin can apply an override). Penalty by season ordinal:
+Absent = an active participant who submitted **no** prediction at all for the round (the admin can
+apply an override — see below). An **incomplete** set counts as present and simply scores 0 on the
+matches it skipped, the same outcome as getting them wrong.
+
+Every write path demands the complete set (`prediction.allMatchesRequired` — participant, OCR import
+and manual admin entry alike), so a partial set is almost always the trace of a **match added to the
+round after the participant answered**. Charging that a zeroed round plus a rung on the ladder below
+punished the participant for an admin's edit. Someone gaming it — one prediction per round, never
+absent — is what the override is for.
+
+Penalty by season ordinal:
 
 | Absence | Round points | Total penalty | Effect |
 |---|---|---|---|
@@ -392,6 +401,13 @@ admin can apply an override). Penalty by season ordinal:
 | 5th | 0 | — | **Eliminated** |
 
 An eliminated participant no longer predicts, unless **manually reactivated** by the admin.
+
+**Override.** `POST /api/admin/rounds/{id}/absences/override` forces a participant absent or present
+for one round, with a mandatory justification, and wins over the automatic rule. It is offered on
+**/admin/rounds/:id** while the round is `Published` or `Locked`, in the same panel that lists who
+is still missing predictions — the panel marks *who has not finished* and *who will actually be
+marked absent* separately, because since the rule above they are different questions. The override
+is an upsert with no delete: it can be flipped, not removed.
 
 **Configurable per season** (admin → *Regras de pontuação*, stored on `SeasonScoringConfig`; the
 values in the table above are the defaults):
@@ -416,9 +432,14 @@ The standings **leader** gets a special deadline before the round; missing it co
 - The **general lock** always prevails (this cap stays at the first kickoff, not at the
   participants' deadline — in that last minute nobody can submit anyway).
 
-If the leader completes the predictions **after** that deadline (but before the lock), they lose
-**half** of the round's points (rounded down — 17 → 8). If they don't predict, they are treated as
-a normal **absence**. A tie at the top ⇒ it applies to all tied leaders.
+If the leader sends their predictions **after** that deadline (but before the lock), they lose
+**half** of the round's points (rounded down — 17 → 8) — an **incomplete** set included. If they
+send nothing at all, they are treated as a normal **absence**. A tie at the top ⇒ it applies to all
+tied leaders.
+
+Incompleteness is deliberately *not* an exemption: now that a partial set is no longer an absence
+(§14), letting it skip the halving would make omitting one match strictly better for the leader than
+sending everything late — no halving, no absence, full points.
 
 **Activation by tournament type:**
 - **Palpitão England** — from the season's `FlavioFromRound` on (**default 16**, editable in
@@ -442,8 +463,8 @@ eliminations and re-scores the finished rounds in order — **idempotent**.
   exact-score difficulty taxonomy defined by the pool rules.
 - **Mirror before predictions close**: the API rejects with 422 (informative message); the frontend
   shows an empty state and no error toast.
-- **Flávio Rule deadline milestone** = the leader's first complete submission (the latest
-  `SubmittedAt` among their round predictions).
+- **Flávio Rule deadline milestone** = the latest `SubmittedAt` among the leader's round
+  predictions — of the whole set when it is complete, of whatever they did send when it is not.
 - **Tie at the top**: the Flávio Rule applies to all tied leaders.
 - **Multiplier on the frontend** (before scoring): the admin round screens pass the season's
   scoring config, so a customised season is reflected. Without it the client mirrors the default
@@ -957,8 +978,10 @@ while the match is being played.
 - A match added **by hand** (not imported from a provider) has no external id, so it is joined by
   team name — a spelling the source does not share leaves it out of the refresh, and it shows up in
   the summary's **"Sem correspondência"** count.
-- The temporary standings include participants with at least one prediction in the round; whoever
-  didn't predict appears only in the official scoring (with an absence), not in the preview.
+- The temporary standings list the **whole roster**: whoever has not predicted shows on zero, which
+  is exactly the signal that they are heading for an absence. Once predictions close, those rows are
+  flagged `willBeAbsent` — a label taken from the absence service itself (so overrides win and it
+  cannot drift from the scoring), never applied to the preview's points.
 
 ## 26. Groups (multi-tenant)
 

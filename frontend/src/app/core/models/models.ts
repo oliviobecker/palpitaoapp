@@ -420,6 +420,13 @@ export interface PredictionCoverageParticipant {
   userId: string;
   name: string;
   predictedCount: number;
+  /**
+   * Scoring the round right now would zero them. Not derivable from `predictedCount`:
+   * an admin override wins over the count, so the backend is the only source of truth.
+   */
+  willBeAbsent: boolean;
+  /** An admin decided this one by hand, so the flag above is not the automatic rule. */
+  hasOverride: boolean;
 }
 
 /** Who has predicted the whole round vs. who is still missing (admin round detail). */

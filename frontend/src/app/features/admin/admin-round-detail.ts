@@ -15,6 +15,7 @@ import { catchError, forkJoin, of } from 'rxjs';
 import { RoundStatus } from '../../core/models/enums';
 import {
   PredictionCoverage,
+  PredictionCoverageParticipant,
   Round,
   RoundMatch,
   ScoringConfig,
@@ -108,7 +109,7 @@ export class AdminRoundDetail implements OnInit {
   /** Sorted matches (stable reference per load) — feeds the inline results editor. */
   protected readonly matches = signal<RoundMatch[]>([]);
   protected readonly closing = signal('');
-  /** Who has predicted everything vs. who is missing — shown while Published. */
+  /** Who has predicted everything vs. who is missing — shown while Published and Locked. */
   protected readonly coverage = signal<PredictionCoverage | null>(null);
   /**
    * The season's ruleset, so the multipliers shown here (and in the group message) match a
@@ -160,9 +161,14 @@ export class AdminRoundDetail implements OnInit {
       });
   }
 
-  /** Prediction coverage helps decide when to chase stragglers before locking. */
+  /**
+   * Prediction coverage helps decide when to chase stragglers before locking — and, while
+   * Locked, it is the last chance to fix who scoring is about to mark absent, since an
+   * absence there costs the round and a rung on the punishment ladder. Not loaded once
+   * Scored: correcting history would mean a recalculation, which is a separate decision.
+   */
   private loadCoverage(round: Round): void {
-    if (round.status !== RoundStatus.Published) {
+    if (round.status !== RoundStatus.Published && round.status !== RoundStatus.Locked) {
       this.coverage.set(null);
       return;
     }
@@ -328,6 +334,40 @@ export class AdminRoundDetail implements OnInit {
       .unlock(r.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ next: () => this.after('roundDetail.unlocked') });
+  }
+
+  /**
+   * The absence override, which the API has always exposed and no screen ever called — so
+   * until now a wrong call could not be corrected from the app at all. There are only two
+   * states, so a single button toggles; the confirmation spells out the direction and the
+   * justification is mandatory (the backend requires and audits it).
+   *
+   * Caveat worth knowing: the backend upserts and offers no delete, so an override can be
+   * flipped but never removed. From the first click on, that participant is on a manual
+   * decision for this round rather than back on the automatic rule.
+   */
+  async toggleAbsence(round: Round, p: PredictionCoverageParticipant): Promise<void> {
+    const markAbsent = !p.willBeAbsent;
+    const action = markAbsent ? 'roundDetail.markAbsent' : 'roundDetail.markPresent';
+    const justification = await this.confirm.askWithInput(
+      this.translate.instant(
+        markAbsent ? 'roundDetail.markAbsentConfirm' : 'roundDetail.markPresentConfirm',
+        { name: p.name },
+      ),
+      {
+        title: this.translate.instant(action),
+        confirmText: this.translate.instant(action),
+        inputLabel: this.translate.instant('roundDetail.absenceJustification'),
+        required: true,
+      },
+    );
+    if (!justification) {
+      return;
+    }
+    this.adminApi
+      .overrideAbsence(round.id, { userId: p.userId, isAbsent: markAbsent, justification })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: () => this.after('roundDetail.absenceOverrideSaved') });
   }
 
   refreshResults(round: Round): void {

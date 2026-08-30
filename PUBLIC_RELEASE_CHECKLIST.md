@@ -24,6 +24,11 @@ Status of the items reviewed while preparing this repository to go public.
 - [x] Seed admin is a clearly-labeled local dev account (`admin@palpitao.local` / `Admin@123`)
 - [x] No OCR sample images or `*.traineddata` committed (`.gitignore` excludes them)
 - [x] No private uploads / local databases committed
+- [x] Public standings link (`/p/<key>`, README §28) is **opt-in per season**
+      (`Season.PublicStandingsEnabled` defaults to `false`), exposes only closed rounds, and is kept
+      out of search by `robots.txt` + a `noindex` meta tag on the page + `X-Robots-Tag` on the API
+- [x] The Open Graph card (`frontend/public/og-cover.jpg`) is generic product art — it names no
+      group, season or participant, so a pasted link never leaks in its preview
 
 ## Build & tests
 - [ ] Backend builds (`dotnet build backend/Palpitao.slnx -c Release`)

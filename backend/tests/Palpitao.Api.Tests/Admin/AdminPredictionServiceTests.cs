@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
+using Palpitao.Api.DTOs.Absences;
 using Palpitao.Api.DTOs.Admin;
 using Palpitao.Api.DTOs.Matches;
 using Palpitao.Api.DTOs.Predictions;
@@ -49,7 +50,7 @@ public class AdminPredictionServiceTests
         return db;
     }
 
-    private static AdminPredictionService Service(AppDbContext db) => new(db, new AuditService(db), new FakeCurrentGroupService());
+    private static AdminPredictionService Service(AppDbContext db) => new(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.Absences(db));
 
     private static Guid CreateParticipant(AppDbContext db, bool eliminated = false)
     {
@@ -293,6 +294,63 @@ public class AdminPredictionServiceTests
         Assert.Equal(missing, pending.UserId);
         Assert.Equal(1, pending.PredictedCount);
         Assert.DoesNotContain(coverage.Missing, p => p.UserId == eliminated);
+    }
+
+    [Fact]
+    public async Task GetCoverage_separates_incomplete_from_heading_for_an_absence()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var round = await PublishedRound(db); // 2 matches
+        var incomplete = CreateParticipant(db);
+        var silent = CreateParticipant(db);
+        db.Predictions.Add(new Prediction
+        {
+            Id = Guid.NewGuid(),
+            RoundId = round.Id,
+            RoundMatchId = round.Matches[0].Id,
+            UserId = incomplete,
+            PredictedHomeScore = 1,
+            PredictedAwayScore = 1,
+            SubmittedAt = DateTime.UtcNow,
+            Source = PredictionSource.Participant,
+        });
+        db.SaveChanges();
+
+        var coverage = await service.GetCoverageAsync(round.Id, Ct);
+
+        // Both are missing a prediction; only the silent one is heading for an absence.
+        // Telling the two apart is the whole point of the screen.
+        Assert.False(coverage.Missing.Single(p => p.UserId == incomplete).WillBeAbsent);
+        Assert.True(coverage.Missing.Single(p => p.UserId == silent).WillBeAbsent);
+        Assert.DoesNotContain(coverage.Missing, p => p.HasOverride);
+    }
+
+    [Fact]
+    public async Task GetCoverage_keeps_a_complete_participant_forced_absent_visible()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var round = await PublishedRound(db); // 2 matches
+        var complete = CreateParticipant(db);
+        await service.SaveManualAsync(round.Id, FullRequest(complete, round), Admin, Ct);
+
+        await TestServices.Absences(db).ApplyOverrideAsync(round.Id, new AbsenceOverrideRequest
+        {
+            UserId = complete,
+            IsAbsent = true,
+            Justification = "Ativado depois do fechamento da rodada.",
+        }, Admin, Ct);
+
+        var coverage = await service.GetCoverageAsync(round.Id, Ct);
+
+        // Nothing is missing, so on the "incomplete only" rule the row would vanish and the
+        // admin would have no way to undo their own decision.
+        var row = Assert.Single(coverage.Missing);
+        Assert.Equal(complete, row.UserId);
+        Assert.True(row.WillBeAbsent);
+        Assert.True(row.HasOverride);
+        Assert.Equal(1, coverage.CompleteParticipants); // counted on predictions, not on Missing
     }
 
     [Fact]

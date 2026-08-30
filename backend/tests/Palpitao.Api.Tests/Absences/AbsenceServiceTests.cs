@@ -255,14 +255,17 @@ public class AbsenceServiceTests
     }
 
     [Fact]
-    public async Task Participant_with_incomplete_predictions_is_absent()
+    public async Task Participant_with_incomplete_predictions_is_not_absent()
     {
         using var db = CreateContext();
         var service = Service(db);
         var user = CreateParticipant(db);
         var round = await PublishedRound(db, 1, matchCount: 2);
 
-        // Insert a single prediction directly (1 of 2 matches) => incomplete.
+        // Insert a single prediction directly (1 of 2 matches) => incomplete, but present.
+        // The usual cause is not laziness: every write path demands the full set, so a
+        // partial one is what a match added after the participant answered leaves behind.
+        // Charging that a zeroed round plus a rung on the punishment ladder was the bug.
         var firstMatchId = round.Matches[0].Id;
         db.Predictions.Add(new Prediction
         {
@@ -276,7 +279,36 @@ public class AbsenceServiceTests
         });
         db.SaveChanges();
 
+        Assert.False(await service.IsAbsentAsync(round.Id, user, Ct));
+    }
+
+    [Fact]
+    public async Task Participant_who_sent_nothing_is_absent()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var user = CreateParticipant(db);
+        var round = await PublishedRound(db, 1, matchCount: 2);
+
         Assert.True(await service.IsAbsentAsync(round.Id, user, Ct));
+    }
+
+    [Fact]
+    public async Task Round_without_matches_marks_nobody_absent()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var user = CreateParticipant(db);
+
+        // A draft: publishing rejects a round with no matches, so this is the only way to
+        // reach the state. It is worth pinning because "absent = sent nothing" would flag
+        // the whole roster here — the exact opposite of what the old rule did.
+        var rounds = new RoundService(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db));
+        var round = await rounds.CreateAsync(
+            new CreateRoundRequest { SeasonId = SeasonId, Number = 1 }, SeedIds.AdminUser, Ct);
+
+        Assert.Empty(await service.DetectAbsenteesAsync(round.Id, Ct));
+        Assert.False(await service.IsAbsentAsync(round.Id, user, Ct));
     }
 
     [Fact]

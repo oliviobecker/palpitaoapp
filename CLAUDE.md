@@ -56,7 +56,7 @@ ASP.NET Core controllers → services (in `src/Palpitao.Api/Services/`, one fold
 `Fixtures`, `Results`, `Ocr`, `Auth`, …) → EF Core (`Data/AppDbContext.cs`) → PostgreSQL. Tests are
 xUnit + **SQLite in-memory**.
 
-Three patterns to understand before touching backend logic:
+Four patterns to understand before touching backend logic:
 
 1. **Multi-tenant isolation chokepoint.** `GroupId` lives only on tenant *roots* (`Season`, `Round`,
    `Standing`, `RoundParticipantResult`, `AuditLog`, `GroupUser`); per-round entities
@@ -76,7 +76,20 @@ Three patterns to understand before touching backend logic:
    gate (deactivation/elimination here are per-group → 403 `group.membershipInactive`). Scoring,
    roster and standings read the **per-group** flags, not the global role.
 
-3. **Tournament type is a strategy keyed on `Season.TournamentType`** (`PalpitaoEngland` /
+3. **The public link is the one anonymous read path — and it inverts both rules above.**
+   `/api/public/seasons/{key}/…` (`PublicStandingsController`) has no session and no `X-Group-Id`:
+   the season's public key *is* the credential. Three traps live here. `[RequireGroupAdmin]` and
+   `[RequireGroupParticipant]` are **action filters, not authorization filters**, so
+   `[AllowAnonymous]` on a method of an existing controller would switch off `[Authorize]` and still
+   get a 403 from the filter — hence a **separate controller**. With no request group the EF global
+   filter matches **every** group rather than none, so `PublicStandingsService` derives the tenant
+   from the resolved season and scopes every query explicitly with `IgnoreQueryFilters()` — never
+   rely on the filter here. And `[IgnoreRequestGroup]` makes `RequestGroupContext` report no group
+   even when a signed-in browser sends a stray `X-Group-Id`, which would otherwise hide the season
+   and 404 a valid link. On the frontend the matching opt-out is the `SKIP_TENANT_HEADERS`
+   `HttpContextToken`, which stops both the auth and group interceptors.
+
+4. **Tournament type is a strategy keyed on `Season.TournamentType`** (`PalpitaoEngland` /
    `FifaWorldCup`), fixed after creation. It drives the allowed competitions/phases, the multiplier
    table, and which Flávio Rule variant applies. When adding tournament behaviour, branch on this —
    see `Services/Tournaments` and `Services/Scoring`.
