@@ -1,28 +1,33 @@
 # DEVELOPMENT_CHECKPOINT
 
-_Last updated: 2026-06-18 (UI modernization pack — committed on `feat/ui-modernization-pack`, [PR #9](https://github.com/oliviobecker/palpitaoapp/pull/9): shared page-header, skeleton loaders, dark mode, full Lucide icon migration, predictions local draft)._
+_Last updated: 2026-08-22 (public standings link — [PR #45](https://github.com/oliviobecker/palpitaoapp/pull/45), released as v1.17.0 and deployed: a key-addressed, account-free standings and scoring audit)._
 
 ## 0. Status at a glance
 
 | Check | Result |
 |---|---|
 | Backend build (`dotnet build`) | ✅ 0 errors (1 pre-existing xUnit2012 analyzer warning) |
-| Backend tests (`dotnet test`) | ✅ **479** passed, 0 failed |
+| Backend tests (`dotnet test`) | ✅ **855** passed, 0 failed |
 | Frontend build (`ng build` prod) | ✅ success |
-| Frontend lint (`ng lint`) | ✅ 0 errors (24 pre-existing `label-has-associated-control` warnings) |
-| Frontend unit tests (Vitest) | ✅ **81** passed (17 files) |
-| Frontend e2e (Playwright) | ✅ **39** passed |
+| Frontend lint (`ng lint`) | ✅ 0 errors |
+| Frontend unit tests (Vitest) | ✅ **149** passed (26 files) |
+| Frontend e2e (Playwright) | ✅ **64** passed |
 | Frontend prod budgets | ✅ within budget (no warnings) |
-| i18n parity | ✅ 663 = 663 (`en-US` / `pt-BR`) |
-| Working tree | Security & performance hardening implemented on `feat/security-hardening-phase1` (pending commit). `main` untouched. |
+| i18n parity | ✅ 787 = 787 (`en-US` / `pt-BR`) |
+| Working tree | `main` at `d1daf6a`. Clean apart from in-progress `delete-rounds` work. |
 
-> **Security & performance hardening (current branch):** auth-endpoint rate limiting;
-> defence-in-depth multi-tenant isolation (EF global query filter + insert-stamping on
-> tenant roots); atomic scoring transactions; single-runner background results refresh
-> (Postgres advisory lock); unified password policy; health-endpoint info-disclosure fix;
-> `AsNoTracking` on hot read paths; transient-retry on external providers; client route
-> guards + guard unit tests; large admin component templates extracted to `.html`;
-> `traceId` on all error responses. See sections 5–6 for the rules these touch.
+> Measured on `main` at `d1daf6a` (2026-08-22), after PRs #43–#46.
+>
+> ⚠️ **`format:check` fails locally and that is expected.** The working copy is CRLF
+> (`core.autocrlf=true`) while Prettier's default `endOfLine` is `lf`, so ~56 files report as
+> unformatted with no real diff. `prettier --check --end-of-line auto` passes; CI checks out LF
+> and passes too. Do not "fix" it by rewriting every file.
+>
+> ⚠️ **The PR-level CI workflow is `disabled_manually`** — `gh pr checks` reports nothing, ever.
+> Run the gates locally, **after merging `main` into the branch**: `main` moves during long
+> sessions (PR #45 was cut before #43/#44 landed and had to be re-verified on the merged tree).
+> What a push to `main` *does* run: staging deploy, then semantic-release → production deploy,
+> and `deploy-iis.yml` runs the full `dotnet test` + `npm run build` before publishing.
 
 ## 1. Project overview
 
@@ -178,6 +183,69 @@ overall standings update.
   (eliminated members included, as an alias may predate the elimination).
 - No migration — the table shipped with the learning itself.
 
+**Public standings link (this session)**
+
+- Every **season** carries an auto-generated **public key** (12 uppercase hex, shown as
+  `A7C3-9F2E-4BD8`, stored unhyphenated) addressing an **account-free** standings and scoring
+  audit at `/p/<key>` — also `/p?key=…`, `?rodada=N`, `?participante=<id>`. The point is to settle
+  "why did Flávio get 6 on that match?" in the group chat without an admin narrating an audit
+  screen: every match line prints the prediction, the category, `base × multiplier = points` and
+  the rule context (classic pair, manual override, phase, absence, Flávio Rule).
+- **Publishing is opt-in.** `Season.PublicStandingsEnabled` defaults to `false`, so the deploy
+  exposed nothing on its own; the admin turns it on per season, can **preview** before sharing, and
+  can **regenerate** the key (the old link dies immediately). Both actions are audited.
+- **Two tabs.** *Geral* is the official standings with podium, name tiles, desktop columns, a name
+  search and the gap to the leader; opening a row reveals the **round-by-round history**, each chip
+  a deep link into that round. *Rodada* slices a round **by participant** or **by match** — the
+  latter transposes the same payload client-side to show what everybody predicted on one fixture.
+- **Only closed rounds** (`Locked`/`Scored`) are ever exposed, so a prediction is never readable
+  while it could still be copied. A `Scored` round reports exactly what the scoring pass persisted;
+  a `Locked` one is computed live and flagged `isPartial` (no absences/elimination/Flávio, per §25
+  of the README). Unknown key, malformed key and unpublished season all return the **same 404**.
+- **Anonymous read path, first of its kind here.** The endpoints carry a new `[IgnoreRequestGroup]`
+  so `RequestGroupContext` reports no group even when a signed-in browser sends `X-Group-Id`
+  (which would otherwise filter the season away and 404 a valid link). With no request group the EF
+  global filter matches *every* group rather than none, so `PublicStandingsService` derives the
+  tenant from the resolved season and scopes each query explicitly with `IgnoreQueryFilters()`.
+  A **separate controller is mandatory**: `RequireGroup*` are action filters, so `[AllowAnonymous]`
+  on an existing controller would switch off `[Authorize]` while the filter still returned 403.
+  A reflection test locks that down.
+- **Distribution.** The copy-ready WhatsApp **closing message** now ends with a deep link to the
+  round that just closed, so the group gets the numbers and the way to check them in one paste.
+  `index.html` gained Open Graph tags with a deliberately **generic** cover (`public/og-cover.jpg`):
+  the crawler does not run JS and could never see a season, and a card naming the group would give
+  away exactly what `noindex` protects.
+- **Migration** `20260822165521_AddSeasonPublicKey` backfills a distinct key per existing season in
+  SQL *before* creating the unique index (the EF-generated version would break on any database with
+  two seasons), and `AppDbContext.SaveChanges` stamps one on insert, mirroring `StampCurrentGroup`.
+  Applied to production on 2026-08-22 as part of v1.17.0.
+- **Deduplication done in passing:** `initials()`/`avatarColor()` existed in both `standings.ts` and
+  `dashboard.ts` with different lightness (the same person got a different colour per screen), and
+  `.rank-avatar` was defined twice in different sizes. Now `shared/utils/avatar.util.ts` and one
+  rule in `styles.scss`, alongside `.podium*`.
+
+**Absence = nothing sent (this session).**
+
+- **The rule changed, not the label.** `DetectAbsenteesAsync` used to flag anyone who had not
+  predicted **every** match of the round, so 10 of 11 was an absence: round zeroed, a rung up the
+  punishment ladder, −20 at the 3rd and elimination at the 5th. It now flags only participants who
+  sent **nothing**; an incomplete set is present and scores 0 on what it skipped.
+- **A real round in production triggered it** — a participant showing `Ausente` and `+11` at the
+  same time in the temporary standings. Since every write path demands the full set
+  (`prediction.allMatchesRequired`), a partial one is almost always what a **match added to an
+  already published round** leaves behind: the participant was being punished for an admin edit.
+- **The Flávio gate had to move with it** (`FlavioRuleService`): with an incomplete set no longer an
+  absence, exempting it from the halving would leave the leader strictly better off omitting one
+  match than sending everything late.
+- **One definition across the three readers** — absence detection, the predictions mirror and the
+  reactivation candidate list. The admin *coverage* list deliberately keeps the old test: "who has
+  not finished" and "who will be marked absent" are now different questions, and it shows both.
+- **The absence override finally has a screen.** `POST /admin/rounds/{id}/absences/override` had
+  shipped with the absence module and no component ever called it, so a wrong call could not be
+  corrected from the app. The coverage panel on **/admin/rounds/:id** now runs while `Published`
+  **and** `Locked` and offers *Marcar presente* / *Marcar ausente* with a mandatory justification.
+- **No history was rewritten** — deliberately; see §4.
+
 ## 4. Pending / not implemented (roadmap)
 
 - **Server-side autosave** of predictions (current draft is client-side only; needs partial/incremental
@@ -188,6 +256,29 @@ overall standings update.
 - Public create-group requires a **new** email (existing user creating another group not supported).
 - `AdminSentryController` (diagnostics) still uses the global role.
 - Real secrets must be configured via env/user-secrets/GitHub Secrets; rotate the 3 once-public secrets.
+
+**Public standings link — known limits (§3):**
+
+- **`og:image` is root-relative** (`/og-cover.jpg`). No public domain is versioned anywhere in the
+  repo, so an absolute URL would have to be invented; most crawlers resolve it, but if a paste
+  preview ever shows no image, that one line is the place to look.
+- **No per-season link preview.** The unfurl is generic by design *and* by constraint: the SPA is
+  client-rendered, so a card naming the season would need SSR or a prerender endpoint.
+- **The link is only as private as its holders.** There is no expiry and no per-viewer access —
+  regenerating the key is the whole revocation story, and it revokes for everyone at once.
+
+**Absence rule change — deliberately left alone (§3):**
+
+- **Rounds already scored keep the absences the old rule recorded.** The new definition applies from
+  the next scoring pass on. Revising them means `recalculate`, which also resets eliminations and
+  re-scores the whole season — and lands on the §7a.1 bug. Worth deciding as its own change, with
+  the numbers in hand.
+- **An override can be flipped but never removed.** `ApplyOverrideAsync` upserts and there is no
+  `DELETE`, so from the first click a participant stays on a manual decision for that round rather
+  than returning to the automatic rule. A `DELETE /absences/override` would close it.
+- **The match nobody could predict still scores 0.** The fix at the root is not letting a match into
+  a published round without reopening submission for whoever already answered — a much bigger
+  change than the absence rule, and it does not affect the punishment any more.
 
 **Deferred from the security/performance hardening (intentional, with rationale):**
 
@@ -242,12 +333,13 @@ overall standings update.
   Championship playoffs ×2; League One every match ×2 (max 1 per round). Manual override needs justification.
 - **Multipliers (World Cup):** group ×1; round of 32/16 ×2; QF/SF/3rd/final ×3; doubled for a knockout
   **classic** (both teams former world champions). Phase prevails, no stacking.
-- **Absences:** 1st–2nd none; 3rd–4th −20 total; 5th → eliminated (manual reactivate only). Per-group.
-  The penalty, the eliminating ordinal and the first counting round are **per-season settings**
-  (`SeasonScoringConfig`); those numbers are the defaults.
-- **Flávio Rule:** leader gets a 24h (or 12h) special deadline; missing it = lose half the round; no
-  prediction = treated as absence; ties apply to all leaders. The starting round is a per-season
-  setting (default 16); the World Cup variant still goes by phase.
+- **Absences:** absent = **sent no prediction at all**; an incomplete set counts as present and
+  scores 0 on what it skipped. An admin override wins over both. 1st–2nd none; 3rd–4th −20 total;
+  5th → eliminated (manual reactivate only). Per-group. The penalty, the eliminating ordinal and the
+  first counting round are **per-season settings** (`SeasonScoringConfig`); those are the defaults.
+- **Flávio Rule:** leader gets a 24h (or 12h) special deadline; missing it = lose half the round,
+  an incomplete set included; sending **nothing** = treated as absence; ties apply to all leaders.
+  The starting round is a per-season setting (default 16); the World Cup variant goes by phase.
 - **FA Cup per season:** `Season.FaCupEnabled` (default on, in **/admin/seasons**, England only).
   Off → FA Cup fixtures are dropped from the fixture search and rejected on manual add/import
   (`season.faCupDisabled`); matches already in a round keep working and stay editable.
@@ -308,6 +400,9 @@ season, `delete-season` drops a season inside a group, `delete-group` takes the 
   `DELETE FROM "Groups"` fails; `PredictionScores.RoundMatchId` is `Restrict` while its `RoundId` is
   `Cascade`, so scores must precede matches; and `AuditLogs.GroupId` has **no FK at all**, so those
   rows orphan themselves unless deleted explicitly.
+- `delete-rounds` takes every round of the season by default; `v_only_numbers` narrows it to
+  specific round numbers (`'{1}'` = just Rodada 1) and `v_only_status` to one lifecycle state. A
+  filter matching nothing aborts and lists the rounds that do exist.
 - `delete-rounds` also resets `Standings` and `GroupUser.IsEliminated` by default — both are
   season-scoped, so deleting rounds otherwise leaves the standings screen showing points from rounds
   that no longer exist (`v_reset_standings := false` if you would rather hit *Recalcular* in the UI).
@@ -347,16 +442,35 @@ the real API and asserts the result. Phases: `all | seed | score | verify | rese
 
 ## 8. Recommended next steps
 
-1. **Open a PR for `feat/security-hardening-phase1`** (security & performance hardening, committed as
-   `d9de501`) and merge after review. All checks green (§0).
-2. Manual smoke test with DB + API + `ng serve` up: confirm **login still works** with rate limiting on;
-   exercise an admin scoring/recalc (transaction) and a results refresh; spot-check the extracted admin
-   screens (matches / round-detail / OCR import) render and submit correctly.
-3. Decide the **deferred hardening items** (§4): H5 token-cookie migration (needs deployment topology),
-   `tessdata` → Git LFS, then the optional perf items (temp-standings cache, list pagination).
+1. **Fix `RecalculateSeasonCoreAsync` (§7a.1) before publicising any public link.** It never clears
+   `Standings`, and the Flávio Rule reads that table — a screen that promises to explain every point
+   is exactly what makes the inconsistency visible to the whole group. This is now the highest-value
+   fix on the list, and its priority went up the moment the public link shipped.
+2. **Smoke-test the public link on staging**: turn publishing on for one season in *Admin → Seasons*,
+   open `/p/<key>` in a private window (proves it works with no session), and check a `Scored` round
+   against `/admin/rounds/:id/audit` — the numbers must match exactly. Then regenerate the key and
+   confirm the old link 404s.
+3. Decide the **deferred hardening items** (§4): H5 token-cookie migration (needs deployment
+   topology), `tessdata` → Git LFS, then the optional perf items (temp-standings cache, pagination).
 4. Resume the product roadmap (§4): **server-side autosave** of predictions (highest value).
 
 ## 9. Files changed this session (highlights)
+
+**Public standings link (PR #45).** Backend: new `Services/Standings/{I,}PublicStandingsService.cs`,
+`Controllers/PublicStandingsController.cs`, `DTOs/Public/PublicStandingsDtos.cs`,
+`Common/PublicKeyGenerator.cs`, `Auth/IgnoreRequestGroupAttribute.cs`, migration
+`20260822165521_AddSeasonPublicKey`; touched `Entities/Season.cs`, `Data/AppDbContext.cs`
+(key stamping + unique index), `Services/Groups/RequestGroupContext.cs`,
+`Services/Seasons/SeasonService.cs` (+ regenerate endpoint), `Program.cs` (`"public"` rate-limit
+policy). Frontend: new `features/public/public-standings.ts`,
+`core/services/public-standings.service.ts`, `shared/utils/{public-link,avatar}.util.ts`,
+`public/{robots.txt,og-cover.jpg}`; touched `core/interceptors/{http-context,group,auth}` (the new
+`SKIP_TENANT_HEADERS` opt-out), `features/admin/{admin-seasons,admin-round-detail}.ts`,
+`shared/utils/closing-message.util.ts` (the link in the group message), `index.html` (Open Graph),
+`styles.scss` (`.podium*`/`.rank-avatar` moved out of two component stylesheets), both i18n files.
+Docs: README §24 and §28, `PUBLIC_STANDINGS_PLAN.md`.
+
+### Earlier sessions
 
 **Backend:** `Services/Rounds/RoundService.cs` (+`IRoundService`, `RoundsController` — reopen);
 `Services/Groups/{CurrentGroupService,GroupService,IGroupService}.cs` + `DTOs/Groups/GroupDtos.cs`
