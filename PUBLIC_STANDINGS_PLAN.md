@@ -1,6 +1,6 @@
 # Classificação pública por chave de temporada (com auditoria de pontos)
 
-_Plano aprovado em 2026-08-22. **Implementado por completo** (fases 1–6). Documentado no [README §28](README.md). Pendente de verificação: aplicar a migration num Postgres real._
+_Plano aprovado em 2026-08-22 e **entregue** — PR #45, v1.17.0, em produção no mesmo dia. Documentado no [README §28](README.md); ver "Entregue", no fim._
 
 ## Contexto
 
@@ -557,3 +557,23 @@ definido duas vezes, em tamanhos diferentes. Hoje: `shared/utils/avatar.util.ts`
 
 **Verificação:** 764 testes de backend, 127 unitários, 59 e2e, lint limpo, build de produção OK,
 paridade de i18n confirmada.
+
+---
+
+## Entregue
+
+Mesclado em `main` pelo [PR #45](https://github.com/oliviobecker/palpitaoapp/pull/45) (commit
+`11ed2d8`), lançado como **v1.17.0** e implantado em staging e produção em 22/08/2026. A migration
+`20260822165521_AddSeasonPublicKey` rodou num Postgres real pela primeira vez no deploy de produção
+e passou — como o índice único vem depois do backfill, o próprio sucesso prova que cada temporada
+existente recebeu uma chave distinta.
+
+Re-verificado sobre o `main` já mesclado (os PRs #43 e #44 entraram enquanto a branch estava aberta):
+**849 testes de backend, 149 unitários, 63 e2e**, lint limpo, build OK, paridade de i18n 778 = 778.
+
+**Nada está exposto ainda:** `PublicStandingsEnabled` nasce `false`, então cada temporada precisa ser
+publicada à mão em *Admin → Temporadas*.
+
+Antes de divulgar qualquer link, ver `DEVELOPMENT_CHECKPOINT.md` §7a.1 — o
+`RecalculateSeasonCoreAsync` não limpa `Standings` e a Regra do Flávio lê essa tabela; uma tela que
+promete explicar cada ponto é justamente o que torna essa incoerência visível ao grupo.
