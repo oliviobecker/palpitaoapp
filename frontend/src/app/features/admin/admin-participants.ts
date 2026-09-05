@@ -13,7 +13,14 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable, catchError, of } from 'rxjs';
 import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
-import { Absence, AbsenceCandidateRound, Participant } from '../../core/models/models';
+import {
+  Absence,
+  AbsenceCandidateRound,
+  AbsenceReviewDecision,
+  AbsenceReviewResult,
+  AbsenceReviewRound,
+  Participant,
+} from '../../core/models/models';
 import { ConfirmChoice, ConfirmService } from '../../core/notifications/confirm.service';
 import { ToastService } from '../../core/notifications/toast.service';
 import { AdminService } from '../../core/services/admin.service';
@@ -31,6 +38,46 @@ import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
  */
 export function isPreselectedAbsence(round: AbsenceCandidateRound): boolean {
   return !round.requiresRescore && !round.hasPresentOverride;
+}
+
+/**
+ * Every listed round gets an explicit decision — ticked means "counts as absent" — so a round
+ * that closed between listing and confirming is never flipped by omission. Ticked ids that are
+ * not in the list are ignored.
+ */
+export function toAbsenceReviewDecisions(
+  rounds: AbsenceReviewRound[],
+  checkedIds: string[],
+): AbsenceReviewDecision[] {
+  const checked = new Set(checkedIds);
+  return rounds.map((r) => ({ roundId: r.roundId, isAbsent: checked.has(r.roundId) }));
+}
+
+/**
+ * Secondary line under a reviewed round. A scored round warns that changing it replays the
+ * season (quoting the recorded ordinal and penalty when there is one); otherwise an override,
+ * then a locked round, get a note on when the decision takes effect.
+ */
+export function absenceReviewHintKey(round: AbsenceReviewRound): string {
+  if (round.requiresRecalculation) {
+    return round.absenceNumber != null
+      ? 'adminParticipants.reviewRoundScored'
+      : 'adminParticipants.reviewRoundScoredNoLadder';
+  }
+  if (round.hasOverride) {
+    return 'adminParticipants.reviewRoundOverride';
+  }
+  return 'adminParticipants.reviewRoundLocked';
+}
+
+/** Which toast a finished review deserves: nothing changed, stored, or stored + season replayed. */
+export function absenceReviewToastKey(result: AbsenceReviewResult): string {
+  if (result.changedRounds === 0) {
+    return 'adminParticipants.reviewNoChanges';
+  }
+  return result.recalculated
+    ? 'adminParticipants.reviewedRecalcMsg'
+    : 'adminParticipants.reviewedMsg';
 }
 
 @Component({
@@ -207,6 +254,9 @@ export function isPreselectedAbsence(round: AbsenceCandidateRound): boolean {
                 }
                 <button class="btn btn-sm btn-outline-primary" (click)="toggleAbsences(p)">
                   {{ 'adminParticipants.absencesBtn' | translate }}
+                </button>
+                <button class="btn btn-sm btn-outline-primary" (click)="reviewAbsences(p)">
+                  {{ 'adminParticipants.reviewAbsences' | translate }}
                 </button>
               </div>
 
@@ -420,18 +470,84 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
   private toChoice(r: AbsenceCandidateRound): ConfirmChoice {
     return {
       id: r.roundId,
-      label: r.title
-        ? this.translate.instant('adminParticipants.absentRoundOptionTitled', {
-            number: r.number,
-            title: r.title,
-          })
-        : this.translate.instant('adminParticipants.absentRoundOption', { number: r.number }),
+      label: this.roundLabel(r),
       hint: r.hasPresentOverride
         ? this.translate.instant('adminParticipants.absentRoundHasPresentOverride')
         : r.requiresRescore
           ? this.translate.instant('adminParticipants.absentRoundNeedsRescore')
           : undefined,
       checked: isPreselectedAbsence(r),
+    };
+  }
+
+  private roundLabel(r: { number: number; title?: string | null }): string {
+    return r.title
+      ? this.translate.instant('adminParticipants.absentRoundOptionTitled', {
+          number: r.number,
+          title: r.title,
+        })
+      : this.translate.instant('adminParticipants.absentRoundOption', { number: r.number });
+  }
+
+  /**
+   * Excuse (or restore) absences in closed rounds — e.g. rounds played before the participant
+   * actually joined. An excused round stays at 0 points but leaves the absence ladder.
+   */
+  reviewAbsences(p: Participant): void {
+    this.api
+      .getAbsenceReviewRounds(p.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: (rounds) => void this.confirmReview(p, rounds) });
+  }
+
+  /**
+   * Ticked = still counts as absent, unticked = present. The boxes open in today's state, so
+   * confirming the dialog untouched is a guaranteed no-op; a change to an already-scored round
+   * replays the season on the server, which the message warns about.
+   */
+  private async confirmReview(p: Participant, rounds: AbsenceReviewRound[]): Promise<void> {
+    if (rounds.length === 0) {
+      this.toast.info(this.translate.instant('adminParticipants.reviewNothing'));
+      return;
+    }
+    let message = this.translate.instant('adminParticipants.confirmReviewAbsences', {
+      name: p.name,
+    });
+    if (rounds.some((r) => r.requiresRecalculation)) {
+      message += ' ' + this.translate.instant('adminParticipants.reviewRecalcWarning');
+    }
+    const answer = await this.confirm.askWithChoices(
+      message,
+      rounds.map((r) => this.toReviewChoice(r)),
+      {
+        title: this.translate.instant('adminParticipants.reviewAbsences'),
+        confirmText: this.translate.instant('adminParticipants.reviewAbsences'),
+        choicesLabel: this.translate.instant('adminParticipants.reviewRoundsLabel'),
+        withInput: true,
+        inputLabel: this.translate.instant('adminParticipants.promptReviewAbsences'),
+      },
+    );
+    if (answer === null) return;
+    this.api
+      .reviewAbsences(p.id, answer.text, toAbsenceReviewDecisions(rounds, answer.choiceIds))
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.refreshAbsences(p);
+          this.afterAction(absenceReviewToastKey(result));
+        },
+      });
+  }
+
+  private toReviewChoice(r: AbsenceReviewRound): ConfirmChoice {
+    return {
+      id: r.roundId,
+      label: this.roundLabel(r),
+      hint: this.translate.instant(absenceReviewHintKey(r), {
+        n: r.absenceNumber,
+        penalty: r.penaltyPoints,
+      }),
+      checked: r.isAbsent,
     };
   }
 
@@ -443,6 +559,17 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
       this.absences.set(copy);
       return;
     }
+    this.loadAbsences(p);
+  }
+
+  /** An expanded absence list is stale after a review; a collapsed one has nothing to refresh. */
+  private refreshAbsences(p: Participant): void {
+    if (this.absences()[p.id]) {
+      this.loadAbsences(p);
+    }
+  }
+
+  private loadAbsences(p: Participant): void {
     this.api
       .getUserAbsences(p.id)
       .pipe(takeUntilDestroyed(this.destroyRef))

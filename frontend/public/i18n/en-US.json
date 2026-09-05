@@ -626,7 +626,20 @@
     "activatedMsg": "Participant activated.",
     "deactivatedMsg": "Participant deactivated.",
     "eliminatedMsg": "Participant eliminated.",
-    "reactivatedMsg": "Participant reactivated."
+    "reactivatedMsg": "Participant reactivated.",
+    "reviewAbsences": "Review absences",
+    "confirmReviewAbsences": "Absences of {{name}} in closed rounds. Untick the rounds that must NOT count as an absence (the round stays at 0 points, with no penalty or elimination).",
+    "reviewRecalcWarning": "On confirm the season is recalculated and everyone's standings may change.",
+    "reviewRoundsLabel": "Count as absent in:",
+    "reviewRoundScored": "Already scored — absence #{{n}} (penalty: {{penalty}}). Changing it recalculates the season.",
+    "reviewRoundScoredNoLadder": "Already scored. Changing it recalculates the season.",
+    "reviewRoundLocked": "Locked — takes effect when the round is scored.",
+    "reviewRoundOverride": "Already adjusted by a manual override; confirming replaces it.",
+    "promptReviewAbsences": "Review justification:",
+    "reviewNothing": "No closed round with an absence to review.",
+    "reviewNoChanges": "No absence changes.",
+    "reviewedMsg": "Absences reviewed.",
+    "reviewedRecalcMsg": "Absences reviewed and season recalculated."
   },
   "adminAudit": {
     "title": "Audit",

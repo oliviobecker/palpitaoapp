@@ -1,6 +1,7 @@
 using Palpitao.Api.Data;
 using Palpitao.Api.Services.Absences;
 using Palpitao.Api.Services.Audit;
+using Palpitao.Api.Services.Flavio;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Scoring;
 using Palpitao.Api.Services.Standings;
@@ -48,5 +49,19 @@ public static class TestServices
         var group = current ?? new FakeCurrentGroupService();
         return new UserAdminService(
             db, new AuditService(db), group, Absences(db, group), new FakeLocalizationService());
+    }
+
+    /// <summary>
+    /// The real <see cref="RoundScoringService"/> with every collaborator real and sharing the
+    /// caller's context — the wiring an absence review relies on to stage overrides and replay
+    /// the season inside one transaction.
+    /// </summary>
+    public static RoundScoringService RoundScoring(AppDbContext db, ICurrentGroupService? current = null)
+    {
+        var group = current ?? new FakeCurrentGroupService();
+        var audit = new AuditService(db);
+        return new RoundScoringService(
+            db, new ScoringService(), ScoringConfig(db, group), Absences(db, group),
+            new FlavioRuleService(db), new StandingsService(db, group), audit, group);
     }
 }

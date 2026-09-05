@@ -1,3 +1,4 @@
+using Palpitao.Api.DTOs.Absences;
 using Palpitao.Api.DTOs.Scoring;
 
 namespace Palpitao.Api.Services.Scoring;
@@ -22,4 +23,14 @@ public interface IRoundScoringService
     /// order, reapplies absences/penalties and rebuilds the standing.
     /// </summary>
     Task RecalculateSeasonAsync(Guid seasonId, Guid actingUserId, CancellationToken ct);
+
+    /// <summary>
+    /// Applies an admin's absence review for one participant (one override per round whose
+    /// decision differs from today's state) and, when an already-scored round changed,
+    /// recalculates the season in the same transaction so the absence ladder, penalties and
+    /// eliminations shift for everyone. Changes to Locked rounds are only stored: they land
+    /// when the round is scored.
+    /// </summary>
+    Task<AbsenceReviewResultDto> ReviewParticipantAbsencesAsync(
+        Guid userId, AbsenceReviewRequest request, Guid actingUserId, CancellationToken ct);
 }

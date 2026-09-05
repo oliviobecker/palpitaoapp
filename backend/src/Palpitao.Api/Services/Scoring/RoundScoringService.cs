@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
+using Palpitao.Api.DTOs.Absences;
 using Palpitao.Api.DTOs.Scoring;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
@@ -123,13 +124,19 @@ public class RoundScoringService : IRoundScoringService
             gu.IsEliminated = false;
         }
 
-        // Clear previous calculations for the season.
+        // Clear previous calculations for the season. The standings go too: the Flávio rule
+        // reads the live standings to find the leader(s) before each round, so a faithful
+        // replay must start from an empty table and rebuild it round by round, exactly as the
+        // season was scored the first time (with a stale table every round >= FlavioFromRound
+        // would target the previous run's end-of-season leader instead).
         _db.PredictionScores.RemoveRange(_db.PredictionScores.Where(p => roundIds.Contains(p.RoundId)));
         _db.RoundParticipantResults.RemoveRange(_db.RoundParticipantResults.Where(r => r.SeasonId == seasonId));
         _db.Absences.RemoveRange(_db.Absences.Where(a => roundIds.Contains(a.RoundId)));
+        _db.Standings.RemoveRange(_db.Standings.Where(s => s.SeasonId == seasonId));
         await _db.SaveChangesAsync(ct);
 
-        // Re-score the already-finished rounds in order.
+        // Re-score the already-finished rounds in order, rebuilding the standings after each
+        // one so the next round's Flávio target is the leader at that point.
         var roundsToScore = await _db.Rounds
             .Where(r => r.SeasonId == seasonId && r.Status == RoundStatus.Scored)
             .OrderBy(r => r.Number)
@@ -138,15 +145,53 @@ public class RoundScoringService : IRoundScoringService
 
         foreach (var id in roundsToScore)
         {
-            await ScoreRoundInternalAsync(id, actingUserId, updateStandings: false, ct);
+            await ScoreRoundInternalAsync(id, actingUserId, updateStandings: true, ct);
         }
-
-        await _standings.RecomputeSeasonStandingsAsync(seasonId, ct);
 
         _audit.Add(actingUserId, "SeasonRecalculated", nameof(Season), seasonId.ToString(),
             new { rounds = roundsToScore.Count });
         await _db.SaveChangesAsync(ct);
     }
+
+    public Task<AbsenceReviewResultDto> ReviewParticipantAbsencesAsync(
+        Guid userId, AbsenceReviewRequest request, Guid actingUserId, CancellationToken ct)
+        => InTransactionAsync(async () =>
+        {
+            var staged = await _absences.StageAbsenceReviewAsync(
+                userId, request.Rounds, request.Justification, actingUserId, ct);
+            if (staged.ChangedRoundIds.Count == 0)
+            {
+                // Nothing staged, so nothing to save: confirming the dialog untouched is a no-op.
+                return new AbsenceReviewResultDto();
+            }
+
+            // Flush first: absentee detection reads the overrides from the database, so the
+            // recalculation below must see the new rows.
+            await _db.SaveChangesAsync(ct);
+
+            // A Locked round's override lands on its own when the round is scored; only a
+            // change to an already-scored round needs the season replayed, which renumbers
+            // everyone's absence ladder, penalties and eliminations.
+            if (staged.RequiresRecalculation)
+            {
+                await RecalculateSeasonCoreAsync(staged.SeasonId!.Value, actingUserId, ct);
+            }
+
+            _audit.Add(actingUserId, "ParticipantAbsencesReviewed", nameof(User), userId.ToString(),
+                new
+                {
+                    request.Justification,
+                    changedRounds = staged.ChangedRoundIds,
+                    recalculated = staged.RequiresRecalculation,
+                });
+            await _db.SaveChangesAsync(ct);
+
+            return new AbsenceReviewResultDto
+            {
+                ChangedRounds = staged.ChangedRoundIds.Count,
+                Recalculated = staged.RequiresRecalculation,
+            };
+        }, ct);
 
     private async Task<RoundResultsDto> ScoreRoundInternalAsync(
         Guid roundId, Guid actingUserId, bool updateStandings, CancellationToken ct)

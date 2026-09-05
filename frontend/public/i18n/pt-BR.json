@@ -626,7 +626,20 @@
     "activatedMsg": "Participante ativado.",
     "deactivatedMsg": "Participante desativado.",
     "eliminatedMsg": "Participante eliminado.",
-    "reactivatedMsg": "Participante reativado."
+    "reactivatedMsg": "Participante reativado.",
+    "reviewAbsences": "Revisar ausências",
+    "confirmReviewAbsences": "Ausências de {{name}} nas rodadas encerradas. Desmarque as rodadas em que ele NÃO deve contar como ausente (a rodada fica com 0 pontos, sem punição nem eliminação).",
+    "reviewRecalcWarning": "Ao confirmar, a temporada será recalculada e a classificação de todos pode mudar.",
+    "reviewRoundsLabel": "Contar como ausente em:",
+    "reviewRoundScored": "Rodada já pontuada — {{n}}ª ausência (punição: {{penalty}}). Alterar recalcula a temporada.",
+    "reviewRoundScoredNoLadder": "Rodada já pontuada. Alterar recalcula a temporada.",
+    "reviewRoundLocked": "Rodada bloqueada — vale quando ela for pontuada.",
+    "reviewRoundOverride": "Já ajustada manualmente por um override; confirmar substitui.",
+    "promptReviewAbsences": "Justificativa da revisão:",
+    "reviewNothing": "Nenhuma rodada encerrada com ausência para revisar.",
+    "reviewNoChanges": "Nenhuma alteração nas ausências.",
+    "reviewedMsg": "Ausências revisadas.",
+    "reviewedRecalcMsg": "Ausências revisadas e temporada recalculada."
   },
   "adminAudit": {
     "title": "Auditoria",

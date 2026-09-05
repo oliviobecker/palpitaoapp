@@ -497,4 +497,105 @@ public class RoundScoringServiceTests
         Assert.Equal(8, after[0].TotalPoints);
         Assert.Equal(1, after[1].TotalPoints);
     }
+
+    /// <summary>
+    /// A hand-built Locked round (default Flávio window: 24h after publication, first match 48h
+    /// later) with its result already entered, so <c>SubmittedAt</c> can sit on either side of
+    /// the special deadline. Neutral pair: multiplier 1.
+    /// </summary>
+    private static Round InsertLockedRound(AppDbContext db, int number, DateTime published, int homeScore, int awayScore)
+    {
+        var firstMatch = published.AddHours(48);
+        var round = new Round
+        {
+            Id = Guid.NewGuid(),
+            GroupId = SeedIds.DefaultGroup,
+            SeasonId = SeasonId,
+            Number = number,
+            Status = RoundStatus.Locked,
+            PublishedAt = published,
+            FirstMatchStartsAt = firstMatch,
+            LockedAt = firstMatch,
+            CreatedByUserId = Admin,
+            CreatedAt = published,
+        };
+        db.Rounds.Add(round);
+        db.RoundMatches.Add(new RoundMatch
+        {
+            Id = Guid.NewGuid(),
+            RoundId = round.Id,
+            Competition = Competition.Championship,
+            Phase = MatchPhase.Regular,
+            HomeTeamId = TestSeed.NeutralPairs[0].Home,
+            AwayTeamId = TestSeed.NeutralPairs[0].Away,
+            StartsAt = firstMatch,
+            HomeScore = homeScore,
+            AwayScore = awayScore,
+            IsFinished = true,
+            CreatedAt = published,
+        });
+        db.SaveChanges();
+        return round;
+    }
+
+    private static void InsertPrediction(AppDbContext db, Round round, Guid user, int home, int away, DateTime submittedAt)
+    {
+        var matchId = db.RoundMatches.Single(m => m.RoundId == round.Id).Id;
+        db.Predictions.Add(new Prediction
+        {
+            Id = Guid.NewGuid(),
+            RoundId = round.Id,
+            RoundMatchId = matchId,
+            UserId = user,
+            PredictedHomeScore = home,
+            PredictedAwayScore = away,
+            SubmittedAt = submittedAt,
+        });
+        db.SaveChanges();
+    }
+
+    [Fact]
+    public async Task Recalculating_reads_the_leader_at_each_round_not_the_final_standings()
+    {
+        using var db = CreateContext();
+        var kit = Build(db);
+        var a = CreateParticipant(db, "Ana");
+        var b = CreateParticipant(db, "Bruno");
+        var published = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var early = published.AddHours(1);
+        var late = published.AddHours(30); // past the 24h special deadline, before the lock
+
+        // Round 16 (Flávio applies from 16): nobody leads yet. Ana exact -> 3, Bruno wrong -> 0.
+        var r16 = InsertLockedRound(db, 16, published, 2, 1);
+        InsertPrediction(db, r16, a, 2, 1, early);
+        InsertPrediction(db, r16, b, 0, 1, early);
+        await kit.Scoring.ScoreRoundAsync(r16.Id, Admin, Ct);
+
+        // Round 17: both exact and both late; only the leader at that point (Ana) is halved.
+        var r17 = InsertLockedRound(db, 17, published.AddDays(7), 2, 1);
+        InsertPrediction(db, r17, a, 2, 1, late.AddDays(7));
+        InsertPrediction(db, r17, b, 2, 1, late.AddDays(7));
+        await kit.Scoring.ScoreRoundAsync(r17.Id, Admin, Ct);
+
+        // Round 18: Bruno exact 0x0 -> 5 and takes the lead; Ana (still leader, early) -> 0.
+        var r18 = InsertLockedRound(db, 18, published.AddDays(14), 0, 0);
+        InsertPrediction(db, r18, a, 1, 0, early.AddDays(14));
+        InsertPrediction(db, r18, b, 0, 0, early.AddDays(14));
+        await kit.Scoring.ScoreRoundAsync(r18.Id, Admin, Ct);
+
+        var before = await kit.Standings.GetStandingsAsync(SeasonId, Ct);
+        Assert.Equal(4, before.Single(s => s.UserId == a).TotalPoints); // 3 + 1 + 0
+        Assert.Equal(8, before.Single(s => s.UserId == b).TotalPoints); // 0 + 3 + 5
+
+        await kit.Scoring.RecalculateSeasonAsync(SeasonId, Admin, Ct);
+
+        // A replay that read the final standings would target Bruno in round 17 instead of
+        // Ana, halving the wrong participant (6 x 6 instead of 4 x 8).
+        var after = await kit.Standings.GetStandingsAsync(SeasonId, Ct);
+        Assert.Equal(
+            before.Select(s => (s.Position, s.UserId, s.TotalPoints)),
+            after.Select(s => (s.Position, s.UserId, s.TotalPoints)));
+        Assert.True(db.RoundParticipantResults.Single(r => r.RoundId == r17.Id && r.UserId == a).FlavioRuleApplied);
+        Assert.False(db.RoundParticipantResults.Single(r => r.RoundId == r17.Id && r.UserId == b).FlavioRuleApplied);
+    }
 }

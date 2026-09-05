@@ -329,19 +329,22 @@ the real API and asserts the result. Phases: `all | seed | score | verify | rese
   `PredictionScores`, `RoundParticipantResults`, `Absences`, `Standings` and `GroupUsers.IsEliminated`
   come exclusively from `POST /rounds/{id}/score`, driven in ascending order by
   `scripts/rehearsal/score-season.ps1` — the Flávio rule reads live standings, so order is load-bearing.
-- **Re-scoring:** use `phase: reset-scoring`, never `POST /seasons/{id}/recalculate` — see §7a.
+- **Re-scoring:** use `phase: reset-scoring`; `POST /seasons/{id}/recalculate` is faithful too since
+  the §7a fix (it rebuilds the standings round by round), but the reset phase keeps the rehearsal
+  driving every score call itself.
 - `SEED_DRY_RUN=true` (the `dry_run` input) runs the whole seed in a transaction and rolls it back.
 
 ## 7a. Known scoring bugs found while building the rehearsal tooling
 
-1. **`RecalculateSeasonAsync` is not idempotent for `PalpitaoEngland`.**
-   `RoundScoringService.RecalculateSeasonCoreAsync` deletes `PredictionScores` /
-   `RoundParticipantResults` / `Absences` but **never deletes `Standings`**, then re-scores with
-   `updateStandings: false`. `FlavioRuleService.GetLeadersBeforeRoundAsync` therefore reads the
-   previous run's *end-of-season* standings for every round ≥ 16, penalising last run's champion
-   instead of the leader at that point. README §16 currently claims it is idempotent.
-   Same root cause makes re-scoring a single middle round unfaithful; `reopen` + re-score is only
-   correct for the highest-numbered scored round.
+1. **`RecalculateSeasonAsync` is not idempotent for `PalpitaoEngland`** — **fixed (September
+   2026)**, when the absence review started triggering the recalculation automatically.
+   `RoundScoringService.RecalculateSeasonCoreAsync` now also deletes `Standings` and re-scores
+   with `updateStandings: true`, so `FlavioRuleService.GetLeadersBeforeRoundAsync` sees the
+   leader *at that point* for every round ≥ 16 instead of the previous run's end-of-season
+   champion (`Recalculating_reads_the_leader_at_each_round_not_the_final_standings`).
+   Still open with the same root cause: re-scoring a **single middle round** reads the current
+   standings, so `reopen` + re-score is only exact for the highest-numbered scored round — use the
+   season recalculation for anything earlier.
 2. **`AdminMatches.remove()` sends no justification** (`admin-matches.ts:446`) while
    `MatchesService.remove()` supports one — deleting a match on a closed round always 422s from the UI.
 

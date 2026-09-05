@@ -240,8 +240,44 @@ public class AbsenceService : IAbsenceService
     private async Task<List<AbsenceCandidateRoundDto>> LoadCandidatesAsync(
         Guid groupId, Guid userId, CancellationToken ct)
     {
-        // AllParticipants, not ActiveParticipants: the participant is inactive or eliminated
-        // by definition here -- that is exactly why the admin is (re)activating them.
+        var (_, rounds) = await LoadClosedRoundStatesAsync(groupId, userId, ct);
+
+        // A round with no matches drops out on its own (0 < 0 is false).
+        return rounds
+            .Where(r => r.PredictionCount < r.MatchCount && r.ForcedAbsent != true)
+            .Select(r => new AbsenceCandidateRoundDto
+            {
+                RoundId = r.Id,
+                Number = r.Number,
+                Title = r.Title,
+                Status = r.Status,
+                MatchCount = r.MatchCount,
+                PredictionCount = r.PredictionCount,
+                // An override currently marking them present is surfaced rather than hidden:
+                // confirming replaces it, and hiding the conflict would be worse.
+                HasPresentOverride = r.ForcedAbsent == false,
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// One participant's state in a round of the active season already closed for predictions:
+    /// how much they predicted, the override (if any) and the absence already on the ladder
+    /// (if any). Shared by the activation candidates and the absence review.
+    /// </summary>
+    private sealed record ClosedRoundState(
+        Guid Id, int Number, string? Title, RoundStatus Status, int MatchCount, int PredictionCount,
+        bool? ForcedAbsent, int? AbsenceNumber, int? PenaltyPoints)
+    {
+        /// <summary>What scoring applies today: the override wins, else incomplete predictions.</summary>
+        public bool IsAbsent => ForcedAbsent ?? PredictionCount < MatchCount;
+    }
+
+    private async Task<(Guid? SeasonId, List<ClosedRoundState> Rounds)> LoadClosedRoundStatesAsync(
+        Guid groupId, Guid userId, CancellationToken ct)
+    {
+        // AllParticipants, not ActiveParticipants: the participant may well be inactive or
+        // eliminated here -- that is exactly why the admin is (re)activating or reviewing them.
         var isMember = await GroupQueries.AllParticipants(_db, groupId).AnyAsync(u => u.Id == userId, ct);
         if (!isMember)
         {
@@ -254,7 +290,7 @@ public class AbsenceService : IAbsenceService
             .FirstOrDefaultAsync(ct);
         if (seasonId is null)
         {
-            return [];
+            return (null, []);
         }
 
         // Locked/Scored only: a Published round still accepts predictions (the participant
@@ -275,13 +311,39 @@ public class AbsenceService : IAbsenceService
                     .Where(o => o.RoundId == r.Id && o.UserId == userId)
                     .Select(o => (bool?)o.IsAbsent)
                     .FirstOrDefault(),
+                AbsenceNumber = _db.Absences
+                    .Where(a => a.RoundId == r.Id && a.UserId == userId)
+                    .Select(a => (int?)a.AbsenceNumber)
+                    .FirstOrDefault(),
+                PenaltyPoints = _db.Absences
+                    .Where(a => a.RoundId == r.Id && a.UserId == userId)
+                    .Select(a => (int?)a.PenaltyPoints)
+                    .FirstOrDefault(),
             })
             .ToListAsync(ct);
 
-        // A round with no matches drops out on its own (0 < 0 is false).
-        return rounds
-            .Where(r => r.PredictionCount < r.MatchCount && r.ForcedAbsent != true)
-            .Select(r => new AbsenceCandidateRoundDto
+        return (seasonId, rounds
+            .Select(r => new ClosedRoundState(
+                r.Id, r.Number, r.Title, r.Status, r.MatchCount, r.PredictionCount,
+                r.ForcedAbsent, r.AbsenceNumber, r.PenaltyPoints))
+            .ToList());
+    }
+
+    public async Task<IReadOnlyList<AbsenceReviewRoundDto>> GetAbsenceReviewRoundsAsync(
+        Guid userId, CancellationToken ct)
+        => (await LoadReviewRoundsAsync(await _current.GetGroupIdAsync(ct), userId, ct)).Rounds;
+
+    private async Task<(Guid? SeasonId, List<AbsenceReviewRoundDto> Rounds)> LoadReviewRoundsAsync(
+        Guid groupId, Guid userId, CancellationToken ct)
+    {
+        var (seasonId, rounds) = await LoadClosedRoundStatesAsync(groupId, userId, ct);
+
+        // Absent by default (incomplete predictions) or carrying any override: an excused round
+        // stays reviewable so the absence can be restored, and a forced absence on a fully
+        // predicted round stays reviewable so it can be undone.
+        return (seasonId, rounds
+            .Where(r => r.PredictionCount < r.MatchCount || r.ForcedAbsent is not null)
+            .Select(r => new AbsenceReviewRoundDto
             {
                 RoundId = r.Id,
                 Number = r.Number,
@@ -289,11 +351,56 @@ public class AbsenceService : IAbsenceService
                 Status = r.Status,
                 MatchCount = r.MatchCount,
                 PredictionCount = r.PredictionCount,
-                // An override currently marking them present is surfaced rather than hidden:
-                // confirming replaces it, and hiding the conflict would be worse.
-                HasPresentOverride = r.ForcedAbsent == false,
+                IsAbsent = r.IsAbsent,
+                HasOverride = r.ForcedAbsent is not null,
+                AbsenceNumber = r.AbsenceNumber,
+                PenaltyPoints = r.PenaltyPoints,
             })
-            .ToList();
+            .ToList());
+    }
+
+    public async Task<AbsenceReviewStaging> StageAbsenceReviewAsync(
+        Guid userId, IReadOnlyCollection<AbsenceReviewDecision> decisions, string justification,
+        Guid actingUserId, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(justification))
+        {
+            throw new BusinessRuleException("common.justificationRequired");
+        }
+
+        var groupId = await _current.GetGroupIdAsync(ct);
+        var (seasonId, rounds) = await LoadReviewRoundsAsync(groupId, userId, ct);
+        var byId = rounds.ToDictionary(r => r.RoundId);
+
+        var changed = new List<Guid>();
+        // DistinctBy: a duplicated id would stage two inserts for the same (RoundId, UserId).
+        foreach (var decision in decisions.DistinctBy(d => d.RoundId))
+        {
+            // Not reviewable: another tenant's round, one still open for predictions, one outside
+            // the active season, or one fully predicted with no override. The generic message
+            // leaks nothing about which.
+            if (!byId.TryGetValue(decision.RoundId, out var round))
+            {
+                throw new BusinessRuleException("absence.roundNotEligible");
+            }
+
+            // Same as today (including an override that already says so): nothing to write.
+            if (decision.IsAbsent == round.IsAbsent)
+            {
+                continue;
+            }
+
+            await StageOverrideAsync(groupId, decision.RoundId, new AbsenceOverrideRequest
+            {
+                UserId = userId,
+                IsAbsent = decision.IsAbsent,
+                Justification = justification,
+            }, actingUserId, ct);
+            changed.Add(decision.RoundId);
+        }
+
+        return new AbsenceReviewStaging(
+            seasonId, changed, changed.Any(id => byId[id].Status == RoundStatus.Scored));
     }
 
     public async Task StageAbsenceOverridesAsync(

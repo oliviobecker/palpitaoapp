@@ -215,3 +215,16 @@ public class ReactivateRequestValidator : AbstractValidator<ReactivateRequest>
             .WithMessage("validation.justification.required")
             .MaximumLength(500).WithMessage("validation.justification.tooLong");
 }
+
+public class AbsenceReviewRequestValidator : AbstractValidator<AbsenceReviewRequest>
+{
+    public AbsenceReviewRequestValidator()
+    {
+        RuleFor(x => x.Justification).NotEmpty().MinimumLength(3)
+            .WithMessage("validation.justification.required")
+            .MaximumLength(500).WithMessage("validation.justification.tooLong");
+        RuleFor(x => x.Rounds).NotNull();
+        RuleForEach(x => x.Rounds).ChildRules(round =>
+            round.RuleFor(d => d.RoundId).NotEmpty().WithMessage("notFound.round"));
+    }
+}
