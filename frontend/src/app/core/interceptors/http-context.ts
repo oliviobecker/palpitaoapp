@@ -9,3 +9,10 @@ export const SKIP_ERROR_TOAST = new HttpContextToken<boolean>(() => false);
  * after a refresh, so a failing refresh can't trigger an infinite refresh loop.
  */
 export const SKIP_AUTH_REFRESH = new HttpContextToken<boolean>(() => false);
+
+/**
+ * When set, the request carries neither the session token nor the current group.
+ * Key-addressed public endpoints resolve their own tenant from the route, and a
+ * logged-in browser would otherwise attach a group that scopes their data away.
+ */
+export const SKIP_TENANT_HEADERS = new HttpContextToken<boolean>(() => false);

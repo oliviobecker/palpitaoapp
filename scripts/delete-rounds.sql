@@ -13,6 +13,10 @@
 -- WHAT IS DELETED: the rounds, their matches, predictions, prediction scores,
 -- absences, per-round results and OCR imports.
 --
+-- WHICH ROUNDS: every round of the season by default. v_only_numbers narrows
+-- it to specific round numbers ('{1}' = only Rodada 1) and v_only_status to a
+-- single lifecycle state; the two combine.
+--
 -- WHAT SURVIVES: the season row and its scoring configuration (score table,
 -- multipliers, classic pairs), the group, memberships, users, teams and the
 -- audit log.
@@ -24,6 +28,9 @@
 -- absences that no longer exist. With the flag on, both are reset, so the season
 -- reads as genuinely empty. Turn it off only if you plan to run "Recalcular" in
 -- the admin UI straight afterwards, which rebuilds the same two things.
+-- Deleting ONE round out of a season that keeps the others is where this bites
+-- hardest: leave the flag on and hit "Recalcular" right after, so the table is
+-- rebuilt from the rounds that survived instead of still counting a deleted one.
 --
 -- SAFETY: one atomic DO block; any RAISE EXCEPTION rolls it all back. Aborts if
 -- the season name matches zero rows or more than one, and lists what exists.
@@ -36,6 +43,11 @@ DECLARE
     v_season_name     text    := 'TESTE - Palpitão England 26/27';
     -- Optional: only needed when two groups have a season with the same name.
     v_group_name      text    := NULL;
+
+    -- >>> Which rounds. This is the number shown in the UI ("Rodada 1"), not
+    -- a database id: '{1}' deletes only Rodada 1, '{1,2}' picks several,
+    -- NULL every round of the season.
+    v_only_numbers    int[]   := NULL;
 
     -- Optional: delete only rounds in this state. RoundStatus is stored as text
     -- (HasConversion<string>), so these are the literal values in the column:
@@ -107,6 +119,7 @@ BEGIN
     SELECT coalesce(array_agg("Id"), '{}') INTO v_round_ids
     FROM "Rounds"
     WHERE "SeasonId" = v_season_id
+      AND (v_only_numbers IS NULL OR "Number" = ANY(v_only_numbers))
       AND (v_only_status IS NULL OR "Status" = v_only_status);
 
     SELECT coalesce(array_agg("Id"), '{}') INTO v_batch_ids
@@ -128,7 +141,13 @@ BEGIN
     END LOOP;
 
     IF cardinality(v_round_ids) = 0 THEN
-        RAISE EXCEPTION 'The season has no round matching the filter. Nothing deleted.';
+        SELECT coalesce(string_agg(format('%s (%s)', r."Number", r."Status"), ', '
+                                   ORDER BY r."Number"), '(the season has none)')
+        INTO v_list
+        FROM "Rounds" r WHERE r."SeasonId" = v_season_id;
+        RAISE EXCEPTION
+            E'No round of "%" matched the filter.\n\n  Rounds that exist: %\n\nNothing deleted.',
+            v_found_name, v_list;
     END IF;
 
     RAISE NOTICE '';

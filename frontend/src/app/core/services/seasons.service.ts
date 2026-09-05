@@ -16,6 +16,8 @@ export interface SeasonRequest {
   allowParticipantsToSubmitPredictions: boolean;
   /** Offer FA Cup fixtures for this season (England certames only). */
   faCupEnabled: boolean;
+  /** Publish the public standings link (default false). The key itself is server-side only. */
+  publicStandingsEnabled: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -41,5 +43,10 @@ export class SeasonsService {
 
   activate(id: string): Observable<Season> {
     return this.http.post<Season>(`${this.base}/${id}/activate`, {});
+  }
+
+  /** Mints a new public key. The previously shared link stops working immediately. */
+  regeneratePublicKey(id: string): Observable<Season> {
+    return this.http.post<Season>(`${this.base}/${id}/public-key/regenerate`, {});
   }
 }

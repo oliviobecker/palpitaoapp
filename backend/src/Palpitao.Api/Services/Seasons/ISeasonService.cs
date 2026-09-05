@@ -1,4 +1,4 @@
-using Palpitao.Api.DTOs.Seasons;
+﻿using Palpitao.Api.DTOs.Seasons;
 
 namespace Palpitao.Api.Services.Seasons;
 
@@ -9,4 +9,7 @@ public interface ISeasonService
     Task<SeasonDto> CreateAsync(SeasonRequest request, Guid actingUserId, CancellationToken ct);
     Task<SeasonDto> UpdateAsync(Guid id, SeasonRequest request, Guid actingUserId, CancellationToken ct);
     Task<SeasonDto> SetActiveAsync(Guid id, Guid actingUserId, CancellationToken ct);
+
+    /// <summary>Mints a new public key, invalidating the previously shared link.</summary>
+    Task<SeasonDto> RegeneratePublicKeyAsync(Guid id, Guid actingUserId, CancellationToken ct);
 }

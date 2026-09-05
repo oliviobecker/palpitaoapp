@@ -340,6 +340,32 @@ public class RoundScoringServiceTests
     }
 
     [Fact]
+    public async Task Incomplete_predictions_score_what_was_sent_and_record_no_absence()
+    {
+        using var db = CreateContext();
+        var kit = Build(db);
+        var user = CreateParticipant(db);
+        var round = await PublishedRound(kit, 1,
+            (Competition.Championship, MatchPhase.Regular),
+            (Competition.Championship, MatchPhase.Regular));
+
+        // Saving demands the full set, so the second prediction is deleted afterwards: this
+        // is the shape a round is left in when a match is added after someone answered.
+        await SavePredictions(kit, round, user, (1, 0), (2, 2));
+        await db.Predictions.Where(p => p.RoundMatchId == round.Matches[1].Id).ExecuteDeleteAsync(Ct);
+
+        await kit.Rounds.LockAsync(round.Id, Admin, Ct);
+        await SetResults(kit, round, (1, 0), (0, 0));
+
+        var results = await kit.Scoring.ScoreRoundAsync(round.Id, Admin, Ct);
+
+        var scored = results.Participants.Single(x => x.UserId == user);
+        Assert.False(scored.WasAbsent);
+        Assert.True(scored.FinalPoints > 0); // the match they did send still pays
+        Assert.False(db.Absences.Any(a => a.RoundId == round.Id)); // no rung on the ladder
+    }
+
+    [Fact]
     public async Task Absent_participant_scores_zero()
     {
         using var db = CreateContext();

@@ -41,7 +41,7 @@ public class AdminPredictionItemDto
 }
 
 /// <summary>Who has already predicted the whole round — helps the admin decide when to
-/// chase stragglers (OCR/manual entry) before locking.</summary>
+/// chase stragglers (OCR/manual entry) before locking, and who is heading for an absence.</summary>
 public class PredictionCoverageDto
 {
     public Guid RoundId { get; set; }
@@ -51,7 +51,11 @@ public class PredictionCoverageDto
     /// <summary>Participants with a prediction for every match of the round.</summary>
     public int CompleteParticipants { get; set; }
 
-    /// <summary>Active participants still missing at least one prediction.</summary>
+    /// <summary>
+    /// Active participants still missing at least one prediction, plus anyone the admin
+    /// decided by hand — a participant who predicted everything but was forced absent has to
+    /// stay visible, otherwise there is no way to undo it.
+    /// </summary>
     public List<PredictionCoverageParticipantDto> Missing { get; set; } = new();
 }
 
@@ -60,4 +64,14 @@ public class PredictionCoverageParticipantDto
     public Guid UserId { get; set; }
     public string Name { get; set; } = string.Empty;
     public int PredictedCount { get; set; }
+
+    /// <summary>
+    /// Whether scoring this round now would mark them absent. Comes from
+    /// <c>IAbsenceService</c> (so admin overrides win) rather than being recomputed here:
+    /// the label must never drift from what the scoring actually does.
+    /// </summary>
+    public bool WillBeAbsent { get; set; }
+
+    /// <summary>An <c>AbsenceOverride</c> exists, so the flag above was decided by an admin.</summary>
+    public bool HasOverride { get; set; }
 }

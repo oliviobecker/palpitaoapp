@@ -145,3 +145,20 @@ describe('buildClosingMessage', () => {
     expect(text).toContain('✱ Uma ausência');
   });
 });
+
+describe('buildClosingMessage — public link', () => {
+  it('omits the link block when no URL is given', () => {
+    const text = buildClosingMessage(41, results, standings, 'Palpitão');
+    expect(text).not.toContain('Confira a pontuação jogo a jogo');
+  });
+
+  it('appends the link as the last line, bare', () => {
+    const url = 'https://palpitao.app/p/A7C3-9F2E-4BD8?rodada=41';
+    const text = buildClosingMessage(41, results, standings, 'Palpitão', url);
+
+    expect(text).toContain('Confira a pontuação jogo a jogo:');
+    // Bare and last: WhatsApp only autolinks a URL that no bold delimiter touches.
+    expect(text.trimEnd().endsWith(url)).toBe(true);
+    expect(text).not.toContain(`*${url}*`);
+  });
+});

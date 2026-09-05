@@ -255,14 +255,17 @@ public class AbsenceServiceTests
     }
 
     [Fact]
-    public async Task Participant_with_incomplete_predictions_is_absent()
+    public async Task Participant_with_incomplete_predictions_is_not_absent()
     {
         using var db = CreateContext();
         var service = Service(db);
         var user = CreateParticipant(db);
         var round = await PublishedRound(db, 1, matchCount: 2);
 
-        // Insert a single prediction directly (1 of 2 matches) => incomplete.
+        // Insert a single prediction directly (1 of 2 matches) => incomplete, but present.
+        // The usual cause is not laziness: every write path demands the full set, so a
+        // partial one is what a match added after the participant answered leaves behind.
+        // Charging that a zeroed round plus a rung on the punishment ladder was the bug.
         var firstMatchId = round.Matches[0].Id;
         db.Predictions.Add(new Prediction
         {
@@ -276,7 +279,36 @@ public class AbsenceServiceTests
         });
         db.SaveChanges();
 
+        Assert.False(await service.IsAbsentAsync(round.Id, user, Ct));
+    }
+
+    [Fact]
+    public async Task Participant_who_sent_nothing_is_absent()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var user = CreateParticipant(db);
+        var round = await PublishedRound(db, 1, matchCount: 2);
+
         Assert.True(await service.IsAbsentAsync(round.Id, user, Ct));
+    }
+
+    [Fact]
+    public async Task Round_without_matches_marks_nobody_absent()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var user = CreateParticipant(db);
+
+        // A draft: publishing rejects a round with no matches, so this is the only way to
+        // reach the state. It is worth pinning because "absent = sent nothing" would flag
+        // the whole roster here — the exact opposite of what the old rule did.
+        var rounds = new RoundService(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db));
+        var round = await rounds.CreateAsync(
+            new CreateRoundRequest { SeasonId = SeasonId, Number = 1 }, SeedIds.AdminUser, Ct);
+
+        Assert.Empty(await service.DetectAbsenteesAsync(round.Id, Ct));
+        Assert.False(await service.IsAbsentAsync(round.Id, user, Ct));
     }
 
     [Fact]
@@ -569,7 +601,7 @@ public class AbsenceServiceTests
         => new() { RoundId = roundId, IsAbsent = isAbsent };
 
     [Fact]
-    public async Task Review_rounds_list_closed_rounds_with_incomplete_predictions_or_an_override()
+    public async Task Review_rounds_list_closed_rounds_with_no_predictions_or_an_override()
     {
         using var db = CreateContext();
         var service = Service(db);
@@ -590,13 +622,27 @@ public class AbsenceServiceTests
         var stillOpen = await PublishedRound(db, 6);
         var cancelled = await PublishedRound(db, 7);
         SetStatus(db, cancelled.Id, RoundStatus.Cancelled);
+        // 1 of 2 matches: an incomplete set counts as present, so there is nothing to review.
+        var partial = await LockedRound(db, 8, matchCount: 2);
+        db.Predictions.Add(new Prediction
+        {
+            Id = Guid.NewGuid(),
+            RoundId = partial.Id,
+            RoundMatchId = partial.Matches[0].Id,
+            UserId = user,
+            PredictedHomeScore = 1,
+            PredictedAwayScore = 0,
+            SubmittedAt = DateTime.UtcNow,
+        });
+        db.SaveChanges();
 
         var rounds = await service.GetAbsenceReviewRoundsAsync(user, Ct);
 
         Assert.Equal(
             new[] { lockedAbsent.Id, scoredAbsent.Id, forcedAbsent.Id, excused.Id },
             rounds.Select(r => r.RoundId));
-        Assert.DoesNotContain(rounds, r => r.RoundId == complete.Id || r.RoundId == stillOpen.Id || r.RoundId == cancelled.Id);
+        Assert.DoesNotContain(rounds, r => r.RoundId == complete.Id || r.RoundId == stillOpen.Id
+            || r.RoundId == cancelled.Id || r.RoundId == partial.Id);
 
         var locked = rounds.Single(r => r.RoundId == lockedAbsent.Id);
         Assert.True(locked.IsAbsent);

@@ -118,8 +118,12 @@ public class FlavioRuleService : IFlavioRuleService
             .Where(p => p.RoundId == roundId && p.UserId == leaderUserId)
             .ToListAsync(ct);
 
-        // Incomplete / no predictions -> treated as a normal absence, not Flávio.
-        if (predictions.Count < round.Matches.Count)
+        // Nothing sent -> a plain absence, which zeroes the round on its own.
+        // An incomplete set is deliberately NOT a free pass. Now that an absence means
+        // "sent nothing" (README §14), excusing incompleteness here would make omitting one
+        // match strictly better for the leader than submitting late in full: no halving, no
+        // absence, full points. The last SubmittedAt still dates a partial set.
+        if (predictions.Count == 0)
         {
             return false;
         }

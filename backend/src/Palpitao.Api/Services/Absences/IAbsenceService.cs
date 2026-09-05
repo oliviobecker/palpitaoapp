@@ -14,7 +14,7 @@ public record AbsenceReviewStaging(Guid? SeasonId, IReadOnlyList<Guid> ChangedRo
 
 public interface IAbsenceService
 {
-    /// <summary>Participant is absent when they did not submit every required prediction.</summary>
+    /// <summary>Participant is absent when they submitted no prediction at all for the round.</summary>
     Task<bool> IsAbsentAsync(Guid roundId, Guid userId, CancellationToken ct);
 
     /// <summary>Active, non-eliminated participants considered absent in the round.</summary>
@@ -34,8 +34,8 @@ public interface IAbsenceService
 
     /// <summary>
     /// Rounds of the group's active season that already closed for predictions (Locked or
-    /// Scored) where the participant did not complete their predictions and is not already
-    /// forced absent — i.e. what an admin can record them absent for when (re)activating them.
+    /// Scored) where the participant sent no prediction at all and is not already forced
+    /// absent — i.e. what an admin can record them absent for when (re)activating them.
     /// </summary>
     Task<IReadOnlyList<AbsenceCandidateRoundDto>> GetAbsenceCandidateRoundsAsync(Guid userId, CancellationToken ct);
 

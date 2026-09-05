@@ -640,7 +640,8 @@ public class ResultsServiceTests
         var round = await PublishedRound(kit, 1,
             (Competition.Championship, MatchPhase.Regular),
             (Competition.Championship, MatchPhase.Regular));
-        // Predicts only the first match (incomplete) -> would be "absent" officially.
+        // Predicts only the first match: incomplete, but present — an absence needs nothing
+        // sent at all — and the temporary standings never apply the penalty anyway.
         await SavePredictions(kit, round, user, (1, 0), (0, 0));
         await db.Predictions.Where(p => p.RoundMatchId == round.Matches[1].Id).ExecuteDeleteAsync(Ct);
         await SetLive(db, round.Matches[0].Id, MatchStatus.Finished, 1, 0);

@@ -1,5 +1,6 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { storedGroupId } from '../services/group-context.service';
+import { SKIP_TENANT_HEADERS } from './http-context';
 
 /**
  * Sends the current group to the API via the X-Group-Id header so the backend can
@@ -8,6 +9,9 @@ import { storedGroupId } from '../services/group-context.service';
  * always re-validates that the user really has access to the group.
  */
 export const groupInterceptor: HttpInterceptorFn = (req, next) => {
+  if (req.context.get(SKIP_TENANT_HEADERS)) {
+    return next(req);
+  }
   const groupId = storedGroupId();
   if (!groupId) {
     return next(req);

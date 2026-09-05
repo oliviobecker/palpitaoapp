@@ -71,6 +71,61 @@
       <div class="section-label mt-3 mb-2">{{ 'roundDetail.lifecycle' | translate }}</div>
       <app-round-stepper [status]="r.status" class="d-block mb-3" />
 
+      <!--
+        Who is missing predictions and, separately, who scoring would actually zero. The two
+        stopped being the same question when an absence became "sent nothing": a participant
+        on 10 of 11 is incomplete but present, and used to be punished as a no-show.
+      -->
+      @if (coverage(); as cov) {
+        <div
+          class="alert py-2 mb-3"
+          [class.alert-success]="cov.missing.length === 0"
+          [class.alert-info]="cov.missing.length > 0"
+        >
+          <div class="d-flex align-items-center gap-2">
+            <app-icon name="users" [size]="16" />
+            {{
+              'roundDetail.coverage'
+                | translate: { complete: cov.completeParticipants, total: cov.totalParticipants }
+            }}
+          </div>
+          @if (cov.missing.length > 0) {
+            <ul class="list-unstyled small mb-0 mt-2 vstack gap-2">
+              @for (p of cov.missing; track p.userId) {
+                <li class="d-flex align-items-center gap-2 flex-wrap">
+                  <span class="fw-semibold">{{ p.name }}</span>
+                  <span class="text-muted">({{ p.predictedCount }}/{{ cov.matchCount }})</span>
+                  @if (p.willBeAbsent) {
+                    <span class="badge text-bg-warning">{{
+                      'roundDetail.willBeAbsent' | translate
+                    }}</span>
+                  } @else {
+                    <span class="badge text-bg-secondary">{{
+                      'roundDetail.incompleteButPresent' | translate
+                    }}</span>
+                  }
+                  @if (p.hasOverride) {
+                    <span class="badge text-bg-info">{{
+                      'roundDetail.overrideByAdmin' | translate
+                    }}</span>
+                  }
+                  <button
+                    class="btn btn-sm btn-outline-secondary ms-auto"
+                    type="button"
+                    (click)="toggleAbsence(r, p)"
+                  >
+                    {{
+                      (p.willBeAbsent ? 'roundDetail.markPresent' : 'roundDetail.markAbsent')
+                        | translate
+                    }}
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+
       @if (r.status === RoundStatus.Draft) {
         <div class="d-grid gap-2">
           @if (r.matches.length === 0) {
@@ -93,29 +148,6 @@
 
       @if (r.status === RoundStatus.Published) {
         <div class="d-grid gap-2">
-          @if (coverage(); as cov) {
-            <div
-              class="alert py-2 mb-0"
-              [class.alert-success]="cov.missing.length === 0"
-              [class.alert-info]="cov.missing.length > 0"
-            >
-              <div class="d-flex align-items-center gap-2">
-                <app-icon name="users" [size]="16" />
-                {{
-                  'roundDetail.coverage'
-                    | translate
-                      : { complete: cov.completeParticipants, total: cov.totalParticipants }
-                }}
-              </div>
-              @if (cov.missing.length > 0) {
-                <ul class="small mb-0 mt-1">
-                  @for (p of cov.missing; track p.userId) {
-                    <li>{{ p.name }} ({{ p.predictedCount }}/{{ cov.matchCount }})</li>
-                  }
-                </ul>
-              }
-            </div>
-          }
           <button class="btn btn-warning btn-lg" (click)="lock(r)">
             <app-icon name="lock" [size]="18" /> {{ 'roundDetail.lock' | translate }}
           </button>

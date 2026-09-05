@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Seasons;
@@ -53,6 +53,8 @@ public class SeasonService : ISeasonService
         AllowParticipantsToViewOthersPredictions = s.AllowParticipantsToViewOthersPredictions,
         AllowParticipantsToSubmitPredictions = s.AllowParticipantsToSubmitPredictions,
         FaCupEnabled = s.FaCupEnabled,
+        PublicKey = s.PublicKey,
+        PublicStandingsEnabled = s.PublicStandingsEnabled,
         HasParticipantPredictions = _db.Predictions.Any(
             p => p.Source == PredictionSource.Participant
                 && _db.Rounds.Any(r => r.Id == p.RoundId && r.SeasonId == s.Id)),
@@ -77,6 +79,10 @@ public class SeasonService : ISeasonService
             AllowParticipantsToViewOthersPredictions = request.AllowParticipantsToViewOthersPredictions,
             AllowParticipantsToSubmitPredictions = request.AllowParticipantsToSubmitPredictions,
             FaCupEnabled = request.FaCupEnabled,
+            // Every season gets a public key up front; publishing it is a separate,
+            // deliberate admin action, off by default.
+            PublicKey = PublicKeyGenerator.Generate(),
+            PublicStandingsEnabled = request.PublicStandingsEnabled,
             CreatedAt = DateTime.UtcNow,
         };
 
@@ -115,6 +121,7 @@ public class SeasonService : ISeasonService
         season.AllowParticipantsToViewOthersPredictions = request.AllowParticipantsToViewOthersPredictions;
         season.AllowParticipantsToSubmitPredictions = request.AllowParticipantsToSubmitPredictions;
         season.FaCupEnabled = request.FaCupEnabled;
+        season.PublicStandingsEnabled = request.PublicStandingsEnabled;
 
         if (request.IsActive && !season.IsActive)
         {
@@ -129,6 +136,27 @@ public class SeasonService : ISeasonService
             season.AllowParticipantsToViewOthersPredictions,
             season.AllowParticipantsToSubmitPredictions,
             season.FaCupEnabled,
+            season.PublicStandingsEnabled,
+        });
+        await _db.SaveChangesAsync(ct);
+        return Map(season, await HasParticipantPredictionsAsync(season.Id, ct));
+    }
+
+    /// <summary>
+    /// Mints a new public key, which immediately kills the previous link. Audited because it
+    /// is the one action that can cut a shared link without any other visible change.
+    /// </summary>
+    public async Task<SeasonDto> RegeneratePublicKeyAsync(Guid id, Guid actingUserId, CancellationToken ct)
+    {
+        var groupId = await _current.GetGroupIdAsync(ct);
+        var season = await _db.Seasons.FirstOrDefaultAsync(s => s.Id == id && s.GroupId == groupId, ct)
+            ?? throw new NotFoundException("notFound.season");
+
+        season.PublicKey = PublicKeyGenerator.Generate();
+
+        _audit.Add(actingUserId, "SeasonPublicKeyRegenerated", nameof(Season), season.Id.ToString(), new
+        {
+            season.PublicStandingsEnabled,
         });
         await _db.SaveChangesAsync(ct);
         return Map(season, await HasParticipantPredictionsAsync(season.Id, ct));
@@ -183,6 +211,8 @@ public class SeasonService : ISeasonService
         AllowParticipantsToViewOthersPredictions = s.AllowParticipantsToViewOthersPredictions,
         AllowParticipantsToSubmitPredictions = s.AllowParticipantsToSubmitPredictions,
         FaCupEnabled = s.FaCupEnabled,
+        PublicKey = s.PublicKey,
+        PublicStandingsEnabled = s.PublicStandingsEnabled,
         HasParticipantPredictions = hasParticipantPredictions,
     };
 }

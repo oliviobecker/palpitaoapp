@@ -77,7 +77,7 @@ public class AbsenceReviewRoundDto
 
     public int PredictionCount { get; set; }
 
-    /// <summary>Estado efetivo hoje: override, senão "palpites incompletos".</summary>
+    /// <summary>Estado efetivo hoje: override, senão a regra automática ("não enviou nada").</summary>
     public bool IsAbsent { get; set; }
 
     public bool HasOverride { get; set; }

@@ -169,7 +169,7 @@ public class PredictionSubmissionModeTests
         var round = await PublishedRound(db, Future);
         var user = AddParticipant(db);
 
-        var admin = new AdminPredictionService(db, new AuditService(db), new FakeCurrentGroupService());
+        var admin = new AdminPredictionService(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.Absences(db));
         await admin.SaveManualAsync(round.Id, new ManualPredictionRequest
         {
             UserId = user,

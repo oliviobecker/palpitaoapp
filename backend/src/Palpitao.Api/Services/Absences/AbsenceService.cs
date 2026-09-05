@@ -75,7 +75,15 @@ public class AbsenceService : IAbsenceService
             else
             {
                 predictionCounts.TryGetValue(userId, out var count);
-                absent = count < matchCount;
+                // Absent = nothing was sent at all. An incomplete set counts as present and
+                // simply scores 0 on the matches it skips -- the same outcome as getting them
+                // wrong. Requiring the full set punished one missing line with a zeroed round,
+                // a step up the penalty ladder and, on the 5th, elimination; and a match added
+                // to an already published round turned everyone who had answered into an
+                // absentee. Abuse ("send one of eleven forever") is the admin override's job.
+                // The matchCount guard keeps a round with no matches marking nobody: with
+                // count == 0 alone it would flag the whole roster, inverting the old behaviour.
+                absent = matchCount > 0 && count == 0;
             }
 
             if (absent)
@@ -242,9 +250,10 @@ public class AbsenceService : IAbsenceService
     {
         var (_, rounds) = await LoadClosedRoundStatesAsync(groupId, userId, ct);
 
-        // A round with no matches drops out on its own (0 < 0 is false).
+        // Same definition as DetectAbsenteesAsync: only a round the participant sent
+        // nothing for is an absence, and a round with no matches never is one.
         return rounds
-            .Where(r => r.PredictionCount < r.MatchCount && r.ForcedAbsent != true)
+            .Where(r => r.SentNothing && r.ForcedAbsent != true)
             .Select(r => new AbsenceCandidateRoundDto
             {
                 RoundId = r.Id,
@@ -269,8 +278,15 @@ public class AbsenceService : IAbsenceService
         Guid Id, int Number, string? Title, RoundStatus Status, int MatchCount, int PredictionCount,
         bool? ForcedAbsent, int? AbsenceNumber, int? PenaltyPoints)
     {
-        /// <summary>What scoring applies today: the override wins, else incomplete predictions.</summary>
-        public bool IsAbsent => ForcedAbsent ?? PredictionCount < MatchCount;
+        /// <summary>
+        /// The automatic rule, as in <see cref="DetectAbsenteesAsync"/>: absent means nothing was
+        /// sent at all (an incomplete set counts as present), and a round with no matches never
+        /// marks anybody.
+        /// </summary>
+        public bool SentNothing => MatchCount > 0 && PredictionCount == 0;
+
+        /// <summary>What scoring applies today: the override wins, else the automatic rule.</summary>
+        public bool IsAbsent => ForcedAbsent ?? SentNothing;
     }
 
     private async Task<(Guid? SeasonId, List<ClosedRoundState> Rounds)> LoadClosedRoundStatesAsync(
@@ -338,11 +354,11 @@ public class AbsenceService : IAbsenceService
     {
         var (seasonId, rounds) = await LoadClosedRoundStatesAsync(groupId, userId, ct);
 
-        // Absent by default (incomplete predictions) or carrying any override: an excused round
-        // stays reviewable so the absence can be restored, and a forced absence on a fully
-        // predicted round stays reviewable so it can be undone.
+        // Absent by default (sent nothing, same definition as DetectAbsenteesAsync) or carrying
+        // any override: an excused round stays reviewable so the absence can be restored, and a
+        // forced absence on a round they did predict stays reviewable so it can be undone.
         return (seasonId, rounds
-            .Where(r => r.PredictionCount < r.MatchCount || r.ForcedAbsent is not null)
+            .Where(r => r.SentNothing || r.ForcedAbsent is not null)
             .Select(r => new AbsenceReviewRoundDto
             {
                 RoundId = r.Id,

@@ -943,6 +943,16 @@ namespace Palpitao.Api.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
 
+                    b.Property<string>("PublicKey")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<bool>("PublicStandingsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<DateOnly>("StartDate")
                         .HasColumnType("date");
 
@@ -956,6 +966,9 @@ namespace Palpitao.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("GroupId");
+
+                    b.HasIndex("PublicKey")
+                        .IsUnique();
 
                     b.ToTable("Seasons");
                 });

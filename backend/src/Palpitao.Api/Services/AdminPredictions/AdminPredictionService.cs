@@ -5,6 +5,7 @@ using Palpitao.Api.DTOs.Admin;
 using Palpitao.Api.DTOs.Predictions;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
+using Palpitao.Api.Services.Absences;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
 
@@ -15,12 +16,15 @@ public class AdminPredictionService : IAdminPredictionService
     private readonly AppDbContext _db;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
+    private readonly IAbsenceService _absences;
 
-    public AdminPredictionService(AppDbContext db, IAuditService audit, ICurrentGroupService current)
+    public AdminPredictionService(
+        AppDbContext db, IAuditService audit, ICurrentGroupService current, IAbsenceService absences)
     {
         _db = db;
         _audit = audit;
         _current = current;
+        _absences = absences;
     }
 
     public async Task SaveManualAsync(Guid roundId, ManualPredictionRequest request, Guid adminId, CancellationToken ct)
@@ -150,14 +154,27 @@ public class AdminPredictionService : IAdminPredictionService
             .Select(g => new { UserId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.UserId, x => x.Count, ct);
 
+        // Who would actually be zeroed comes from the absence service, overrides included,
+        // for the same reason TemporaryStandingsService defers to it. An incomplete set is no
+        // longer an absence, so "missing a prediction" and "will be absent" are now different
+        // questions and the screen has to be able to tell them apart.
+        var absentees = (await _absences.DetectAbsenteesAsync(roundId, ct)).ToHashSet();
+        var overridden = (await _db.AbsenceOverrides
+            .Where(o => o.RoundId == roundId)
+            .Select(o => o.UserId)
+            .ToListAsync(ct))
+            .ToHashSet();
+
         var missing = participants
             .Select(u => new PredictionCoverageParticipantDto
             {
                 UserId = u.Id,
                 Name = u.Name,
                 PredictedCount = predictedCounts.GetValueOrDefault(u.Id),
+                WillBeAbsent = absentees.Contains(u.Id),
+                HasOverride = overridden.Contains(u.Id),
             })
-            .Where(p => matchCount == 0 || p.PredictedCount < matchCount)
+            .Where(p => matchCount == 0 || p.PredictedCount < matchCount || p.HasOverride)
             .ToList();
 
         return new PredictionCoverageDto
@@ -165,7 +182,11 @@ public class AdminPredictionService : IAdminPredictionService
             RoundId = roundId,
             MatchCount = matchCount,
             TotalParticipants = participants.Count,
-            CompleteParticipants = participants.Count - missing.Count,
+            // Counted independently: a complete predictor forced absent is in Missing too, so
+            // subtracting its length would understate the tally.
+            CompleteParticipants = matchCount == 0
+                ? 0
+                : participants.Count(u => predictedCounts.GetValueOrDefault(u.Id) >= matchCount),
             Missing = missing,
         };
     }

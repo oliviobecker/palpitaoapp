@@ -29,6 +29,7 @@ export function buildClosingMessage(
   results: RoundResults,
   standings: Standing[],
   groupTitle = '',
+  publicUrl = '',
 ): string {
   const lines: string[] = [];
   // Header is the current group/season name (not the product name).
@@ -132,6 +133,16 @@ export function buildClosingMessage(
         lines.push(`${ABSENCE_MARK.repeat(n)} ${word} ausência${n > 1 ? 's' : ''}`);
       }
     }
+  }
+
+  // --- Public link: where the group can check the arithmetic themselves ----------
+  // Bare, on its own line: wrapping it in `*…*` would make WhatsApp swallow the autolink.
+  if (publicUrl.trim()) {
+    lines.push('');
+    lines.push('——');
+    lines.push('');
+    lines.push('Confira a pontuação jogo a jogo:');
+    lines.push(publicUrl.trim());
   }
 
   return lines.join('\n');

@@ -1,0 +1,7 @@
+# The public standings link (/p/<key>) carries participants' names. It is meant to be
+# shared by whoever holds the key, not found by a stranger searching for a name — so it
+# stays out of search indexes. The pages themselves also send a noindex robots meta tag,
+# which is what actually keeps an already-crawled URL out of the index.
+User-agent: *
+Disallow: /p/
+Disallow: /admin/

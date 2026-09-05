@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
@@ -106,6 +106,12 @@ var ocrRateLimitWindowSeconds = builder.Configuration.GetValue<int?>("RateLimiti
 const string OcrImageRateLimitPolicy = "ocrImage";
 var ocrImageRateLimitPermit = builder.Configuration.GetValue<int?>("RateLimiting:OcrImage:PermitLimit") ?? 60;
 var ocrImageRateLimitWindowSeconds = builder.Configuration.GetValue<int?>("RateLimiting:OcrImage:WindowSeconds") ?? 60;
+// The public standings link is unauthenticated, so it is throttled per IP like the auth
+// endpoints -- but generously: it is a cheap read, and a whole group opens the same link at
+// once when a round ends. Tunable via "RateLimiting:Public".
+const string PublicRateLimitPolicy = "public";
+var publicRateLimitPermit = builder.Configuration.GetValue<int?>("RateLimiting:Public:PermitLimit") ?? 60;
+var publicRateLimitWindowSeconds = builder.Configuration.GetValue<int?>("RateLimiting:Public:WindowSeconds") ?? 60;
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -116,6 +122,16 @@ builder.Services.AddRateLimiter(options =>
             {
                 PermitLimit = authRateLimitPermit,
                 Window = TimeSpan.FromSeconds(authRateLimitWindowSeconds),
+                QueueLimit = 0,
+            }));
+
+    options.AddPolicy(PublicRateLimitPolicy, httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = publicRateLimitPermit,
+                Window = TimeSpan.FromSeconds(publicRateLimitWindowSeconds),
                 QueueLimit = 0,
             }));
 
@@ -251,6 +267,7 @@ else
 }
 builder.Services.AddScoped<IResultsUpdateService, ResultsUpdateService>();
 builder.Services.AddScoped<ITemporaryStandingsService, TemporaryStandingsService>();
+builder.Services.AddScoped<IPublicStandingsService, PublicStandingsService>();
 builder.Services.AddScoped<IScoutService, ScoutService>();
 
 // Periodic background results refresh (disabled by default; safe no-op when off).

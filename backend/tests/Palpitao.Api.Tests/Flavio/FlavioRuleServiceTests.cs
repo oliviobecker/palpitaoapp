@@ -200,6 +200,37 @@ public class FlavioRuleServiceTests
         Assert.False(await service.ShouldPenalizeLeaderAsync(round.Id, leader, ScoringDefaults.FlavioFromRound, Ct));
     }
 
+    [Fact]
+    public async Task Leader_with_an_incomplete_late_set_is_still_penalized()
+    {
+        using var db = CreateContext();
+        var service = new FlavioRuleService(db);
+        var leader = CreateParticipant(db, "Líder");
+
+        var published = new DateTime(2026, 1, 10, 12, 0, 0, DateTimeKind.Utc);
+        var firstMatch = published.AddHours(48); // gap >= 24h -> 24h window
+        var round = InsertPublishedRound(db, 16, published, firstMatch);
+        db.RoundMatches.Add(new RoundMatch
+        {
+            Id = Guid.NewGuid(),
+            RoundId = round.Id,
+            Competition = Competition.PremierLeague,
+            Phase = MatchPhase.Regular,
+            HomeTeamId = SeedIds.Liverpool,
+            AwayTeamId = SeedIds.Newcastle,
+            StartsAt = firstMatch.AddHours(1),
+            CreatedAt = DateTime.UtcNow,
+        });
+        db.SaveChanges();
+
+        InsertPrediction(db, round, leader, published.AddHours(30)); // 1 of 2, after 24h
+
+        // Now that an incomplete set is no longer an absence, excusing it here would let the
+        // leader dodge the halving by deliberately omitting one match — strictly better than
+        // sending everything late. The completeness gate only covers "sent nothing".
+        Assert.True(await service.ShouldPenalizeLeaderAsync(round.Id, leader, ScoringDefaults.FlavioFromRound, Ct));
+    }
+
     [Theory]
     [InlineData(17, 8)]
     [InlineData(16, 8)]

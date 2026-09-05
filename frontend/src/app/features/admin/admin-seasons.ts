@@ -19,8 +19,11 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
 import { TournamentType } from '../../core/models/enums';
 import { Season } from '../../core/models/models';
+import { ConfirmService } from '../../core/notifications/confirm.service';
 import { ToastService } from '../../core/notifications/toast.service';
 import { SeasonsService } from '../../core/services/seasons.service';
+import { copyToClipboard } from '../../shared/utils/clipboard.util';
+import { publicStandingsUrl } from '../../shared/utils/public-link.util';
 import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { ErrorState } from '../../shared/components/error-state/error-state';
 import { FormField } from '../../shared/components/form-field/form-field';
@@ -236,6 +239,28 @@ function dateRange(group: AbstractControl): ValidationErrors | null {
             </div>
           </div>
 
+          <hr class="my-1" />
+
+          <div>
+            <div class="form-check form-switch">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                id="publicStandings"
+                formControlName="publicStandingsEnabled"
+              />
+              <label class="form-check-label" for="publicStandings">{{
+                'adminSeasons.publicStandings' | translate
+              }}</label>
+              <div class="form-text">{{ 'adminSeasons.publicStandingsHelp' | translate }}</div>
+            </div>
+            @if (form.controls.publicStandingsEnabled.value) {
+              <div class="alert alert-warning py-2 small mt-2 mb-0" role="alert">
+                {{ 'adminSeasons.publicStandingsWarning' | translate }}
+              </div>
+            }
+          </div>
+
           <div class="d-flex gap-2">
             <button
               type="submit"
@@ -287,6 +312,44 @@ function dateRange(group: AbstractControl): ValidationErrors | null {
                 }
               </div>
             </div>
+
+            @if (s.publicStandingsEnabled) {
+              <div class="card-body border-top py-2 px-3">
+                <div class="small text-muted mb-1">
+                  {{ 'adminSeasons.publicLink' | translate }}
+                </div>
+                <code class="user-select-all d-block small text-break mb-2">{{
+                  publicUrl(s)
+                }}</code>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                  <button
+                    class="btn btn-sm btn-outline-secondary"
+                    (click)="copyLink(s)"
+                    [attr.aria-label]="'adminSeasons.copyLink' | translate"
+                  >
+                    <app-icon name="copy" [size]="14" />
+                    {{ 'adminSeasons.copyLink' | translate }}
+                  </button>
+                  <a
+                    class="btn btn-sm btn-outline-primary"
+                    [href]="publicUrl(s)"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    <app-icon name="external-link" [size]="14" />
+                    {{ 'adminSeasons.previewLink' | translate }}
+                  </a>
+                  <button
+                    class="btn btn-sm btn-outline-danger"
+                    (click)="regenerate(s)"
+                    [attr.aria-label]="'adminSeasons.regenerateKey' | translate"
+                  >
+                    <app-icon name="refresh-cw" [size]="14" />
+                    {{ 'adminSeasons.regenerateKey' | translate }}
+                  </button>
+                </div>
+              </div>
+            }
           </div>
         }
       </div>
@@ -296,6 +359,7 @@ function dateRange(group: AbstractControl): ValidationErrors | null {
 export class AdminSeasons implements OnInit, HasUnsavedChanges {
   private readonly api = inject(SeasonsService);
   private readonly toast = inject(ToastService);
+  private readonly confirm = inject(ConfirmService);
   private readonly translate = inject(TranslateService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
@@ -323,6 +387,7 @@ export class AdminSeasons implements OnInit, HasUnsavedChanges {
       // England certames only; left on (and hidden) for the World Cup, which never
       // allows the FA Cup anyway.
       faCupEnabled: [true],
+      publicStandingsEnabled: [false],
     },
     { validators: dateRange },
   );
@@ -374,6 +439,7 @@ export class AdminSeasons implements OnInit, HasUnsavedChanges {
       allowParticipantsToSubmitPredictions: season.allowParticipantsToSubmitPredictions,
       allowParticipantsToViewOthersPredictions: season.allowParticipantsToViewOthersPredictions,
       faCupEnabled: season.faCupEnabled ?? true,
+      publicStandingsEnabled: season.publicStandingsEnabled ?? false,
     });
   }
 
@@ -389,6 +455,7 @@ export class AdminSeasons implements OnInit, HasUnsavedChanges {
       allowParticipantsToSubmitPredictions: true,
       allowParticipantsToViewOthersPredictions: false,
       faCupEnabled: true,
+      publicStandingsEnabled: false,
     });
   }
 
@@ -410,6 +477,36 @@ export class AdminSeasons implements OnInit, HasUnsavedChanges {
       },
       error: () => this.saving.set(false),
     });
+  }
+
+  publicUrl(season: Season): string {
+    return publicStandingsUrl(season.publicKey);
+  }
+
+  async copyLink(season: Season): Promise<void> {
+    await copyToClipboard(this.publicUrl(season));
+    this.toast.success(this.translate.instant('adminSeasons.linkCopied'));
+  }
+
+  async regenerate(season: Season): Promise<void> {
+    const ok = await this.confirm.ask(this.translate.instant('adminSeasons.regenerateConfirm'), {
+      title: this.translate.instant('adminSeasons.regenerateKey'),
+      confirmText: this.translate.instant('adminSeasons.regenerateKey'),
+      danger: true,
+    });
+    if (!ok) {
+      return;
+    }
+
+    this.api
+      .regeneratePublicKey(season.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.toast.success(this.translate.instant('adminSeasons.keyRegenerated'));
+          this.load();
+        },
+      });
   }
 
   activate(season: Season): void {

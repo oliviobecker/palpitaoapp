@@ -1,4 +1,4 @@
-using Palpitao.Api.Enums;
+﻿using Palpitao.Api.Enums;
 
 namespace Palpitao.Api.DTOs.Seasons;
 
@@ -27,6 +27,12 @@ public class SeasonDto
     /// warns before switching to admin-only.
     /// </summary>
     public bool HasParticipantPredictions { get; set; }
+
+    /// <summary>Key of the public standings link. Admin-only: it is the link's credential.</summary>
+    public string PublicKey { get; set; } = string.Empty;
+
+    /// <summary>Whether the public link resolves. Off until an admin publishes it.</summary>
+    public bool PublicStandingsEnabled { get; set; }
 }
 
 public class SeasonRequest
@@ -53,4 +59,12 @@ public class SeasonRequest
     /// World Cup certame never allows the FA Cup regardless of this flag.
     /// </summary>
     public bool FaCupEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Publish the public standings link (default false). Turning it on makes the season's
+    /// standings — and the predictions of its closed rounds — readable by anyone holding the
+    /// key, regardless of <see cref="AllowParticipantsToViewOthersPredictions"/>. The key
+    /// itself is never taken from the request; it is generated and regenerated server-side.
+    /// </summary>
+    public bool PublicStandingsEnabled { get; set; }
 }
