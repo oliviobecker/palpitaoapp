@@ -343,6 +343,35 @@ export interface AbsenceCandidateRound {
   hasPresentOverride: boolean;
 }
 
+/** A closed round in which the participant counts as absent today, or carries an override. */
+export interface AbsenceReviewRound {
+  roundId: string;
+  number: number;
+  title?: string | null;
+  status: RoundStatus;
+  matchCount: number;
+  predictionCount: number;
+  /** Effective state today: the override, else the automatic rule (sent nothing at all). */
+  isAbsent: boolean;
+  hasOverride: boolean;
+  /** Already scored: changing it replays the whole season. */
+  requiresRecalculation: boolean;
+  /** Ordinal and penalty already on the ladder, when the round was scored with the absence. */
+  absenceNumber?: number | null;
+  penaltyPoints?: number | null;
+}
+
+/** The admin's explicit decision for one reviewed round. */
+export interface AbsenceReviewDecision {
+  roundId: string;
+  isAbsent: boolean;
+}
+
+export interface AbsenceReviewResult {
+  changedRounds: number;
+  recalculated: boolean;
+}
+
 export interface Participant {
   id: string;
   name: string;

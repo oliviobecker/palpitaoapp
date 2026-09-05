@@ -5,6 +5,13 @@ namespace Palpitao.Api.Services.Absences;
 /// <summary>Outcome of processing one participant's absence in a round.</summary>
 public record AbsenceOutcome(Guid UserId, int AbsenceNumber, int PenaltyPoints, bool Eliminated);
 
+/// <summary>
+/// What an absence review staged: the active season the rounds belong to, the rounds whose
+/// effective state changed and whether any of them is already Scored — in which case only a
+/// season recalculation makes the change (and everyone's absence ladder) real.
+/// </summary>
+public record AbsenceReviewStaging(Guid? SeasonId, IReadOnlyList<Guid> ChangedRoundIds, bool RequiresRecalculation);
+
 public interface IAbsenceService
 {
     /// <summary>Participant is absent when they submitted no prediction at all for the round.</summary>
@@ -43,6 +50,23 @@ public interface IAbsenceService
 
     Task ReactivateAsync(
         Guid userId, string justification, IReadOnlyCollection<Guid>? absentRoundIds, Guid actingUserId, CancellationToken ct);
+
+    /// <summary>
+    /// Rounds of the group's active season already closed for predictions (Locked or Scored) in
+    /// which the participant currently counts as absent, or carries an override — what an admin
+    /// reviews to excuse absences (e.g. rounds before the participant actually joined) or to
+    /// restore one that was excused.
+    /// </summary>
+    Task<IReadOnlyList<AbsenceReviewRoundDto>> GetAbsenceReviewRoundsAsync(Guid userId, CancellationToken ct);
+
+    /// <summary>
+    /// Stages one override per round whose decision differs from its effective state,
+    /// <b>without saving</b> (same contract as <see cref="StageAbsenceOverridesAsync"/>). Every
+    /// id must come from <see cref="GetAbsenceReviewRoundsAsync"/>; anything else is rejected.
+    /// </summary>
+    Task<AbsenceReviewStaging> StageAbsenceReviewAsync(
+        Guid userId, IReadOnlyCollection<AbsenceReviewDecision> decisions, string justification,
+        Guid actingUserId, CancellationToken ct);
 
     Task<IReadOnlyList<AbsenceDto>> GetUserAbsencesAsync(Guid userId, CancellationToken ct);
 

@@ -315,7 +315,7 @@ Jwt__Key=<long random secret, >= 32 bytes>
 
 **Admin**
 - `GET/POST /api/admin/users` · `PUT /api/admin/users/{id}` · `POST .../activate|deactivate|eliminate|reactivate`
-- `GET /api/admin/users/{id}/absences` · `GET /api/admin/rounds/{id}/absences` · `POST /api/admin/rounds/{id}/absences/override`
+- `GET /api/admin/users/{id}/absences` · `GET /api/admin/users/{id}/absence-candidates` · `GET|POST /api/admin/users/{id}/absence-review` · `GET /api/admin/rounds/{id}/absences` · `POST /api/admin/rounds/{id}/absences/override`
 - `GET /api/admin/registration-requests` · `GET .../{userId}` · `POST .../{userId}/approve` · `POST .../{userId}/reject`
 - `GET /api/admin/audit?userId&entityName&from&to`
 
@@ -424,6 +424,17 @@ in a round **before** `AbsenceFromRound` still zeroes that round — it just doe
 ladder. Changes apply to rounds scored from then on; use **recalculate** to reapply them to the
 whole season.
 
+**Reviewing a participant's absences (admin).** From **/admin/participants → Review absences** the
+admin sees the closed rounds (Locked/Scored) of the active season in which the participant counts
+as absent today, or carries an override, each with a checkbox in its current state. **Unticking**
+a round records an `AbsenceOverride` with `IsAbsent = false` (justification required): the
+participant keeps **0 points** in that round, but it is **not an absence** — no ordinal, no
+penalty, no elimination, and it counts as a round played. Ticking an excused round restores the
+absence. Changing a round that was already scored **recalculates the season in the same
+transaction** (`POST /api/admin/users/{id}/absence-review`), renumbering everyone's absence
+ladder; a change to a Locked round only takes effect when that round is scored. Typical use: a
+participant who was on the roster before actually joining the pool.
+
 ## 15. Flávio Rule
 
 The standings **leader** gets a special deadline before the round; missing it costs points:
@@ -454,8 +465,9 @@ Shows position, name, total points, rounds played, absences, penalties and statu
 (active/eliminated). `Total = Σ(final points per round) − Σ(penalties)`. Ordering:
 1. Total points (desc) → 2. Fewest absences → 3. Name (alphabetical).
 
-**Recalculate season** (`POST /api/seasons/{id}/recalculate`) clears the calculations, resets
-eliminations and re-scores the finished rounds in order — **idempotent**.
+**Recalculate season** (`POST /api/seasons/{id}/recalculate`) clears the calculations (standings
+included), resets eliminations and re-scores the finished rounds in order, rebuilding the standings
+after each one so the Flávio Rule targets the leader **at that point** — **idempotent**.
 
 ## 17. Implemented decisions and ambiguities
 

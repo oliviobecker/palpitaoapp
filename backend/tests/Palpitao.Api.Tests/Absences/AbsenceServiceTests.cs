@@ -572,5 +572,268 @@ public class AbsenceServiceTests
         await Assert.ThrowsAsync<BusinessRuleException>(() => service.StageAbsenceOverridesAsync(
             user, new[] { stillOpen.Id }, "Ativado depois do fechamento.", SeedIds.AdminUser, Ct));
     }
+
+    // --- Absence review: excusing (or restoring) absences in closed rounds ----------------
+
+    private static async Task Predict(AppDbContext db, RoundDto round, Guid user)
+    {
+        var predictions = new PredictionsService(db, new AuditService(db), new FakeCurrentGroupService());
+        await predictions.SavePredictionsAsync(round.Id, user, new SavePredictionsRequest
+        {
+            Predictions = round.Matches.Select(m => new PredictionItemRequest
+            {
+                RoundMatchId = m.Id,
+                PredictedHomeScore = 1,
+                PredictedAwayScore = 0,
+            }).ToList(),
+        }, false, Ct);
+    }
+
+    private static Task Override(AbsenceService service, Guid roundId, Guid user, bool isAbsent)
+        => service.ApplyOverrideAsync(roundId, new AbsenceOverrideRequest
+        {
+            UserId = user,
+            IsAbsent = isAbsent,
+            Justification = "Ajuste manual.",
+        }, SeedIds.AdminUser, Ct);
+
+    private static AbsenceReviewDecision Decide(Guid roundId, bool isAbsent)
+        => new() { RoundId = roundId, IsAbsent = isAbsent };
+
+    [Fact]
+    public async Task Review_rounds_list_closed_rounds_with_no_predictions_or_an_override()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var user = CreateParticipant(db);
+
+        var lockedAbsent = await LockedRound(db, 1);
+        var scoredAbsent = await LockedRound(db, 2);
+        SetStatus(db, scoredAbsent.Id, RoundStatus.Scored);
+        var forcedAbsent = await PublishedRound(db, 3);          // complete, but forced absent
+        await Predict(db, forcedAbsent, user);
+        await Override(service, forcedAbsent.Id, user, isAbsent: true);
+        SetStatus(db, forcedAbsent.Id, RoundStatus.Locked);
+        var excused = await LockedRound(db, 4);                   // no predictions, but excused
+        await Override(service, excused.Id, user, isAbsent: false);
+        var complete = await PublishedRound(db, 5);              // nothing to review
+        await Predict(db, complete, user);
+        SetStatus(db, complete.Id, RoundStatus.Locked);
+        var stillOpen = await PublishedRound(db, 6);
+        var cancelled = await PublishedRound(db, 7);
+        SetStatus(db, cancelled.Id, RoundStatus.Cancelled);
+        // 1 of 2 matches: an incomplete set counts as present, so there is nothing to review.
+        var partial = await LockedRound(db, 8, matchCount: 2);
+        db.Predictions.Add(new Prediction
+        {
+            Id = Guid.NewGuid(),
+            RoundId = partial.Id,
+            RoundMatchId = partial.Matches[0].Id,
+            UserId = user,
+            PredictedHomeScore = 1,
+            PredictedAwayScore = 0,
+            SubmittedAt = DateTime.UtcNow,
+        });
+        db.SaveChanges();
+
+        var rounds = await service.GetAbsenceReviewRoundsAsync(user, Ct);
+
+        Assert.Equal(
+            new[] { lockedAbsent.Id, scoredAbsent.Id, forcedAbsent.Id, excused.Id },
+            rounds.Select(r => r.RoundId));
+        Assert.DoesNotContain(rounds, r => r.RoundId == complete.Id || r.RoundId == stillOpen.Id
+            || r.RoundId == cancelled.Id || r.RoundId == partial.Id);
+
+        var locked = rounds.Single(r => r.RoundId == lockedAbsent.Id);
+        Assert.True(locked.IsAbsent);
+        Assert.False(locked.HasOverride);
+        Assert.False(locked.RequiresRecalculation);
+
+        var scored = rounds.Single(r => r.RoundId == scoredAbsent.Id);
+        Assert.True(scored.IsAbsent);
+        Assert.True(scored.RequiresRecalculation);
+
+        var forced = rounds.Single(r => r.RoundId == forcedAbsent.Id);
+        Assert.True(forced.IsAbsent);
+        Assert.True(forced.HasOverride);
+        Assert.Equal(forced.MatchCount, forced.PredictionCount);
+
+        var present = rounds.Single(r => r.RoundId == excused.Id);
+        Assert.False(present.IsAbsent);
+        Assert.True(present.HasOverride);
+    }
+
+    [Fact]
+    public async Task Review_rounds_expose_the_recorded_ordinal_and_penalty()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var user = CreateParticipant(db);
+
+        var ids = new List<Guid>();
+        foreach (var number in new[] { 1, 2, 3 })
+        {
+            var round = await PublishedRound(db, number);
+            await service.ProcessRoundAbsencesAsync(round.Id, SeedIds.AdminUser, Ct);
+            SetStatus(db, round.Id, RoundStatus.Scored);
+            ids.Add(round.Id);
+        }
+
+        var rounds = await service.GetAbsenceReviewRoundsAsync(user, Ct);
+
+        var first = Assert.Single(rounds, r => r.RoundId == ids[0]);
+        Assert.Equal(1, first.AbsenceNumber);
+        Assert.Equal(0, first.PenaltyPoints);
+        var third = Assert.Single(rounds, r => r.RoundId == ids[2]);
+        Assert.Equal(3, third.AbsenceNumber);
+        Assert.Equal(20, third.PenaltyPoints);
+    }
+
+    [Fact]
+    public async Task Review_rounds_show_no_ordinal_for_a_round_not_yet_scored()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var user = CreateParticipant(db);
+        var locked = await LockedRound(db, 1);
+
+        var only = Assert.Single(await service.GetAbsenceReviewRoundsAsync(user, Ct));
+
+        Assert.Equal(locked.Id, only.RoundId);
+        Assert.Null(only.AbsenceNumber);
+        Assert.Null(only.PenaltyPoints);
+    }
+
+    [Fact]
+    public async Task Staging_a_review_writes_overrides_only_for_rounds_whose_state_changes()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var user = CreateParticipant(db);
+        var kept = await LockedRound(db, 1);
+        var excused = await LockedRound(db, 2);
+
+        var staged = await service.StageAbsenceReviewAsync(
+            user, new[] { Decide(kept.Id, true), Decide(excused.Id, false) },
+            "Ainda não participava.", SeedIds.AdminUser, Ct);
+        await db.SaveChangesAsync(Ct);
+
+        Assert.Equal(new[] { excused.Id }, staged.ChangedRoundIds);
+        Assert.Equal(SeasonId, staged.SeasonId);
+        var stored = Assert.Single(db.AbsenceOverrides.Where(o => o.UserId == user));
+        Assert.Equal(excused.Id, stored.RoundId);
+        Assert.False(stored.IsAbsent);
+        Assert.Equal("Ainda não participava.", stored.Justification);
+        Assert.Single(db.AuditLogs.Where(a => a.Action == "AbsenceOverride"));
+    }
+
+    [Fact]
+    public async Task Staging_a_review_flags_recalculation_only_when_a_scored_round_changes()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var user = CreateParticipant(db);
+        var locked = await LockedRound(db, 1);
+        var scored = await LockedRound(db, 2);
+        SetStatus(db, scored.Id, RoundStatus.Scored);
+
+        var lockedOnly = await service.StageAbsenceReviewAsync(
+            user, new[] { Decide(locked.Id, false) }, "Ainda não participava.", SeedIds.AdminUser, Ct);
+        await db.SaveChangesAsync(Ct);
+        var scoredToo = await service.StageAbsenceReviewAsync(
+            user, new[] { Decide(scored.Id, false) }, "Ainda não participava.", SeedIds.AdminUser, Ct);
+
+        // A Locked round's override lands on its own at scoring time; a Scored one needs the replay.
+        Assert.False(lockedOnly.RequiresRecalculation);
+        Assert.True(scoredToo.RequiresRecalculation);
+    }
+
+    [Fact]
+    public async Task Staging_a_review_re_marks_an_excused_round_absent()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var user = CreateParticipant(db);
+        var round = await LockedRound(db, 1);
+        await Override(service, round.Id, user, isAbsent: false);
+
+        var staged = await service.StageAbsenceReviewAsync(
+            user, new[] { Decide(round.Id, true) }, "Abono concedido por engano.", SeedIds.AdminUser, Ct);
+        await db.SaveChangesAsync(Ct);
+
+        Assert.Equal(new[] { round.Id }, staged.ChangedRoundIds);
+        var stored = Assert.Single(db.AbsenceOverrides.Where(o => o.RoundId == round.Id && o.UserId == user));
+        Assert.True(stored.IsAbsent);
+        Assert.Equal("Abono concedido por engano.", stored.Justification);
+    }
+
+    [Fact]
+    public async Task Staging_a_review_with_no_changes_stages_nothing()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var user = CreateParticipant(db);
+        var absent = await LockedRound(db, 1);
+        var excused = await LockedRound(db, 2);
+        await Override(service, excused.Id, user, isAbsent: false);
+
+        // Every decision matches today's state, override included.
+        var staged = await service.StageAbsenceReviewAsync(
+            user, new[] { Decide(absent.Id, true), Decide(excused.Id, false) },
+            "Conferido.", SeedIds.AdminUser, Ct);
+        await db.SaveChangesAsync(Ct);
+
+        Assert.Empty(staged.ChangedRoundIds);
+        Assert.False(staged.RequiresRecalculation);
+        Assert.Single(db.AbsenceOverrides);
+        Assert.Single(db.AuditLogs.Where(a => a.Action == "AbsenceOverride"));
+    }
+
+    [Fact]
+    public async Task Staging_a_review_rejects_a_round_outside_the_review_set()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var user = CreateParticipant(db);
+        var stillOpen = await PublishedRound(db, 1);
+        var complete = await PublishedRound(db, 2);
+        await Predict(db, complete, user);
+        SetStatus(db, complete.Id, RoundStatus.Locked);
+
+        await Assert.ThrowsAsync<BusinessRuleException>(() => service.StageAbsenceReviewAsync(
+            user, new[] { Decide(stillOpen.Id, false) }, "Ainda não participava.", SeedIds.AdminUser, Ct));
+        await Assert.ThrowsAsync<BusinessRuleException>(() => service.StageAbsenceReviewAsync(
+            user, new[] { Decide(complete.Id, false) }, "Ainda não participava.", SeedIds.AdminUser, Ct));
+
+        Assert.Empty(db.AbsenceOverrides);
+    }
+
+    [Fact]
+    public async Task Staging_a_review_requires_a_justification()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var user = CreateParticipant(db);
+        var round = await LockedRound(db, 1);
+
+        await Assert.ThrowsAsync<BusinessRuleException>(() => service.StageAbsenceReviewAsync(
+            user, new[] { Decide(round.Id, false) }, "  ", SeedIds.AdminUser, Ct));
+    }
+
+    [Fact]
+    public async Task Review_rounds_do_not_leak_another_groups_rounds()
+    {
+        using var db = CreateContext();
+        var user = CreateParticipant(db);
+        await LockedRound(db, 1);
+
+        var otherGroup = Guid.NewGuid();
+        var foreignCurrent = new FakeCurrentGroupService(otherGroup);
+        var foreign = new AbsenceService(
+            db, new AuditService(db), foreignCurrent, TestServices.ScoringConfig(db, foreignCurrent));
+
+        // The participant is not an approved member of the other group at all.
+        await Assert.ThrowsAsync<NotFoundException>(() => foreign.GetAbsenceReviewRoundsAsync(user, Ct));
+    }
 }
 

@@ -271,8 +271,9 @@ overall standings update.
 
 - **Rounds already scored keep the absences the old rule recorded.** The new definition applies from
   the next scoring pass on. Revising them means `recalculate`, which also resets eliminations and
-  re-scores the whole season — and lands on the §7a.1 bug. Worth deciding as its own change, with
-  the numbers in hand.
+  re-scores the whole season (faithfully, now that §7a.1 is fixed). Worth deciding as its own
+  change, with the numbers in hand — *Admin → Participantes → Revisar ausências* does it per
+  participant and runs the recalculation itself.
 - **An override can be flipped but never removed.** `ApplyOverrideAsync` upserts and there is no
   `DELETE`, so from the first click a participant stays on a manual decision for that round rather
   than returning to the automatic rule. A `DELETE /absences/override` would close it.
@@ -424,28 +425,31 @@ the real API and asserts the result. Phases: `all | seed | score | verify | rese
   `PredictionScores`, `RoundParticipantResults`, `Absences`, `Standings` and `GroupUsers.IsEliminated`
   come exclusively from `POST /rounds/{id}/score`, driven in ascending order by
   `scripts/rehearsal/score-season.ps1` — the Flávio rule reads live standings, so order is load-bearing.
-- **Re-scoring:** use `phase: reset-scoring`, never `POST /seasons/{id}/recalculate` — see §7a.
+- **Re-scoring:** use `phase: reset-scoring`; `POST /seasons/{id}/recalculate` is faithful too since
+  the §7a fix (it rebuilds the standings round by round), but the reset phase keeps the rehearsal
+  driving every score call itself.
 - `SEED_DRY_RUN=true` (the `dry_run` input) runs the whole seed in a transaction and rolls it back.
 
 ## 7a. Known scoring bugs found while building the rehearsal tooling
 
-1. **`RecalculateSeasonAsync` is not idempotent for `PalpitaoEngland`.**
-   `RoundScoringService.RecalculateSeasonCoreAsync` deletes `PredictionScores` /
-   `RoundParticipantResults` / `Absences` but **never deletes `Standings`**, then re-scores with
-   `updateStandings: false`. `FlavioRuleService.GetLeadersBeforeRoundAsync` therefore reads the
-   previous run's *end-of-season* standings for every round ≥ 16, penalising last run's champion
-   instead of the leader at that point. README §16 currently claims it is idempotent.
-   Same root cause makes re-scoring a single middle round unfaithful; `reopen` + re-score is only
-   correct for the highest-numbered scored round.
+1. **`RecalculateSeasonAsync` is not idempotent for `PalpitaoEngland`** — **fixed (September
+   2026)**, when the absence review started triggering the recalculation automatically.
+   `RoundScoringService.RecalculateSeasonCoreAsync` now also deletes `Standings` and re-scores
+   with `updateStandings: true`, so `FlavioRuleService.GetLeadersBeforeRoundAsync` sees the
+   leader *at that point* for every round ≥ 16 instead of the previous run's end-of-season
+   champion (`Recalculating_reads_the_leader_at_each_round_not_the_final_standings`).
+   Still open with the same root cause: re-scoring a **single middle round** reads the current
+   standings, so `reopen` + re-score is only exact for the highest-numbered scored round — use the
+   season recalculation for anything earlier.
 2. **`AdminMatches.remove()` sends no justification** (`admin-matches.ts:446`) while
    `MatchesService.remove()` supports one — deleting a match on a closed round always 422s from the UI.
 
 ## 8. Recommended next steps
 
-1. **Fix `RecalculateSeasonCoreAsync` (§7a.1) before publicising any public link.** It never clears
-   `Standings`, and the Flávio Rule reads that table — a screen that promises to explain every point
-   is exactly what makes the inconsistency visible to the whole group. This is now the highest-value
-   fix on the list, and its priority went up the moment the public link shipped.
+1. ~~**Fix `RecalculateSeasonCoreAsync` (§7a.1) before publicising any public link.**~~ Done
+   (September 2026): the recalculation clears `Standings` and rebuilds them round by round, so the
+   Flávio Rule targets the leader at each round; the public link can no longer expose a replay that
+   disagrees with the original scoring.
 2. **Smoke-test the public link on staging**: turn publishing on for one season in *Admin → Seasons*,
    open `/p/<key>` in a private window (proves it works with no session), and check a `Scored` round
    against `/admin/rounds/:id/audit` — the numbers must match exactly. Then regenerate the key and

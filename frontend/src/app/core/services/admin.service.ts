@@ -6,6 +6,9 @@ import { SKIP_ERROR_TOAST } from '../interceptors/http-context';
 import {
   Absence,
   AbsenceCandidateRound,
+  AbsenceReviewDecision,
+  AbsenceReviewResult,
+  AbsenceReviewRound,
   AuditLog,
   ImportFixturesResponse,
   OcrBatch,
@@ -138,6 +141,23 @@ export class AdminService {
 
   getUserAbsences(userId: string): Observable<Absence[]> {
     return this.http.get<Absence[]>(`${this.base}/users/${userId}/absences`);
+  }
+
+  /** Closed rounds the participant counts absent in (or has an override for): the review dialog. */
+  getAbsenceReviewRounds(userId: string): Observable<AbsenceReviewRound[]> {
+    return this.http.get<AbsenceReviewRound[]>(`${this.base}/users/${userId}/absence-review`);
+  }
+
+  /** One explicit decision per reviewed round; a scored round that changes replays the season. */
+  reviewAbsences(
+    userId: string,
+    justification: string,
+    rounds: AbsenceReviewDecision[],
+  ): Observable<AbsenceReviewResult> {
+    return this.http.post<AbsenceReviewResult>(`${this.base}/users/${userId}/absence-review`, {
+      justification,
+      rounds,
+    });
   }
 
   // --- Absences (round) ---------------------------------------------------
