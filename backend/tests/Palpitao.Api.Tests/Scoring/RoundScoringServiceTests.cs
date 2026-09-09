@@ -21,7 +21,7 @@ using Xunit;
 
 namespace Palpitao.Api.Tests.Scoring;
 
-public class RoundScoringServiceTests
+public partial class RoundScoringServiceTests
 {
     private static readonly Guid SeasonId = Guid.Parse("33333333-3333-3333-3333-333333333301");
     private static readonly Guid Admin = SeedIds.AdminUser;
@@ -432,8 +432,12 @@ public class RoundScoringServiceTests
         var kit = Build(db);
         var leader = CreateParticipant(db, "Líder");
 
-        // Make the participant the standing leader before the round.
-        db.Standings.Add(new Standing { Id = Guid.NewGuid(), SeasonId = SeasonId, UserId = leader, TotalPoints = 100, Position = 1, UpdatedAt = DateTime.UtcNow });
+        // Establish leadership from actual prior results, not the standings cache.
+        var prior = await PublishedRound(kit, 1);
+        await SavePredictions(kit, prior, leader, (2, 1));
+        await kit.Rounds.LockAsync(prior.Id, Admin, Ct);
+        await SetResults(kit, prior, (2, 1));
+        await kit.Scoring.ScoreRoundAsync(prior.Id, Admin, Ct);
 
         var published = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         var firstMatch = published.AddHours(48); // 24h window, deadline = published + 24h

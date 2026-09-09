@@ -41,6 +41,7 @@ import { buildClosingMessage } from '../../shared/utils/closing-message.util';
 import { publicStandingsUrl } from '../../shared/utils/public-link.util';
 import { AdminRoundMessages } from './admin-round-messages';
 import { RoundStepper } from './round-stepper';
+import { AdminFlavioOverrides } from './admin-flavio-overrides';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -57,6 +58,7 @@ import { RoundStepper } from './round-stepper';
     AdminRoundMessages,
     RoundStepper,
     RoundResultsEditor,
+    AdminFlavioOverrides,
   ],
   templateUrl: './admin-round-detail.html',
   styles: [

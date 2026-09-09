@@ -1,0 +1,98 @@
+<section class="card border-0 shadow-sm mb-3" aria-labelledby="flavio-override-title">
+  <div class="card-body">
+    <h2 id="flavio-override-title" class="h5">{{ 'flavioOverride.title' | translate }}</h2>
+    <p class="text-muted small">{{ 'flavioOverride.hint' | translate }}</p>
+    @if (loading()) {
+      <app-skeleton />
+    } @else if (failed()) {
+      <div class="alert alert-danger" role="alert">
+        {{ 'flavioOverride.loadError' | translate }}
+        <button class="btn btn-outline-danger btn-sm" (click)="load()">
+          {{ 'flavioOverride.retry' | translate }}
+        </button>
+      </div>
+    } @else if (data(); as panel) {
+      @if (!panel.applies) {
+        <p class="alert alert-info">{{ 'flavioOverride.notApplicable' | translate }}</p>
+      }
+      <p>
+        {{ 'flavioOverride.deadline' | translate }}:
+        @if (panel.applies && panel.deadlineUtc) {
+          <strong>{{ panel.deadlineUtc | date: 'dd/MM/yyyy HH:mm:ss' : 'UTC' }} UTC</strong>
+        } @else {
+          —
+        }
+      </p>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th scope="col">{{ 'flavioOverride.participant' | translate }}</th>
+              <th scope="col">{{ 'flavioOverride.submitted' | translate }}</th>
+              <th scope="col">{{ 'flavioOverride.points' | translate }}</th>
+              <th scope="col">{{ 'flavioOverride.status' | translate }}</th>
+              <th scope="col">{{ 'flavioOverride.action' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (participant of panel.participants; track participant.userId) {
+              <tr>
+                <th scope="row">
+                  {{ participant.name }}
+                  @if (participant.isTarget) {
+                    <span class="badge text-bg-secondary">{{
+                      'flavioOverride.target' | translate
+                    }}</span>
+                  }
+                </th>
+                <td [attr.data-label]="'flavioOverride.submitted' | translate">
+                  @if (participant.submittedAt) {
+                    {{ participant.submittedAt | date: 'dd/MM/yyyy HH:mm:ss' : 'UTC' }} UTC
+                  } @else {
+                    —
+                  }
+                </td>
+                <td [attr.data-label]="'flavioOverride.points' | translate">
+                  {{ participant.grossPoints ?? '—' }} / {{ participant.finalPoints ?? '—' }}
+                </td>
+                <td [attr.data-label]="'flavioOverride.status' | translate">
+                  {{
+                    (participant.isExempt ? 'flavioOverride.exempted' : 'flavioOverride.automatic')
+                      | translate
+                  }}
+                  @if (participant.flavioRuleApplied) {
+                    <span class="badge text-bg-warning">{{
+                      'flavioOverride.applied' | translate
+                    }}</span>
+                  }
+                  @if (participant.justification) {
+                    <div class="small text-muted text-break">{{ participant.justification }}</div>
+                    <div class="small text-muted">
+                      {{ participant.updatedAt | date: 'dd/MM/yyyy HH:mm:ss' : 'UTC' }} UTC
+                    </div>
+                  }
+                </td>
+                <td>
+                  <button
+                    class="btn btn-outline-primary btn-sm"
+                    [disabled]="disabled()"
+                    (click)="change(participant)"
+                  >
+                    {{
+                      (participant.isExempt ? 'flavioOverride.restore' : 'flavioOverride.exempt')
+                        | translate
+                    }}
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5">{{ 'flavioOverride.empty' | translate }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</section>

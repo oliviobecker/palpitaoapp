@@ -145,13 +145,44 @@ public class FlavioRuleServiceTests
         var leader = CreateParticipant(db, "Líder");
         var other = CreateParticipant(db, "Outro");
 
-        db.Standings.Add(new Standing { Id = Guid.NewGuid(), SeasonId = SeasonId, UserId = leader, TotalPoints = 100, Position = 1, UpdatedAt = DateTime.UtcNow });
-        db.Standings.Add(new Standing { Id = Guid.NewGuid(), SeasonId = SeasonId, UserId = other, TotalPoints = 50, Position = 2, UpdatedAt = DateTime.UtcNow });
+        var published = DateTime.UtcNow.AddDays(-3);
+        var prior = InsertPublishedRound(db, 4, published, published.AddHours(48));
+        var current = InsertPublishedRound(db, 5, published, published.AddHours(48));
+        var later = InsertPublishedRound(db, 6, published, published.AddHours(48));
+        foreach (var (round, user, points, penalty) in new[] {
+            (prior, leader, 100, 20), (prior, other, 70, 0),
+            (current, other, 200, 0), (later, other, 300, 0) })
+            db.RoundParticipantResults.Add(new RoundParticipantResult {
+                Id = Guid.NewGuid(), SeasonId = SeasonId, RoundId = round.Id,
+                UserId = user, FinalPoints = points, PenaltyPoints = penalty });
+        db.Standings.Add(new Standing { Id = Guid.NewGuid(), SeasonId = SeasonId,
+            UserId = other, TotalPoints = 570, Position = 1 });
         db.SaveChanges();
 
-        var leaders = await service.GetLeadersBeforeRoundAsync(SeasonId, Ct);
+        var leaders = await service.GetLeadersBeforeRoundAsync(current.Id, Ct);
 
         Assert.Equal(new[] { leader }, leaders);
+
+        // Only net points decide a tie; the current/future results still cannot break it.
+        db.RoundParticipantResults.Single(r => r.RoundId == prior.Id && r.UserId == other).FinalPoints = 80;
+        db.SaveChanges();
+        Assert.Equal(new[] { leader, other }.Order(),
+            (await service.GetLeadersBeforeRoundAsync(current.Id, Ct)).Order());
+        Assert.Empty(await service.GetLeadersBeforeRoundAsync(prior.Id, Ct));
+    }
+
+    [Fact]
+    public async Task Automatic_mode_does_not_force_a_penalty_at_the_deadline()
+    {
+        using var db = CreateContext();
+        var leader = CreateParticipant(db, "Líder");
+        var published = DateTime.UtcNow.AddDays(-3);
+        var round = InsertPublishedRound(db, 5, published, published.AddHours(48));
+        InsertPrediction(db, round, leader, published.AddHours(24));
+        db.FlavioOverrides.Add(new FlavioOverride { Id = Guid.NewGuid(), RoundId = round.Id,
+            UserId = leader, IsExempt = false, Justification = "Restaurado." });
+        db.SaveChanges();
+        Assert.False(await new FlavioRuleService(db).ShouldPenalizeLeaderAsync(round.Id, leader, 5, Ct));
     }
 
     [Fact]

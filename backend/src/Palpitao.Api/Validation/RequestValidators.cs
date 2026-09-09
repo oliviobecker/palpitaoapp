@@ -228,3 +228,13 @@ public class AbsenceReviewRequestValidator : AbstractValidator<AbsenceReviewRequ
             round.RuleFor(d => d.RoundId).NotEmpty().WithMessage("notFound.round"));
     }
 }
+
+public class FlavioOverrideRequestValidator : AbstractValidator<FlavioOverrideRequest>
+{
+    public FlavioOverrideRequestValidator()
+    {
+        RuleFor(x => x.UserId).NotEmpty().WithMessage("validation.participant.required");
+        RuleFor(x => x.Justification).NotEmpty().WithMessage("flavio.justificationRequired")
+            .MaximumLength(500).WithMessage("flavio.justificationRequired");
+    }
+}

@@ -91,33 +91,24 @@ public class RoundService : IRoundService
 
     /// <summary>
     /// Flávio-rule info for the group message: only from the season's configured
-    /// <c>FlavioFromRound</c> on (default 16), with the current standings leader(s) and
+    /// <c>FlavioFromRound</c> on (default 16), with the historical leader(s) and
     /// their special deadline (once published).
     /// </summary>
     private async Task<RoundFlavioDto?> BuildFlavioAsync(Round round, CancellationToken ct)
     {
         var rules = await _config.GetRuleParamsAsync(round.SeasonId, ct);
-        if (round.Number < rules.FlavioFromRound)
-        {
-            return null;
-        }
+        var tournamentType = await _db.Seasons.Where(s => s.Id == round.SeasonId)
+            .Select(s => s.TournamentType).FirstAsync(ct);
+        var applies = tournamentType == TournamentType.FifaWorldCup
+            ? round.Matches.Any(m => TournamentRules.IsWorldCupFlavioPhase(m.Phase))
+            : round.Number >= rules.FlavioFromRound;
+        if (!applies) return null;
 
-        var topPoints = await _db.Standings
-            .Where(s => s.SeasonId == round.SeasonId)
-            .Select(s => (int?)s.TotalPoints)
-            .MaxAsync(ct);
-
-        var leaderNames = new List<string>();
-        if (topPoints is not null)
-        {
-            // Eliminated participants (per-group flag) are not named as leaders.
-            leaderNames = await _db.Standings
-                .Where(s => s.SeasonId == round.SeasonId && s.TotalPoints == topPoints)
-                .Where(s => _db.GroupUsers.Any(gu =>
-                    gu.GroupId == round.GroupId && gu.UserId == s.UserId && !gu.IsEliminated))
-                .Join(_db.Users, s => s.UserId, u => u.Id, (s, u) => u.Name)
-                .ToListAsync(ct);
-        }
+        var targets = tournamentType == TournamentType.FifaWorldCup
+            ? (round.FlavioRuleTargetUserId is Guid target ? new[] { target } : Array.Empty<Guid>())
+            : await FlavioLeaders.GetBeforeRoundAsync(_db, round.Id, ct);
+        var leaderNames = await _db.Users.Where(u => targets.Contains(u.Id))
+            .OrderBy(u => u.Name).Select(u => u.Name).ToListAsync(ct);
 
         var deadline = FlavioRuleService.TryCompute(round);
         return new RoundFlavioDto

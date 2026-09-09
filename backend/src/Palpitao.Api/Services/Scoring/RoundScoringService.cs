@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
@@ -77,7 +78,18 @@ public class RoundScoringService : IRoundScoringService
     }
 
     public Task<RoundResultsDto> ScoreRoundAsync(Guid roundId, Guid actingUserId, CancellationToken ct)
-        => InTransactionAsync(() => ScoreRoundInternalAsync(roundId, actingUserId, updateStandings: true, ct), ct);
+        => InTransactionAsync(async () =>
+        {
+            var groupId = await _current.GetGroupIdAsync(ct);
+            var round = await _db.Rounds.FirstOrDefaultAsync(r => r.Id == roundId && r.GroupId == groupId, ct)
+                ?? throw new NotFoundException("notFound.round");
+            if (round.Status == RoundStatus.Scored)
+            {
+                await RecalculateSeasonCoreAsync(round.SeasonId, actingUserId, ct);
+                return await GetRoundResultsAsync(roundId, ct);
+            }
+            return await ScoreRoundInternalAsync(roundId, actingUserId, updateStandings: true, ct);
+        }, ct);
 
     public Task RecalculateSeasonAsync(Guid seasonId, Guid actingUserId, CancellationToken ct)
         => InTransactionAsync(async () =>
@@ -98,7 +110,7 @@ public class RoundScoringService : IRoundScoringService
             return await action();
         }
 
-        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var result = await action();
         await tx.CommitAsync(ct);
         return result;
@@ -113,6 +125,14 @@ public class RoundScoringService : IRoundScoringService
             throw new NotFoundException("notFound.season");
         }
 
+        // Reopened rounds retain their historical scores. Do not silently erase them.
+        if (await _db.Rounds.AnyAsync(r => r.SeasonId == seasonId
+            && r.Status != RoundStatus.Scored && r.Status != RoundStatus.Cancelled
+            && (_db.RoundParticipantResults.Any(x => x.RoundId == r.Id)
+                || _db.PredictionScores.Any(x => x.RoundId == r.Id)
+                || _db.Absences.Any(x => x.RoundId == r.Id)), ct))
+            throw new BusinessRuleException("scoring.reopenedRoundPending");
+
         var roundIds = await _db.Rounds.Where(r => r.SeasonId == seasonId).Select(r => r.Id).ToListAsync(ct);
 
         // Reset eliminations so they are re-derived from the recomputed absences
@@ -124,11 +144,8 @@ public class RoundScoringService : IRoundScoringService
             gu.IsEliminated = false;
         }
 
-        // Clear previous calculations for the season. The standings go too: the Flávio rule
-        // reads the live standings to find the leader(s) before each round, so a faithful
-        // replay must start from an empty table and rebuild it round by round, exactly as the
-        // season was scored the first time (with a stale table every round >= FlavioFromRound
-        // would target the previous run's end-of-season leader instead).
+        // Clear all derived values before replaying. Flávio targets come from prior-round
+        // net results; standings are rebuilt alongside the chronological absence review.
         _db.PredictionScores.RemoveRange(_db.PredictionScores.Where(p => roundIds.Contains(p.RoundId)));
         _db.RoundParticipantResults.RemoveRange(_db.RoundParticipantResults.Where(r => r.SeasonId == seasonId));
         _db.Absences.RemoveRange(_db.Absences.Where(a => roundIds.Contains(a.RoundId)));
@@ -136,7 +153,7 @@ public class RoundScoringService : IRoundScoringService
         await _db.SaveChangesAsync(ct);
 
         // Re-score the already-finished rounds in order, rebuilding the standings after each
-        // one so the next round's Flávio target is the leader at that point.
+        // one to keep the season's derived values consistent during the replay.
         var roundsToScore = await _db.Rounds
             .Where(r => r.SeasonId == seasonId && r.Status == RoundStatus.Scored)
             .OrderBy(r => r.Number)
@@ -230,7 +247,7 @@ public class RoundScoringService : IRoundScoringService
 
         var absentees = (await _absences.DetectAbsenteesAsync(roundId, ct)).ToHashSet();
 
-        // Flávio targets: England penalizes the live leader(s) before the round;
+        // Flávio targets: England uses net results strictly before this round;
         // the World Cup uses the single target captured at publication.
         var tournamentType = await _db.Seasons
             .Where(s => s.Id == round.SeasonId)
@@ -238,7 +255,7 @@ public class RoundScoringService : IRoundScoringService
             .FirstAsync(ct);
         var flavioTargets = tournamentType == TournamentType.FifaWorldCup
             ? (round.FlavioRuleTargetUserId is Guid wcTarget ? new HashSet<Guid> { wcTarget } : new HashSet<Guid>())
-            : (await _flavio.GetLeadersBeforeRoundAsync(round.SeasonId, ct)).ToHashSet();
+            : (await _flavio.GetLeadersBeforeRoundAsync(round.Id, ct)).ToHashSet();
 
         var predictions = await _db.Predictions
             .Where(p => p.RoundId == roundId)

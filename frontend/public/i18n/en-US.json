@@ -562,7 +562,7 @@
     "confirmCancel": "Are you sure you want to cancel this round?",
     "confirmLock": "Locking closes prediction entry and freezes the matches for this round. Continue?",
     "confirmFinalize": "This will lock the round (if it isn't already) and calculate the final score. Continue?",
-    "confirmRecalculate": "This will recalculate the round score from the current results. Continue?",
+    "confirmRecalculate": "Recalculate all scored rounds in the season in order? Standings and penalties in later rounds may change.",
     "reopen": "Reopen round",
     "confirmReopen": "This reopens the round back to Locked so you can fix results. Scores stay until you calculate again. Continue?",
     "reopened": "Round reopened.",
@@ -928,5 +928,33 @@
   },
   "predictionNotice": {
     "worldCupSignedPrints": "Prediction screenshots must be signed and sent in the official Palpitão World Cup 2026 WhatsApp group."
+  },
+  "flavioOverride": {
+    "title": "Flávio rule",
+    "hint": "The recorded time is when predictions were entered in the app. For predictions received on time through another channel, record an exemption with a justification. Exemptions do not change absences.",
+    "exempt": "Exempt with justification",
+    "restore": "Restore automatic calculation",
+    "deadline": "Special deadline",
+    "participant": "Participant",
+    "submitted": "Recorded time (UTC)",
+    "points": "Gross / final points",
+    "status": "Status",
+    "action": "Action",
+    "target": "Leader subject to the rule",
+    "exempted": "Exempt",
+    "automatic": "Automatic calculation",
+    "applied": "Reduction applied",
+    "empty": "No participants in this round.",
+    "notApplicable": "The rule does not apply to this round under the current settings.",
+    "loadError": "Could not load exemptions.",
+    "retry": "Try again",
+    "justification": "Justification (required, up to 500 characters)",
+    "invalidJustification": "Enter a justification of 1 to 500 characters.",
+    "confirmRecalculate": "Change the Flávio rule for {{name}} in this round? Saving will recalculate all scored rounds in the season in order. Standings and penalties in later rounds may change.",
+    "confirmSave": "Change the Flávio rule for {{name}} in this round only? The change will take effect when the round is scored.",
+    "saveRecalculate": "Save and recalculate",
+    "save": "Save",
+    "recalculated": "Exemption updated and season recalculated.",
+    "saved": "Exemption updated."
   }
 }
