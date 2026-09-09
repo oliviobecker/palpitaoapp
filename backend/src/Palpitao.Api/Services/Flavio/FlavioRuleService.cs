@@ -76,25 +76,8 @@ public class FlavioRuleService : IFlavioRuleService
 
     public int ApplyHalfPenalty(int grossPoints) => (int)Math.Floor(grossPoints / 2.0);
 
-    public async Task<IReadOnlyList<Guid>> GetLeadersBeforeRoundAsync(Guid seasonId, CancellationToken ct)
-    {
-        var standings = await _db.Standings
-            .Where(s => s.SeasonId == seasonId)
-            .ToListAsync(ct);
-
-        if (standings.Count == 0)
-        {
-            return Array.Empty<Guid>();
-        }
-
-        var topPoints = standings.Max(s => s.TotalPoints);
-
-        // All participants tied at the top are leaders.
-        return standings
-            .Where(s => s.TotalPoints == topPoints)
-            .Select(s => s.UserId)
-            .ToList();
-    }
+    public Task<IReadOnlyList<Guid>> GetLeadersBeforeRoundAsync(Guid roundId, CancellationToken ct)
+        => FlavioLeaders.GetBeforeRoundAsync(_db, roundId, ct);
 
     public async Task<bool> ShouldPenalizeLeaderAsync(
         Guid roundId, Guid leaderUserId, int firstApplicableRound, CancellationToken ct)
@@ -113,6 +96,10 @@ public class FlavioRuleService : IFlavioRuleService
         {
             return false;
         }
+
+        if (await _db.FlavioOverrides.AnyAsync(o => o.RoundId == roundId
+            && o.UserId == leaderUserId && o.IsExempt, ct))
+            return false;
 
         var predictions = await _db.Predictions
             .Where(p => p.RoundId == roundId && p.UserId == leaderUserId)

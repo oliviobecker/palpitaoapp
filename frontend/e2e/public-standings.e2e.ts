@@ -280,6 +280,6 @@ test.describe('Public standings link', () => {
     await page.goto(`/p/${KEY}?rodada=99`);
 
     // Previously this fell back to the newest round with no explanation at all.
-    await expect(page.getByRole('status')).toContainText('99');
+    await expect(page.getByRole('status').filter({ hasText: '99' })).toContainText('99');
   });
 });

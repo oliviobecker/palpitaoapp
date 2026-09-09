@@ -198,6 +198,19 @@
         </div>
       }
 
+      @if (
+        r.status === RoundStatus.Published ||
+        r.status === RoundStatus.Locked ||
+        r.status === RoundStatus.Scored
+      ) {
+        <app-admin-flavio-overrides
+          [round]="r"
+          [disabled]="finalizing()"
+          (busyChange)="finalizing.set($event)"
+          (saved)="load()"
+        />
+      }
+
       <!-- Cancel: secondary, destructive -->
       @if (r.status !== RoundStatus.Scored && r.status !== RoundStatus.Cancelled) {
         <div class="d-grid mt-3">

@@ -286,6 +286,9 @@ public static class DomainMessages
                 "This phase is not allowed for this season's tournament type."),
 
             // Flávio rule.
+            ["flavio.justificationRequired"] = ("Informe uma justificativa de 1 a 500 caracteres.", "Enter a justification of 1 to 500 characters."),
+            ["flavio.overrideRoundStatus"] = ("A dispensa só pode ser alterada em rodadas publicadas, bloqueadas ou pontuadas.", "Exemptions can only be changed on published, locked or scored rounds."),
+            ["scoring.reopenedRoundPending"] = ("Finalize as rodadas reabertas antes de recalcular a temporada. A pontuação histórica foi preservada.", "Finalize reopened rounds before recalculating the season. Historical scores have been preserved."),
             ["flavio.insufficientData"] = ("Rodada sem dados suficientes para a Regra Flávio.", "Round without enough data for the Flávio rule."),
 
             // Seasons.

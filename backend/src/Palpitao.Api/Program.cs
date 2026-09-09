@@ -204,6 +204,7 @@ builder.Services.AddScoped<IRoundService, RoundService>();
 builder.Services.AddScoped<IPredictionsService, PredictionsService>();
 builder.Services.AddScoped<IAbsenceService, AbsenceService>();
 builder.Services.AddScoped<IFlavioRuleService, FlavioRuleService>();
+builder.Services.AddScoped<FlavioOverrideService>();
 builder.Services.AddScoped<ISeasonService, SeasonService>();
 builder.Services.AddScoped<IUserAdminService, UserAdminService>();
 builder.Services.AddScoped<IAdminPredictionService, AdminPredictionService>();

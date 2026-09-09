@@ -25,6 +25,27 @@ import {
 } from '../models/models';
 import { Competition, MatchPhase } from '../models/enums';
 
+export interface FlavioParticipant {
+  userId: string;
+  name: string;
+  isTarget: boolean;
+  submittedAt: string | null;
+  grossPoints: number | null;
+  finalPoints: number | null;
+  flavioRuleApplied: boolean;
+  isExempt: boolean;
+  justification: string | null;
+  updatedByUserId: string | null;
+  updatedAt: string | null;
+}
+
+export interface RoundFlavioOverrides {
+  roundId: string;
+  applies: boolean;
+  deadlineUtc: string | null;
+  participants: FlavioParticipant[];
+}
+
 export interface SearchFixturesRequest {
   startDate: string;
   endDate: string;
@@ -93,6 +114,17 @@ export interface AuditFilter {
 
 @Injectable({ providedIn: 'root' })
 export class AdminService {
+  getFlavioOverrides(roundId: string): Observable<RoundFlavioOverrides> {
+    return this.http.get<RoundFlavioOverrides>(`${this.base}/rounds/${roundId}/flavio-overrides`);
+  }
+
+  setFlavioOverride(
+    roundId: string,
+    request: { userId: string; isExempt: boolean; justification: string },
+  ): Observable<void> {
+    return this.http.put<void>(`${this.base}/rounds/${roundId}/flavio-overrides`, request);
+  }
+
   private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiBaseUrl}/admin`;
 

@@ -42,12 +42,12 @@ public interface IFlavioRuleService
     int ApplyHalfPenalty(int grossPoints);
 
     /// <summary>Leader(s) of the season's general standing before the round.</summary>
-    Task<IReadOnlyList<Guid>> GetLeadersBeforeRoundAsync(Guid seasonId, CancellationToken ct);
+    Task<IReadOnlyList<Guid>> GetLeadersBeforeRoundAsync(Guid roundId, CancellationToken ct);
 
     /// <summary>
-    /// True when the leader submitted a complete set of predictions after the
+    /// True when a non-exempt leader submitted predictions after the
     /// special deadline (but before the general lock). A leader who did not
-    /// predict (or predicted incompletely) is handled as a normal absence.
+    /// predict is handled as a normal absence; partial late sets can be penalized.
     /// </summary>
     Task<bool> ShouldPenalizeLeaderAsync(
         Guid roundId, Guid leaderUserId, int firstApplicableRound, CancellationToken ct);

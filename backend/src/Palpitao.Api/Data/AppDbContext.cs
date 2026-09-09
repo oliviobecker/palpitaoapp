@@ -39,6 +39,7 @@ public class AppDbContext : DbContext
     public DbSet<Prediction> Predictions => Set<Prediction>();
     public DbSet<Standing> Standings => Set<Standing>();
     public DbSet<Absence> Absences => Set<Absence>();
+    public DbSet<FlavioOverride> FlavioOverrides => Set<FlavioOverride>();
     public DbSet<AbsenceOverride> AbsenceOverrides => Set<AbsenceOverride>();
     public DbSet<RoundParticipantResult> RoundParticipantResults => Set<RoundParticipantResult>();
     public DbSet<PredictionScore> PredictionScores => Set<PredictionScore>();
@@ -331,6 +332,14 @@ public class AppDbContext : DbContext
                 .WithMany(u => u.Absences)
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<FlavioOverride>(e =>
+        {
+            e.Property(x => x.Justification).HasMaxLength(500).IsRequired();
+            e.HasIndex(x => new { x.RoundId, x.UserId }).IsUnique();
+            e.HasOne(x => x.Round).WithMany().HasForeignKey(x => x.RoundId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<AbsenceOverride>(e =>

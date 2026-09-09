@@ -452,9 +452,27 @@ Incompleteness is deliberately *not* an exemption: now that a partial set is no 
 (§14), letting it skip the halving would make omitting one match strictly better for the leader than
 sending everything late — no halving, no absence, full points.
 
+**External submissions and administrative exemptions.** Manual entry and OCR store the time
+predictions were entered in the app, which can be later than their original WhatsApp submission.
+On **admin → round → Flávio rule**, admins can inspect the special deadline, recorded submission
+time (UTC), historical target, gross/final points and exemption. **Exempt with justification**
+requires 1–500 characters; **Restore automatic calculation** returns to normal rule evaluation.
+The exemption is per participant/round and does not change predictions, timestamps or absences.
+`GET/PUT /api/admin/rounds/{roundId}/flavio-overrides` lists the panel and saves
+`{ userId, isExempt, justification }`; access is restricted to that group's admins. Changes retain
+creator/updater timestamps and append before/after values to the audit trail.
+
+For a **Scored** round, **Save and recalculate** commits the exemption and chronological season
+recalculation atomically. The existing round **Recalculate** button uses the same season replay,
+since restoring points can change the leader and Flávio penalties in later rounds. England targets
+come from the net results of earlier rounds, never the current standings cache; all tied leaders
+are included. World Cup publication targets remain frozen. A reopened round retaining historical
+results must be finalized before another round or the season can be recalculated. Published/Locked
+round exemptions are saved for their next scoring without triggering a replay.
+
 **Activation by tournament type:**
 - **Palpitão England** — from the season's `FlavioFromRound` on (**default 16**, editable in
-  admin → *Regras de pontuação*); the target is the **live leader(s)** before the round.
+  admin → *Regras de pontuação*); the targets are the **leader(s) from prior-round net results**.
 - **FIFA World Cup** — whenever the round contains a **quarter-final-or-later** match; the target is
   the **single leader captured at publication** (`FlavioRuleTargetUserId`), so a mid-round standings
   change can't move it.

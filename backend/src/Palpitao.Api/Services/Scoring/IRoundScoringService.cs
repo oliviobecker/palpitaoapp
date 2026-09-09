@@ -11,7 +11,8 @@ public interface IRoundScoringService
     /// <summary>
     /// Scores a round: validates results, computes per-match points, applies
     /// multipliers, absences and the Flávio rule, saves the per-participant
-    /// results and updates the season standing. Sets the round to Scored.
+    /// results and updates the season standing. Sets the round to Scored. Re-scoring
+    /// a Scored round replays the scored season chronologically.
     /// </summary>
     Task<RoundResultsDto> ScoreRoundAsync(Guid roundId, Guid actingUserId, CancellationToken ct);
 

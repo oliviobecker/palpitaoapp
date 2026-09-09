@@ -562,7 +562,7 @@
     "confirmCancel": "Tem certeza que deseja cancelar esta rodada?",
     "confirmLock": "Travar encerra o envio de palpites e congela as partidas desta rodada. Continuar?",
     "confirmFinalize": "Isto vai travar a rodada (se ainda não estiver) e calcular a pontuação final. Continuar?",
-    "confirmRecalculate": "Isto vai recalcular a pontuação da rodada com os resultados atuais. Continuar?",
+    "confirmRecalculate": "Recalcular todas as rodadas pontuadas da temporada em ordem? A classificação e as penalidades das rodadas seguintes podem mudar.",
     "reopen": "Reabrir rodada",
     "confirmReopen": "Isto reabre a rodada para Travada para você corrigir resultados. As pontuações ficam até você calcular de novo. Continuar?",
     "reopened": "Rodada reaberta.",
@@ -928,5 +928,33 @@
   },
   "predictionNotice": {
     "worldCupSignedPrints": "Os prints com os palpites devem ser assinados e enviados no grupo oficial do Palpitão Copa do Mundo 2026 no WhatsApp."
+  },
+  "flavioOverride": {
+    "title": "Regra Flávio",
+    "hint": "O horário registrado é o do cadastro no sistema. Para palpites recebidos no prazo por outro canal, registre uma dispensa com justificativa. A dispensa não altera faltas.",
+    "exempt": "Dispensar regra com justificativa",
+    "restore": "Restaurar cálculo automático",
+    "deadline": "Prazo especial",
+    "participant": "Participante",
+    "submitted": "Horário registrado (UTC)",
+    "points": "Pontos brutos / finais",
+    "status": "Situação",
+    "action": "Ação",
+    "target": "Líder sujeito à regra",
+    "exempted": "Dispensado",
+    "automatic": "Cálculo automático",
+    "applied": "Redução aplicada",
+    "empty": "Nenhum participante nesta rodada.",
+    "notApplicable": "A regra não se aplica a esta rodada na configuração atual.",
+    "loadError": "Não foi possível carregar as dispensas.",
+    "retry": "Tentar novamente",
+    "justification": "Justificativa (obrigatória, até 500 caracteres)",
+    "invalidJustification": "Informe uma justificativa de 1 a 500 caracteres.",
+    "confirmRecalculate": "Alterar a regra Flávio de {{name}} nesta rodada? Ao salvar, todas as rodadas pontuadas da temporada serão recalculadas em ordem. A classificação e as penalidades das rodadas seguintes podem mudar.",
+    "confirmSave": "Alterar a regra Flávio de {{name}} somente nesta rodada? A alteração será considerada quando a rodada for pontuada.",
+    "saveRecalculate": "Salvar e recalcular",
+    "save": "Salvar",
+    "recalculated": "Dispensa atualizada e temporada recalculada.",
+    "saved": "Dispensa atualizada."
   }
 }
