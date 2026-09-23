@@ -627,6 +627,7 @@
   "adminResults": {
     "title": "Resultados",
     "finished": "Finalizado",
+    "inProgress": "Em andamento",
     "saveResults": "Salvar resultados",
     "saveCount": "Salvar resultados ({{count}})",
     "partialPair": "Preencha os dois placares ou deixe ambos vazios.",

@@ -1,6 +1,6 @@
 import { FormBuilder } from '@angular/forms';
 import { describe, expect, it } from 'vitest';
-import { completePairs, scorePairValidator } from './round-results-editor';
+import { completePairs, pairsToSave, scorePairValidator } from './round-results-editor';
 
 const fb = new FormBuilder();
 
@@ -37,5 +37,21 @@ describe('completePairs', () => {
 
   it('treats empty strings as missing', () => {
     expect(completePairs([{ home: '', away: 1 }])).toEqual([]);
+  });
+});
+
+describe('pairsToSave', () => {
+  it('sends only the complete pairs the admin typed', () => {
+    const values = [
+      { home: 0, away: 0 }, // live score the refresh brought in, untouched -> never sent
+      { home: 2, away: 1 }, // typed -> sent
+      { home: 1, away: 1 }, // final score from the refresh, untouched -> not re-sent
+      { home: 3, away: null }, // typed but half-filled -> not sent
+    ];
+    expect(pairsToSave(values, [false, true, false, true])).toEqual([1]);
+  });
+
+  it('sends a shown score once the admin retypes it', () => {
+    expect(pairsToSave([{ home: 0, away: 1 }], [true])).toEqual([0]);
   });
 });
