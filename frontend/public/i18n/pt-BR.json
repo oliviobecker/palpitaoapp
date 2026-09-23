@@ -758,11 +758,13 @@
     "hasPredictions": "Este participante já possui palpites.",
     "loadingPredictions": "Carregando palpites...",
     "prefilledNote": "Palpites carregados — salvar irá sobrescrever os existentes.",
+    "partialNote": "{{count}} jogo(s) sem palpite — preencha antes de salvar.",
     "overwrite": "Substituir palpites existentes",
     "justification": "Justificativa",
     "eliminatedJustificationHint": "Participante eliminado: para registrar, informe uma justificativa.",
     "save": "Salvar palpites",
     "saved": "Palpites salvos!",
+    "missingScores": "Preencha todos os placares — faltam {{count}}.",
     "selectParticipantError": "Selecione um participante."
   },
   "adminEntry": {

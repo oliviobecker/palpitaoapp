@@ -758,11 +758,13 @@
     "hasPredictions": "This participant already has predictions.",
     "loadingPredictions": "Loading predictions...",
     "prefilledNote": "Predictions loaded — saving will overwrite the existing ones.",
+    "partialNote": "{{count}} match(es) without a prediction — fill them in before saving.",
     "overwrite": "Overwrite existing predictions",
     "justification": "Justification",
     "eliminatedJustificationHint": "Eliminated participant: enter a justification to register.",
     "save": "Save predictions",
     "saved": "Predictions saved!",
+    "missingScores": "Fill in every score — {{count}} missing.",
     "selectParticipantError": "Select a participant."
   },
   "adminEntry": {

@@ -510,6 +510,9 @@ after each one so the Flávio Rule targets the leader **at that point** — **id
 In a round (admin → **Round detail → Enter predictions**, route
 `/admin/rounds/:id/manual-predictions`) the admin picks a participant, fills in the score of
 **all** matches and saves. Endpoint: `POST /api/admin/rounds/{roundId}/predictions/manual`.
+A match the participant has no prediction for (a first entry, or a line the OCR import missed)
+starts **empty** and must be typed — saving is refused while any score is empty, so the screen
+never saves a 0x0 the admin did not enter.
 
 - **The admin ignores the deadline.** The board often only gets the WhatsApp screenshots in after
   the round's deadline, and nothing closes a round on its own, so admin entry follows the
