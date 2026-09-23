@@ -20,6 +20,7 @@ import {
 } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
+import { MatchStatus } from '../../../core/models/enums';
 import { RoundMatch } from '../../../core/models/models';
 import { ToastService } from '../../../core/notifications/toast.service';
 import { MatchesService } from '../../../core/services/matches.service';
@@ -34,11 +35,23 @@ export function scorePairValidator(group: AbstractControl): ValidationErrors | n
   return filled === 1 ? { partialPair: true } : null;
 }
 
-/** Indices of the pairs that are complete (both scores present) and can be saved. */
+/** Indices of the pairs that are complete (both scores present). */
 export function completePairs(values: { home: unknown; away: unknown }[]): number[] {
   return values.flatMap((v, i) =>
     v.home !== null && v.home !== '' && v.away !== null && v.away !== '' ? [i] : [],
   );
+}
+
+/**
+ * Indices of the pairs to save: complete, and typed by the admin. A score the form only shows —
+ * what the results refresh brought in, a live one included — is never sent: saving it would turn
+ * it into a manual final result, which the refresh then leaves alone for good.
+ */
+export function pairsToSave(
+  values: { home: unknown; away: unknown }[],
+  edited: readonly boolean[],
+): number[] {
+  return completePairs(values).filter((i) => edited[i]);
 }
 
 /**
@@ -47,8 +60,10 @@ export function completePairs(values: { home: unknown; away: unknown }[]): numbe
  * results page and inline in the round-detail "Locked" step so the score-entry UI
  * (and its save logic) lives in a single place.
  *
- * Unplayed matches stay empty (no 0×0 prefill): only the pairs with both scores
- * filled are saved, so partial result entry never marks a pending match as finished.
+ * Unplayed matches stay empty (no 0×0 prefill), and only the pairs the admin typed are saved
+ * ({@link pairsToSave}): partial entry never marks a pending match as finished, and a live score
+ * the refresh brought in is never saved as the final one (production, round 3: a 0×0 captured four
+ * minutes into Aston Villa x Arsenal).
  */
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -65,6 +80,10 @@ export function completePairs(values: { home: unknown; away: unknown }[]): numbe
                 @if (m.isFinished) {
                   <span class="badge text-bg-success">{{
                     'adminResults.finished' | translate
+                  }}</span>
+                } @else if (m.status === MatchStatus.InProgress) {
+                  <span class="badge text-bg-warning">{{
+                    'adminResults.inProgress' | translate
                   }}</span>
                 }
               </div>
@@ -110,14 +129,14 @@ export function completePairs(values: { home: unknown; away: unknown }[]): numbe
           type="button"
           class="btn btn-soft-primary btn-lg"
           (click)="save()"
-          [disabled]="completeCount() === 0 || form.invalid || saving()"
+          [disabled]="toSaveCount() === 0 || form.invalid || saving()"
         >
           @if (saving()) {
             <span class="spinner-border spinner-border-sm me-2"></span>
           }
           <app-icon name="save" [size]="16" />
-          @if (completeCount() > 0 && completeCount() < matches().length) {
-            {{ 'adminResults.saveCount' | translate: { count: completeCount() } }}
+          @if (toSaveCount() > 0 && toSaveCount() < matches().length) {
+            {{ 'adminResults.saveCount' | translate: { count: toSaveCount() } }}
           } @else {
             {{ 'adminResults.saveResults' | translate }}
           }
@@ -176,6 +195,7 @@ export class RoundResultsEditor {
 
   /** Matches to enter results for (already sorted by the caller). */
   readonly matches = input.required<RoundMatch[]>();
+  protected readonly MatchStatus = MatchStatus;
   /** Emitted after results are saved successfully, so the caller can reload. */
   readonly saved = output<void>();
 
@@ -207,6 +227,18 @@ export class RoundResultsEditor {
 
   completeCount(): number {
     return completePairs(this.form.getRawValue() as { home: unknown; away: unknown }[]).length;
+  }
+
+  /** How many results a save would send: the complete pairs the admin typed. */
+  toSaveCount(): number {
+    return this.indicesToSave().length;
+  }
+
+  private indicesToSave(): number[] {
+    return pairsToSave(
+      this.form.getRawValue() as { home: unknown; away: unknown }[],
+      this.form.controls.map((g) => g.dirty),
+    );
   }
 
   /** Typing a score jumps to the next empty score box, so a round is filled without the mouse. */
@@ -244,7 +276,7 @@ export class RoundResultsEditor {
       this.form.markAllAsTouched();
       return;
     }
-    const indices = completePairs(this.form.getRawValue() as { home: unknown; away: unknown }[]);
+    const indices = this.indicesToSave();
     if (indices.length === 0) {
       return;
     }

@@ -627,6 +627,7 @@
   "adminResults": {
     "title": "Results",
     "finished": "Finished",
+    "inProgress": "In progress",
     "saveResults": "Save results",
     "saveCount": "Save results ({{count}})",
     "partialPair": "Fill in both scores or clear both.",
