@@ -12,10 +12,14 @@ public class ManualPredictionRequest
     /// <summary>When true, replaces existing predictions of the participant.</summary>
     public bool OverwriteExisting { get; set; }
 
-    /// <summary>Required to overwrite, to register for an eliminated participant or after the deadline.</summary>
+    /// <summary>Required, with <see cref="AllowAfterDeadline"/>, to register for an eliminated participant.</summary>
     public string? Justification { get; set; }
 
-    /// <summary>Admin override to register predictions after the round deadline/lock.</summary>
+    /// <summary>
+    /// Admin override to register for an eliminated participant. The name predates the rule
+    /// that lets the admin enter predictions regardless of the deadline until the round is
+    /// finalized (see <c>AdminPredictionWindow</c>); kept so the API contract does not move.
+    /// </summary>
     public bool AllowAfterDeadline { get; set; }
 }
 

@@ -83,6 +83,7 @@ public class PredictionImportService : IPredictionImportService
     {
         var groupId = await _current.GetGroupIdAsync(ct);
         var batch = await _db.OcrImportBatches
+            .Include(b => b.Round)
             .Include(b => b.Candidates)
             .FirstOrDefaultAsync(b => b.Id == batchId && b.Round!.GroupId == groupId, ct)
             ?? throw new NotFoundException("notFound.ocrBatch");
@@ -96,6 +97,10 @@ public class PredictionImportService : IPredictionImportService
         {
             throw new BusinessRuleException("ocr.batchNotReviewable");
         }
+
+        // Checked here too, not only at upload: the round may have been finalized while the
+        // batch sat in review. Editing or discarding candidates stays open — only this writes.
+        AdminPredictionWindow.EnsureOpen(batch.Round!);
 
         var incomplete = batch.Candidates.Any(c =>
             c.UserId is null || c.RoundMatchId is null ||

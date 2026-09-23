@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   DestroyRef,
   OnInit,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -19,6 +20,8 @@ import { RoundsService } from '../../core/services/rounds.service';
 import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
 import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
+import { AdminEntryNotice } from './admin-entry-notice';
+import { adminEntryBlockKey } from './admin-entry.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,6 +31,7 @@ import { Loading } from '../../shared/components/loading/loading';
     FormsModule,
     RouterLink,
     TranslatePipe,
+    AdminEntryNotice,
     CompetitionBadge,
     Icon,
     Loading,
@@ -47,6 +51,7 @@ import { Loading } from '../../shared/components/loading/loading';
     @if (loading()) {
       <app-loading />
     } @else if (round(); as r) {
+      <app-admin-entry-notice [round]="r" />
       <div class="card mb-3">
         <div class="card-body p-4">
           <label for="mp-participant" class="form-label">{{
@@ -123,17 +128,20 @@ import { Loading } from '../../shared/components/loading/loading';
             <input type="checkbox" class="form-check-input" id="ow" [(ngModel)]="overwrite" />
             <label class="form-check-label" for="ow">{{ 'manual.overwrite' | translate }}</label>
           </div>
-          @if (overwrite) {
-            <input
-              class="form-control"
-              [placeholder]="'manual.justification' | translate"
-              [(ngModel)]="justification"
-            />
+          @if (selectedIsEliminated()) {
+            <div>
+              <input
+                class="form-control"
+                [placeholder]="'manual.justification' | translate"
+                [(ngModel)]="justification"
+              />
+              <div class="form-text">{{ 'manual.eliminatedJustificationHint' | translate }}</div>
+            </div>
           }
           <button
             class="btn btn-success btn-lg w-100"
             (click)="save()"
-            [disabled]="saving() || !userId"
+            [disabled]="saving() || !userId || entryBlocked()"
           >
             <app-icon name="save" [size]="16" /> {{ 'manual.save' | translate }}
           </button>
@@ -194,6 +202,10 @@ export class AdminManualPredictions implements OnInit {
   protected readonly existing = signal<AdminParticipantPredictions | null>(null);
   protected readonly loadingExisting = signal(false);
   protected readonly form = this.fb.array<FormGroup>([]);
+  /** Finalized, draft or cancelled: the notice explains why, and saving would only be refused. */
+  protected readonly entryBlocked = computed(
+    () => adminEntryBlockKey(this.round()?.status) !== null,
+  );
 
   protected userId = '';
   protected overwrite = false;
@@ -245,6 +257,14 @@ export class AdminManualPredictions implements OnInit {
 
   group(i: number): FormGroup {
     return this.form.at(i) as FormGroup;
+  }
+
+  /**
+   * An eliminated participant is the one case that still needs the justified override — the
+   * deadline no longer does (entry stays open until the round is finalized).
+   */
+  protected selectedIsEliminated(): boolean {
+    return this.participants().find((p) => p.id === this.userId)?.isEliminated ?? false;
   }
 
   onParticipantChange(userId: string): void {
@@ -302,7 +322,7 @@ export class AdminManualPredictions implements OnInit {
         predictions,
         overwriteExisting: this.overwrite,
         justification: this.justification || undefined,
-        allowAfterDeadline: this.overwrite && !!this.justification,
+        allowAfterDeadline: this.selectedIsEliminated() && !!this.justification,
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

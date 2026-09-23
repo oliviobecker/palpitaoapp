@@ -15,6 +15,10 @@
   </p>
 </div>
 
+@if (round(); as r) {
+  <app-admin-entry-notice [round]="r" />
+}
+
 @if (loading()) {
   <app-loading />
 } @else if (!batch()) {
@@ -78,7 +82,7 @@
       <button
         class="btn btn-primary btn-lg w-100"
         (click)="process()"
-        [disabled]="!file() || processing()"
+        [disabled]="!file() || processing() || entryBlocked()"
       >
         @if (processing()) {
           <span class="spinner-border spinner-border-sm me-2"></span>
@@ -268,7 +272,9 @@
         <button
           class="btn btn-success btn-lg"
           (click)="confirm()"
-          [disabled]="confirming() || hasUnsavedEdits() || b.candidates.length === 0"
+          [disabled]="
+            confirming() || hasUnsavedEdits() || b.candidates.length === 0 || entryBlocked()
+          "
         >
           @if (confirming()) {
             <span class="spinner-border spinner-border-sm me-2"></span>

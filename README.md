@@ -511,11 +511,26 @@ In a round (admin → **Round detail → Enter predictions**, route
 `/admin/rounds/:id/manual-predictions`) the admin picks a participant, fills in the score of
 **all** matches and saves. Endpoint: `POST /api/admin/rounds/{roundId}/predictions/manual`.
 
-- By default it respects the round deadline (only `Published` and before the 1st match).
-- **Override**: `allowAfterDeadline` + justification allows recording after the deadline or for an
-  **eliminated** participant (recorded in the AuditLog).
+- **The admin ignores the deadline.** The board often only gets the WhatsApp screenshots in after
+  the round's deadline, and nothing closes a round on its own, so admin entry follows the
+  **status** alone (`Common/AdminPredictionWindow`, shared with the OCR import in §19):
+
+  | Round status | Admin entry (manual and OCR) |
+  |---|---|
+  | `Published`, `Locked` | open — before or after the deadline, no override needed |
+  | `Scored` (**Finalize round**) | refused (`adminPrediction.roundScored`): **reopen** the round (back to `Locked`, scores kept), enter, then **Finalize** again, which re-scores it |
+  | `Draft` / `Cancelled` | refused (`adminPrediction.roundNotPublished` / `roundCancelled`) |
+
+  Participants still close at the deadline, one minute before the first kickoff (§1). The manual and OCR screens show the reason when
+  entry is refused, with a link back to the round.
+- **Override**: `allowAfterDeadline` + justification is now only needed for an **eliminated**
+  participant (recorded in the AuditLog). The field keeps its old name so the API contract does not
+  move; the screen offers the justification when the selected participant is eliminated.
 - If predictions already exist, `overwriteExisting = true` is required (confirmation).
 - Predictions are marked with **`Source = AdminManual`** and `CreatedBy/UpdatedBy`.
+- **Flávio Rule**: what the admin enters is stamped with the time it is entered (§15). Once a
+  leader's special deadline has passed, the manual and OCR screens say so and point at the round's
+  **Flávio rule** panel, where a prediction that arrived on time over WhatsApp can be exempted.
 
 ## 19. OCR import (Tesseract)
 
@@ -532,6 +547,12 @@ Endpoints: `POST /api/admin/rounds/{id}/predictions/import-image` (per-admin rat
 `DELETE .../candidates/{candidateId}` (discard a noise candidate),
 `POST .../confirm`, `POST .../cancel`. A confirmed batch is immutable (confirm/cancel/edit
 return 4xx), and confirm rejects duplicate participant+match candidates.
+
+The import follows the same **status window as manual entry** (§18): it works before or after the
+deadline on a `Published` or `Locked` round, and is refused on a `Scored`, `Draft` or `Cancelled`
+one. Both the **upload** (before any batch or image is stored) and the **confirm** check it, since a
+round can be finalized while a batch sits in review. Editing, discarding and cancelling candidates
+stay open — they write no predictions — so a batch left from before can still be cleaned up.
 
 ### Install/configure Tesseract
 

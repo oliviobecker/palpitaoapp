@@ -759,10 +759,17 @@
     "prefilledNote": "Predictions loaded — saving will overwrite the existing ones.",
     "overwrite": "Overwrite existing predictions",
     "justification": "Justification",
-    "allowAfterDeadline": "Allow registering after the deadline (override)",
+    "eliminatedJustificationHint": "Eliminated participant: enter a justification to register.",
     "save": "Save predictions",
     "saved": "Predictions saved!",
     "selectParticipantError": "Select a participant."
+  },
+  "adminEntry": {
+    "blockedScored": "This round has already been finalized. To import or adjust predictions, reopen the round and finalize it again afterwards.",
+    "blockedDraft": "This round is still a draft. Publish it before registering predictions.",
+    "blockedCancelled": "This round was cancelled. Predictions can no longer be registered.",
+    "openRound": "Open the round",
+    "flavioLate": "Flávio rule: the special deadline for {{leaders}} ended at {{deadline}}. Anything registered now counts as sent now — if the prediction arrived on time over WhatsApp, exempt it in the round's Flávio rule panel."
   },
   "ocr": {
     "title": "Import predictions from image",

@@ -3,8 +3,8 @@ namespace Palpitao.Api.Common;
 /// <summary>
 /// The general prediction deadline of a round: predictions close one minute before the
 /// first match kicks off. Single source of the lead time — every gate (participant save,
-/// admin manual entry, mirror release) derives from here rather than comparing against
-/// <c>FirstMatchStartsAt</c> directly.
+/// mirror release) derives from here rather than comparing against
+/// <c>FirstMatchStartsAt</c> directly. Admin entry ignores it: see <see cref="AdminPredictionWindow"/>.
 /// </summary>
 public static class PredictionDeadline
 {
