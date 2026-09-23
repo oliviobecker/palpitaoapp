@@ -293,6 +293,25 @@
         }
       </div>
 
+      @if (overwrites().length > 0) {
+        <div class="alert alert-warning d-flex gap-2 py-2 px-3 small mt-3 mb-0" role="alert">
+          <app-icon name="triangle-alert" [size]="16" />
+          <div>
+            <div class="fw-semibold">{{ 'ocr.overwrite.title' | translate }}</div>
+            @for (o of overwrites(); track o.userId) {
+              <div>
+                {{
+                  'ocr.overwrite.line'
+                    | translate
+                      : { name: o.userName, existing: o.existingCount, changed: o.changedCount }
+                }}
+              </div>
+            }
+            <div class="text-muted">{{ 'ocr.overwrite.hint' | translate }}</div>
+          </div>
+        </div>
+      }
+
       <div class="d-grid gap-2 mt-3">
         <button
           class="btn btn-success btn-lg"

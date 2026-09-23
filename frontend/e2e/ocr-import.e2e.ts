@@ -222,6 +222,110 @@ test.describe('Admin OCR import', () => {
     await expect.poll(() => confirmed).toEqual(['b1']);
   });
 
+  test('warns before an import replaces predictions someone already has', async ({ page }) => {
+    // Production, round 8: Vilaça's screenshot was filed under Becker and replaced Becker's own
+    // round — every row complete, nothing flagged, nothing said.
+    await seedAuth(page, 'pt-BR');
+
+    const overwriting = {
+      ...batch,
+      originalFileName: 'Vilaca.jpeg',
+      overwrites: [{ userId: 'p1', userName: 'João Silva', existingCount: 12, changedCount: 10 }],
+    };
+    let confirmed = false;
+    await installApi(page, [
+      { method: 'GET', match: path('/rounds/r1'), respond: () => ({ json: round }) },
+      { method: 'GET', match: path('/admin/users'), respond: () => ({ json: participants }) },
+      {
+        method: 'POST',
+        match: path('/admin/rounds/r1/predictions/import-image'),
+        respond: () => ({ json: overwriting }),
+      },
+      {
+        method: 'POST',
+        match: path('/admin/ocr-imports/b1/confirm'),
+        respond: () => {
+          confirmed = true;
+          return { status: 204 };
+        },
+      },
+    ]);
+
+    await page.goto('/admin/rounds/r1/import-predictions');
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles({ name: 'Vilaca.jpeg', mimeType: 'image/jpeg', buffer: pngBytes });
+    await page.getByRole('button', { name: 'Processar imagem' }).click();
+
+    // Every row is complete, yet the review says whose predictions a confirm would change.
+    await expect(page.getByText('Este print substitui palpites já gravados')).toBeVisible();
+    await expect(
+      page.getByText('João Silva já tem 12 palpite(s) nesta rodada — confirmar muda 10.'),
+    ).toBeVisible();
+
+    // And the confirm asks first.
+    await page.getByRole('button', { name: 'Confirmar importação' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('João Silva');
+    expect(confirmed).toBe(false);
+    await dialog.getByRole('button', { name: 'Confirmar importação' }).click();
+    await expect.poll(() => confirmed).toBe(true);
+  });
+
+  test('never confirms from the list an import that would replace saved predictions', async ({
+    page,
+  }) => {
+    await seedAuth(page, 'pt-BR');
+
+    const summary = (id: string, file: string, userId: string, overwriteCount: number) => ({
+      id,
+      roundId: 'r1',
+      status: 'Processed',
+      originalFileName: file,
+      languageUsed: 'por',
+      hasImage: true,
+      candidateCount: 2,
+      needsReviewCount: 0,
+      overwriteCount,
+      participantUserId: userId,
+      uploadedByUserId: 'u1',
+      createdAt: '2026-01-01T00:00:00Z',
+    });
+    const summaries: unknown[] = [];
+    await installApi(page, [
+      { method: 'GET', match: path('/rounds/r1'), respond: () => ({ json: round }) },
+      { method: 'GET', match: path('/admin/users'), respond: () => ({ json: participants }) },
+      {
+        method: 'GET',
+        match: path('/admin/rounds/r1/ocr-imports'),
+        respond: () => ({ json: summaries }),
+      },
+      {
+        method: 'POST',
+        match: path('/admin/rounds/r1/predictions/import-image'),
+        respond: (req) => {
+          const maria = (req.postData() ?? '').includes('Maria.png');
+          summaries.push(
+            maria ? summary('b2', 'Maria.png', 'p2', 10) : summary('b1', 'Joao.png', 'p1', 0),
+          );
+          return { json: { ...batch, id: maria ? 'b2' : 'b1' } };
+        },
+      },
+    ]);
+
+    await page.goto('/admin/rounds/r1/import-predictions');
+    await page.locator('input[type="file"]').setInputFiles([
+      { name: 'Joao.png', mimeType: 'image/png', buffer: pngBytes },
+      { name: 'Maria.png', mimeType: 'image/png', buffer: pngBytes },
+    ]);
+    await page.getByRole('button', { name: 'Processar 2 imagens' }).click();
+
+    // Maria's rows are all settled, but they would change ten saved predictions: it waits to be
+    // opened, and only João's counts as ready.
+    await expect(page.getByText('substitui 10 palpite(s) já gravado(s)')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Confirmar prontas (1)' })).toBeVisible();
+  });
+
   test('says why a complete row still needs a look, and which lines were left out', async ({
     page,
   }) => {

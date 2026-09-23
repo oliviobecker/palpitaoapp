@@ -310,7 +310,83 @@ public class OcrService : IOcrService
         // would pull the whole blob on a path the review screen hits after every edit.
         var hasImage = await _db.OcrImportImages.AnyAsync(i => i.OcrImportBatchId == batchId, ct);
 
-        return Map(batch, hasImage);
+        var dto = Map(batch, hasImage);
+        if (IsUnderReview(batch.Status))
+        {
+            dto.Overwrites = await OverwritesAsync(batch, ct);
+        }
+        return dto;
+    }
+
+    private static bool IsUnderReview(OcrBatchStatus status)
+        => status is OcrBatchStatus.Processed or OcrBatchStatus.Reviewed;
+
+    /// <summary>A complete candidate row: the only kind a confirm writes.</summary>
+    private sealed record CandidateRow(Guid BatchId, Guid UserId, Guid RoundMatchId, int Home, int Away);
+
+    /// <summary>
+    /// Counts, per batch and participant, the rows that would replace one of the participant's
+    /// predictions in the round with a different score — what a confirm overwrites without asking.
+    /// A row that restates the stored score (the same screenshot imported again) or fills a match
+    /// the participant has no prediction for changes nothing and is not counted.
+    /// </summary>
+    private async Task<(Dictionary<(Guid BatchId, Guid UserId), int> Changed, Dictionary<Guid, int> Existing)>
+        CountOverwritesAsync(Guid roundId, IReadOnlyCollection<CandidateRow> rows, CancellationToken ct)
+    {
+        var userIds = rows.Select(r => r.UserId).Distinct().ToList();
+        if (userIds.Count == 0)
+        {
+            return (new(), new());
+        }
+
+        var stored = await _db.Predictions
+            .AsNoTracking()
+            .Where(p => p.RoundId == roundId && userIds.Contains(p.UserId))
+            .Select(p => new { p.UserId, p.RoundMatchId, p.PredictedHomeScore, p.PredictedAwayScore })
+            .ToListAsync(ct);
+        // (RoundMatchId, UserId) is unique on Predictions.
+        var byKey = stored.ToDictionary(p => (p.UserId, p.RoundMatchId));
+
+        var changed = rows
+            .Where(r => byKey.TryGetValue((r.UserId, r.RoundMatchId), out var p)
+                && (p.PredictedHomeScore != r.Home || p.PredictedAwayScore != r.Away))
+            .GroupBy(r => (r.BatchId, r.UserId))
+            .ToDictionary(g => g.Key, g => g.Count());
+        var existing = stored.GroupBy(p => p.UserId).ToDictionary(g => g.Key, g => g.Count());
+        return (changed, existing);
+    }
+
+    private async Task<List<OcrOverwriteDto>> OverwritesAsync(OcrImportBatch batch, CancellationToken ct)
+    {
+        var rows = batch.Candidates
+            .Where(c => c.UserId is not null && c.RoundMatchId is not null
+                && c.PredictedHomeScore is not null && c.PredictedAwayScore is not null)
+            .Select(c => new CandidateRow(batch.Id, c.UserId!.Value, c.RoundMatchId!.Value,
+                c.PredictedHomeScore!.Value, c.PredictedAwayScore!.Value))
+            .ToList();
+        var (changed, existing) = await CountOverwritesAsync(batch.RoundId, rows, ct);
+        if (changed.Count == 0)
+        {
+            return new List<OcrOverwriteDto>();
+        }
+
+        var userIds = changed.Keys.Select(k => k.UserId).ToList();
+        var names = await _db.Users
+            .AsNoTracking()
+            .Where(u => userIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.Name })
+            .ToDictionaryAsync(u => u.Id, u => u.Name, ct);
+
+        return changed
+            .Select(kv => new OcrOverwriteDto
+            {
+                UserId = kv.Key.UserId,
+                UserName = names.GetValueOrDefault(kv.Key.UserId) ?? string.Empty,
+                ExistingCount = existing.GetValueOrDefault(kv.Key.UserId),
+                ChangedCount = kv.Value,
+            })
+            .OrderBy(o => o.UserName)
+            .ToList();
     }
 
     public async Task<List<OcrBatchSummaryDto>> ListBatchesAsync(Guid roundId, CancellationToken ct)
@@ -355,17 +431,39 @@ public class OcrService : IOcrService
             .Select(u => new { u.Id, u.Name })
             .ToDictionaryAsync(u => u.Id, u => u.Name, ct);
 
-        // Who each batch is filed against, for the pending list the multi-image upload shows. Only
-        // the two columns, and only for batches already scoped to the group above.
+        // Who each batch is filed against, for the pending list the multi-image upload shows, and
+        // what its rows would write. Only these columns, and only for batches already scoped to
+        // the group above.
         var batchIds = batches.Select(b => b.Id).ToList();
-        var owners = await _db.OcrPredictionCandidates
+        var candidates = await _db.OcrPredictionCandidates
             .AsNoTracking()
             .Where(c => batchIds.Contains(c.OcrImportBatchId))
-            .Select(c => new { c.OcrImportBatchId, c.UserId })
+            .Select(c => new
+            {
+                c.OcrImportBatchId,
+                c.UserId,
+                c.RoundMatchId,
+                c.PredictedHomeScore,
+                c.PredictedAwayScore,
+            })
             .ToListAsync(ct);
-        var ownerByBatch = owners
+        var ownerByBatch = candidates
             .GroupBy(o => o.OcrImportBatchId)
             .ToDictionary(g => g.Key, g => g.Select(o => o.UserId).Distinct().ToList());
+
+        // Only a batch still under review can overwrite anything: a confirmed one already did.
+        var underReview = batches.Where(b => IsUnderReview(b.Status)).Select(b => b.Id).ToHashSet();
+        var rows = candidates
+            .Where(c => underReview.Contains(c.OcrImportBatchId)
+                && c.UserId is not null && c.RoundMatchId is not null
+                && c.PredictedHomeScore is not null && c.PredictedAwayScore is not null)
+            .Select(c => new CandidateRow(c.OcrImportBatchId, c.UserId!.Value, c.RoundMatchId!.Value,
+                c.PredictedHomeScore!.Value, c.PredictedAwayScore!.Value))
+            .ToList();
+        var (changed, _) = await CountOverwritesAsync(roundId, rows, ct);
+        var changedByBatch = changed
+            .GroupBy(kv => kv.Key.BatchId)
+            .ToDictionary(g => g.Key, g => g.Sum(kv => kv.Value));
 
         foreach (var batch in batches)
         {
@@ -373,6 +471,7 @@ public class OcrService : IOcrService
             batch.ParticipantUserId = ownerByBatch.TryGetValue(batch.Id, out var users) && users.Count == 1
                 ? users[0]
                 : null;
+            batch.OverwriteCount = changedByBatch.GetValueOrDefault(batch.Id);
         }
 
         return batches;

@@ -95,6 +95,12 @@
                   'ocr.needsReviewCount' | translate: { count: b.needsReviewCount }
                 }}</span>
               }
+              @if ((b.overwriteCount ?? 0) > 0) {
+                ·
+                <span class="text-warning-emphasis">{{
+                  'ocr.pending.overwrites' | translate: { count: b.overwriteCount }
+                }}</span>
+              }
             </small>
           </div>
           <button type="button" class="btn btn-outline-primary btn-sm" (click)="review.emit(b.id)">

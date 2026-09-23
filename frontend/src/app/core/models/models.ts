@@ -416,6 +416,24 @@ export interface OcrBatch {
   ignoredLineCount?: number;
   /** The rounds those lines belong to. Only on the upload response. */
   ignoredRoundNumbers?: number[];
+  /**
+   * Participants whose predictions confirming this batch would change. Only for a batch still
+   * under review; empty when nothing stored would change.
+   */
+  overwrites?: OcrOverwrite[];
+}
+
+/**
+ * A participant who already has predictions in the round, at least one of which a batch row would
+ * replace with a different score — a confirm overwrites without asking and keeps no old values.
+ */
+export interface OcrOverwrite {
+  userId: string;
+  userName: string;
+  /** Predictions the participant already has in the round. */
+  existingCount: number;
+  /** Rows of the batch that would replace one of them with a different score. */
+  changedCount: number;
 }
 
 /** One past import of a round, without the extracted text or the image bytes. */
@@ -433,6 +451,8 @@ export interface OcrBatchSummary {
   needsReviewCount?: number;
   /** The participant every candidate is filed against, or null when they differ or none is set. */
   participantUserId?: string | null;
+  /** Rows that would replace an existing prediction with a different score (batches under review). */
+  overwriteCount?: number;
   uploadedByUserId: string;
   uploadedByName?: string | null;
   createdAt: string;

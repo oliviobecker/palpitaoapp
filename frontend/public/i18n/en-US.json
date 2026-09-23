@@ -847,7 +847,14 @@
       "confirm": "Confirm",
       "confirmReady": "Confirm ready ones ({{count}})",
       "confirmReadyQuestion": "Confirm the {{count}} imports with nothing left to review? The predictions will be saved.",
-      "confirmedMany": "{{count}} imports confirmed."
+      "confirmedMany": "{{count}} imports confirmed.",
+      "overwrites": "replaces {{count}} saved prediction(s)"
+    },
+    "overwrite": {
+      "title": "This screenshot replaces saved predictions",
+      "line": "{{name}} already has {{existing}} prediction(s) in this round — confirming changes {{changed}}.",
+      "hint": "Check that the screenshot really is this person's before confirming: the old predictions are not kept.",
+      "confirmQuestion": "Confirming replaces saved predictions of {{names}}. Continue?"
     }
   },
   "ocrHistory": {

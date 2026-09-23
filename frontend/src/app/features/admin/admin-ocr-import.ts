@@ -226,6 +226,11 @@ export class AdminOcrImport implements OnInit {
   protected readonly needsReviewCount = computed(
     () => this.batch()?.candidates.filter((c) => c.needsReview).length ?? 0,
   );
+  /**
+   * Whose stored predictions a confirm would change, as the server last computed it (refreshed on
+   * every saved edit, and confirm waits for pending edits).
+   */
+  protected readonly overwrites = computed(() => this.batch()?.overwrites ?? []);
   /** True while any candidate edit is unsaved (debounce pending, in flight or failed). */
   protected readonly hasUnsavedEdits = computed(() =>
     Object.values(this.saveStates()).some((s) => s !== 'saved'),
@@ -563,6 +568,7 @@ export class AdminOcrImport implements OnInit {
         ? {
             ...b,
             status: server.status,
+            overwrites: server.overwrites ?? [],
             candidates: b.candidates.map((x) =>
               x.id === candidateId && serverCandidate
                 ? {
@@ -611,6 +617,7 @@ export class AdminOcrImport implements OnInit {
               ? {
                   ...cur,
                   status: updated.status,
+                  overwrites: updated.overwrites ?? [],
                   candidates: cur.candidates.filter((x) => x.id !== c.id),
                 }
               : cur,
@@ -620,10 +627,28 @@ export class AdminOcrImport implements OnInit {
       });
   }
 
-  confirm(): void {
+  async confirm(): Promise<void> {
     const b = this.batch();
     if (!b || this.hasUnsavedEdits()) {
       return;
+    }
+    // A confirm overwrites stored predictions without keeping the old values: make the admin say
+    // so, since a screenshot filed under the wrong person replaces that person's own round.
+    const overwrites = this.overwrites();
+    if (overwrites.length > 0) {
+      const ok = await this.confirmDialog.ask(
+        this.translate.instant('ocr.overwrite.confirmQuestion', {
+          names: overwrites.map((o) => o.userName).join(', '),
+        }),
+        {
+          title: this.translate.instant('ocr.overwrite.title'),
+          confirmText: this.translate.instant('ocr.confirm'),
+          danger: true,
+        },
+      );
+      if (!ok) {
+        return;
+      }
     }
     this.confirming.set(true);
     this.adminApi
