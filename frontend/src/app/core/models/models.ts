@@ -409,6 +409,13 @@ export interface OcrBatch {
   processedAt?: string | null;
   confirmedAt?: string | null;
   candidates: OcrCandidate[];
+  /**
+   * Lines that were another round's fixtures (a screenshot carrying two rounds) and were left
+   * out. Only on the upload response — a reloaded batch does not carry it.
+   */
+  ignoredLineCount?: number;
+  /** The rounds those lines belong to. Only on the upload response. */
+  ignoredRoundNumbers?: number[];
 }
 
 /** One past import of a round, without the extracted text or the image bytes. */
@@ -422,6 +429,10 @@ export interface OcrBatchSummary {
   imageContentType?: string | null;
   imageByteSize?: number | null;
   candidateCount: number;
+  /** Candidates still flagged for review; 0 means the batch can be confirmed as it is. */
+  needsReviewCount?: number;
+  /** The participant every candidate is filed against, or null when they differ or none is set. */
+  participantUserId?: string | null;
   uploadedByUserId: string;
   uploadedByName?: string | null;
   createdAt: string;

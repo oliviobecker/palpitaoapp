@@ -227,13 +227,22 @@ export class AdminService {
   }
 
   // --- OCR import ---------------------------------------------------------
-  importImage(roundId: string, file: File, language: string): Observable<OcrBatch> {
+  importImage(
+    roundId: string,
+    file: File,
+    language: string,
+    options: { silent?: boolean } = {},
+  ): Observable<OcrBatch> {
     const form = new FormData();
     form.append('file', file);
     form.append('language', language);
+    // Silent for the multi-image queue, which shows each file's error on its own row rather than
+    // stacking one toast per failed upload.
+    const context = options.silent ? new HttpContext().set(SKIP_ERROR_TOAST, true) : undefined;
     return this.http.post<OcrBatch>(
       `${this.base}/rounds/${roundId}/predictions/import-image`,
       form,
+      { context },
     );
   }
 

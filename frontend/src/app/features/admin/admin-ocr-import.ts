@@ -21,6 +21,9 @@ import { OcrImageService } from '../../core/services/ocr-image.service';
 import { RoundsService } from '../../core/services/rounds.service';
 import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
+import { isPendingOcrBatch } from '../../shared/utils/ocr-batch.util';
+import { AdminOcrBatches } from './admin-ocr-batches';
+import { OcrUploadQueue } from './ocr-upload-queue';
 
 /** Autosave lifecycle of one candidate card (debounced PUT per candidate). */
 type SaveState = 'pending' | 'saving' | 'saved' | 'error';
@@ -57,7 +60,8 @@ export function validateOcrFile(name: string, size: number): 'invalidFormat' | '
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-ocr-import',
-  imports: [FormsModule, RouterLink, TranslatePipe, Icon, Loading],
+  imports: [FormsModule, RouterLink, TranslatePipe, Icon, Loading, AdminOcrBatches],
+  providers: [OcrUploadQueue],
   templateUrl: './admin-ocr-import.html',
   styles: [
     `
@@ -181,6 +185,7 @@ export class AdminOcrImport implements OnInit {
   private readonly ocrImages = inject(OcrImageService);
   private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly queue = inject(OcrUploadQueue);
 
   protected readonly loading = signal(true);
   protected readonly processing = signal(false);
@@ -188,7 +193,10 @@ export class AdminOcrImport implements OnInit {
   protected readonly round = signal<Round | null>(null);
   protected readonly participants = signal<Participant[]>([]);
   protected readonly batch = signal<OcrBatch | null>(null);
-  protected readonly file = signal<File | null>(null);
+  /** The screenshots picked and not yet sent — one, or a whole round's worth. */
+  protected readonly files = signal<File[]>([]);
+  /** The file when exactly one is picked: that case keeps the preview and opens its review. */
+  protected readonly file = computed(() => (this.files().length === 1 ? this.files()[0] : null));
   /** Object URL of the file just picked, before it is uploaded. */
   protected readonly localPreviewUrl = signal<string | null>(null);
   /** Object URL of the image fetched back from the database (after a reload). */
@@ -268,7 +276,9 @@ export class AdminOcrImport implements OnInit {
 
   onFile(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.setFile(input.files?.[0] ?? null);
+    this.addFiles(Array.from(input.files ?? []));
+    // Cleared so picking the same file again (after removing it) still fires a change.
+    input.value = '';
   }
 
   onDragOver(event: DragEvent): void {
@@ -284,11 +294,11 @@ export class AdminOcrImport implements OnInit {
   onDrop(event: DragEvent): void {
     event.preventDefault();
     this.dragOver.set(false);
-    this.setFile(event.dataTransfer?.files?.[0] ?? null);
+    this.addFiles(Array.from(event.dataTransfer?.files ?? []));
   }
 
-  removeFile(): void {
-    this.setFile(null);
+  removeFile(f: File): void {
+    this.setFiles(this.files().filter((x) => x !== f));
   }
 
   fileSize(f: File): string {
@@ -308,13 +318,23 @@ export class AdminOcrImport implements OnInit {
     });
   }
 
-  private setFile(f: File | null): void {
-    if (f && !this.isValidFile(f)) {
-      return;
+  /** Adds the valid files to the pick, skipping one already there (same name and size). */
+  private addFiles(picked: File[]): void {
+    const current = this.files();
+    const added = picked.filter(
+      (f) => this.isValidFile(f) && !current.some((x) => x.name === f.name && x.size === f.size),
+    );
+    if (added.length > 0) {
+      this.setFiles([...current, ...added]);
     }
+  }
+
+  private setFiles(files: File[]): void {
     this.revokeLocalPreview();
-    this.file.set(f);
-    this.localPreviewUrl.set(f ? URL.createObjectURL(f) : null);
+    this.files.set(files);
+    // Previewed only when there is one: a round's worth of thumbnails is noise, and each file
+    // name already says whose screenshot it is.
+    this.localPreviewUrl.set(files.length === 1 ? URL.createObjectURL(files[0]) : null);
   }
 
   private isValidFile(f: File): boolean {
@@ -334,29 +354,82 @@ export class AdminOcrImport implements OnInit {
   }
 
   process(): void {
-    const f = this.file();
-    if (!f) {
+    const files = this.files();
+    if (files.length === 0) {
       this.toast.error(this.translate.instant('ocr.noFile'));
+      return;
+    }
+    if (files.length > 1) {
+      // A round's worth: each file becomes its own import through the queue, and lands in the
+      // pending list below instead of opening a review per image.
+      this.queue.enqueue(this.roundId, files, this.language);
+      this.setFiles([]);
       return;
     }
     this.processing.set(true);
     this.adminApi
-      .importImage(this.roundId, f, this.language)
+      .importImage(this.roundId, files[0], this.language)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (b) => {
           this.applyBatch(b);
           this.processing.set(false);
+          this.announceIgnoredLines(b);
           // Keep the batch id in the URL so a reload comes back to this review, not the
           // upload form — the image is re-fetched from the database.
-          void this.router.navigate([], {
-            relativeTo: this.route,
-            queryParams: { batch: b.id },
-            replaceUrl: true,
-          });
+          this.showBatchInUrl(b.id);
         },
         error: () => this.processing.set(false),
       });
+  }
+
+  /** Opens one of the pending imports listed under the upload form. */
+  openBatch(batchId: string): void {
+    this.adminApi
+      .getOcrBatch(batchId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (b) => {
+          this.setFiles([]);
+          this.applyBatch(b);
+          this.showBatchInUrl(b.id);
+        },
+      });
+  }
+
+  /** Leaves the review for the upload form and the pending list, without touching the import. */
+  backToList(): void {
+    this.saveTimers.forEach((t) => clearTimeout(t));
+    this.saveTimers.clear();
+    this.batch.set(null);
+    this.saveStates.set({});
+    this.storedPreviewUrl.set(null);
+    this.ocrImages.releaseAll();
+    void this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
+  }
+
+  private showBatchInUrl(batchId: string): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { batch: batchId },
+      replaceUrl: true,
+    });
+  }
+
+  /**
+   * A screenshot holding two rounds (people send "Rodada 6 e 7" in one message) has the other
+   * round's lines left out by the server — said here, so an empty-looking review is not a mystery.
+   */
+  private announceIgnoredLines(b: OcrBatch): void {
+    const count = b.ignoredLineCount ?? 0;
+    if (count > 0) {
+      this.toast.info(
+        this.translate.instant('ocr.ignoredOtherRound', {
+          count,
+          rounds: (b.ignoredRoundNumbers ?? []).join(', '),
+        }),
+      );
+    }
   }
 
   saveStateOf(id: string): SaveState | undefined {
@@ -401,6 +474,15 @@ export class AdminOcrImport implements OnInit {
       parts.push(this.translate.instant('ocr.missingScore'));
     }
     return parts.join(' · ');
+  }
+
+  /**
+   * Why a card needs a look: what is missing, and what the import doubted (a score its readings
+   * disagreed on, a fixture matched approximately, a header naming someone other than the file).
+   * A complete card can be flagged for the second reason alone.
+   */
+  reviewReasons(c: OcrCandidate): string {
+    return [this.missingReasons(c), c.reviewNotes ?? ''].filter((p) => p.length > 0).join(' · ');
   }
 
   /** Debounced autosave: every edit lands on the server without a per-card save button. */
@@ -470,6 +552,8 @@ export class AdminOcrImport implements OnInit {
                     ...x,
                     needsReview: serverCandidate.needsReview,
                     confidence: serverCandidate.confidence,
+                    // Cleared by the server once the score or the fixture was touched.
+                    reviewNotes: serverCandidate.reviewNotes,
                   }
                 : x,
             ),
@@ -531,9 +615,33 @@ export class AdminOcrImport implements OnInit {
       .subscribe({
         next: () => {
           this.toast.success(this.translate.instant('ocr.confirmed'));
-          void this.router.navigate(['/admin/rounds', this.roundId]);
+          this.confirming.set(false);
+          this.afterConfirm(b.id);
         },
         error: () => this.confirming.set(false),
+      });
+  }
+
+  /**
+   * Back to the pending list while the round still has imports waiting — the admin is working
+   * through a whole round's screenshots — and on to the round once it has none.
+   */
+  private afterConfirm(confirmedId: string): void {
+    this.adminApi
+      .listOcrBatches(this.roundId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (batches) => {
+          const waiting = (Array.isArray(batches) ? batches : []).some(
+            (x) => x.id !== confirmedId && isPendingOcrBatch(x.status),
+          );
+          if (waiting) {
+            this.backToList();
+          } else {
+            void this.router.navigate(['/admin/rounds', this.roundId]);
+          }
+        },
+        error: () => void this.router.navigate(['/admin/rounds', this.roundId]),
       });
   }
 

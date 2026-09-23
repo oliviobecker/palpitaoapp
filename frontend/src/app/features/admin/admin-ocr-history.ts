@@ -18,6 +18,7 @@ import { EmptyState } from '../../shared/components/empty-state/empty-state';
 import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Icon } from '../../shared/components/icon/icon';
 import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
+import { isReviewableOcrBatch, ocrBatchStatusClass } from '../../shared/utils/ocr-batch.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -142,30 +143,15 @@ export class AdminOcrHistory implements OnInit {
     return bytes ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : '—';
   }
 
-  /** Maps an OcrBatchStatus to a Bootstrap badge class. */
   statusClass(status: string): string {
-    switch (status) {
-      case 'Confirmed':
-        return 'text-bg-success';
-      case 'Failed':
-        return 'text-bg-danger';
-      case 'Reviewed':
-        return 'text-bg-info';
-      case 'Processed':
-        return 'text-bg-warning';
-      default:
-        return 'text-bg-secondary';
-    }
+    return ocrBatchStatusClass(status);
   }
 
   statusLabel(status: string): string {
     return this.translate.instant(`ocrHistory.status${status}`);
   }
 
-  /** A batch that was never confirmed or cancelled can still be reopened for review. */
   isReviewable(batch: OcrBatchSummary): boolean {
-    return (
-      batch.status !== 'Confirmed' && batch.status !== 'Failed' && batch.status !== 'Cancelled'
-    );
+    return isReviewableOcrBatch(batch.status);
   }
 }

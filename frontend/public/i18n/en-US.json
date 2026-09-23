@@ -770,7 +770,7 @@
     "subtitle": "Upload a photo of the predictions table and let OCR fill in the scores.",
     "imageLabel": "Predictions image",
     "dropClick": "Click to upload",
-    "dropRest": "or drag the image here",
+    "dropRest": "or drag one or more images here",
     "dropHint": "PNG, JPG or WEBP · up to 10 MB",
     "fileReady": "ready to process",
     "tip": "Sharp, well-framed photos without glare greatly improve recognition accuracy. You can review the scores before saving.",
@@ -814,7 +814,34 @@
     "discarded": "Candidate discarded.",
     "confirmCancel": "Cancel this import? The extracted candidates will be lost.",
     "confirmed": "Import confirmed!",
-    "cancelled": "Import cancelled."
+    "cancelled": "Import cancelled.",
+    "fileNameTip": "Name each file after its participant (e.g. Valter.png): the predictions go straight to them.",
+    "processMany": "Process {{count}} images",
+    "removeFile": "Remove file",
+    "backToList": "Back to the list",
+    "ignoredOtherRound": "{{count}} lines from another round's fixtures (round {{rounds}}) were left out.",
+    "queue": {
+      "title": "Sending images",
+      "clear": "clear finished",
+      "queued": "queued",
+      "processing": "reading…",
+      "waiting": "waiting for the server's limit",
+      "done": "{{rows}} lines · {{review}} to review",
+      "ignored": "{{count}} from another round",
+      "ignoredHint": "Lines from another round's fixtures, left out of this import",
+      "error": "failed"
+    },
+    "pending": {
+      "title": "Imports waiting in this round",
+      "empty": "No import waiting for review.",
+      "noParticipant": "participant not identified",
+      "rows": "{{count}} lines",
+      "review": "Review",
+      "confirm": "Confirm",
+      "confirmReady": "Confirm ready ones ({{count}})",
+      "confirmReadyQuestion": "Confirm the {{count}} imports with nothing left to review? The predictions will be saved.",
+      "confirmedMany": "{{count}} imports confirmed."
+    }
   },
   "ocrHistory": {
     "title": "Import history",

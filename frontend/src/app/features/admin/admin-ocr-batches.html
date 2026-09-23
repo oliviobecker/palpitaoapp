@@ -1,0 +1,127 @@
+@if (queue.items().length > 0) {
+  <div class="card mb-3">
+    <div class="card-body vstack gap-2">
+      <div class="d-flex justify-content-between align-items-center gap-2">
+        <h2 class="h6 fw-bold mb-0">{{ 'ocr.queue.title' | translate }}</h2>
+        @if (!queue.busy()) {
+          <button type="button" class="btn btn-link btn-sm p-0" (click)="queue.clearFinished()">
+            {{ 'ocr.queue.clear' | translate }}
+          </button>
+        }
+      </div>
+      @for (item of queue.items(); track item.key) {
+        <div class="d-flex align-items-center gap-2 small">
+          <app-icon name="image" [size]="14" />
+          <span class="text-truncate flex-grow-1 min-w-0">{{ item.file.name }}</span>
+          @switch (item.status) {
+            @case ('queued') {
+              <span class="badge text-bg-secondary">{{ 'ocr.queue.queued' | translate }}</span>
+            }
+            @case ('processing') {
+              <span class="spinner-border spinner-border-sm text-secondary"></span>
+              <span class="text-muted">{{ 'ocr.queue.processing' | translate }}</span>
+            }
+            @case ('waiting') {
+              <span class="badge text-bg-warning">{{ 'ocr.queue.waiting' | translate }}</span>
+            }
+            @case ('done') {
+              <span class="text-muted">
+                {{
+                  participantName(item.participantId) ?? ('ocr.pending.noParticipant' | translate)
+                }}
+              </span>
+              <span
+                class="badge"
+                [class.text-bg-success]="!item.needsReview"
+                [class.text-bg-warning]="item.needsReview"
+              >
+                {{ 'ocr.queue.done' | translate: { rows: item.rows, review: item.needsReview } }}
+              </span>
+              @if (item.ignored) {
+                <span class="badge text-bg-light" [title]="'ocr.queue.ignoredHint' | translate">
+                  {{ 'ocr.queue.ignored' | translate: { count: item.ignored } }}
+                </span>
+              }
+            }
+            @case ('error') {
+              <span class="text-danger text-truncate" style="max-width: 50%">
+                {{ item.error || ('ocr.queue.error' | translate) }}
+              </span>
+            }
+          }
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<div class="card mb-3">
+  <div class="card-body vstack gap-2">
+    <div class="d-flex justify-content-between align-items-center gap-2">
+      <h2 class="h6 fw-bold mb-0">
+        {{ 'ocr.pending.title' | translate }} ({{ pending().length }})
+      </h2>
+      @if (readyCount() > 0) {
+        <button
+          type="button"
+          class="btn btn-success btn-sm"
+          (click)="confirmReady()"
+          [disabled]="working() || queue.busy()"
+        >
+          {{ 'ocr.pending.confirmReady' | translate: { count: readyCount() } }}
+        </button>
+      }
+    </div>
+
+    @if (loading()) {
+      <app-skeleton-list [count]="2" />
+    } @else if (error()) {
+      <app-error-state (retry)="load()" />
+    } @else if (pending().length === 0) {
+      <p class="text-muted small mb-0">{{ 'ocr.pending.empty' | translate }}</p>
+    } @else {
+      @for (b of pending(); track b.id) {
+        <div class="d-flex flex-wrap align-items-center gap-2 border-top pt-2">
+          <div class="flex-grow-1 min-w-0">
+            <div class="fw-semibold text-truncate">{{ b.originalFileName }}</div>
+            <small class="text-muted">
+              {{
+                participantName(b.participantUserId) ?? ('ocr.pending.noParticipant' | translate)
+              }}
+              · {{ 'ocr.pending.rows' | translate: { count: b.candidateCount } }}
+              @if ((b.needsReviewCount ?? 0) > 0) {
+                ·
+                <span class="text-warning-emphasis">{{
+                  'ocr.needsReviewCount' | translate: { count: b.needsReviewCount }
+                }}</span>
+              }
+            </small>
+          </div>
+          <button type="button" class="btn btn-outline-primary btn-sm" (click)="review.emit(b.id)">
+            {{ 'ocr.pending.review' | translate }}
+          </button>
+          @if (isReady(b)) {
+            <button
+              type="button"
+              class="btn btn-success btn-sm"
+              (click)="confirmOne(b)"
+              [disabled]="working()"
+            >
+              {{ 'ocr.pending.confirm' | translate }}
+            </button>
+          }
+          <button
+            type="button"
+            class="btn btn-outline-danger btn-sm"
+            (click)="discard(b)"
+            [disabled]="working()"
+            [attr.aria-label]="'ocr.cancel' | translate"
+            [title]="'ocr.cancel' | translate"
+          >
+            <app-icon name="trash-2" [size]="14" />
+          </button>
+        </div>
+      }
+    }
+  </div>
+</div>
