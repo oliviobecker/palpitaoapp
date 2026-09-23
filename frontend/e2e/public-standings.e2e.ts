@@ -274,6 +274,22 @@ test.describe('Public standings link', () => {
     await expect(page.getByText('Você')).toBeVisible();
   });
 
+  test('the round picker shows the round the link opened, not the newest one', async ({ page }) => {
+    // The picker used to show its first option (the newest round) whatever round was on screen.
+    await installApi(page, [
+      ...publicApi([]),
+      {
+        method: 'GET',
+        match: path(`/public/seasons/${KEY}/rounds/17`),
+        respond: () => ({ json: { ...ROUND, number: 17 } }),
+      },
+    ]);
+
+    await page.goto(`/p/${KEY}?rodada=17`);
+
+    await expect(page.locator('#round-select')).toHaveValue('17');
+  });
+
   test('says so when the link points at a round that is not published', async ({ page }) => {
     await installApi(page, publicApi([]));
 

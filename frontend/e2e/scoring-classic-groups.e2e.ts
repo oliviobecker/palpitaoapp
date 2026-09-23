@@ -112,3 +112,41 @@ test.describe('Classic team groups', () => {
     expect(saved.classicTeams).toContainEqual({ teamId: 't1', competition: 'PremierLeague' });
   });
 });
+
+test.describe('Scoring rules season picker', () => {
+  test('shows the active season it edits even when another season is listed first', async ({
+    page,
+  }) => {
+    // Seasons come newest first, so a test season can head the list. The picker used to show
+    // that first season while the page loaded (and would recalculate) the active one.
+    const testSeason = {
+      ...season,
+      id: 's0',
+      name: 'TESTE - Palpitão England 26/27',
+      startDate: '2026-09-01T00:00:00Z',
+      isActive: false,
+    };
+    const configRequests: string[] = [];
+    await seedAuth(page, 'pt-BR');
+    await installApi(page, [
+      { method: 'GET', match: path('/seasons'), respond: () => ({ json: [testSeason, season] }) },
+      {
+        method: 'GET',
+        match: (p) => p.endsWith('/scoring-config'),
+        respond: (req) => {
+          configRequests.push(new URL(req.url()).pathname);
+          return { json: scoringConfig };
+        },
+      },
+    ]);
+
+    await page.goto('/admin/scoring');
+
+    const picker = page.getByRole('combobox', { name: 'Temporada' });
+    await expect(picker).toHaveValue('s1');
+    await expect(picker.locator('option:checked')).toHaveText(/Palpitão England 2026\/2027/);
+    // ...and it is the season whose rules are on screen.
+    await expect(page.locator('.classic-group')).toHaveCount(2);
+    expect(configRequests).toEqual(['/seasons/s1/scoring-config']);
+  });
+});

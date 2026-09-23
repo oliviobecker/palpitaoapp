@@ -60,15 +60,19 @@ export interface FixtureSelectionState {
 
       <div class="row g-2 mb-3">
         <div class="col-6">
+          <!-- [selected] per option: a [value] on the select lands before the @for options. -->
           <select
             class="form-select form-select-sm"
             [attr.aria-label]="'fixtures.filterByCompetition' | translate"
-            [value]="filterCompetition()"
             (change)="setCompetitionFilter($event)"
           >
-            <option value="">{{ 'fixtures.allCompetitions' | translate }}</option>
+            <option value="" [selected]="!filterCompetition()">
+              {{ 'fixtures.allCompetitions' | translate }}
+            </option>
             @for (c of competitions(); track c) {
-              <option [value]="c">{{ 'fixtures.comp.' + c | translate }}</option>
+              <option [value]="c" [selected]="c === filterCompetition()">
+                {{ 'fixtures.comp.' + c | translate }}
+              </option>
             }
           </select>
         </div>
