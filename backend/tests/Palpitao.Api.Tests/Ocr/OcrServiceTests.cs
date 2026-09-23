@@ -232,7 +232,7 @@ public class OcrServiceTests
         Assert.All(batch.Candidates, c => Assert.Equal(joao, c.UserId));
         // Liverpool x Manchester City is round 2's: left out, and said so.
         Assert.Equal(1, batch.IgnoredLineCount);
-        Assert.Equal([2], batch.IgnoredRoundNumbers);
+        Assert.Equal(["2"], batch.IgnoredRoundLabels);
     }
 
     [Fact]

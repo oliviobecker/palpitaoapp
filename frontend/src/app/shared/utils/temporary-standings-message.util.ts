@@ -1,4 +1,5 @@
 import { TemporaryStandings } from '../../core/models/models';
+import { roundLabel } from './round-name.util';
 
 /**
  * Builds the WhatsApp-style "partial standings" message for a round: the group
@@ -23,7 +24,11 @@ export function buildTemporaryStandingsMessage(data: TemporaryStandings, groupTi
   }
   // A backend that predates the roundNumber field leaves it unset; the group still
   // gets a usable heading instead of "Rodada undefined".
-  lines.push(data.roundNumber ? `Rodada ${data.roundNumber} — parcial` : 'Parcial da rodada');
+  lines.push(
+    data.roundNumber
+      ? `Rodada ${roundLabel(data.roundNumber, data.roundPart)} — parcial`
+      : 'Parcial da rodada',
+  );
 
   if (data.standings.length === 0) {
     lines.push('');

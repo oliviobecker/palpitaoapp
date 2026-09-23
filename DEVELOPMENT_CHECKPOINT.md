@@ -1,23 +1,24 @@
 # DEVELOPMENT_CHECKPOINT
 
-_Last updated: 2026-09-23 (OCR import of rounds 4–9: participant from the file name, approximate matches, doubtful scores flagged, other-round lines left out, multi-image upload — branch `claude/ocr-game-imports-42a474`)._
+_Last updated: 2026-09-23 (rounds played in parts — `10.1` + `10.2` count as one round for absences; regrouping scored rounds renumbers and replays the season — branch `claude/grouped-rounds`)._
 
 ## 0. Status at a glance
 
 | Check | Result |
 |---|---|
 | Backend build (`dotnet build`) | ✅ 0 errors (1 pre-existing xUnit2012 analyzer warning) |
-| Backend tests (`dotnet test`) | ✅ **965** passed, 0 failed (1 skipped: `OcrSamplesTests`, runs only with `OCR_SAMPLES_DIR`) |
+| Backend tests (`dotnet test`) | ✅ **1026** passed, 0 failed (1 skipped: `OcrSamplesTests`, runs only with `OCR_SAMPLES_DIR`) |
 | Frontend build (`ng build` prod) | ✅ success |
 | Frontend lint (`ng lint`) | ✅ 0 errors |
-| Frontend unit tests (Vitest) | ✅ **175** passed (29 files) |
-| Frontend e2e (Playwright) | ✅ **78** passed |
+| Frontend unit tests (Vitest) | ✅ **199** passed (31 files) |
+| Frontend e2e (Playwright) | ✅ **90** passed |
 | Frontend prod budgets | ✅ within budget (no warnings) |
-| i18n parity | ✅ 854 = 854 (`en-US` / `pt-BR`) |
-| OCR on real screenshots (`OcrSamplesTests`) | ✅ **574/575** fixtures over rounds 4–9 (was 557) |
-| Working tree | branch `claude/ocr-game-imports-42a474` with `main` at `b1ee650` (#50) merged in. |
+| i18n parity | ✅ 886 = 886 (`en-US` / `pt-BR`) |
+| OCR on real screenshots (`OcrSamplesTests`) | ✅ **574/575** fixtures over rounds 4–9 (was 557) — not re-run this session |
+| Working tree | branch `claude/grouped-rounds` from `main` at `b67f315` (#52). |
 
-> Measured on branch `claude/ocr-game-imports-42a474` (2026-09-23) after merging `main` at `b1ee650`.
+> Measured on branch `claude/grouped-rounds` (2026-09-23), cut from `main` at `b67f315`. The new
+> migration `AddRoundPart` was only exercised on SQLite (tests): run it on staging before production.
 >
 > ⚠️ **`format:check` fails locally and that is expected.** The working copy is CRLF
 > (`core.autocrlf=true`) while Prettier's default `endOfLine` is `lf`, so ~56 files report as
@@ -65,6 +66,10 @@ overall standings update.
 - **Absences** (progressive penalties, elimination on the 5th) + **Flávio Rule** (England: from the
   season's configured round, live leader; World Cup: quarter-finals+, leader captured at
   publication). Both **configurable per season** in admin → *Regras de pontuação*.
+- **Rounds played in parts** (`10.1` + `10.2`): the lists of a week count as one round for absences,
+  decided by the last part. Grouped when created ("same week") or later from the round detail
+  (join previous / ungroup), scored rounds included — renumbering the rounds after it and replaying
+  the season in the same transaction. The public link addresses parts as `?rodada=10.2`.
 - **Overall standings** (idempotent recompute); **temporary standings** while in play.
 - **Two tournament types** per season (England / FIFA World Cup), fixed after creation; World Cup uses
   seeded national-team world champions for the knockout "classic" multiplier.
@@ -194,8 +199,8 @@ overall standings update.
   import keeps the one that resolves the most fixtures (confidence breaks ties) and flags a score
   the readings disagree on — not a vote: two of three readings once agreed on the wrong one.
 - **Other round**: a line that is one of the season's other fixtures is left out and counted
-  (`OcrBatchDto.IgnoredLineCount`/`IgnoredRoundNumbers`, upload response only); a line that fits no
-  round stays for review.
+  (`OcrBatchDto.IgnoredLineCount`/`IgnoredRoundLabels` — labels, so a part reads "10.1"; upload
+  response only); a line that fits no round stays for review.
 - **Alias learning**: learns only names that resolve to nobody, never the message's own words, and
   the file name instead of OCR text when the file names someone. `UpdateCandidateAsync` keeps a
   score/match doubt flagged when only the participant changes.
@@ -391,6 +396,10 @@ overall standings update.
   scores 0 on what it skipped. An admin override wins over both. 1st–2nd none; 3rd–4th −20 total;
   5th → eliminated (manual reactivate only). Per-group. The penalty, the eliminating ordinal and the
   first counting round are **per-season settings** (`SeasonScoringConfig`); those are the defaults.
+- **Rounds played in parts** (`10.1` + `10.2`, a week with two lists): one round for absences —
+  absent only when absent in every part; the last part not cancelled records it (one rung). The
+  missed part of someone present scores 0. Flávio: every part targets the leader before the round.
+  Standings count rounds (numbers), not parts. README §14.
 - **Flávio Rule:** leader gets a 24h (or 12h) special deadline; missing it = lose half the round,
   an incomplete set included; sending **nothing** = treated as absence; ties apply to all leaders.
   The starting round is a per-season setting (default 16); the World Cup variant goes by phase.
@@ -512,6 +521,19 @@ the real API and asserts the result. Phases: `all | seed | score | verify | rese
 4. Resume the product roadmap (§4): **server-side autosave** of predictions (highest value).
 
 ## 9. Files changed this session (highlights)
+
+**Rounds played in parts — 10.1 / 10.2 (branch `claude/grouped-rounds`).** Backend: `Round.Part`
+(migration `20260923205101_AddRoundPart`, unique `(SeasonId, Number, Part)`); new
+`Services/Rounds/{RoundWeek,RoundWeekPlanner,IRoundWeekService,RoundWeekService}.cs` and
+`Common/RoundNames.cs`; the week rule in `AbsenceService` (`DetectWeekAbsenteesAsync`,
+`ProcessRoundAbsencesAsync`), the guard + out-of-order replay in `RoundScoringService.ScoreRoundAsync`,
+week-aware `StandingsService`, `AdminPredictionService` (`AbsentInPart`), `TemporaryStandingsService`,
+`PublicStandingsService` (`?part=`, fallback), `RoundService` (`RoundDto.Week`, part number locked),
+`RoundsController` (`join-previous-week`, `leave-week`, create/cancel via `RoundWeekService`), OCR
+`IgnoredRoundLabels`. Frontend: `shared/pipes/round-label.pipe.ts`, `roundLabel`/`parseRoundLabel`/
+`joinPreview` in `round-name.util.ts`; labels across dashboard, rounds, admin and the public page;
+join/leave + parts panel on the round detail; "same week" on the round form; every open round on
+both dashboards. Docs: README §11, §14, §15, §16, §24, §28.
 
 **Public standings link (PR #45).** Backend: new `Services/Standings/{I,}PublicStandingsService.cs`,
 `Controllers/PublicStandingsController.cs`, `DTOs/Public/PublicStandingsDtos.cs`,

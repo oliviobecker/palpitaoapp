@@ -298,4 +298,46 @@ test.describe('Public standings link', () => {
     // Previously this fell back to the newest round with no explanation at all.
     await expect(page.getByRole('status').filter({ hasText: '99' })).toContainText('99');
   });
+
+  test('opens a part of a round played in parts from its label', async ({ page }) => {
+    // Two lists in the same week share the number: the link says "19.2", the API gets ?part=2.
+    const parts: Array<string | null> = [];
+    await installApi(page, [
+      {
+        method: 'GET',
+        match: path(`/public/seasons/${KEY}`),
+        respond: () => ({
+          json: {
+            ...SEASON,
+            rounds: [
+              { ...SEASON.rounds[0], number: 19, part: 2 },
+              { ...SEASON.rounds[0], number: 19, part: 1 },
+              ...SEASON.rounds,
+            ],
+          },
+        }),
+      },
+      ...publicApi([]).slice(1),
+      {
+        method: 'GET',
+        match: path(`/public/seasons/${KEY}/rounds/19`),
+        respond: (req) => {
+          const part = new URL(req.url()).searchParams.get('part');
+          parts.push(part);
+          return { json: { ...ROUND, number: 19, part: Number(part ?? 0) } };
+        },
+      },
+    ]);
+
+    await page.goto(`/p/${KEY}?rodada=19.2`);
+
+    await expect(page.locator('#round-select')).toHaveValue('19.2');
+    await expect(page.locator('#round-select option:checked')).toContainText('Rodada 19.2');
+    expect(parts).toEqual(['2']);
+
+    // Picking the other part keeps the label in the URL and asks for that part.
+    await page.locator('#round-select').selectOption('19.1');
+    await expect(page).toHaveURL(/rodada=19\.1/);
+    await expect.poll(() => parts).toEqual(['2', '1']);
+  });
 });

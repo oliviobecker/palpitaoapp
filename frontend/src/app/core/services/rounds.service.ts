@@ -29,6 +29,8 @@ export class RoundsService {
     title?: string | null;
     startDate?: string | null;
     endDate?: string | null;
+    /** Play the new round as the next part of the previous round ("10.2"). */
+    joinPreviousWeek?: boolean;
   }): Observable<Round> {
     return this.http.post<Round>(this.base, request);
   }
@@ -63,6 +65,16 @@ export class RoundsService {
 
   unlock(id: string): Observable<Round> {
     return this.http.post<Round>(`${this.base}/${id}/unlock`, {});
+  }
+
+  /** Plays a standalone round as the next part of the previous round ("11" → "10.2"). */
+  joinPreviousWeek(id: string): Observable<Round> {
+    return this.http.post<Round>(`${this.base}/${id}/join-previous-week`, {});
+  }
+
+  /** Takes the last part out of its round played in parts ("10.2" → "11"). */
+  leaveWeek(id: string): Observable<Round> {
+    return this.http.post<Round>(`${this.base}/${id}/leave-week`, {});
   }
 
   addMatch(roundId: string, request: unknown): Observable<RoundMatch> {

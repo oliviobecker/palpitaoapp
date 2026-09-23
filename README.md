@@ -294,8 +294,9 @@ Jwt__Key=<long random secret, >= 32 bytes>
 **Auth** · `POST /api/auth/login` (returns access + refresh token) · `POST /api/auth/refresh` (rotate) · `POST /api/auth/logout` (revoke) · `POST /api/auth/register` (public sign-up, pending group approval) · `POST /api/auth/create-group` (public) · `GET /api/auth/my-groups` · `GET /api/auth/my-groups/pending` (pending/rejected/deactivated, for the `/pending` screen)
 
 **Rounds / Matches** (mutations: Admin)
-- `GET /api/rounds` · `GET /api/rounds/{id}` · `POST /api/rounds` · `PUT /api/rounds/{id}` (round with `startDate`/`endDate`)
-- `POST /api/rounds/{id}/publish|lock|cancel|score|reopen` · `GET /api/rounds/{id}/results`
+- `GET /api/rounds` · `GET /api/rounds/{id}` · `POST /api/rounds` · `PUT /api/rounds/{id}` (round with `startDate`/`endDate`; `joinPreviousWeek: true` on create plays it as the next part of the previous round — §14)
+- `POST /api/rounds/{id}/publish|lock|cancel|score|reopen|unlock` · `GET /api/rounds/{id}/results`
+- `POST /api/rounds/{id}/join-previous-week` · `POST /api/rounds/{id}/leave-week` (rounds played in parts, "10.1"/"10.2" — §14)
 - `POST /api/rounds/{roundId}/matches` · `PUT /api/matches/{id}` · `DELETE /api/matches/{id}`
 - `POST /api/matches/{id}/result`
 
@@ -435,6 +436,38 @@ transaction** (`POST /api/admin/users/{id}/absence-review`), renumbering everyon
 ladder; a change to a Locked round only takes effect when that round is scored. Typical use: a
 participant who was on the roster before actually joining the pool.
 
+**Rounds played in parts (10.1 / 10.2).** A week with two lists of predictions (a midweek list
+and a weekend one) can be played as **one round in parts**: the rounds share the number and read
+`10.1`, `10.2` — always with a dot, since the OCR reads `x`, `×`, `:` and dashes between two digits
+as a score. For absences the parts are **one round**:
+- A participant is absent only when absent in **every** part (sent nothing, or forced absent by an
+  override). Whoever sent any part is present; the parts they missed score 0, like an incomplete set.
+- The **last part** not cancelled decides. Finalizing it records the absence — one rung, one
+  penalty — for whoever missed every part; earlier parts only zero whoever sent nothing there
+  (`WasAbsent = false`). A part with no matches has no say.
+- The last part cannot be finalized while another part is still Draft/Published
+  (`round.weekPartsOpen`); Locked is enough. Finalizing an earlier part after the last one is
+  already Scored (out of order, or predictions entered on it while Locked) replays the season.
+- Overrides stay per part: excusing any part excuses the round; forcing one part absent does not
+  make the round an absence when another part was sent. The review dialog says so.
+- `AbsenceFromRound` and `FlavioFromRound` compare the round **number**, so the parts are in or
+  out together. The standings count rounds, not parts: **Rounds** played and **Absences** (§16).
+
+The admin groups them on **/admin/rounds/new** ("Same week as round N") or on the round detail
+(**Group with the previous round** / **Ungroup**). Grouping renumbers the rounds after it
+(`11 → 10.2` closes the gap, `12 → 11`, …; ungrouping reopens it), renames the default titles
+("Sétima Rodada") that followed the old number, and — whenever an affected round is Scored —
+**recalculates the season in the same transaction**. It is all or nothing: it fails if a reopened
+round still holds results or a scored round has a match that is not finished. A part's number
+cannot be edited on its own. Links and messages already sent keep the old numbering; `?rodada=10`
+still opens `10.1` (§28).
+
+Regrouping the rounds of a running season: go from the most recent double week back to the
+oldest, so the numbers of the weeks still to do do not move under you. Afterwards, review *Regras
+de pontuação* — `AbsenceFromRound`/`FlavioFromRound` now count rounds, i.e. weeks — and redo any
+manual elimination: like every season recalculation, the replay resets them and uses today's
+roster.
+
 ## 15. Flávio Rule
 
 The standings **leader** gets a special deadline before the round; missing it costs points:
@@ -477,15 +510,23 @@ round exemptions are saved for their next scoring without triggering a replay.
   the **single leader captured at publication** (`FlavioRuleTargetUserId`), so a mid-round standings
   change can't move it.
 
+**Rounds played in parts (§14):** every part of an England round targets the **same** leader(s) —
+the leaders before the round, from the net results of the earlier round numbers — so 10.2's target
+ignores what 10.1 changed. Each part keeps its own special deadline (its own publication). World
+Cup: the target is still captured at each part's publication.
+
 ## 16. Overall standings
 
 Shows position, name, total points, rounds played, absences, penalties and status
 (active/eliminated). `Total = Σ(final points per round) − Σ(penalties)`. Ordering:
-1. Total points (desc) → 2. Fewest absences → 3. Name (alphabetical).
+1. Total points (desc) → 2. Fewest absences → 3. Name (alphabetical). **Rounds** and
+**absences** count round numbers: a round played in parts (§14) is one round — played when the
+participant is not absent in it, one absence when they are.
 
 **Recalculate season** (`POST /api/seasons/{id}/recalculate`) clears the calculations (standings
-included), resets eliminations and re-scores the finished rounds in order, rebuilding the standings
-after each one so the Flávio Rule targets the leader **at that point** — **idempotent**.
+included), resets eliminations and re-scores the finished rounds in order (number, then part),
+rebuilding the standings after each one so the Flávio Rule targets the leader **at that point** —
+**idempotent**.
 
 ## 17. Implemented decisions and ambiguities
 
@@ -849,7 +890,10 @@ alternatives. Switch via `Fixtures:Provider`.
 
 ### How it works
 
-1. In **/admin/rounds/new**, the admin enters name/number, **start date** and **end date**.
+1. In **/admin/rounds/new**, the admin enters name/number, **start date** and **end date**. For the
+   second list of a week, **Same week as round N** creates it as the next part of the previous
+   round (`10.2`, which counts as one round with `10.1` for absences — §14); the preview shows the
+   label it will get, and warns when the previous round is already scored (the season is replayed).
 2. Clicks **"Search matches"** → the backend queries the external provider
    (`POST /api/admin/fixtures/search`) and returns the matches in the period. The request carries
    the target season (`seasonId` while creating a round, `roundId` when editing one), so the search
@@ -1273,8 +1317,13 @@ audit** requiring no account:
 /p/A7C3-9F2E-4BD8                                  → overall standings
 /p?key=A7C39F2E4BD8                                → same, key via query string
 /p/A7C3-9F2E-4BD8?rodada=18                        → that round's breakdown
+/p/A7C3-9F2E-4BD8?rodada=10.2                      → part 2 of a round played in parts (§14)
 /p/A7C3-9F2E-4BD8?rodada=18&participante=<userId>  → with that participant expanded
 ```
+
+A link outlives regrouping: when the exact round is gone, the page (and the API) fall back to the
+lowest visible part of the same number — `?rodada=10` shared before round 10 was split opens
+`10.1`, and `?rodada=10.2` after the parts were merged back opens `10`.
 
 **Publishing is off by default.** Every season has a key, but `Season.PublicStandingsEnabled`
 starts `false` and the link answers **404** until an admin turns it on in *Admin → Seasons*. So
@@ -1332,7 +1381,7 @@ the public page in a new tab before anything is shared.
 |---|---|
 | `GET /api/public/seasons/{key}` | group and season names, visible rounds, base-points ruleset |
 | `GET /api/public/seasons/{key}/standings` | the official standings, each row with its scored-round history |
-| `GET /api/public/seasons/{key}/rounds/{number}` | that round's per-participant breakdown |
+| `GET /api/public/seasons/{key}/rounds/{number}?part=N` | that round's per-participant breakdown (`part` for a part of a round played in parts; omit it for a standalone round) |
 
 An unknown key, a malformed key and an unpublished season all return the **same 404**, so probing
 cannot tell them apart.

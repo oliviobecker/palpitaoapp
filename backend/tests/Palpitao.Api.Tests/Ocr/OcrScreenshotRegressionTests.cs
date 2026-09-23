@@ -372,7 +372,7 @@ public class OcrScreenshotRegressionTests
         Assert.Equal(2, result.Candidates.Count);
         Assert.All(result.Candidates, c => Assert.Equal(Ezau.Id, c.UserId));
         Assert.Equal(2, result.IgnoredLineCount);
-        Assert.Equal([7], result.IgnoredRoundNumbers);
+        Assert.Equal(["7"], result.IgnoredRoundLabels);
     }
 
     [Fact]

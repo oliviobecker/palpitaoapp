@@ -11,9 +11,10 @@ export function formatPublicKey(key: string): string {
 
 /**
  * Absolute URL of a season's public page. Pass `round` to land straight on that round's
- * audit — the whole point of sharing the link right after a round closes.
+ * audit — the whole point of sharing the link right after a round closes. It is the round's
+ * label: 41, or "10.2" for a part of a round played in parts (see `roundLabel`).
  */
-export function publicStandingsUrl(key: string, round?: number | null): string {
+export function publicStandingsUrl(key: string, round?: number | string | null): string {
   const base = `${window.location.origin}/p/${formatPublicKey(key)}`;
   return round == null ? base : `${base}?rodada=${round}`;
 }

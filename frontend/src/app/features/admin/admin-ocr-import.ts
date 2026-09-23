@@ -21,6 +21,7 @@ import { OcrImageService } from '../../core/services/ocr-image.service';
 import { RoundsService } from '../../core/services/rounds.service';
 import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
+import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
 import { isPendingOcrBatch } from '../../shared/utils/ocr-batch.util';
 import { AdminEntryNotice } from './admin-entry-notice';
 import { adminEntryBlockKey } from './admin-entry.util';
@@ -70,6 +71,7 @@ export function validateOcrFile(name: string, size: number): 'invalidFormat' | '
     Icon,
     Loading,
     AdminOcrBatches,
+    RoundLabelPipe,
   ],
   providers: [OcrUploadQueue],
   templateUrl: './admin-ocr-import.html',
@@ -448,7 +450,7 @@ export class AdminOcrImport implements OnInit {
       this.toast.info(
         this.translate.instant('ocr.ignoredOtherRound', {
           count,
-          rounds: (b.ignoredRoundNumbers ?? []).join(', '),
+          rounds: (b.ignoredRoundLabels ?? []).join(', '),
         }),
       );
     }

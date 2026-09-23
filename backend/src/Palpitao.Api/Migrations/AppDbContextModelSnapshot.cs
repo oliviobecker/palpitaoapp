@@ -685,6 +685,9 @@ namespace Palpitao.Api.Migrations
                     b.Property<int>("Number")
                         .HasColumnType("integer");
 
+                    b.Property<int>("Part")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("PublishedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -712,7 +715,7 @@ namespace Palpitao.Api.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.HasIndex("SeasonId", "Number")
+                    b.HasIndex("SeasonId", "Number", "Part")
                         .IsUnique();
 
                     b.ToTable("Rounds");

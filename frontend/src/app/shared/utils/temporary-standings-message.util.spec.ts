@@ -66,6 +66,11 @@ describe('buildTemporaryStandingsMessage', () => {
     expect(text).not.toContain('*');
   });
 
+  it('labels a part of a round played in parts', () => {
+    const text = buildTemporaryStandingsMessage(standings({ roundNumber: 10, roundPart: 2 }));
+    expect(text.startsWith('Rodada 10.2 — parcial')).toBe(true);
+  });
+
   it('falls back to a generic heading when the round number is missing', () => {
     // A backend that predates the roundNumber field.
     const text = buildTemporaryStandingsMessage(standings({ roundNumber: 0 }));

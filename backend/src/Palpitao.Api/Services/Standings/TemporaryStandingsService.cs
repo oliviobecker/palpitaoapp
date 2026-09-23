@@ -6,6 +6,7 @@ using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Absences;
 using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Services.Rounds;
 using Palpitao.Api.Services.Scoring;
 
 namespace Palpitao.Api.Services.Standings;
@@ -57,6 +58,7 @@ public class TemporaryStandingsService : ITemporaryStandingsService
         {
             RoundId = round.Id,
             RoundNumber = round.Number,
+            RoundPart = round.Part,
             IsTemporary = true,
             RoundStatus = round.Status,
             LastUpdatedAt = round.ResultsUpdatedAt
@@ -87,12 +89,17 @@ public class TemporaryStandingsService : ITemporaryStandingsService
         // "Absent" is only true once nobody can submit any more -- before the general lock a
         // participant on zero can still send their predictions. Who counts as absent comes
         // from the absence service itself (overrides win), so this label can never drift
-        // from what scoring will actually do.
-        var predictionsClosed = round.Status is RoundStatus.Locked or RoundStatus.Scored
-            || (round.PredictionDeadlineUtc is { } deadline && DateTime.UtcNow > deadline);
-        var absentees = predictionsClosed
-            ? (await _absences.DetectAbsenteesAsync(round.Id, ct)).ToHashSet()
-            : [];
+        // from what scoring will actually do. For a round played in parts that means every
+        // part closed, and the verdict of the whole round — the one the last part records.
+        IReadOnlySet<Guid> absentees = new HashSet<Guid>();
+        if (RoundWeek.IsClosedForPredictions(round, DateTime.UtcNow))
+        {
+            var week = await _absences.DetectWeekAbsenteesAsync(round.Id, ct);
+            if (week.OtherPartsClosed)
+            {
+                absentees = week.WeekAbsentees;
+            }
+        }
 
         var officialTotals = await _db.Standings
             .Where(s => s.SeasonId == round.SeasonId)

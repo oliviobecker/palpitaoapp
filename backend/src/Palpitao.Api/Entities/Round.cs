@@ -15,6 +15,13 @@ public class Round : IGroupOwned
 
     public int Number { get; set; }
 
+    /// <summary>
+    /// Position inside a round played in parts ("10.1", "10.2"): 0 for a standalone round,
+    /// 1..k for the parts that share <see cref="Number"/>. The parts of a number count as a
+    /// single round for absences — see <c>RoundWeek</c>.
+    /// </summary>
+    public int Part { get; set; }
+
     public string? Title { get; set; }
 
     /// <summary>

@@ -30,6 +30,7 @@ import { Loading } from '../../shared/components/loading/loading';
 import { MatchStatusBadge } from '../../shared/components/match-status-badge/match-status-badge';
 import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
 import { PageHeader } from '../../shared/components/page-header/page-header';
+import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
 import {
   deadlinePassed,
   predictionDeadline,
@@ -58,6 +59,7 @@ import {
     MatchStatusBadge,
     MultiplierBadge,
     PageHeader,
+    RoundLabelPipe,
   ],
   templateUrl: './predictions.html',
   styles: [

@@ -14,11 +14,13 @@
           <div class="d-flex align-items-center gap-3">
             <span class="round-tile">
               <span class="round-tile__label">{{ 'adminRounds.tile' | translate }}</span>
-              <span class="round-tile__num">{{ round.number }}</span>
+              <span class="round-tile__num" [class.round-tile__num--part]="!!round.part">{{
+                round.number | roundLabel: round.part
+              }}</span>
             </span>
             <div class="round-item__body">
               <div class="fw-semibold">
-                {{ 'dashboard.round' | translate }} {{ round.number }}
+                {{ 'dashboard.round' | translate }} {{ round.number | roundLabel: round.part }}
                 @if (round.title) {
                   · {{ round.title }}
                 }

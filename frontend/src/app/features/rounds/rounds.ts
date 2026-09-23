@@ -21,11 +21,13 @@ import { Countdown } from '../../shared/components/countdown/countdown';
 import { Icon } from '../../shared/components/icon/icon';
 import { PageHeader } from '../../shared/components/page-header/page-header';
 import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
+import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
 import {
   deadlinePassed,
   predictionDeadline,
   predictionDeadlineIso,
 } from '../../shared/utils/deadline.util';
+import { compareRounds } from '../../shared/utils/round-name.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,6 +42,7 @@ import {
     PageHeader,
     SkeletonList,
     Icon,
+    RoundLabelPipe,
   ],
   templateUrl: './rounds.html',
 })
@@ -89,7 +92,7 @@ export class Rounds implements OnInit {
   protected readonly visible = computed(() =>
     this.rounds()
       .filter((r) => r.status !== RoundStatus.Draft && r.status !== RoundStatus.Cancelled)
-      .sort((a, b) => b.number - a.number),
+      .sort((a, b) => compareRounds(b, a)),
   );
 
   ngOnInit(): void {

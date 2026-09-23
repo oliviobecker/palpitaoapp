@@ -353,6 +353,20 @@ public class PredictionImportServiceTests
         Assert.Equal(brightonMatch, c.RoundMatchId);
     }
 
+    [Theory]
+    [InlineData("Gilberto, Rodada 10.2", "Gilberto")]
+    [InlineData("PALPITES PL, Rodada 10.2", "PL")]
+    public void A_part_label_in_the_header_is_read_as_the_header_not_a_score(string header, string participant)
+    {
+        // The app prints a round played in parts as "10.2" — with a dot precisely because the
+        // parser reads x, ×, :, - and – between two digits as a score.
+        var parsed = PureService().Parse($"{header}\nArsenal 2x1 Chelsea\nLiverpool 1x1 Everton");
+
+        Assert.Equal(2, parsed.Count);
+        Assert.All(parsed, p => Assert.Equal(participant, p.ParticipantName));
+        Assert.Equal((2, 1), (parsed[0].HomeScore, parsed[0].AwayScore));
+    }
+
     [Fact]
     public void Parser_handles_whatsapp_screenshot_with_flags_and_header()
     {

@@ -11,7 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { catchError, forkJoin, of } from 'rxjs';
+import { Observable, catchError, forkJoin, of } from 'rxjs';
 import { RoundStatus } from '../../core/models/enums';
 import {
   PredictionCoverage,
@@ -36,9 +36,11 @@ import { PageHeader } from '../../shared/components/page-header/page-header';
 import { RoundResultsEditor } from '../../shared/components/round-results-editor/round-results-editor';
 import { RoundStatusBadge } from '../../shared/components/round-status-badge/round-status-badge';
 import { Skeleton } from '../../shared/components/skeleton/skeleton';
+import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
 import { buildRoundMessage } from '../../shared/utils/round-message.util';
 import { buildClosingMessage } from '../../shared/utils/closing-message.util';
 import { publicStandingsUrl } from '../../shared/utils/public-link.util';
+import { roundLabel } from '../../shared/utils/round-name.util';
 import { AdminRoundMessages } from './admin-round-messages';
 import { RoundStepper } from './round-stepper';
 import { AdminFlavioOverrides } from './admin-flavio-overrides';
@@ -59,6 +61,7 @@ import { AdminFlavioOverrides } from './admin-flavio-overrides';
     RoundStepper,
     RoundResultsEditor,
     AdminFlavioOverrides,
+    RoundLabelPipe,
   ],
   templateUrl: './admin-round-detail.html',
   styles: [
@@ -106,6 +109,8 @@ export class AdminRoundDetail implements OnInit {
   protected readonly loading = signal(true);
   protected readonly finalizing = signal(false);
   protected readonly refreshing = signal(false);
+  /** A join/leave is on its way: it may renumber rounds and replay the season. */
+  protected readonly regrouping = signal(false);
   protected readonly refreshSummary = signal<RefreshResultsResponse | null>(null);
   protected readonly round = signal<Round | null>(null);
   /** Sorted matches (stable reference per load) — feeds the inline results editor. */
@@ -129,6 +134,14 @@ export class AdminRoundDetail implements OnInit {
   protected readonly missingResults = computed(
     () => this.matches().filter((m) => m.homeScore == null || m.awayScore == null).length,
   );
+  /**
+   * The last part of a round played in parts decides its absences from what every part received,
+   * so it waits while another part still takes predictions (mirrors the backend guard).
+   */
+  protected readonly finalizeBlockedByPart = computed(() => {
+    const r = this.round();
+    return r?.status === RoundStatus.Locked && !!r.week?.openPartBlocksFinalize;
+  });
 
   protected readonly form = this.fb.nonNullable.group({
     number: [1, [Validators.required, Validators.min(1)]],
@@ -136,8 +149,12 @@ export class AdminRoundDetail implements OnInit {
   });
 
   ngOnInit(): void {
-    this.id = this.route.snapshot.paramMap.get('id') ?? '';
-    this.load();
+    // Parts link to each other on this same route, so follow the id instead of reading it once.
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.id = params.get('id') ?? '';
+      this.refreshSummary.set(null);
+      this.load();
+    });
   }
 
   load(): void {
@@ -154,6 +171,12 @@ export class AdminRoundDetail implements OnInit {
             ),
           );
           this.form.setValue({ number: r.number, title: r.title ?? '' });
+          // A part's number follows its round played in parts: it moves by ungrouping.
+          if (r.part) {
+            this.form.controls.number.disable();
+          } else {
+            this.form.controls.number.enable();
+          }
           this.loading.set(false);
           this.loadClosing(r);
           this.loadCoverage(r);
@@ -212,18 +235,13 @@ export class AdminRoundDetail implements OnInit {
       .subscribe({
         next: ({ results, standings, seasons }) => {
           const season = seasons.find((s) => s.id === round.seasonId);
+          const label = roundLabel(round.number, round.part);
           const link =
             season?.publicStandingsEnabled && season.publicKey
-              ? publicStandingsUrl(season.publicKey, round.number)
+              ? publicStandingsUrl(season.publicKey, label)
               : '';
           this.closing.set(
-            buildClosingMessage(
-              round.number,
-              results,
-              standings,
-              this.group.groupName() ?? '',
-              link,
-            ),
+            buildClosingMessage(label, results, standings, this.group.groupName() ?? '', link),
           );
         },
         error: () => this.closing.set(''),
@@ -266,19 +284,21 @@ export class AdminRoundDetail implements OnInit {
     // Scoring runs only on a locked (or already-scored) round: locking is now an
     // explicit prior step, and results must be entered first (button is gated).
     const recalculating = r.status === RoundStatus.Scored;
-    const ok = await this.confirm.ask(
-      this.translate.instant(
-        recalculating ? 'roundDetail.confirmRecalculate' : 'roundDetail.confirmFinalize',
-      ),
-      {
-        title: this.translate.instant(
-          recalculating ? 'roundDetail.recalculate' : 'roundDetail.finalize',
-        ),
-        confirmText: this.translate.instant(
-          recalculating ? 'roundDetail.recalculate' : 'roundDetail.finalize',
-        ),
-      },
+    let message = this.translate.instant(
+      recalculating ? 'roundDetail.confirmRecalculate' : 'roundDetail.confirmFinalize',
     );
+    // A later part already decided this round's absences: finalizing this one replays them.
+    if (!recalculating && r.week?.laterPartScored) {
+      message += ' ' + this.translate.instant('roundDetail.finalizeReplays');
+    }
+    const ok = await this.confirm.ask(message, {
+      title: this.translate.instant(
+        recalculating ? 'roundDetail.recalculate' : 'roundDetail.finalize',
+      ),
+      confirmText: this.translate.instant(
+        recalculating ? 'roundDetail.recalculate' : 'roundDetail.finalize',
+      ),
+    });
     if (!ok) {
       return;
     }
@@ -296,7 +316,13 @@ export class AdminRoundDetail implements OnInit {
   }
 
   async cancel(r: Round): Promise<void> {
-    const ok = await this.confirm.ask(this.translate.instant('roundDetail.confirmCancel'), {
+    let message = this.translate.instant('roundDetail.confirmCancel');
+    // Another part already scored: the part deciding the absences may change, so the server
+    // replays the season.
+    if (r.week?.parts.some((p) => p.id !== r.id && p.status === RoundStatus.Scored)) {
+      message += ' ' + this.translate.instant('roundDetail.cancelPartRecalc');
+    }
+    const ok = await this.confirm.ask(message, {
       title: this.translate.instant('roundDetail.cancelRound'),
       confirmText: this.translate.instant('roundDetail.cancelRound'),
       danger: true,
@@ -349,7 +375,7 @@ export class AdminRoundDetail implements OnInit {
    * decision for this round rather than back on the automatic rule.
    */
   async toggleAbsence(round: Round, p: PredictionCoverageParticipant): Promise<void> {
-    const markAbsent = !p.willBeAbsent;
+    const markAbsent = !this.absentHere(p);
     const action = markAbsent ? 'roundDetail.markAbsent' : 'roundDetail.markPresent';
     const justification = await this.confirm.askWithInput(
       this.translate.instant(
@@ -390,6 +416,101 @@ export class AdminRoundDetail implements OnInit {
 
   message(round: Round): string {
     return buildRoundMessage(round, this.group.groupName() ?? '', this.scoringConfig());
+  }
+
+  /**
+   * Absent in this round alone — what the present/absent override flips, since the override
+   * belongs to the round. On a part it differs from `willBeAbsent`, the whole round's verdict.
+   */
+  protected absentHere(p: PredictionCoverageParticipant): boolean {
+    return p.absentInPart ?? p.willBeAbsent;
+  }
+
+  /** The part that decides the round's absences: the last one not cancelled. */
+  protected lastPartLabel(r: Round): string {
+    const live = (r.week?.parts ?? []).filter((p) => p.status !== RoundStatus.Cancelled);
+    const last = live[live.length - 1];
+    return last ? roundLabel(last.number, last.part) : '';
+  }
+
+  protected joinTarget(r: Round): string {
+    const move = r.week?.joinPrevious;
+    return move?.targetNumber ? roundLabel(move.targetNumber, move.targetPart) : '';
+  }
+
+  protected leaveTarget(r: Round): string {
+    const move = r.week?.leave;
+    return move?.targetNumber ? roundLabel(move.targetNumber, move.targetPart) : '';
+  }
+
+  /** Two lists in the same week: play this round as the next part of the previous one. */
+  async joinPreviousWeek(r: Round): Promise<void> {
+    const move = r.week?.joinPrevious;
+    if (!move?.allowed) return;
+    const ok = await this.confirmRegroup(
+      'roundDetail.confirmJoinPrevious',
+      'roundDetail.joinPrevious',
+      roundLabel(r.number, r.part),
+      this.joinTarget(r),
+      move.renumberedRounds,
+      move.requiresRecalculation,
+    );
+    if (!ok) return;
+    this.regroup(this.api.joinPreviousWeek(r.id), 'roundDetail.joinedPrevious');
+  }
+
+  /** Undo of a grouping: the last part becomes a round of its own again. */
+  async leaveWeek(r: Round): Promise<void> {
+    const move = r.week?.leave;
+    if (!move?.allowed) return;
+    const ok = await this.confirmRegroup(
+      'roundDetail.confirmLeaveWeek',
+      'roundDetail.leaveWeek',
+      roundLabel(r.number, r.part),
+      this.leaveTarget(r),
+      move.renumberedRounds,
+      move.requiresRecalculation,
+    );
+    if (!ok) return;
+    this.regroup(this.api.leaveWeek(r.id), 'roundDetail.leftWeek');
+  }
+
+  /**
+   * Regrouping renumbers the rounds after it and, when a scored round is involved, replays the
+   * season — everyone's absences, penalties and the standings can move, and links and messages
+   * already sent to the group keep the old numbers. The dialog says all of that up front.
+   */
+  private confirmRegroup(
+    messageKey: string,
+    actionKey: string,
+    from: string,
+    to: string,
+    renumbered: number,
+    recalculates: boolean,
+  ): Promise<boolean> {
+    let message = this.translate.instant(messageKey, { from, to });
+    if (renumbered > 1) {
+      message +=
+        ' ' + this.translate.instant('roundDetail.regroupRenumbers', { count: renumbered });
+    }
+    if (recalculates) {
+      message += ' ' + this.translate.instant('roundDetail.regroupRecalc');
+    }
+    return this.confirm.ask(message, {
+      title: this.translate.instant(actionKey),
+      confirmText: this.translate.instant(actionKey),
+    });
+  }
+
+  private regroup(request: Observable<Round>, successKey: string): void {
+    this.regrouping.set(true);
+    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.regrouping.set(false);
+        this.after(successKey);
+      },
+      error: () => this.regrouping.set(false),
+    });
   }
 
   private after(key: string): void {

@@ -30,6 +30,8 @@ import { FormField } from '../../shared/components/form-field/form-field';
 import { Icon } from '../../shared/components/icon/icon';
 import { PageHeader } from '../../shared/components/page-header/page-header';
 import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
+import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
+import { roundLabel } from '../../shared/utils/round-name.util';
 
 /**
  * Whether a candidate round starts out ticked. A locked round's absence lands on its own at
@@ -93,6 +95,7 @@ export function absenceReviewToastKey(result: AbsenceReviewResult): string {
     Icon,
     PageHeader,
     SkeletonList,
+    RoundLabelPipe,
   ],
   template: `
     <app-page-header [title]="'adminParticipants.title' | translate">
@@ -267,7 +270,8 @@ export function absenceReviewToastKey(result: AbsenceReviewResult): string {
                   } @else {
                     @for (a of list; track a.roundId) {
                       <li>
-                        {{ 'adminParticipants.round' | translate }} {{ a.roundNumber }} —
+                        {{ 'adminParticipants.round' | translate }}
+                        {{ a.roundNumber | roundLabel: a.roundPart }} —
                         {{
                           'adminParticipants.absenceLine'
                             | translate: { n: a.absenceNumber, penalty: a.penaltyPoints }
@@ -470,7 +474,7 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
   private toChoice(r: AbsenceCandidateRound): ConfirmChoice {
     return {
       id: r.roundId,
-      label: this.roundLabel(r),
+      label: this.choiceLabel(r),
       hint: r.hasPresentOverride
         ? this.translate.instant('adminParticipants.absentRoundHasPresentOverride')
         : r.requiresRescore
@@ -480,13 +484,14 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
     };
   }
 
-  private roundLabel(r: { number: number; title?: string | null }): string {
+  private choiceLabel(r: { number: number; part?: number; title?: string | null }): string {
+    const number = roundLabel(r.number, r.part);
     return r.title
       ? this.translate.instant('adminParticipants.absentRoundOptionTitled', {
-          number: r.number,
+          number,
           title: r.title,
         })
-      : this.translate.instant('adminParticipants.absentRoundOption', { number: r.number });
+      : this.translate.instant('adminParticipants.absentRoundOption', { number });
   }
 
   /**
@@ -516,6 +521,10 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
     if (rounds.some((r) => r.requiresRecalculation)) {
       message += ' ' + this.translate.instant('adminParticipants.reviewRecalcWarning');
     }
+    // A round played in parts is one round for absences: every part has to stay ticked.
+    if (rounds.some((r) => (r.part ?? 0) > 0)) {
+      message += ' ' + this.translate.instant('adminParticipants.reviewPartsHint');
+    }
     const answer = await this.confirm.askWithChoices(
       message,
       rounds.map((r) => this.toReviewChoice(r)),
@@ -542,7 +551,7 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
   private toReviewChoice(r: AbsenceReviewRound): ConfirmChoice {
     return {
       id: r.roundId,
-      label: this.roundLabel(r),
+      label: this.choiceLabel(r),
       hint: this.translate.instant(absenceReviewHintKey(r), {
         n: r.absenceNumber,
         penalty: r.penaltyPoints,

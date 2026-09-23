@@ -30,7 +30,7 @@
     <div class="card-body">
       <div class="d-flex justify-content-between align-items-center mb-2">
         <h2 class="h5 fw-bold mb-0">
-          {{ 'dashboard.round' | translate }} {{ r.number }}
+          {{ 'dashboard.round' | translate }} {{ r.number | roundLabel: r.part }}
           @if (r.title) {
             · {{ r.title }}
           }
@@ -64,12 +64,47 @@
               {{ 'roundDetail.save' | translate }}
             </button>
           </div>
+          @if (r.part) {
+            <p class="col-12 text-muted small mb-0">
+              {{ 'roundDetail.partNumberHint' | translate }}
+            </p>
+          }
         </form>
       }
 
       <!-- Round lifecycle + the single guided next step for the current state -->
       <div class="section-label mt-3 mb-2">{{ 'roundDetail.lifecycle' | translate }}</div>
       <app-round-stepper [status]="r.status" class="d-block mb-3" />
+
+      <!--
+        A week with two lists is one round played in parts ("10.1" + "10.2"): only its last part
+        decides absences, and only for whoever sent nothing in every part.
+      -->
+      @if (r.week && r.week.parts.length > 1) {
+        <div class="alert alert-light border py-2 mb-3 small">
+          <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+            <app-icon name="link" [size]="15" />
+            <span class="fw-semibold">{{
+              'roundDetail.weekTitle' | translate: { round: r.number }
+            }}</span>
+            @for (p of r.week.parts; track p.id) {
+              <a
+                class="badge rounded-pill border text-decoration-none"
+                [class.text-bg-primary]="p.id === r.id"
+                [class.text-bg-light]="p.id !== r.id"
+                [routerLink]="['/admin/rounds', p.id]"
+                >{{ p.number | roundLabel: p.part }} · {{ 'status.' + p.status | translate }}</a
+              >
+            }
+          </div>
+          <div class="text-muted">
+            {{
+              (r.week.decidesAbsences ? 'roundDetail.weekDecides' : 'roundDetail.weekPending')
+                | translate: { last: lastPartLabel(r) }
+            }}
+          </div>
+        </div>
+      }
 
       <!--
         Who is missing predictions and, separately, who scoring would actually zero. The two
@@ -99,6 +134,10 @@
                     <span class="badge text-bg-warning">{{
                       'roundDetail.willBeAbsent' | translate
                     }}</span>
+                  } @else if (p.absentInPart) {
+                    <span class="badge text-bg-light border">{{
+                      'roundDetail.absentInPartOnly' | translate
+                    }}</span>
                   } @else {
                     <span class="badge text-bg-secondary">{{
                       'roundDetail.incompleteButPresent' | translate
@@ -115,7 +154,7 @@
                     (click)="toggleAbsence(r, p)"
                   >
                     {{
-                      (p.willBeAbsent ? 'roundDetail.markPresent' : 'roundDetail.markAbsent')
+                      (absentHere(p) ? 'roundDetail.markPresent' : 'roundDetail.markAbsent')
                         | translate
                     }}
                   </button>
@@ -168,10 +207,19 @@
               }}
             </div>
           }
+          @if (finalizeBlockedByPart()) {
+            <div class="alert alert-warning py-2 mb-0">
+              {{ 'roundDetail.finalizeBlockedByPart' | translate }}
+            </div>
+          }
           <button
             class="btn btn-primary btn-lg"
             (click)="score(r)"
-            [disabled]="finalizing() || (r.status === RoundStatus.Locked && !resultsComplete())"
+            [disabled]="
+              finalizing() ||
+              (r.status === RoundStatus.Locked && !resultsComplete()) ||
+              finalizeBlockedByPart()
+            "
           >
             @if (finalizing()) {
               <span class="spinner-border spinner-border-sm me-2"></span>
@@ -267,6 +315,48 @@
             <span class="action-card__arrow"><app-icon name="arrow-right" [size]="18" /></span>
           </a>
         </div>
+
+        <!-- Two lists in the same week: play them as one round in parts (10.1 + 10.2). -->
+        @if (r.week?.joinPrevious?.allowed) {
+          <div class="col-12 col-md-6">
+            <button
+              type="button"
+              class="action-card h-100 w-100 text-start"
+              (click)="joinPreviousWeek(r)"
+              [disabled]="regrouping()"
+            >
+              <span class="icon-tile icon-tile--violet"><app-icon name="link" [size]="20" /></span>
+              <div>
+                <div class="action-card__title">{{ 'roundDetail.joinPrevious' | translate }}</div>
+                <div class="action-card__sub">
+                  {{ 'roundDetail.joinPreviousSub' | translate: { target: joinTarget(r) } }}
+                </div>
+              </div>
+              <span class="action-card__arrow"><app-icon name="arrow-right" [size]="18" /></span>
+            </button>
+          </div>
+        }
+        @if (r.week?.leave?.allowed) {
+          <div class="col-12 col-md-6">
+            <button
+              type="button"
+              class="action-card h-100 w-100 text-start"
+              (click)="leaveWeek(r)"
+              [disabled]="regrouping()"
+            >
+              <span class="icon-tile icon-tile--violet"
+                ><app-icon name="unlink" [size]="20"
+              /></span>
+              <div>
+                <div class="action-card__title">{{ 'roundDetail.leaveWeek' | translate }}</div>
+                <div class="action-card__sub">
+                  {{ 'roundDetail.leaveWeekSub' | translate: { target: leaveTarget(r) } }}
+                </div>
+              </div>
+              <span class="action-card__arrow"><app-icon name="arrow-right" [size]="18" /></span>
+            </button>
+          </div>
+        }
 
         @if (r.status === RoundStatus.Published || r.status === RoundStatus.Locked) {
           <div class="col-12 col-md-6">

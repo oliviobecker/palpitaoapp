@@ -70,10 +70,10 @@ public class AdminPredictionServiceTests
         return id;
     }
 
-    private static async Task<RoundDto> PublishedRound(AppDbContext db, int matchCount = 2)
+    private static async Task<RoundDto> PublishedRound(AppDbContext db, int matchCount = 2, int number = 1)
     {
         var rounds = new RoundService(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db));
-        var round = await rounds.CreateAsync(new CreateRoundRequest { SeasonId = SeasonId, Number = 1 }, Admin, Ct);
+        var round = await rounds.CreateAsync(new CreateRoundRequest { SeasonId = SeasonId, Number = number }, Admin, Ct);
         for (var i = 0; i < matchCount; i++)
         {
             await rounds.AddMatchAsync(round.Id, new CreateMatchRequest
@@ -431,6 +431,36 @@ public class AdminPredictionServiceTests
         Assert.True(row.WillBeAbsent);
         Assert.True(row.HasOverride);
         Assert.Equal(1, coverage.CompleteParticipants); // counted on predictions, not on Missing
+    }
+
+    [Fact]
+    public async Task GetCoverage_on_a_part_tells_absent_here_from_absent_in_the_round()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var first = await PublishedRound(db);
+        var second = await PublishedRound(db, number: 2);
+        db.Rounds.Single(r => r.Id == first.Id).Part = 1;
+        var secondRound = db.Rounds.Single(r => r.Id == second.Id);
+        (secondRound.Number, secondRound.Part) = (1, 2);
+        db.SaveChanges();
+
+        var sentFirstOnly = CreateParticipant(db);
+        var silent = CreateParticipant(db);
+        await service.SaveManualAsync(first.Id, FullRequest(sentFirstOnly, first), Admin, Ct);
+
+        // The last part decides: silent missed both parts, sentFirstOnly only this one. The
+        // toggle works on this part's override, so it must follow AbsentInPart.
+        var last = await service.GetCoverageAsync(second.Id, Ct);
+        Assert.Equal((true, true), Flags(last, silent));
+        Assert.Equal((true, false), Flags(last, sentFirstOnly));
+
+        // An earlier part never decides: sending nothing there is only absent in that part.
+        var earlier = await service.GetCoverageAsync(first.Id, Ct);
+        Assert.Equal((true, false), Flags(earlier, silent));
+
+        static (bool AbsentInPart, bool WillBeAbsent) Flags(PredictionCoverageDto coverage, Guid user)
+            => coverage.Missing.Where(p => p.UserId == user).Select(p => (p.AbsentInPart, p.WillBeAbsent)).Single();
     }
 
     [Fact]

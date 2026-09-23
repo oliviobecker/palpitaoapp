@@ -8,6 +8,7 @@ public class RoundScoutDto
 {
     public Guid RoundId { get; set; }
     public int RoundNumber { get; set; }
+    public int RoundPart { get; set; }
     public string? RoundTitle { get; set; }
     public List<ScoutMatchDto> Matches { get; set; } = new();
 }

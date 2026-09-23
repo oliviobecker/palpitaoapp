@@ -24,6 +24,10 @@ public interface IPublicStandingsService
     /// <summary>The season's official accumulated standings, each row with its round history.</summary>
     Task<IReadOnlyList<PublicStandingRowDto>> GetStandingsAsync(string key, CancellationToken ct);
 
-    /// <summary>One round's per-participant, per-match scoring breakdown.</summary>
-    Task<PublicRoundDto> GetRoundAsync(string key, int roundNumber, CancellationToken ct);
+    /// <summary>
+    /// One round's per-participant, per-match scoring breakdown. <paramref name="part"/> picks a
+    /// part of a round played in parts ("10.2"); when that exact round is gone (the round was
+    /// regrouped since the link was shared) the lowest visible part of the number answers.
+    /// </summary>
+    Task<PublicRoundDto> GetRoundAsync(string key, int roundNumber, int? part, CancellationToken ct);
 }

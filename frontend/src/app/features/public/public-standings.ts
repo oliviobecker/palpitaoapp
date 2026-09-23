@@ -30,8 +30,16 @@ import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Icon } from '../../shared/components/icon/icon';
 import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
 import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
+import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
 import { avatarColor, initials } from '../../shared/utils/avatar.util';
 import { phaseLabel } from '../../shared/utils/match.util';
+import {
+  NumberedRound,
+  compareRounds,
+  parseRoundLabel,
+  roundLabel,
+  sameRound,
+} from '../../shared/utils/round-name.util';
 import { shortTeamName } from '../../shared/utils/team-name.util';
 
 type Tab = 'overall' | 'round';
@@ -55,6 +63,7 @@ type Cut = 'participant' | 'match';
     Icon,
     MultiplierBadge,
     SkeletonList,
+    RoundLabelPipe,
   ],
   styles: [
     `
@@ -179,9 +188,10 @@ type Cut = 'participant' | 'match';
               class="form-select"
               (change)="pickRound($any($event.target).value)"
             >
-              @for (r of s.rounds; track r.number) {
-                <option [value]="r.number" [selected]="r.number === roundNumber()">
-                  {{ 'publicStandings.roundN' | translate: { n: r.number } }}
+              <!-- Keyed by label: the parts of a round played in parts share a number. -->
+              @for (r of s.rounds; track r.number + '.' + (r.part ?? 0)) {
+                <option [value]="r.number | roundLabel: r.part" [selected]="isSelected(r)">
+                  {{ 'publicStandings.roundN' | translate: { n: (r.number | roundLabel: r.part) } }}
                   @if (r.title) {
                     · {{ r.title }}
                   }
@@ -339,18 +349,21 @@ type Cut = 'participant' | 'match';
                               {{ 'publicStandings.roundHistory' | translate }}
                             </div>
                             <div class="d-flex flex-wrap gap-1">
-                              @for (h of row.rounds; track h.number) {
+                              @for (h of row.rounds; track h.number + '.' + (h.part ?? 0)) {
                                 <button
                                   type="button"
                                   class="btn btn-sm btn-outline-secondary py-0 px-2 calc"
                                   [class.border-warning]="h.flavioRuleApplied"
                                   [class.text-muted]="h.wasAbsent"
                                   [attr.title]="
-                                    'publicStandings.roundN' | translate: { n: h.number }
+                                    'publicStandings.roundN'
+                                      | translate: { n: (h.number | roundLabel: h.part) }
                                   "
-                                  (click)="auditParticipant(row.userId, h.number)"
+                                  (click)="auditParticipant(row.userId, h)"
                                 >
-                                  <span class="text-muted">{{ h.number }}</span>
+                                  <span class="text-muted">{{
+                                    h.number | roundLabel: h.part
+                                  }}</span>
                                   <span class="text-muted mx-1">·</span>
                                   <span class="fw-semibold">{{ h.points }}</span>
                                   @if (h.wasAbsent) {
@@ -735,13 +748,14 @@ export class PublicStandings implements OnInit {
   protected readonly invalidKey = signal(false);
   protected readonly standingsError = signal(false);
   protected readonly roundError = signal(false);
-  /** Set when a deep link asked for a round the season does not publish. */
-  protected readonly missingRound = signal<number | null>(null);
+  /** Set, as a label, when a deep link asked for a round the season does not publish. */
+  protected readonly missingRound = signal<string | null>(null);
   protected readonly season = signal<PublicSeason | null>(null);
   protected readonly standings = signal<PublicStandingRow[]>([]);
   protected readonly round = signal<PublicRound | null>(null);
   protected readonly tab = signal<Tab>('overall');
-  protected readonly roundNumber = signal<number | null>(null);
+  /** The round on screen: number plus part, since a round played in parts shares its number. */
+  protected readonly selectedRound = signal<NumberedRound | null>(null);
   protected readonly expanded = signal<Set<string>>(new Set());
 
   /** Free-text search over the standings. Filters, never reorders. */
@@ -763,6 +777,12 @@ export class PublicStandings implements OnInit {
 
   /** Rounds newest-first, as the API returns them. */
   protected readonly rounds = computed(() => this.season()?.rounds ?? []);
+
+  /** The selected round as it reads in the URL: "10", or "10.2" for a part. */
+  private readonly selectedLabel = computed(() => {
+    const selected = this.selectedRound();
+    return selected ? roundLabel(selected.number, selected.part) : null;
+  });
 
   /** Top three, for the podium — same treatment as the in-app standings. */
   protected readonly podium = computed(() => this.standings().slice(0, 3));
@@ -798,9 +818,10 @@ export class PublicStandings implements OnInit {
     const key = params.paramMap.get('key') ?? params.queryParamMap.get('key') ?? '';
     this.key.set(key);
 
-    const round = Number(params.queryParamMap.get('rodada'));
-    if (Number.isFinite(round) && round > 0) {
-      this.roundNumber.set(round);
+    // "?rodada=10" or, for a part of a round played in parts, "?rodada=10.2".
+    const round = parseRoundLabel(params.queryParamMap.get('rodada'));
+    if (round) {
+      this.selectedRound.set(round);
       this.tab.set('round');
     }
     const participant = params.queryParamMap.get('participante');
@@ -865,25 +886,32 @@ export class PublicStandings implements OnInit {
     if (available.length === 0) {
       return;
     }
-    const wanted = this.roundNumber();
-    const found = available.some((r) => r.number === wanted);
+    const wanted = this.selectedRound();
+    // The exact round, else whatever now stands at that number: a link shared before the
+    // round was split ("10" → 10.1) or merged back ("10.2" → 10) still lands on it.
+    const target = wanted
+      ? (available.find((r) => sameRound(r, wanted)) ??
+        available.filter((r) => r.number === wanted.number).sort(compareRounds)[0])
+      : undefined;
     // Falling back silently to another round makes the page look like it ignored the link.
-    this.missingRound.set(!found && wanted != null ? wanted : null);
-    const number = found ? wanted! : available[0].number;
-    this.roundNumber.set(number);
+    this.missingRound.set(!target && wanted ? roundLabel(wanted.number, wanted.part) : null);
+    const pick = target ?? available[0];
+    const selected = { number: pick.number, part: pick.part ?? 0 };
+    this.selectedRound.set(selected);
 
     // Switching tabs back and forth should not re-fetch a round already in hand — it
     // flashes the skeleton and burns the public endpoint's per-IP quota.
-    if (this.round()?.number !== number || this.roundError()) {
-      this.loadRound(number);
+    const current = this.round();
+    if (!current || !sameRound(current, selected) || this.roundError()) {
+      this.loadRound(selected);
     }
   }
 
-  private loadRound(number: number): void {
+  private loadRound(target: NumberedRound): void {
     this.roundLoading.set(true);
     this.roundError.set(false);
     this.api
-      .round(this.key(), number)
+      .round(this.key(), target.number, target.part)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (r) => {
@@ -900,10 +928,15 @@ export class PublicStandings implements OnInit {
 
   /** Retry hook for the round error state. */
   reloadRound(): void {
-    const number = this.roundNumber();
-    if (number !== null) {
-      this.loadRound(number);
+    const selected = this.selectedRound();
+    if (selected !== null) {
+      this.loadRound(selected);
     }
+  }
+
+  protected isSelected(r: NumberedRound): boolean {
+    const selected = this.selectedRound();
+    return selected !== null && sameRound(r, selected);
   }
 
   selectTab(tab: Tab): void {
@@ -914,14 +947,15 @@ export class PublicStandings implements OnInit {
     this.syncUrl();
   }
 
+  /** `value` is the option's label ("10" or "10.2"), never parsed as a decimal number. */
   pickRound(value: string): void {
-    const number = Number(value);
-    if (!Number.isFinite(number)) {
+    const picked = parseRoundLabel(value);
+    if (!picked) {
       return;
     }
-    this.roundNumber.set(number);
+    this.selectedRound.set(picked);
     this.missingRound.set(null);
-    this.loadRound(number);
+    this.loadRound(picked);
     this.syncUrl();
   }
 
@@ -929,12 +963,12 @@ export class PublicStandings implements OnInit {
    * Jumps from the overall tab into this participant's round breakdown, optionally at the
    * round the reader just pointed at in the history strip.
    */
-  auditParticipant(userId: string, roundNumber?: number): void {
+  auditParticipant(userId: string, round?: NumberedRound): void {
     this.expanded.set(new Set([userId]));
     this.cut.set('participant');
     this.tab.set('round');
-    if (roundNumber != null) {
-      this.roundNumber.set(roundNumber);
+    if (round != null) {
+      this.selectedRound.set({ number: round.number, part: round.part ?? 0 });
     }
     this.ensureRound();
     this.syncUrl();
@@ -1113,7 +1147,7 @@ export class PublicStandings implements OnInit {
       replaceUrl: true,
       queryParams: {
         key: this.route.snapshot.paramMap.get('key') ? null : this.key(),
-        rodada: this.tab() === 'round' ? this.roundNumber() : null,
+        rodada: this.tab() === 'round' ? this.selectedLabel() : null,
         participante: open.length > 0 ? open.join(',') : null,
       },
       queryParamsHandling: 'merge',

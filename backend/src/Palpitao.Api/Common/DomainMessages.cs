@@ -162,6 +162,24 @@ public static class DomainMessages
                 "Não é possível alterar jogos de uma rodada bloqueada, pontuada ou cancelada sem justificativa administrativa.",
                 "Cannot change matches of a locked, scored or cancelled round without an administrative justification."),
 
+            // Rounds played in parts ("10.1", "10.2").
+            ["round.weekPartsOpen"] = (
+                "Bloqueie ou cancele as outras partes desta rodada antes de finalizar a última: é ela que decide as ausências, e uma parte aberta ainda recebe palpites.",
+                "Lock or cancel this round's other parts before finalizing its last part: it decides the absences, and an open part still takes predictions."),
+            ["round.noPreviousWeek"] = ("Não há rodada anterior para agrupar.", "There is no previous round to group with."),
+            ["round.joinOnlyStandalone"] = (
+                "Só uma rodada avulsa pode ser agrupada com a anterior.",
+                "Only a standalone round can be grouped with the previous one."),
+            ["round.leaveOnlyLastPart"] = (
+                "Só a última parte de uma rodada agrupada pode ser desagrupada.",
+                "Only the last part of a grouped round can be ungrouped."),
+            ["round.regroupCancelled"] = (
+                "Uma rodada cancelada não pode ser agrupada nem desagrupada.",
+                "A cancelled round cannot be grouped or ungrouped."),
+            ["round.partNumberLocked"] = (
+                "O número de uma parte acompanha a rodada agrupada. Desagrupe a parte para mudar o número.",
+                "A part's number follows its grouped round. Ungroup the part to change its number."),
+
             // Matches.
             ["match.competitionRequired"] = ("A competição é obrigatória.", "The competition is required."),
             ["match.phaseRequired"] = ("A fase é obrigatória.", "The phase is required."),

@@ -157,8 +157,11 @@ public class AdminPredictionService : IAdminPredictionService
         // Who would actually be zeroed comes from the absence service, overrides included,
         // for the same reason TemporaryStandingsService defers to it. An incomplete set is no
         // longer an absence, so "missing a prediction" and "will be absent" are now different
-        // questions and the screen has to be able to tell them apart.
-        var absentees = (await _absences.DetectAbsenteesAsync(roundId, ct)).ToHashSet();
+        // questions and the screen has to be able to tell them apart. On a part of a round
+        // played in parts a third one appears: absent here, yet present in the round because
+        // another part was sent — and the override the screen toggles is this part's.
+        var week = await _absences.DetectWeekAbsenteesAsync(roundId, ct);
+        var partAbsentees = week.PartAbsentees.ToHashSet();
         var overridden = (await _db.AbsenceOverrides
             .Where(o => o.RoundId == roundId)
             .Select(o => o.UserId)
@@ -171,7 +174,8 @@ public class AdminPredictionService : IAdminPredictionService
                 UserId = u.Id,
                 Name = u.Name,
                 PredictedCount = predictedCounts.GetValueOrDefault(u.Id),
-                WillBeAbsent = absentees.Contains(u.Id),
+                WillBeAbsent = week.WeekAbsentees.Contains(u.Id),
+                AbsentInPart = partAbsentees.Contains(u.Id),
                 HasOverride = overridden.Contains(u.Id),
             })
             .Where(p => matchCount == 0 || p.PredictedCount < matchCount || p.HasOverride)

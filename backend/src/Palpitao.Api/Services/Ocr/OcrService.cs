@@ -222,7 +222,7 @@ public class OcrService : IOcrService
                     candidates = result.Candidates.Count,
                     variant = result.Reading.Variant,
                     ignoredOtherRound = result.IgnoredLineCount,
-                    ignoredRounds = result.IgnoredRoundNumbers,
+                    ignoredRounds = result.IgnoredRoundLabels,
                     imageBytes = bytes.Length,
                     contentType,
                 });
@@ -248,7 +248,7 @@ public class OcrService : IOcrService
         // Not stored: the lines were never candidates. The upload response is where the admin needs
         // to hear about them; the extracted text still shows them on a reload.
         dto.IgnoredLineCount = result.IgnoredLineCount;
-        dto.IgnoredRoundNumbers = result.IgnoredRoundNumbers.ToList();
+        dto.IgnoredRoundLabels = result.IgnoredRoundLabels.ToList();
         return dto;
     }
 

@@ -47,6 +47,7 @@ public class ScoutService : IScoutService
         {
             RoundId = round.Id,
             RoundNumber = round.Number,
+            RoundPart = round.Part,
             RoundTitle = round.Title,
         };
 

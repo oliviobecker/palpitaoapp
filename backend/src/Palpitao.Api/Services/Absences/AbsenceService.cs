@@ -6,6 +6,7 @@ using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Services.Rounds;
 using Palpitao.Api.Services.Scoring;
 using Sentry;
 
@@ -102,6 +103,45 @@ public class AbsenceService : IAbsenceService
                 && _db.Rounds.Any(r => r.Id == a.RoundId && r.SeasonId == seasonId), ct);
     }
 
+    public async Task<WeekAbsence> DetectWeekAbsenteesAsync(Guid roundId, CancellationToken ct)
+    {
+        var round = await _db.Rounds.AsNoTracking().FirstOrDefaultAsync(r => r.Id == roundId, ct)
+            ?? throw new NotFoundException("notFound.round");
+
+        var partAbsentees = await DetectAbsenteesAsync(roundId, ct);
+        var siblings = await RoundWeek.Siblings(_db, round).AsNoTracking().ToListAsync(ct);
+        var decides = RoundWeek.Decides(round, siblings);
+        var now = DateTime.UtcNow;
+        var otherPartsClosed = siblings.All(s => RoundWeek.IsClosedForPredictions(s, now));
+
+        var weekAbsentees = new HashSet<Guid>();
+        if (decides)
+        {
+            weekAbsentees.UnionWith(partAbsentees);
+
+            // A part without matches marks nobody absent (see DetectAbsenteesAsync), so it has no
+            // say: intersecting with it would excuse the whole roster.
+            var siblingIds = siblings.Select(s => s.Id).ToList();
+            var withMatches = await _db.RoundMatches
+                .Where(m => siblingIds.Contains(m.RoundId))
+                .Select(m => m.RoundId)
+                .Distinct()
+                .ToListAsync(ct);
+
+            foreach (var siblingId in withMatches)
+            {
+                if (weekAbsentees.Count == 0)
+                {
+                    break;
+                }
+
+                weekAbsentees.IntersectWith(await DetectAbsenteesAsync(siblingId, ct));
+            }
+        }
+
+        return new WeekAbsence(partAbsentees, weekAbsentees, round.Part > 0, decides, otherPartsClosed);
+    }
+
     public async Task<IReadOnlyList<AbsenceOutcome>> ProcessRoundAbsencesAsync(Guid roundId, Guid actingUserId, CancellationToken ct)
     {
         var round = await _db.Rounds
@@ -117,9 +157,21 @@ public class AbsenceService : IAbsenceService
             await _db.SaveChangesAsync(ct);
         }
 
-        var absentees = await DetectAbsenteesAsync(roundId, ct);
+        // A round played in parts is one round for absences: whoever sent nothing in this part
+        // but did send another one is present (the part just scores 0, like an incomplete
+        // set), and the absence of someone who missed every part is recorded once, by the last
+        // part. A standalone round decides for itself, so there both sets are the same.
+        var week = await DetectWeekAbsenteesAsync(roundId, ct);
+        var absentees = week.WeekAbsentees.ToList();
         var now = DateTime.UtcNow;
         var outcomes = new List<AbsenceOutcome>();
+        var missedPartOnly = 0;
+
+        foreach (var userId in week.PartAbsentees.Where(u => !week.WeekAbsentees.Contains(u)))
+        {
+            await UpsertZeroedResultAsync(round, userId, wasAbsent: false, penalty: 0, eliminated: false, now, ct);
+            missedPartOnly++;
+        }
 
         // Rounds before the season's AbsenceFromRound still zero the absentee's round —
         // they just don't climb the punishment ladder (no Absence row, so no ordinal, no
@@ -138,7 +190,7 @@ public class AbsenceService : IAbsenceService
             .Select(g => new { UserId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.UserId, x => x.Count, ct);
 
-        foreach (var userId in absentees)
+        foreach (var userId in week.PartAbsentees.Where(week.WeekAbsentees.Contains))
         {
             var absenceNumber = counted ? priorCounts.GetValueOrDefault(userId) + 1 : 0;
             var (penalty, eliminated) = counted
@@ -171,13 +223,13 @@ public class AbsenceService : IAbsenceService
                 });
             }
 
-            await UpsertAbsentResultAsync(round, userId, penalty, eliminated, now, ct);
+            await UpsertZeroedResultAsync(round, userId, wasAbsent: true, penalty, eliminated, now, ct);
 
             outcomes.Add(new AbsenceOutcome(userId, absenceNumber, penalty, eliminated));
         }
 
         _audit.Add(actingUserId, "RoundAbsencesProcessed", nameof(Round), roundId.ToString(),
-            new { absent = outcomes.Count });
+            new { absent = outcomes.Count, missedPartOnly, decidesWeek = week.DecidesWeek });
         await _db.SaveChangesAsync(ct);
 
         return outcomes;
@@ -258,6 +310,7 @@ public class AbsenceService : IAbsenceService
             {
                 RoundId = r.Id,
                 Number = r.Number,
+                Part = r.Part,
                 Title = r.Title,
                 Status = r.Status,
                 MatchCount = r.MatchCount,
@@ -275,7 +328,7 @@ public class AbsenceService : IAbsenceService
     /// (if any). Shared by the activation candidates and the absence review.
     /// </summary>
     private sealed record ClosedRoundState(
-        Guid Id, int Number, string? Title, RoundStatus Status, int MatchCount, int PredictionCount,
+        Guid Id, int Number, int Part, string? Title, RoundStatus Status, int MatchCount, int PredictionCount,
         bool? ForcedAbsent, int? AbsenceNumber, int? PenaltyPoints)
     {
         /// <summary>
@@ -315,10 +368,12 @@ public class AbsenceService : IAbsenceService
             .Where(r => r.SeasonId == seasonId
                 && (r.Status == RoundStatus.Locked || r.Status == RoundStatus.Scored))
             .OrderBy(r => r.Number)
+            .ThenBy(r => r.Part)
             .Select(r => new
             {
                 r.Id,
                 r.Number,
+                r.Part,
                 r.Title,
                 r.Status,
                 MatchCount = r.Matches.Count,
@@ -340,7 +395,7 @@ public class AbsenceService : IAbsenceService
 
         return (seasonId, rounds
             .Select(r => new ClosedRoundState(
-                r.Id, r.Number, r.Title, r.Status, r.MatchCount, r.PredictionCount,
+                r.Id, r.Number, r.Part, r.Title, r.Status, r.MatchCount, r.PredictionCount,
                 r.ForcedAbsent, r.AbsenceNumber, r.PenaltyPoints))
             .ToList());
     }
@@ -363,6 +418,7 @@ public class AbsenceService : IAbsenceService
             {
                 RoundId = r.Id,
                 Number = r.Number,
+                Part = r.Part,
                 Title = r.Title,
                 Status = r.Status,
                 MatchCount = r.MatchCount,
@@ -511,12 +567,14 @@ public class AbsenceService : IAbsenceService
             {
                 RoundId = a.RoundId,
                 RoundNumber = r.Number,
+                RoundPart = r.Part,
                 UserId = a.UserId,
                 AbsenceNumber = a.AbsenceNumber,
                 PenaltyPoints = a.PenaltyPoints,
                 CreatedAt = a.CreatedAt,
             })
             .OrderBy(a => a.RoundNumber)
+            .ThenBy(a => a.RoundPart)
             .ToListAsync(ct);
     }
 
@@ -529,6 +587,7 @@ public class AbsenceService : IAbsenceService
             {
                 RoundId = a.RoundId,
                 RoundNumber = r.Number,
+                RoundPart = r.Part,
                 UserId = a.UserId,
                 AbsenceNumber = a.AbsenceNumber,
                 PenaltyPoints = a.PenaltyPoints,
@@ -555,8 +614,13 @@ public class AbsenceService : IAbsenceService
         return absenceNumber >= FirstPenalizedAbsence ? (penaltyPoints, false) : (0, false);
     }
 
-    private async Task UpsertAbsentResultAsync(
-        Round round, Guid userId, int penalty, bool eliminated, DateTime now, CancellationToken ct)
+    /// <summary>
+    /// The zeroed result row of a participant left out of the round's match loop: an absentee
+    /// (<paramref name="wasAbsent"/>), or someone who missed only this part of a round played
+    /// in parts — zero points, but present, like an incomplete set.
+    /// </summary>
+    private async Task UpsertZeroedResultAsync(
+        Round round, Guid userId, bool wasAbsent, int penalty, bool eliminated, DateTime now, CancellationToken ct)
     {
         var result = await _db.RoundParticipantResults
             .FirstOrDefaultAsync(r => r.RoundId == round.Id && r.UserId == userId, ct);
@@ -573,7 +637,7 @@ public class AbsenceService : IAbsenceService
                 GrossPoints = 0,
                 FinalPoints = 0,
                 PenaltyPoints = penalty,
-                WasAbsent = true,
+                WasAbsent = wasAbsent,
                 WasEliminated = eliminated,
                 FlavioRuleApplied = false,
                 CreatedAt = now,
@@ -585,7 +649,7 @@ public class AbsenceService : IAbsenceService
             result.GrossPoints = 0;
             result.FinalPoints = 0;
             result.PenaltyPoints = penalty;
-            result.WasAbsent = true;
+            result.WasAbsent = wasAbsent;
             result.WasEliminated = eliminated;
             result.UpdatedAt = now;
         }

@@ -10,6 +10,7 @@ using Palpitao.Api.Services.Absences;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Flavio;
 using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Services.Rounds;
 using Palpitao.Api.Services.Standings;
 using Sentry;
 
@@ -88,7 +89,28 @@ public class RoundScoringService : IRoundScoringService
                 await RecalculateSeasonCoreAsync(round.SeasonId, actingUserId, ct);
                 return await GetRoundResultsAsync(roundId, ct);
             }
-            return await ScoreRoundInternalAsync(roundId, actingUserId, updateStandings: true, ct);
+
+            // A round played in parts is one round for absences, decided by its last part from
+            // what every part received. Finalizing that part while another one still takes
+            // predictions would decide on a list that can still change.
+            var siblings = await RoundWeek.Siblings(_db, round).AsNoTracking().ToListAsync(ct);
+            if (RoundWeek.Decides(round, siblings) && siblings.Any(RoundWeek.IsOpen))
+            {
+                throw new BusinessRuleException("round.weekPartsOpen");
+            }
+
+            var results = await ScoreRoundInternalAsync(roundId, actingUserId, updateStandings: true, ct);
+
+            // A later part already decided the round's absences from this part as it stood then
+            // (finalized out of order, or predictions entered here while it was Locked): replay
+            // the season so that decision, and everything after it, is taken again.
+            if (siblings.Any(s => s.Part > round.Part && s.Status == RoundStatus.Scored))
+            {
+                await RecalculateSeasonCoreAsync(round.SeasonId, actingUserId, ct);
+                results = await GetRoundResultsAsync(roundId, ct);
+            }
+
+            return results;
         }, ct);
 
     public Task RecalculateSeasonAsync(Guid seasonId, Guid actingUserId, CancellationToken ct)
@@ -157,6 +179,7 @@ public class RoundScoringService : IRoundScoringService
         var roundsToScore = await _db.Rounds
             .Where(r => r.SeasonId == seasonId && r.Status == RoundStatus.Scored)
             .OrderBy(r => r.Number)
+            .ThenBy(r => r.Part)
             .Select(r => r.Id)
             .ToListAsync(ct);
 
