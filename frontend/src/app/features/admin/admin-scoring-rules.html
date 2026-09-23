@@ -5,14 +5,17 @@
     <div class="season-box__label">
       <span class="dot"></span> {{ 'scoringRules.season' | translate }}
     </div>
+    <!-- [selected] per option, not [value] on the select: that is applied before the @for
+         creates the options, so the browser fell back to the first season in the list. -->
     <select
       class="form-select form-select-sm"
       [attr.aria-label]="'scoringRules.season' | translate"
-      [value]="seasonId()"
       (change)="onSeasonChange($any($event.target).value)"
     >
       @for (s of seasons(); track s.id) {
-        <option [value]="s.id">{{ s.name }}{{ s.isActive ? ' ★' : '' }}</option>
+        <option [value]="s.id" [selected]="s.id === seasonId()">
+          {{ s.name }}{{ s.isActive ? ' ★' : '' }}
+        </option>
       }
     </select>
   </div>

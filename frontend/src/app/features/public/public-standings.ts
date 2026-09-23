@@ -172,14 +172,15 @@ type Cut = 'participant' | 'match';
             <label class="form-label small" for="round-select">{{
               'publicStandings.round' | translate
             }}</label>
+            <!-- [selected] per option: a [value] on the select lands before the options exist,
+                 so a deep-linked round showed the newest one in the picker. -->
             <select
               id="round-select"
               class="form-select"
-              [value]="roundNumber() ?? ''"
               (change)="pickRound($any($event.target).value)"
             >
               @for (r of s.rounds; track r.number) {
-                <option [value]="r.number">
+                <option [value]="r.number" [selected]="r.number === roundNumber()">
                   {{ 'publicStandings.roundN' | translate: { n: r.number } }}
                   @if (r.title) {
                     · {{ r.title }}
