@@ -21,11 +21,16 @@ public interface IOcrAliasService
     /// Records the participant names a confirmed batch had to be corrected on, and returns how many
     /// were learned. Enqueues its changes on the caller's unit of work — the caller saves.
     /// </summary>
+    /// <param name="fileName">
+    /// The batch's uploaded file name. When it names a participant ("JP.jpeg") that name is the one
+    /// learned, and the names OCR read off the image are left alone.
+    /// </param>
     Task<int> LearnAsync(
         ICollection<OcrPredictionCandidate> candidates,
         Guid groupId,
         Guid adminId,
         DateTime now,
+        string? fileName,
         CancellationToken ct);
 
     /// <summary>Every alias of the current group, with the participant it points at.</summary>

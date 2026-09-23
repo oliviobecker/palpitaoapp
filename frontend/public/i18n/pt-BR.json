@@ -777,7 +777,7 @@
     "subtitle": "Envie uma foto da tabela de palpites e deixe o OCR preencher os placares.",
     "imageLabel": "Imagem dos palpites",
     "dropClick": "Clique para enviar",
-    "dropRest": "ou arraste a imagem aqui",
+    "dropRest": "ou arraste uma ou várias imagens aqui",
     "dropHint": "PNG, JPG ou WEBP · até 10 MB",
     "fileReady": "pronto para processar",
     "tip": "Fotos nítidas e bem enquadradas, sem reflexo, melhoram bastante a precisão do reconhecimento. Você poderá revisar os placares antes de salvar.",
@@ -821,7 +821,34 @@
     "discarded": "Candidato descartado.",
     "confirmCancel": "Cancelar esta importação? Os candidatos extraídos serão perdidos.",
     "confirmed": "Importação confirmada!",
-    "cancelled": "Importação cancelada."
+    "cancelled": "Importação cancelada.",
+    "fileNameTip": "Dê a cada arquivo o nome do participante (ex.: Valter.png): os palpites vão direto para ele.",
+    "processMany": "Processar {{count}} imagens",
+    "removeFile": "Remover arquivo",
+    "backToList": "Voltar à lista",
+    "ignoredOtherRound": "{{count}} linhas de jogos de outra rodada (rodada {{rounds}}) foram deixadas de fora.",
+    "queue": {
+      "title": "Enviando imagens",
+      "clear": "limpar concluídas",
+      "queued": "na fila",
+      "processing": "lendo…",
+      "waiting": "aguardando o limite do servidor",
+      "done": "{{rows}} linhas · {{review}} a revisar",
+      "ignored": "{{count}} de outra rodada",
+      "ignoredHint": "Linhas de jogos de outra rodada, deixadas de fora desta importação",
+      "error": "falhou"
+    },
+    "pending": {
+      "title": "Importações pendentes desta rodada",
+      "empty": "Nenhuma importação aguardando revisão.",
+      "noParticipant": "participante não identificado",
+      "rows": "{{count}} linhas",
+      "review": "Revisar",
+      "confirm": "Confirmar",
+      "confirmReady": "Confirmar prontas ({{count}})",
+      "confirmReadyQuestion": "Confirmar as {{count}} importações sem pendências? Os palpites serão salvos.",
+      "confirmedMany": "{{count}} importações confirmadas."
+    }
   },
   "ocrHistory": {
     "title": "Histórico de importações",

@@ -26,7 +26,7 @@ public class HealthControllerTests
 
     private sealed class StubOcrEngine(params string[] missing) : IOcrEngine
     {
-        public string ExtractText(byte[] image, string language) => string.Empty;
+        public IReadOnlyList<OcrReading> ReadVariants(byte[] image, string language) => [];
         public IReadOnlyList<string> MissingLanguages(string language) => missing;
     }
 

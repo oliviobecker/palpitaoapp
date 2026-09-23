@@ -17,6 +17,7 @@ public class OcrStorageOptions
     public int RetentionDays { get; set; } = 180;
 
     /// <summary>Keep at most this many stored images per round, oldest dropped first
-    /// (0 = unlimited).</summary>
-    public int MaxImagesPerRound { get; set; } = 10;
+    /// (0 = unlimited). Sized for a whole round sent at once — up to 18 screenshots so far, with
+    /// room for re-sends — so an image is not pruned while its import still waits for review.</summary>
+    public int MaxImagesPerRound { get; set; } = 30;
 }

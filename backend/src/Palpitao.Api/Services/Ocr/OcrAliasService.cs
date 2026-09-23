@@ -34,26 +34,39 @@ public class OcrAliasService : IOcrAliasService
     /// it is the difference between fixing the same screenshot format once and fixing it every
     /// round.
     ///
-    /// Only names the matcher could not already resolve on its own are stored, and only when every
-    /// row bearing that name agrees on the participant — one image can carry two people, and a name
-    /// that pointed at both would be a coin flip on the next import.
+    /// Only names that resolve to <em>nobody</em> on their own are stored — never one that already
+    /// points at a participant, or a mislabelled "Ezau.jpg" filed under Bruno would teach "ezau" →
+    /// Bruno and take Ezaú's own name away from him on every later import. Only when every row
+    /// bearing that name agrees on the participant — one image can carry two people, and a name
+    /// that pointed at both would be a coin flip on the next import. And never a word of the round
+    /// message itself: "REGRA FLÁVIO" or "palpitar" read as a name once must not file someone
+    /// else's predictions later.
+    ///
+    /// A file name that names someone ("JP.jpeg") is what the admin labelled the image with, so it
+    /// is the name learned for the batch, and the names OCR read off the image are left out.
     /// </summary>
     public async Task<int> LearnAsync(
         ICollection<OcrPredictionCandidate> candidates,
         Guid groupId,
         Guid adminId,
         DateTime now,
+        string? fileName,
         CancellationToken ct)
     {
         var participants = await GroupQueries.ActiveParticipants(_db, groupId).ToListAsync(ct);
+        var fileNamed = OcrTextParser.NameFromFileName(fileName);
 
         var unanimous = candidates
-            .Where(c => !string.IsNullOrWhiteSpace(c.ParticipantNameRaw) && c.UserId is not null)
-            .GroupBy(c => OcrTeamMatcher.NormalizeAlias(c.ParticipantNameRaw!), StringComparer.Ordinal)
-            .Where(g => g.Select(c => c.UserId!.Value).Distinct().Count() == 1)
-            .Select(g => (Key: g.Key, UserId: g.First().UserId!.Value, Raw: g.First().ParticipantNameRaw!))
+            .Where(c => c.UserId is not null)
+            .Select(c => (Raw: fileNamed ?? c.ParticipantNameRaw, UserId: c.UserId!.Value))
+            .Where(x => OcrTextParser.IsPlausibleParticipantName(x.Raw))
+            .GroupBy(x => OcrTeamMatcher.NormalizeAlias(x.Raw!), StringComparer.Ordinal)
+            .Where(g => g.Select(x => x.UserId).Distinct().Count() == 1)
+            .Select(g => (Key: g.Key, g.First().UserId, Raw: g.First().Raw!))
             .Where(x => x.Key.Length > 0
-                && OcrTeamMatcher.ResolveParticipant(x.Raw, participants) != x.UserId)
+                && (fileNamed is null
+                    ? OcrTeamMatcher.ResolveParticipant(x.Raw, participants)
+                    : OcrTeamMatcher.ResolveParticipantFromFileName(x.Raw, participants)) is null)
             .ToList();
 
         if (unanimous.Count == 0)

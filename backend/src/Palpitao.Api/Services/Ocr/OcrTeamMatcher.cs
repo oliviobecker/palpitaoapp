@@ -87,8 +87,31 @@ public static class OcrTeamMatcher
         return fuzzy.Count == 1 ? fuzzy[0].Id : null;
     }
 
+    /// <summary>How a line was tied to a fixture, and whether it took the approximate tier.</summary>
+    /// <param name="Approximate">
+    /// Resolved by <see cref="ResolveByAnchor"/>: one side was too garbled for the one-edit budget.
+    /// Right on every garbled line measured, but still a guess, so the import sends it to review.
+    /// </param>
+    public readonly record struct MatchResolution(Guid? MatchId, bool Approximate);
+
     /// <summary>Resolves raw home/away names to a round match, only when exactly one fits.</summary>
-    public static Guid? ResolveMatch(string homeRaw, string awayRaw, IReadOnlyList<RoundMatch> matches)
+    /// <param name="catalogue">
+    /// Every club name. Only with it does the approximate tier run: it is what lets that tier refuse
+    /// a "garbled" side that is really another club.
+    /// </param>
+    public static Guid? ResolveMatch(
+        string homeRaw,
+        string awayRaw,
+        IReadOnlyList<RoundMatch> matches,
+        IReadOnlyCollection<string>? catalogue = null) =>
+        Resolve(homeRaw, awayRaw, matches, catalogue).MatchId;
+
+    /// <inheritdoc cref="ResolveMatch"/>
+    public static MatchResolution Resolve(
+        string homeRaw,
+        string awayRaw,
+        IReadOnlyList<RoundMatch> matches,
+        IReadOnlyCollection<string>? catalogue = null)
     {
         var hits = matches
             .Where(m => TeamMatches(homeRaw, m.HomeTeam?.Name) && TeamMatches(awayRaw, m.AwayTeam?.Name))
@@ -96,7 +119,7 @@ public static class OcrTeamMatcher
 
         if (hits.Count == 1)
         {
-            return hits[0].Id;
+            return new MatchResolution(hits[0].Id, false);
         }
 
         // A strict hit is never second-guessed: two strict hits mean the line genuinely fits two
@@ -105,7 +128,7 @@ public static class OcrTeamMatcher
         // letter ("Coventy") otherwise costs the admin the whole row.
         if (hits.Count > 0)
         {
-            return null;
+            return default;
         }
 
         var fuzzyHits = matches
@@ -113,7 +136,204 @@ public static class OcrTeamMatcher
                 && TeamMatches(awayRaw, m.AwayTeam?.Name, fuzzy: true))
             .ToList();
 
-        return fuzzyHits.Count == 1 ? fuzzyHits[0].Id : null;
+        if (fuzzyHits.Count > 0)
+        {
+            return fuzzyHits.Count == 1 ? new MatchResolution(fuzzyHits[0].Id, false) : default;
+        }
+
+        if (catalogue is null)
+        {
+            return default;
+        }
+
+        var anchored = ResolveByAnchor(homeRaw, awayRaw, matches, catalogue);
+        return anchored is null ? default : new MatchResolution(anchored, Approximate: true);
+    }
+
+    /// <summary>
+    /// Last tier, for the low-resolution screenshots (WhatsApp Desktop, ~9px text) where OCR gets
+    /// one side of a line badly wrong: "Torrenham 2 x 1 Aston Villa", "Newcastle 3 x 1 Hll",
+    /// "Lmon 1 x 0 Bradford". One side still reads cleanly, and a club plays once per round, so that
+    /// side alone pins the fixture; the other side then only has to be plausible for the club it
+    /// sits against, not within the one-edit budget that has to keep the whole catalogue apart.
+    ///
+    /// Three conditions, all required. The clean side pins exactly one fixture at its own position
+    /// (home against home, away against away). The garbled side is plausible for that fixture's club
+    /// only. And the garbled side is not itself a club of the catalogue: "Brentford 1x1 Nottingham"
+    /// from another round's list, against "Brentford x Tottenham" on this card, is a real club
+    /// that happens to look like the one expected — not a misreading of it.
+    /// <c>OcrShortNameRoundTripTests</c> sweeps every pair of clubs to hold that line.
+    /// </summary>
+    private static Guid? ResolveByAnchor(
+        string homeRaw, string awayRaw, IReadOnlyList<RoundMatch> matches, IReadOnlyCollection<string> catalogue)
+    {
+        var pinnedByHome = matches.Where(m => TeamMatches(homeRaw, m.HomeTeam?.Name, fuzzy: true)).ToList();
+        var pinnedByAway = matches.Where(m => TeamMatches(awayRaw, m.AwayTeam?.Name, fuzzy: true)).ToList();
+        var home = pinnedByHome.Count == 1 ? pinnedByHome[0] : null;
+        var away = pinnedByAway.Count == 1 ? pinnedByAway[0] : null;
+
+        // Both sides pinning means they pinned different fixtures (the same one would have matched
+        // above): a line that mixes two fixtures is not something to guess at.
+        if (home is not null && away is not null)
+        {
+            return null;
+        }
+
+        if (home is not null)
+        {
+            return IsMisreadingOf(awayRaw, home.AwayTeam?.Name, catalogue) ? home.Id : null;
+        }
+
+        if (away is not null)
+        {
+            return IsMisreadingOf(homeRaw, away.HomeTeam?.Name, catalogue) ? away.Id : null;
+        }
+
+        return null;
+    }
+
+    /// <summary>Largest share of a name OCR may get wrong and still count as plausible for a club.</summary>
+    private const double PlausibleEditShare = 0.4;
+
+    /// <summary>
+    /// Words too common among club names to identify one: measured against them, "Coventry" looks
+    /// like any "… County" and "Hull" like any "… City". A club's distinctive words and its short
+    /// names still count.
+    /// </summary>
+    private static readonly HashSet<string> GenericClubWords = new(StringComparer.Ordinal)
+    {
+        "afc", "fc", "city", "town", "united", "county", "rovers", "wanderers", "athletic", "albion",
+        "rangers", "north", "end", "park", "hove", "and",
+    };
+
+    /// <summary>
+    /// True when <paramref name="raw"/> reads as a garbled <paramref name="teamName"/>: within
+    /// <see cref="PlausibleEditShare"/> of some form of the club — its distinctive words ("hull" for
+    /// Hull City) or the short names the message prints ("man utd"), with and without the rn/m
+    /// ligature — and not a clean reading of a different club.
+    /// </summary>
+    private static bool IsMisreadingOf(string raw, string? teamName, IReadOnlyCollection<string> catalogue)
+    {
+        if (string.IsNullOrWhiteSpace(teamName))
+        {
+            return false;
+        }
+
+        var r = Fold(raw.Replace('&', ' '));
+        if (r.Length == 0)
+        {
+            return false;
+        }
+
+        var plausible = NameForms(teamName).Any(form =>
+        {
+            var budget = (int)Math.Floor(PlausibleEditShare * Math.Max(r.Length, form.Length));
+            return WithinDistance(r, form, budget) || WithinDistance(Ligature(r), Ligature(form), budget);
+        });
+
+        return plausible && !catalogue.Any(other => !IsSameClub(other, teamName) && TeamMatches(raw, other, fuzzy: true));
+    }
+
+    private static bool IsSameClub(string a, string b) =>
+        Comparable(a) == Comparable(b)
+        || FootballReference.Canonical(a) == FootballReference.Canonical(b);
+
+    /// <summary>
+    /// The club's folded name, every run of its words that is not only generic words, and the
+    /// short names that point at it.
+    /// </summary>
+    private static IEnumerable<string> NameForms(string teamName)
+    {
+        var full = Fold(teamName.Replace('&', ' '));
+        var words = full.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        for (var start = 0; start < words.Length; start++)
+        {
+            for (var count = 1; start + count <= words.Length; count++)
+            {
+                if (words.Skip(start).Take(count).All(GenericClubWords.Contains))
+                {
+                    continue;
+                }
+
+                yield return string.Join(' ', words, start, count);
+            }
+        }
+
+        var canonical = FootballReference.Canonical(teamName);
+        foreach (var (shortName, fullName) in FootballReference.Aliases)
+        {
+            if (string.Equals(fullName, canonical, StringComparison.OrdinalIgnoreCase))
+            {
+                yield return Fold(shortName);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Resolves the participant a screenshot's file name points at (see
+    /// <see cref="OcrTextParser.NameFromFileName"/>). Stricter than <see cref="ResolveParticipant"/>
+    /// on purpose — the file name is trusted over what OCR reads, so it must not guess: a learned
+    /// alias, the same name, whole words of it ("Valter" for "Valter Silva", "De Farias" for "Felipe
+    /// de Farias"), or one wrong letter in a longer word ("Vilacao"). Never a bare substring, which
+    /// would let a two-letter participant such as "PL" claim "Complete.png". The first word is tried
+    /// alone only when the whole name found nobody at all ("Ezau Unica"), never when it found two.
+    /// </summary>
+    public static Guid? ResolveParticipantFromFileName(
+        string? stem,
+        IReadOnlyList<User> participants,
+        IReadOnlyDictionary<string, Guid>? aliases = null)
+    {
+        if (string.IsNullOrWhiteSpace(stem))
+        {
+            return null;
+        }
+
+        var candidates = FileNameCandidates(stem, participants, aliases);
+        if (candidates.Count == 0 && stem.Contains(' '))
+        {
+            candidates = FileNameCandidates(stem[..stem.IndexOf(' ')], participants, aliases);
+        }
+
+        return candidates.Count == 1 ? candidates[0] : null;
+    }
+
+    private static List<Guid> FileNameCandidates(
+        string name, IReadOnlyList<User> participants, IReadOnlyDictionary<string, Guid>? aliases)
+    {
+        if (aliases is not null
+            && aliases.TryGetValue(NormalizeAlias(name), out var aliased)
+            && participants.Any(p => p.Id == aliased))
+        {
+            return [aliased];
+        }
+
+        var key = Fold(name);
+        var exact = participants.Where(p => Fold(p.Name) == key).Select(p => p.Id).ToList();
+        if (exact.Count > 0)
+        {
+            return exact;
+        }
+
+        var words = key.Split(' ');
+        var byWords = participants
+            .Where(p =>
+            {
+                var own = Fold(p.Name).Split(' ');
+                return words.All(own.Contains) || own.All(words.Contains);
+            })
+            .Select(p => p.Id)
+            .ToList();
+        if (byWords.Count > 0)
+        {
+            return byWords;
+        }
+
+        return participants
+            .Where(p => words.Any(w => w.Length >= MinimumLengthForAnEdit
+                && Fold(p.Name).Split(' ').Any(own => WithinDistance(w, own, 1)))
+                || Fuzzy(key, p.Name))
+            .Select(p => p.Id)
+            .ToList();
     }
 
     private static bool TeamMatches(string raw, string? teamName, bool fuzzy = false)
@@ -192,8 +412,17 @@ public static class OcrTeamMatcher
     /// </summary>
     private static bool Fuzzy(string a, string b)
     {
-        var x = Ligature(Fold(a));
-        var y = Ligature(Fold(b));
+        var x = Fold(a);
+        var y = Fold(b);
+
+        // Both spellings are tried: the ligature closes "Blackbum" (an rn read as m) but opens a
+        // gap on the reverse mistake — "Blackburmn", where OCR added the m, is one edit from the
+        // club as written and two once every m has become rn.
+        return FuzzyFolded(Ligature(x), Ligature(y)) || FuzzyFolded(x, y);
+    }
+
+    private static bool FuzzyFolded(string x, string y)
+    {
         if (x.Length == 0 || y.Length == 0)
         {
             return false;
@@ -248,7 +477,7 @@ public static class OcrTeamMatcher
     private static string Ligature(string value) => value.Replace("m", "rn", StringComparison.Ordinal);
 
     /// <summary>Lowercases and strips accents, so "Joao" and "João" compare equal.</summary>
-    private static string Fold(string value)
+    internal static string Fold(string value)
     {
         var decomposed = value.ToLowerInvariant().Normalize(NormalizationForm.FormD);
         var builder = new StringBuilder(decomposed.Length);
@@ -266,7 +495,7 @@ public static class OcrTeamMatcher
     }
 
     /// <summary>Levenshtein distance, abandoned as soon as every path exceeds the budget.</summary>
-    private static bool WithinDistance(string a, string b, int budget)
+    internal static bool WithinDistance(string a, string b, int budget)
     {
         if (Math.Abs(a.Length - b.Length) > budget)
         {

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Palpitao.Api.Entities;
 
 namespace Palpitao.Api.Common;
@@ -282,6 +283,19 @@ public static class DomainMessages
             ["ocr.aliasAlreadyExists"] = (
                 "Este apelido já está cadastrado. Edite o apelido existente na lista.",
                 "This alias already exists. Edit the existing one in the list."),
+            // Review notes written on an OCR candidate; {0} is filled in by DomainMessages.Format.
+            ["ocr.review.scoreDisagreement"] = (
+                "O OCR leu este placar de formas diferentes ({0}). Confira no print.",
+                "The OCR read this score in different ways ({0}). Check the screenshot."),
+            ["ocr.review.scoreFromLetter"] = (
+                "O placar foi lido a partir de uma letra. Confira no print.",
+                "The score was read from a letter. Check the screenshot."),
+            ["ocr.review.approximateMatch"] = (
+                "Jogo reconhecido por aproximação (\"{0}\"). Confira no print.",
+                "Match recognised approximately (\"{0}\"). Check the screenshot."),
+            ["ocr.review.nameConflict"] = (
+                "O print diz \"{0}\", mas o nome do arquivo aponta outro participante.",
+                "The screenshot says \"{0}\", but the file name points at another participant."),
 
             // Tournament type (certame) validation.
             ["tournament.competitionNotAllowed"] = (
@@ -345,6 +359,13 @@ public static class DomainMessages
     /// <summary>Resolves a key to the given language ("pt"/"en"); falls back to the key itself.</summary>
     public static string Resolve(string key, string lang)
         => Catalog.TryGetValue(key, out var value) ? (lang == "pt" ? value.Pt : value.En) : key;
+
+    /// <summary>
+    /// <see cref="Resolve"/> for a message that carries values ("{0}"). Invariant culture: the
+    /// values are OCR text and scores, not numbers to be localised.
+    /// </summary>
+    public static string Format(string key, string lang, params object?[] args)
+        => string.Format(CultureInfo.InvariantCulture, Resolve(key, lang), args);
 
     /// <summary>Portuguese text for a key (used for logs and <see cref="Exception.Message"/>).</summary>
     public static string Pt(string key) => Resolve(key, "pt");
