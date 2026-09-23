@@ -7,17 +7,17 @@ _Last updated: 2026-09-23 (OCR import of rounds 4–9: participant from the file
 | Check | Result |
 |---|---|
 | Backend build (`dotnet build`) | ✅ 0 errors (1 pre-existing xUnit2012 analyzer warning) |
-| Backend tests (`dotnet test`) | ✅ **957** passed, 0 failed (1 skipped: `OcrSamplesTests`, runs only with `OCR_SAMPLES_DIR`) |
+| Backend tests (`dotnet test`) | ✅ **965** passed, 0 failed (1 skipped: `OcrSamplesTests`, runs only with `OCR_SAMPLES_DIR`) |
 | Frontend build (`ng build` prod) | ✅ success |
 | Frontend lint (`ng lint`) | ✅ 0 errors |
-| Frontend unit tests (Vitest) | ✅ **169** passed (28 files) |
-| Frontend e2e (Playwright) | ✅ **73** passed |
+| Frontend unit tests (Vitest) | ✅ **175** passed (29 files) |
+| Frontend e2e (Playwright) | ✅ **78** passed |
 | Frontend prod budgets | ✅ within budget (no warnings) |
-| i18n parity | ✅ 849 = 849 (`en-US` / `pt-BR`) |
+| i18n parity | ✅ 854 = 854 (`en-US` / `pt-BR`) |
 | OCR on real screenshots (`OcrSamplesTests`) | ✅ **574/575** fixtures over rounds 4–9 (was 557) |
-| Working tree | branch `claude/ocr-game-imports-42a474` off `main` at `de9891d`. |
+| Working tree | branch `claude/ocr-game-imports-42a474` with `main` at `b1ee650` (#50) merged in. |
 
-> Measured on branch `claude/ocr-game-imports-42a474` (2026-09-23), off `main` at `de9891d`.
+> Measured on branch `claude/ocr-game-imports-42a474` (2026-09-23) after merging `main` at `b1ee650`.
 >
 > ⚠️ **`format:check` fails locally and that is expected.** The working copy is CRLF
 > (`core.autocrlf=true`) while Prettier's default `endOfLine` is `lf`, so ~56 files report as
@@ -281,6 +281,23 @@ overall standings update.
   corrected from the app. The coverage panel on **/admin/rounds/:id** now runs while `Published`
   **and** `Locked` and offers *Marcar presente* / *Marcar ausente* with a mandatory justification.
 - **No history was rewritten** — deliberately; see §4.
+
+**Late admin entry: import and adjust until the round is finalized (this session).**
+
+- **The clock no longer stops the admin.** The board often imports the WhatsApp screenshots after
+  the deadline. Manual entry refused anything past it unless the admin ticked *Substituir palpites
+  existentes* (the only way to reveal the justification box, even for someone with no predictions)
+  and justified it. OCR had the opposite problem: **no** gate at all, so it wrote into `Scored`
+  and `Cancelled` rounds and left the scores silently stale.
+- **One status window for both** (`Common/AdminPredictionWindow`): `Published`/`Locked` open, with
+  no override; `Scored` refused until the round is reopened (then *Finalizar* re-scores it);
+  `Draft`/`Cancelled` refused. OCR checks it at upload (no batch or image left behind) and at
+  confirm (a round can be finalized mid-review). Candidate edit/discard/cancel stay open.
+- **The override is now only for eliminated participants**; `allowAfterDeadline` keeps its name so
+  the API contract does not move. `adminPrediction.roundNotOpenOverride` is gone.
+- **Flávio stays honest**: what the admin enters is stamped with the entry time, so once a leader's
+  special deadline has passed both screens say so and point at the exemption panel (PR #49).
+- Participants still close at the deadline — unchanged.
 
 ## 4. Pending / not implemented (roadmap)
 

@@ -15,6 +15,10 @@
   </p>
 </div>
 
+@if (round(); as r) {
+  <app-admin-entry-notice [round]="r" />
+}
+
 @if (loading()) {
   <app-loading />
 } @else if (!batch()) {
@@ -86,7 +90,7 @@
       <button
         class="btn btn-primary btn-lg w-100"
         (click)="process()"
-        [disabled]="files().length === 0 || processing()"
+        [disabled]="files().length === 0 || processing() || entryBlocked()"
       >
         @if (processing()) {
           <span class="spinner-border spinner-border-sm me-2"></span>
@@ -109,6 +113,7 @@
   <app-admin-ocr-batches
     [roundId]="roundId"
     [participants]="participants()"
+    [blocked]="entryBlocked()"
     (review)="openBatch($event)"
   />
 } @else if (batch(); as b) {
@@ -292,7 +297,9 @@
         <button
           class="btn btn-success btn-lg"
           (click)="confirm()"
-          [disabled]="confirming() || hasUnsavedEdits() || b.candidates.length === 0"
+          [disabled]="
+            confirming() || hasUnsavedEdits() || b.candidates.length === 0 || entryBlocked()
+          "
         >
           @if (confirming()) {
             <span class="spinner-border spinner-border-sm me-2"></span>

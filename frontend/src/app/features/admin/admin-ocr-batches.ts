@@ -51,6 +51,11 @@ export class AdminOcrBatches {
 
   readonly roundId = input.required<string>();
   readonly participants = input<Participant[]>([]);
+  /**
+   * The round no longer takes predictions from the admin (finalized, draft or cancelled): the
+   * server refuses a confirm then, so the list does not offer one.
+   */
+  readonly blocked = input(false);
   /** The admin asked to open one of the pending imports. */
   readonly review = output<string>();
 

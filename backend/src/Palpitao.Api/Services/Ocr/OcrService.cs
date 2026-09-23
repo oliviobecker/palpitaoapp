@@ -122,6 +122,10 @@ public class OcrService : IOcrService
             .FirstOrDefaultAsync(r => r.Id == roundId && r.GroupId == groupId, ct)
             ?? throw new NotFoundException("notFound.round");
 
+        // Up front, like the language check below: a finalized round would only fail at
+        // confirm, after the admin reviewed every candidate — and would leave a batch behind.
+        AdminPredictionWindow.EnsureOpen(round);
+
         var now = DateTime.UtcNow;
         var lang = NormalizeLanguage(language);
 

@@ -244,9 +244,15 @@ public static class DomainMessages
                 "Participante eliminado. Use override com justificativa para registrar.",
                 "Eliminated participant. Use an override with justification to register."),
             ["adminPrediction.alreadyHasPredictions"] = ("O participante já possui palpites. Confirme a substituição.", "The participant already has predictions. Confirm the replacement."),
-            ["adminPrediction.roundNotOpenOverride"] = (
-                "A rodada não está aberta para palpites. Use override com justificativa para registrar fora do prazo.",
-                "The round is not open for predictions. Use an override with justification to register after the deadline."),
+            ["adminPrediction.roundScored"] = (
+                "A rodada já foi finalizada. Reabra a rodada para importar ou ajustar palpites.",
+                "The round has already been finalized. Reopen it to import or adjust predictions."),
+            ["adminPrediction.roundNotPublished"] = (
+                "Publique a rodada antes de registrar palpites.",
+                "Publish the round before registering predictions."),
+            ["adminPrediction.roundCancelled"] = (
+                "A rodada foi cancelada. Não é possível registrar palpites.",
+                "The round was cancelled. Predictions can no longer be registered."),
 
             // OCR.
             ["ocr.sendImage"] = ("Envie uma imagem.", "Send an image."),

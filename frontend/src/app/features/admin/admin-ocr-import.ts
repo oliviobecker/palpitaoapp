@@ -22,6 +22,8 @@ import { RoundsService } from '../../core/services/rounds.service';
 import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
 import { isPendingOcrBatch } from '../../shared/utils/ocr-batch.util';
+import { AdminEntryNotice } from './admin-entry-notice';
+import { adminEntryBlockKey } from './admin-entry.util';
 import { AdminOcrBatches } from './admin-ocr-batches';
 import { OcrUploadQueue } from './ocr-upload-queue';
 
@@ -60,7 +62,15 @@ export function validateOcrFile(name: string, size: number): 'invalidFormat' | '
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-ocr-import',
-  imports: [FormsModule, RouterLink, TranslatePipe, Icon, Loading, AdminOcrBatches],
+  imports: [
+    FormsModule,
+    RouterLink,
+    TranslatePipe,
+    AdminEntryNotice,
+    Icon,
+    Loading,
+    AdminOcrBatches,
+  ],
   providers: [OcrUploadQueue],
   templateUrl: './admin-ocr-import.html',
   styles: [
@@ -219,6 +229,13 @@ export class AdminOcrImport implements OnInit {
   /** True while any candidate edit is unsaved (debounce pending, in flight or failed). */
   protected readonly hasUnsavedEdits = computed(() =>
     Object.values(this.saveStates()).some((s) => s !== 'saved'),
+  );
+  /**
+   * Finalized, draft or cancelled: upload and confirm stay off (the notice says why). Reviewing
+   * or discarding a batch left from before is still allowed — only confirming writes predictions.
+   */
+  protected readonly entryBlocked = computed(
+    () => adminEntryBlockKey(this.round()?.status) !== null,
   );
   /** The name OCR read off the image, shown as a hint next to the batch selector. */
   protected readonly detectedName = computed(

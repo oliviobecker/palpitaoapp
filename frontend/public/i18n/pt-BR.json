@@ -759,10 +759,17 @@
     "prefilledNote": "Palpites carregados — salvar irá sobrescrever os existentes.",
     "overwrite": "Substituir palpites existentes",
     "justification": "Justificativa",
-    "allowAfterDeadline": "Permitir registrar fora do prazo (override)",
+    "eliminatedJustificationHint": "Participante eliminado: para registrar, informe uma justificativa.",
     "save": "Salvar palpites",
     "saved": "Palpites salvos!",
     "selectParticipantError": "Selecione um participante."
+  },
+  "adminEntry": {
+    "blockedScored": "Esta rodada já foi finalizada. Para importar ou ajustar palpites, reabra a rodada e finalize de novo depois.",
+    "blockedDraft": "Esta rodada ainda é um rascunho. Publique a rodada antes de registrar palpites.",
+    "blockedCancelled": "Esta rodada foi cancelada. Não é possível registrar palpites.",
+    "openRound": "Abrir a rodada",
+    "flavioLate": "Regra Flávio: o prazo especial de {{leaders}} terminou em {{deadline}}. O que for registrado agora conta como enviado agora — se o palpite chegou no prazo pelo WhatsApp, dispense a regra no painel Regra Flávio da rodada."
   },
   "ocr": {
     "title": "Importar palpites por imagem",

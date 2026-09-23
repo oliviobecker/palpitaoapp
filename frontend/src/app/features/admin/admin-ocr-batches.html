@@ -66,7 +66,7 @@
           type="button"
           class="btn btn-success btn-sm"
           (click)="confirmReady()"
-          [disabled]="working() || queue.busy()"
+          [disabled]="working() || queue.busy() || blocked()"
         >
           {{ 'ocr.pending.confirmReady' | translate: { count: readyCount() } }}
         </button>
@@ -105,7 +105,7 @@
               type="button"
               class="btn btn-success btn-sm"
               (click)="confirmOne(b)"
-              [disabled]="working()"
+              [disabled]="working() || blocked()"
             >
               {{ 'ocr.pending.confirm' | translate }}
             </button>
