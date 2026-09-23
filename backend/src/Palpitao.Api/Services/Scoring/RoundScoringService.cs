@@ -235,6 +235,15 @@ public class RoundScoringService : IRoundScoringService
             throw new BusinessRuleException("round.allResultsRequired");
         }
 
+        // A live score from the results refresh is not a result, and the refresh never revisits
+        // a Scored round, so scoring on it would freeze a half-played score for good. Manual entry
+        // sets both flags; IsFinished alone covers rows written before Status existed. The season
+        // replay runs this too, so a round already scored on a live score surfaces here.
+        if (round.Matches.Any(m => !m.IsFinished && m.Status != MatchStatus.Finished))
+        {
+            throw new BusinessRuleException("round.allMatchesFinishedRequired");
+        }
+
         // Idempotency: drop this round's previous per-match scores and results.
         _db.PredictionScores.RemoveRange(_db.PredictionScores.Where(p => p.RoundId == roundId));
         _db.RoundParticipantResults.RemoveRange(_db.RoundParticipantResults.Where(r => r.RoundId == roundId));

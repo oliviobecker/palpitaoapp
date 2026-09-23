@@ -1010,6 +1010,11 @@ standings** (preview), without officially closing the round.
 | Flávio Rule | does **not** apply | applies |
 | Season standings | does **not** change | recalculated |
 
+A round is finalized only once **every match is finished** (`round.allMatchesFinishedRequired`,
+checked again for each scored round a season recalculation replays): a live score saved by the
+refresh does not count, and a match that will not finish normally needs its result entered by hand,
+which marks it `Finished`.
+
 The temporary scoring uses the **same `ScoringService`** (categories + multipliers, including the
 manual override). `projectedTotalPoints = current official scoring + the round's temporary points`.
 
