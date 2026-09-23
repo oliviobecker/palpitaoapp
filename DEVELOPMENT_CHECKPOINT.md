@@ -1,22 +1,23 @@
 # DEVELOPMENT_CHECKPOINT
 
-_Last updated: 2026-08-22 (public standings link — [PR #45](https://github.com/oliviobecker/palpitaoapp/pull/45), released as v1.17.0 and deployed: a key-addressed, account-free standings and scoring audit)._
+_Last updated: 2026-09-23 (OCR import of rounds 4–9: participant from the file name, approximate matches, doubtful scores flagged, other-round lines left out, multi-image upload — branch `claude/ocr-game-imports-42a474`)._
 
 ## 0. Status at a glance
 
 | Check | Result |
 |---|---|
 | Backend build (`dotnet build`) | ✅ 0 errors (1 pre-existing xUnit2012 analyzer warning) |
-| Backend tests (`dotnet test`) | ✅ **855** passed, 0 failed |
+| Backend tests (`dotnet test`) | ✅ **957** passed, 0 failed (1 skipped: `OcrSamplesTests`, runs only with `OCR_SAMPLES_DIR`) |
 | Frontend build (`ng build` prod) | ✅ success |
 | Frontend lint (`ng lint`) | ✅ 0 errors |
-| Frontend unit tests (Vitest) | ✅ **149** passed (26 files) |
-| Frontend e2e (Playwright) | ✅ **64** passed |
+| Frontend unit tests (Vitest) | ✅ **169** passed (28 files) |
+| Frontend e2e (Playwright) | ✅ **73** passed |
 | Frontend prod budgets | ✅ within budget (no warnings) |
-| i18n parity | ✅ 787 = 787 (`en-US` / `pt-BR`) |
-| Working tree | `main` at `d1daf6a`. Clean apart from in-progress `delete-rounds` work. |
+| i18n parity | ✅ 849 = 849 (`en-US` / `pt-BR`) |
+| OCR on real screenshots (`OcrSamplesTests`) | ✅ **574/575** fixtures over rounds 4–9 (was 557) |
+| Working tree | branch `claude/ocr-game-imports-42a474` off `main` at `de9891d`. |
 
-> Measured on `main` at `d1daf6a` (2026-08-22), after PRs #43–#46.
+> Measured on branch `claude/ocr-game-imports-42a474` (2026-09-23), off `main` at `de9891d`.
 >
 > ⚠️ **`format:check` fails locally and that is expected.** The working copy is CRLF
 > (`core.autocrlf=true`) while Prettier's default `endOfLine` is `lf`, so ~56 files report as
@@ -114,8 +115,8 @@ overall standings update.
   post-confirm navigation back to the round detail.
 - **OCR backend guards**: confirm/cancel/update reject already-confirmed batches; confirm requires
   Processed/Reviewed and rejects duplicate participant+match candidates; `Confidence` recalculated on
-  edit; per-admin **rate limit** on the upload endpoint (`RateLimiting:Ocr`, 5/min default); request
-  size limit derived from the shared 10 MB constant.
+  edit; per-admin **rate limit** on the upload endpoint (`RateLimiting:Ocr`, 20/min since the
+  multi-image upload — was 5/min); request size limit derived from the shared 10 MB constant.
 - **Results entry**: `round-results-editor` no longer prefills 0×0 — only complete score pairs are
   saved (pair validator + count on the button), so partial entry can't mark unplayed matches finished;
   typing a score auto-advances the focus.
@@ -130,7 +131,7 @@ overall standings update.
 - **Viewing**: `GET admin/rounds/{id}/ocr-imports` (summaries, no bytes) and
   `GET admin/ocr-imports/{id}/image` (bytes, `nosniff` + CSP `default-src 'none'; sandbox` +
   `private, immutable` cache + SHA-256 ETag → 304). Own rate-limit policy `RateLimiting:OcrImage`
-  (60/min) — the 5/min upload throttle would reject a gallery. The frontend fetches images as blobs
+  (60/min) — the upload throttle would reject a gallery. The frontend fetches images as blobs
   through `HttpClient` (so the bearer/group interceptors apply) and wraps them in object URLs
   (`OcrImageService`), shown in a root-level lightbox (`ImageViewer`, modelled on `ConfirmDialog`).
   New page `/admin/rounds/:id/import-history`; the review screen keeps its image across a reload via
@@ -139,7 +140,8 @@ overall standings update.
   the claimed extension → `ocr.contentMismatch` (422) *before* any row is written. A fake `.png` no
   longer produces a junk `Failed` batch.
 - **Storage footprint** (`OcrStorage` in appsettings): `StoreImages` kill switch,
-  `MaxImagesPerRound` (10) pruned synchronously on upload, `RetentionDays` (180) swept daily by
+  `MaxImagesPerRound` (30 — a round sent at once is up to 18 screenshots; was 10) pruned
+  synchronously on upload, `RetentionDays` (180) swept daily by
   `OcrImageRetentionBackgroundService` (Postgres advisory lock, single-runner). Pruning removes
   **only the bytes** — batches, candidates and audit survive. Expect ~1 GB/season/group otherwise.
 
@@ -167,6 +169,40 @@ overall standings update.
   `BuildCandidates`. An over-long line failed the insert *inside* the import's `try`, and the
   `catch` that records the failure re-saved the same tracked entities — so it failed again and the
   admin got an opaque 500 instead of "could not read this image".
+
+**OCR import of rounds 4–9: file-named participants, approximate matches, doubtful scores, a round at once (2026-09-23)**
+- Measured, not deduced: the real engine + import over the 51 screenshots of rounds 4–9
+  (`OcrSamplesTests`, now a permanent env-gated harness — `OCR_SAMPLES_DIR`). Before: 557/575
+  fixtures resolved, participant wrong or missing on 19 of 50 prints (11 of 19 in rounds 8–9),
+  two scores silently wrong, a two-round screenshot left 11 rows to delete per import. After:
+  **574/575** (the last one is an unreadable `1xP`), participant right on every print named after
+  its person, both wrong scores flagged, other-round lines left out.
+- **Participant from the file name** (`OcrTextParser.NameFromFileName`,
+  `OcrTeamMatcher.ResolveParticipantFromFileName`): `Valter1.jpeg` → Valter Silva, ahead of whatever
+  OCR reads; generic names (`9.png`, `WhatsApp Image …`) fall back to the header. A header naming
+  someone else keeps the file's participant but flags the rows.
+- **Parser**: `Name: content` only when the content holds a fixture (the `REGRA FLÁVIO: … 24 horas`
+  line named the participant of every row below it); initials in the round header (`JP Rodada 9`);
+  the `Nome` placeholder dropped; headings recognised with up to two wrong characters; the round
+  message's words never a name; phone numbers and glued digits across `:`/`-` never a score; a
+  doubled zero against the separator (`OxO0`) read as one; `ScoreFromLetter` for any non-O letter.
+- **Matcher**: an approximate tier (`OcrTeamMatcher.Resolve`) for the small WhatsApp Desktop prints —
+  the clean side pins the fixture, the other side only has to be plausible (≤ 40%) and must not be
+  another club; only with the catalogue at hand, always flagged. New club-pair sweep in
+  `OcrShortNameRoundTripTests`. `Fuzzy` compares with and without the rn/m rewrite.
+- **Three readings, chosen by the round**: `IOcrEngine.ReadVariants` returns every reading; the
+  import keeps the one that resolves the most fixtures (confidence breaks ties) and flags a score
+  the readings disagree on — not a vote: two of three readings once agreed on the wrong one.
+- **Other round**: a line that is one of the season's other fixtures is left out and counted
+  (`OcrBatchDto.IgnoredLineCount`/`IgnoredRoundNumbers`, upload response only); a line that fits no
+  round stays for review.
+- **Alias learning**: learns only names that resolve to nobody, never the message's own words, and
+  the file name instead of OCR text when the file names someone. `UpdateCandidateAsync` keeps a
+  score/match doubt flagged when only the participant changes.
+- **Multi-image upload**: pick a round's screenshots at once; a sequential queue (`OcrUploadQueue`,
+  waits out a 429's `Retry-After`) and a pending list (`AdminOcrBatches`) with **Confirm ready
+  ones**. `OcrBatchSummaryDto` gains `NeedsReviewCount` and `ParticipantUserId`. Review cards show
+  the reason a complete row was flagged. `RateLimiting:Ocr` 5 → 20/min, `MaxImagesPerRound` 10 → 30.
 
 **Admin screen for the learned aliases (this session)**
 - New tab **Admin → Apelidos** (`/admin/ocr-aliases`): lists what the group has learned, re-points an

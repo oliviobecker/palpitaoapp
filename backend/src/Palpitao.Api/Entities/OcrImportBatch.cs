@@ -5,6 +5,9 @@ namespace Palpitao.Api.Entities;
 /// <summary>An OCR import job: one uploaded image processed for a round.</summary>
 public class OcrImportBatch
 {
+    /// <summary>Column width of <see cref="OriginalFileName"/>, which the client sends.</summary>
+    public const int MaxOriginalFileNameLength = 300;
+
     public Guid Id { get; set; }
 
     public Guid RoundId { get; set; }

@@ -1052,6 +1052,74 @@ public class PredictionImportServiceTests
     }
 
     [Fact]
+    public async Task Confirm_learns_the_file_name_when_it_named_nobody_yet()
+    {
+        // "JP.jpeg" for a member registered as "João Paulo": the admin picks him once, and the
+        // file name — not the junk OCR read off the image — is what the next import resolves.
+        using var db = CreateContext();
+        var (roundId, matchId, _) = SeedRound(db);
+        var joao = SeedParticipant(db, "João Paulo");
+        var service = ImportService(db);
+
+        await service.ConfirmAsync(
+            SeedNamedBatchWithCandidates(db, roundId, "JP.jpeg", (matchId, joao, "Premier Leaque")), Admin, Ct);
+
+        var alias = await db.OcrParticipantAliases.SingleAsync();
+        Assert.Equal("JP", alias.AliasRaw);
+        Assert.Equal(joao, alias.UserId);
+    }
+
+    [Fact]
+    public async Task Confirm_learns_nothing_when_the_file_name_already_named_the_participant()
+    {
+        using var db = CreateContext();
+        var (roundId, matchId, _) = SeedRound(db);
+        var valter = SeedParticipant(db, "Valter Silva");
+        var service = ImportService(db);
+
+        await service.ConfirmAsync(
+            SeedNamedBatchWithCandidates(db, roundId, "Valter1.jpeg", (matchId, valter, "REGRA FLÁVIO")), Admin, Ct);
+
+        Assert.Empty(await db.OcrParticipantAliases.ToListAsync());
+    }
+
+    [Theory]
+    // Read as a participant by earlier versions of the parser, and filed by hand by the admin.
+    [InlineData("REGRA FLÁVIO")]
+    [InlineData("palpitar")]
+    [InlineData("Premier Leaque")]
+    [InlineData("Nome")]
+    public async Task Confirm_never_learns_the_round_messages_own_words(string raw)
+    {
+        using var db = CreateContext();
+        var (roundId, matchId, _) = SeedRound(db);
+        var pl = SeedParticipant(db, "PL");
+        var service = ImportService(db);
+
+        await service.ConfirmAsync(SeedBatchWithCandidates(db, roundId, (matchId, pl, raw)), Admin, Ct);
+
+        Assert.Empty(await db.OcrParticipantAliases.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData("x.png", "Ezau")] // the name OCR read belongs to another member
+    [InlineData("Ezau.jpg", "Premier Leaque")] // the file was labelled with another member's name
+    public async Task Confirm_does_not_learn_a_name_that_already_points_at_someone_else(string file, string raw)
+    {
+        // Learning "ezau" -> Bruno here would take Ezaú's own name away from him on every later
+        // import: aliases are checked before names.
+        using var db = CreateContext();
+        var (roundId, matchId, _) = SeedRound(db);
+        SeedParticipant(db, "Ezaú Moura");
+        var bruno = SeedParticipant(db, "Bruno Vilaça");
+        var service = ImportService(db);
+
+        await service.ConfirmAsync(SeedNamedBatchWithCandidates(db, roundId, file, (matchId, bruno, raw)), Admin, Ct);
+
+        Assert.Empty(await db.OcrParticipantAliases.ToListAsync());
+    }
+
+    [Fact]
     public void Ambiguous_items_are_flagged_for_review()
     {
         // Unknown participant + a match that is not in the round.
@@ -1119,14 +1187,19 @@ public class PredictionImportServiceTests
     /// <summary>A reviewed batch whose candidates are already filed against a participant —
     /// the state the admin leaves behind just before pressing Confirm.</summary>
     private static Guid SeedBatchWithCandidates(
-        AppDbContext db, Guid roundId, params (Guid MatchId, Guid UserId, string Raw)[] candidates)
+        AppDbContext db, Guid roundId, params (Guid MatchId, Guid UserId, string Raw)[] candidates) =>
+        SeedNamedBatchWithCandidates(db, roundId, "x.png", candidates);
+
+    /// <inheritdoc cref="SeedBatchWithCandidates"/>
+    private static Guid SeedNamedBatchWithCandidates(
+        AppDbContext db, Guid roundId, string fileName, params (Guid MatchId, Guid UserId, string Raw)[] candidates)
     {
         var batch = new OcrImportBatch
         {
             Id = Guid.NewGuid(),
             RoundId = roundId,
             UploadedByUserId = Admin,
-            OriginalFileName = "x.png",
+            OriginalFileName = fileName,
             LanguageUsed = "por",
             Status = OcrBatchStatus.Reviewed,
             CreatedAt = DateTime.UtcNow,

@@ -8,6 +8,7 @@ using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Services.Localization;
 
 namespace Palpitao.Api.Services.Ocr;
 
@@ -27,6 +28,7 @@ public class OcrService : IOcrService
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
     private readonly OcrStorageOptions _storage;
+    private readonly ILocalizationService _localization;
     private readonly ILogger<OcrService> _logger;
 
     public OcrService(
@@ -37,6 +39,7 @@ public class OcrService : IOcrService
         IAuditService audit,
         ICurrentGroupService current,
         IOptions<OcrStorageOptions> storage,
+        ILocalizationService localization,
         ILogger<OcrService> logger)
     {
         _db = db;
@@ -46,6 +49,7 @@ public class OcrService : IOcrService
         _audit = audit;
         _current = current;
         _storage = storage.Value;
+        _localization = localization;
         _logger = logger;
     }
 
@@ -136,7 +140,10 @@ public class OcrService : IOcrService
             Id = Guid.NewGuid(),
             RoundId = roundId,
             UploadedByUserId = adminId,
-            OriginalFileName = fileName,
+            // The name comes from the client and the column has a width.
+            OriginalFileName = fileName.Length > OcrImportBatch.MaxOriginalFileNameLength
+                ? fileName[..OcrImportBatch.MaxOriginalFileNameLength]
+                : fileName,
             LanguageUsed = lang,
             Status = OcrBatchStatus.Uploaded,
             CreatedAt = now,
@@ -159,23 +166,62 @@ public class OcrService : IOcrService
             });
         }
 
+        OcrImportResult result;
         try
         {
-            var text = _engine.ExtractText(bytes, lang);
-            batch.ExtractedText = text;
+            var readings = _engine.ReadVariants(bytes, lang);
+            // Kept even if building the candidates fails below, so a failed batch still shows what
+            // OCR saw; replaced by the reading actually chosen once there is one.
+            batch.ExtractedText = readings.FirstOrDefault()?.Text;
             batch.Status = OcrBatchStatus.Processed;
             batch.ProcessedAt = now;
 
             var participants = await GroupQueries.ActiveParticipants(_db, groupId)
                 .ToListAsync(ct);
             var aliases = await _aliases.GetForGroupAsync(groupId, ct);
+            var catalogue = await _db.Teams.AsNoTracking().Select(t => t.Name).ToListAsync(ct);
+            var otherRounds = await _db.RoundMatches
+                .AsNoTracking()
+                .Include(m => m.Round)
+                .Include(m => m.HomeTeam)
+                .Include(m => m.AwayTeam)
+                .Where(m => m.Round!.SeasonId == round.SeasonId
+                    && m.Round.GroupId == groupId
+                    && m.RoundId != roundId)
+                .ToListAsync(ct);
 
-            var candidates = _import.BuildCandidates(
-                batch.Id, roundId, text, round.Matches.ToList(), participants, aliases);
-            _db.OcrPredictionCandidates.AddRange(candidates);
+            result = _import.BuildCandidates(
+                batch.Id,
+                roundId,
+                readings,
+                new OcrImportContext(
+                    round.Matches.ToList(),
+                    participants,
+                    aliases,
+                    fileName,
+                    catalogue,
+                    otherRounds,
+                    _localization.Language));
+            batch.ExtractedText = result.Reading.Text;
+            _db.OcrPredictionCandidates.AddRange(result.Candidates);
 
+            _logger.LogInformation(
+                "OCR: leitura {Variant} escolhida para {File}: {Candidates} linhas, {Ignored} de outra rodada ignoradas.",
+                result.Reading.Variant,
+                fileName,
+                result.Candidates.Count,
+                result.IgnoredLineCount);
             _audit.Add(adminId, "OcrImportProcessed", nameof(OcrImportBatch), batch.Id.ToString(),
-                new { roundId, candidates = candidates.Count, imageBytes = bytes.Length, contentType });
+                new
+                {
+                    roundId,
+                    candidates = result.Candidates.Count,
+                    variant = result.Reading.Variant,
+                    ignoredOtherRound = result.IgnoredLineCount,
+                    ignoredRounds = result.IgnoredRoundNumbers,
+                    imageBytes = bytes.Length,
+                    contentType,
+                });
             await _db.SaveChangesAsync(ct);
         }
         catch (Exception ex) when (ex is not BusinessRuleException and not NotFoundException)
@@ -194,7 +240,12 @@ public class OcrService : IOcrService
             await PruneRoundImagesAsync(roundId, ct);
         }
 
-        return await GetBatchAsync(batch.Id, ct);
+        var dto = await GetBatchAsync(batch.Id, ct);
+        // Not stored: the lines were never candidates. The upload response is where the admin needs
+        // to hear about them; the extracted text still shows them on a reload.
+        dto.IgnoredLineCount = result.IgnoredLineCount;
+        dto.IgnoredRoundNumbers = result.IgnoredRoundNumbers.ToList();
+        return dto;
     }
 
     /// <summary>
@@ -283,6 +334,7 @@ public class OcrService : IOcrService
                 ImageContentType = b.Image!.ContentType,
                 ImageByteSize = (int?)b.Image!.ByteSize,
                 CandidateCount = b.Candidates.Count,
+                NeedsReviewCount = b.Candidates.Count(c => c.NeedsReview),
                 UploadedByUserId = b.UploadedByUserId,
                 CreatedAt = b.CreatedAt,
                 ProcessedAt = b.ProcessedAt,
@@ -299,9 +351,24 @@ public class OcrService : IOcrService
             .Select(u => new { u.Id, u.Name })
             .ToDictionaryAsync(u => u.Id, u => u.Name, ct);
 
+        // Who each batch is filed against, for the pending list the multi-image upload shows. Only
+        // the two columns, and only for batches already scoped to the group above.
+        var batchIds = batches.Select(b => b.Id).ToList();
+        var owners = await _db.OcrPredictionCandidates
+            .AsNoTracking()
+            .Where(c => batchIds.Contains(c.OcrImportBatchId))
+            .Select(c => new { c.OcrImportBatchId, c.UserId })
+            .ToListAsync(ct);
+        var ownerByBatch = owners
+            .GroupBy(o => o.OcrImportBatchId)
+            .ToDictionary(g => g.Key, g => g.Select(o => o.UserId).Distinct().ToList());
+
         foreach (var batch in batches)
         {
             batch.UploadedByName = names.GetValueOrDefault(batch.UploadedByUserId);
+            batch.ParticipantUserId = ownerByBatch.TryGetValue(batch.Id, out var users) && users.Count == 1
+                ? users[0]
+                : null;
         }
 
         return batches;
@@ -330,14 +397,27 @@ public class OcrService : IOcrService
             .FirstOrDefaultAsync(c => c.Id == candidateId && c.OcrImportBatchId == batchId, ct)
             ?? throw new NotFoundException("notFound.ocrCandidate");
 
+        // The import's notes are about the fixture and the score it read (readings that disagree, a
+        // score read off a letter, an approximate match). Touching either answers them, so the
+        // note goes; filing the row under a participant — what "apply to all" does to every card —
+        // does not, and must not quietly clear a doubt about the score. A note the client itself
+        // changed is taken as sent.
+        var readingReviewed = candidate.RoundMatchId != request.RoundMatchId
+            || candidate.PredictedHomeScore != request.PredictedHomeScore
+            || candidate.PredictedAwayScore != request.PredictedAwayScore;
+        var notes = request.ReviewNotes != candidate.ReviewNotes
+            ? request.ReviewNotes
+            : readingReviewed ? null : candidate.ReviewNotes;
+
         candidate.UserId = request.UserId;
         candidate.RoundMatchId = request.RoundMatchId;
         candidate.PredictedHomeScore = request.PredictedHomeScore;
         candidate.PredictedAwayScore = request.PredictedAwayScore;
-        candidate.ReviewNotes = request.ReviewNotes;
+        candidate.ReviewNotes = notes;
         candidate.NeedsReview = request.UserId is null || request.RoundMatchId is null
             || request.PredictedHomeScore is null || request.PredictedAwayScore is null
-            || request.PredictedHomeScore < 0 || request.PredictedAwayScore < 0;
+            || request.PredictedHomeScore < 0 || request.PredictedAwayScore < 0
+            || (notes is not null && !readingReviewed);
         candidate.Confidence = (request.UserId is not null ? 0.5 : 0.0)
             + (request.RoundMatchId is not null ? 0.5 : 0.0);
         candidate.UpdatedAt = DateTime.UtcNow;

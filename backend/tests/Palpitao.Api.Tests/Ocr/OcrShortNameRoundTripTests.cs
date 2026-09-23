@@ -202,6 +202,45 @@ public class OcrShortNameRoundTripTests
     }
 
     [Fact]
+    public void The_approximate_tier_never_takes_one_club_for_another()
+    {
+        // The safety proof for OcrTeamMatcher's approximate tier, which the two sweeps above cannot
+        // give: there the away side (Arsenal) is on every fixture, so it never pins one and the tier
+        // never runs. Here Arsenal is on a single fixture, facing club Y, and the line names a
+        // different club X — the shape of another round's line on this card ("Brentford 1x1
+        // Nottingham" against "Brentford x Tottenham"). X is real, so it must never be taken for a
+        // misreading of Y, however alike the two look (Man City/Man Utd, West Ham/West Brom,
+        // Burnley/Barnsley, Southampton/Northampton, Tottenham/Nottingham). Written both as the
+        // catalogue spells X and as the message prints it.
+        var shortByFull = ShortNames.ToDictionary(p => p.Full, p => p.Short);
+        var clubs = SeededTeamNames.Value.Where(n => n != OpponentName).ToList();
+
+        var wrong = new List<string>();
+        foreach (var y in clubs)
+        {
+            List<RoundMatch> card =
+            [
+                new() { Id = Guid.NewGuid(), HomeTeam = new Team { Name = OpponentName }, AwayTeam = new Team { Name = y } },
+            ];
+
+            foreach (var x in clubs.Where(x => x != y))
+            {
+                string[] written = shortByFull.TryGetValue(x, out var s) ? [x, s] : [x];
+                foreach (var form in written)
+                {
+                    var parsed = Assert.Single(OcrTextParser.Parse($"{OpponentName} 2 x 1 {form}"));
+                    if (OcrTeamMatcher.ResolveMatch(parsed.HomeTeamRaw, parsed.AwayTeamRaw, card, SeededTeamNames.Value) is not null)
+                    {
+                        wrong.Add($"'{form}' ({x}) was taken for {y}");
+                    }
+                }
+            }
+        }
+
+        Assert.Empty(wrong);
+    }
+
+    [Fact]
     public void Full_names_still_resolve_so_older_screenshots_keep_importing()
     {
         var (matches, idByName) = RoundOfEveryClub(clubAtHome: true);

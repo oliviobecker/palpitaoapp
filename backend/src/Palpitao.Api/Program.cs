@@ -98,8 +98,11 @@ var authRateLimitPermit = builder.Configuration.GetValue<int?>("RateLimiting:Aut
 var authRateLimitWindowSeconds = builder.Configuration.GetValue<int?>("RateLimiting:Auth:WindowSeconds") ?? 60;
 // OCR image processing is CPU-bound (Tesseract) with up-to-10MB uploads, so the
 // import endpoint gets its own per-admin throttle. Tunable via "RateLimiting:Ocr".
+// Sized for a whole round sent at once (the multi-image upload sends one image at a
+// time, so the CPU still reads one screenshot per admin at a time): a round has been
+// up to 18 screenshots.
 const string OcrRateLimitPolicy = "ocr";
-var ocrRateLimitPermit = builder.Configuration.GetValue<int?>("RateLimiting:Ocr:PermitLimit") ?? 5;
+var ocrRateLimitPermit = builder.Configuration.GetValue<int?>("RateLimiting:Ocr:PermitLimit") ?? 20;
 var ocrRateLimitWindowSeconds = builder.Configuration.GetValue<int?>("RateLimiting:Ocr:WindowSeconds") ?? 60;
 // Serving stored images is a cheap read, but a gallery issues many of them — the import
 // throttle above would reject the second row of cards. Tunable via "RateLimiting:OcrImage".

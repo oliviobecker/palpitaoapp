@@ -458,7 +458,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<OcrImportBatch>(e =>
         {
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(30);
-            e.Property(x => x.OriginalFileName).HasMaxLength(300);
+            e.Property(x => x.OriginalFileName).HasMaxLength(OcrImportBatch.MaxOriginalFileNameLength);
             e.Property(x => x.LanguageUsed).HasMaxLength(20);
 
             e.HasOne(x => x.Round)
@@ -472,7 +472,7 @@ public class AppDbContext : DbContext
             e.Property(x => x.ParticipantNameRaw)
                 .HasMaxLength(OcrPredictionCandidate.MaxParticipantNameLength);
             e.Property(x => x.MatchTextRaw).HasMaxLength(OcrPredictionCandidate.MaxMatchTextLength);
-            e.Property(x => x.ReviewNotes).HasMaxLength(500);
+            e.Property(x => x.ReviewNotes).HasMaxLength(OcrPredictionCandidate.MaxReviewNotesLength);
             e.HasIndex(x => x.OcrImportBatchId);
 
             e.HasOne(x => x.Batch)

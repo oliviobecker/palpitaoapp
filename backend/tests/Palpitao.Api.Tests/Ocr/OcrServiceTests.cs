@@ -30,14 +30,21 @@ public class OcrServiceTests
     private sealed class FakeOcrEngine : IOcrEngine
     {
         public string Result = string.Empty;
+
+        /// <summary>Every reading, when a test needs more than one; otherwise <see cref="Result"/> alone.</summary>
+        public OcrReading[]? Readings;
+
         public string[] Missing = [];
-        public string ExtractText(byte[] image, string language) => Result;
+
+        public IReadOnlyList<OcrReading> ReadVariants(byte[] image, string language)
+            => Readings ?? [new OcrReading("original", Result, 0.9f)];
+
         public IReadOnlyList<string> MissingLanguages(string language) => Missing;
     }
 
     private sealed class ThrowingOcrEngine : IOcrEngine
     {
-        public string ExtractText(byte[] image, string language)
+        public IReadOnlyList<OcrReading> ReadVariants(byte[] image, string language)
             => throw new InvalidOperationException("tessdata ausente");
 
         // Models present, engine broken — the case the generic failure path is for.
@@ -147,7 +154,8 @@ public class OcrServiceTests
         var aliases = new OcrAliasService(db, new AuditService(db), current);
         var import = new PredictionImportService(db, new AuditService(db), current, aliases);
         var service = new OcrService(
-            db, engine, import, aliases, new AuditService(db), current, Storage(), NullLogger<OcrService>.Instance);
+            db, engine, import, aliases, new AuditService(db), current, Storage(),
+            new FakeLocalizationService("pt"), NullLogger<OcrService>.Instance);
 
         var batch = await service.ProcessAsync(round.Id, "palpites.png", PngBytes(1, 2, 3), "por", Admin, Ct);
 
@@ -157,6 +165,169 @@ public class OcrServiceTests
         Assert.Equal(userId, candidate.UserId);
         Assert.Equal(2, candidate.PredictedHomeScore);
         Assert.False(candidate.NeedsReview);
+    }
+
+    /// <summary>
+    /// Round 1 (Arsenal x Chelsea, Newcastle x Tottenham) and round 2 (Liverpool x Manchester City)
+    /// of one season, and the participants João and Valter Silva.
+    /// </summary>
+    private static async Task<(Guid Round1, Guid Joao, Guid Valter)> SeedTwoRoundsAsync(AppDbContext db)
+    {
+        var rounds = new RoundService(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db));
+        var first = await rounds.CreateAsync(new CreateRoundRequest { SeasonId = SeasonId, Number = 1 }, Admin, Ct);
+        var second = await rounds.CreateAsync(new CreateRoundRequest { SeasonId = SeasonId, Number = 2 }, Admin, Ct);
+        foreach (var (round, home, away) in new[]
+        {
+            (first.Id, SeedIds.Arsenal, SeedIds.Chelsea),
+            (first.Id, SeedIds.Newcastle, SeedIds.Tottenham),
+            (second.Id, SeedIds.Liverpool, SeedIds.ManchesterCity),
+        })
+        {
+            await rounds.AddMatchAsync(round, new CreateMatchRequest
+            {
+                Competition = Competition.PremierLeague,
+                Phase = MatchPhase.Regular,
+                HomeTeamId = home,
+                AwayTeamId = away,
+                StartsAt = DateTime.UtcNow.AddDays(2),
+            }, Admin, Ct);
+        }
+
+        var joao = Guid.NewGuid();
+        var valter = Guid.NewGuid();
+        db.Users.Add(new User { Id = joao, Name = "João", Email = $"{joao}@x.com", PasswordHash = "x", Role = UserRole.Participant, IsActive = true, CreatedAt = DateTime.UtcNow });
+        db.Users.Add(new User { Id = valter, Name = "Valter Silva", Email = $"{valter}@x.com", PasswordHash = "x", Role = UserRole.Participant, IsActive = true, CreatedAt = DateTime.UtcNow });
+        TestSeed.AddDefaultGroupMembership(db, joao);
+        TestSeed.AddDefaultGroupMembership(db, valter);
+        db.SaveChanges();
+        return (first.Id, joao, valter);
+    }
+
+    [Fact]
+    public async Task Process_keeps_the_reading_with_most_fixtures_and_reports_another_rounds_lines()
+    {
+        using var db = CreateContext();
+        var (round1, joao, _) = await SeedTwoRoundsAsync(db);
+        const string complete =
+            "João\nArsenal 2x1 Chelsea\nNewcastle 1x0 Tottenham\nLiverpool 1x1 Manchester City";
+        var engine = new FakeOcrEngine
+        {
+            Readings =
+            [
+                new OcrReading("original", "João\nArsenal 2x1 Chelsea", 0.9f),
+                new OcrReading("prepared", complete, 0.4f),
+            ],
+        };
+        var service = CreateService(db, engine: engine);
+
+        var batch = await service.ProcessAsync(round1, "palpites.png", PngBytes(1), "por", Admin, Ct);
+
+        // The less confident reading read more of the round, so it is the one kept — text included.
+        Assert.Equal(complete, batch.ExtractedText);
+        Assert.Equal(2, batch.Candidates.Count);
+        Assert.All(batch.Candidates, c => Assert.Equal(joao, c.UserId));
+        // Liverpool x Manchester City is round 2's: left out, and said so.
+        Assert.Equal(1, batch.IgnoredLineCount);
+        Assert.Equal([2], batch.IgnoredRoundNumbers);
+    }
+
+    [Fact]
+    public async Task Process_files_the_rows_under_the_participant_the_file_is_named_after()
+    {
+        using var db = CreateContext();
+        var (round1, _, valter) = await SeedTwoRoundsAsync(db);
+        var service = CreateService(db, engine: new FakeOcrEngine { Result = "João\nArsenal 2x1 Chelsea" });
+
+        var batch = await service.ProcessAsync(round1, "Valter1.jpeg", JpegBytes(), "por", Admin, Ct);
+
+        var candidate = Assert.Single(batch.Candidates);
+        Assert.Equal(valter, candidate.UserId);
+        Assert.False(candidate.NeedsReview);
+
+        var summary = Assert.Single(await service.ListBatchesAsync(round1, Ct));
+        Assert.Equal(valter, summary.ParticipantUserId);
+        Assert.Equal(0, summary.NeedsReviewCount);
+    }
+
+    /// <summary>A minimal byte array that passes the JPEG header sniff.</summary>
+    private static byte[] JpegBytes() => [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10];
+
+    [Fact]
+    public async Task ListBatches_reports_what_is_left_to_review_and_that_no_one_owns_the_batch_yet()
+    {
+        using var db = CreateContext();
+        var (batchId, _, _, _) = SeedBatchWithCandidate(db);
+        var roundId = (await db.OcrImportBatches.FindAsync([batchId], Ct))!.RoundId;
+        var service = CreateService(db);
+
+        var summary = Assert.Single(await service.ListBatchesAsync(roundId, Ct));
+
+        Assert.Equal(1, summary.NeedsReviewCount);
+        Assert.Null(summary.ParticipantUserId);
+    }
+
+    /// <summary>A complete candidate the import flagged: its readings disagreed on the score.</summary>
+    private static (Guid BatchId, Guid CandidateId, Guid MatchId, Guid UserId) SeedDoubtfulCandidate(AppDbContext db)
+    {
+        var (batchId, candidateId, matchId, userId) = SeedBatchWithCandidate(db);
+        var candidate = db.OcrPredictionCandidates.Single(c => c.Id == candidateId);
+        candidate.UserId = userId;
+        candidate.RoundMatchId = matchId;
+        candidate.PredictedHomeScore = 1;
+        candidate.PredictedAwayScore = 1;
+        candidate.ReviewNotes = "O OCR leu este placar de formas diferentes (1x1 / 0x1). Confira no print.";
+        candidate.NeedsReview = true;
+        db.SaveChanges();
+        return (batchId, candidateId, matchId, userId);
+    }
+
+    [Fact]
+    public async Task UpdateCandidate_keeps_a_doubt_about_the_score_when_only_the_participant_changes()
+    {
+        // What "apply to all" does to every card: filing the row under someone else says nothing
+        // about whether the score was read right.
+        using var db = CreateContext();
+        var (batchId, candidateId, matchId, _) = SeedDoubtfulCandidate(db);
+        var other = Guid.NewGuid();
+        db.Users.Add(new User { Id = other, Name = "Outro", Email = $"{other}@x.com", PasswordHash = "x", Role = UserRole.Participant, IsActive = true, CreatedAt = DateTime.UtcNow });
+        db.SaveChanges();
+        var service = CreateService(db);
+        var notes = (await db.OcrPredictionCandidates.FindAsync([candidateId], Ct))!.ReviewNotes;
+
+        var dto = await service.UpdateCandidateAsync(batchId, candidateId, new UpdateOcrCandidateRequest
+        {
+            UserId = other,
+            RoundMatchId = matchId,
+            PredictedHomeScore = 1,
+            PredictedAwayScore = 1,
+            ReviewNotes = notes,
+        }, Admin, Ct);
+
+        var c = Assert.Single(dto.Candidates);
+        Assert.True(c.NeedsReview);
+        Assert.Equal(notes, c.ReviewNotes);
+    }
+
+    [Fact]
+    public async Task UpdateCandidate_settles_the_doubt_once_the_score_is_touched()
+    {
+        using var db = CreateContext();
+        var (batchId, candidateId, matchId, userId) = SeedDoubtfulCandidate(db);
+        var service = CreateService(db);
+        var notes = (await db.OcrPredictionCandidates.FindAsync([candidateId], Ct))!.ReviewNotes;
+
+        var dto = await service.UpdateCandidateAsync(batchId, candidateId, new UpdateOcrCandidateRequest
+        {
+            UserId = userId,
+            RoundMatchId = matchId,
+            PredictedHomeScore = 0,
+            PredictedAwayScore = 1,
+            ReviewNotes = notes,
+        }, Admin, Ct);
+
+        var c = Assert.Single(dto.Candidates);
+        Assert.False(c.NeedsReview);
+        Assert.Null(c.ReviewNotes);
     }
 
     // --- Review lifecycle (update / delete / cancel) -------------------------
@@ -172,7 +343,8 @@ public class OcrServiceTests
         return new OcrService(
             db, engine ?? new FakeOcrEngine(),
             new PredictionImportService(db, new AuditService(db), current, aliases), aliases,
-            new AuditService(db), current, Storage(storage), NullLogger<OcrService>.Instance);
+            new AuditService(db), current, Storage(storage), new FakeLocalizationService("pt"),
+            NullLogger<OcrService>.Instance);
     }
 
     /// <summary>Seeds a round with one match and a batch holding one unresolved (noise) candidate.</summary>

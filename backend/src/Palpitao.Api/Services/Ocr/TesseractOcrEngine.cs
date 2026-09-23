@@ -56,50 +56,42 @@ public class TesseractOcrEngine : IOcrEngine
         return missing;
     }
 
-    public string ExtractText(byte[] image, string language)
+    public IReadOnlyList<OcrReading> ReadVariants(byte[] image, string language)
     {
         using var engine = new TesseractEngine(_tessdataPath, language, EngineMode.Default);
         using var pix = Pix.LoadFromMemory(image);
-
-        if (!_preprocess)
-        {
-            return Read(engine, pix, "original").Text;
-        }
 
         // The untouched image competes too. Preprocessing is tuned for a bubble so small that
         // Tesseract reads it as noise, but binarization is a lossy bet: on a dark-mode screenshot
         // whose text is grey on near-black, a global Otsu threshold flattens most of the page into
         // the background. Measured on the screenshot that prompted this (391x712, dark mode):
         // original 83% and every fixture, binarized 66% and one, binarized+inverted 67% and three.
-        // Reading only the prepared variants is what threw the other twenty away.
         var original = Read(engine, pix, "original");
-        var best = original;
+        if (!_preprocess)
+        {
+            return [original];
+        }
 
         var prepared = Preprocess(pix);
+        if (ReferenceEquals(prepared, pix))
+        {
+            // Preprocessing failed and handed the original back: a second pass would only repeat it.
+            return [original];
+        }
+
         try
         {
-            var normal = Read(engine, prepared, "prepared");
-            if (normal.Confidence > best.Confidence)
-            {
-                best = normal;
-            }
+            var readings = new List<OcrReading> { original, Read(engine, prepared, "prepared") };
 
             // Tesseract expects dark text on a light background. A dark-mode chat screenshot is
-            // the opposite, and binarization keeps it that way — so read the inverse too and let
-            // the engine's own confidence pick. Which one wins depends on the sender's theme,
-            // which we cannot know from the bytes.
+            // the opposite, and binarization keeps it that way — so read the inverse too. Which
+            // one reads best depends on the sender's theme, which we cannot know from the bytes.
             var inverted = Invert(prepared);
-            float? invertedConfidence = null;
             if (inverted is not null)
             {
                 try
                 {
-                    var alternative = Read(engine, inverted, "prepared+inverted");
-                    invertedConfidence = alternative.Confidence;
-                    if (alternative.Confidence > best.Confidence)
-                    {
-                        best = alternative;
-                    }
+                    readings.Add(Read(engine, inverted, "prepared+inverted"));
                 }
                 finally
                 {
@@ -107,35 +99,27 @@ public class TesseractOcrEngine : IOcrEngine
                 }
             }
 
-            // Every candidate, not just the winner: when an import comes back short the first
-            // question is which variant won and by how much, and this answers it in one line.
+            // Every reading, not just one: when an import comes back short the first question is
+            // how each variant read, and this answers it in one line. Which one is kept is decided
+            // by the import, which knows the round (see PredictionImportService).
             _logger.LogInformation(
-                "OCR: variante {Variant} escolhida. original {Original:P0}, prepared {Prepared:P0}, "
-                    + "prepared+inverted {Inverted:P0}; {Width}x{Height}px preparados.",
-                best.Variant,
-                original.Confidence,
-                normal.Confidence,
-                invertedConfidence ?? 0f,
+                "OCR: leituras {Readings}; {Width}x{Height}px preparados.",
+                string.Join(", ", readings.Select(r => $"{r.Variant} {r.Confidence:P0}")),
                 prepared.Width,
                 prepared.Height);
 
-            return best.Text;
+            return readings;
         }
         finally
         {
-            if (!ReferenceEquals(prepared, pix))
-            {
-                prepared.Dispose();
-            }
+            prepared.Dispose();
         }
     }
 
-    private static (string Text, float Confidence, string Variant) Read(
-        TesseractEngine engine, Pix pix, string variant)
+    private static OcrReading Read(TesseractEngine engine, Pix pix, string variant)
     {
         using var page = engine.Process(pix);
-        var text = page.GetText() ?? string.Empty;
-        return (text, page.GetMeanConfidence(), variant);
+        return new OcrReading(variant, page.GetText() ?? string.Empty, page.GetMeanConfidence());
     }
 
     private Pix? Invert(Pix source)

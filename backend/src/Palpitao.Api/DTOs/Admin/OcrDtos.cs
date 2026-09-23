@@ -31,6 +31,15 @@ public class OcrBatchDto
     public DateTime? ProcessedAt { get; set; }
     public DateTime? ConfirmedAt { get; set; }
     public List<OcrCandidateDto> Candidates { get; set; } = new();
+
+    /// <summary>
+    /// Lines that were another round's fixtures (a screenshot carrying two rounds) and were left
+    /// out. Only on the upload response — they were never stored as candidates.
+    /// </summary>
+    public int IgnoredLineCount { get; set; }
+
+    /// <summary>The rounds those lines belong to, ascending. Only on the upload response.</summary>
+    public List<int> IgnoredRoundNumbers { get; set; } = new();
 }
 
 /// <summary>One past import of a round. Deliberately omits ExtractedText (large) and the bytes.</summary>
@@ -45,6 +54,13 @@ public class OcrBatchSummaryDto
     public string? ImageContentType { get; set; }
     public int? ImageByteSize { get; set; }
     public int CandidateCount { get; set; }
+
+    /// <summary>Candidates still flagged for review; 0 means the batch can be confirmed as it is.</summary>
+    public int NeedsReviewCount { get; set; }
+
+    /// <summary>The participant every candidate is filed against, or null when they differ or none is set.</summary>
+    public Guid? ParticipantUserId { get; set; }
+
     public Guid UploadedByUserId { get; set; }
     public string? UploadedByName { get; set; }
     public DateTime CreatedAt { get; set; }

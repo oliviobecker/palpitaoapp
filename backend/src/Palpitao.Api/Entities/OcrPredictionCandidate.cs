@@ -14,6 +14,9 @@ public class OcrPredictionCandidate
     /// <inheritdoc cref="MaxParticipantNameLength"/>
     public const int MaxMatchTextLength = 300;
 
+    /// <summary>Column width of <see cref="ReviewNotes"/>, which the import fills from OCR text.</summary>
+    public const int MaxReviewNotesLength = 500;
+
     public Guid Id { get; set; }
 
     public Guid OcrImportBatchId { get; set; }
