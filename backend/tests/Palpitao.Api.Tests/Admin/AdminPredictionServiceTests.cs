@@ -176,6 +176,86 @@ public class AdminPredictionServiceTests
         Assert.Equal(round.Matches.Count, await db.Predictions.CountAsync(p => p.UserId == user));
     }
 
+    // The board often gets the WhatsApp screenshots in after the deadline: until the round is
+    // finalized, the clock alone must not stop the admin, and no override is needed for it.
+    [Fact]
+    public async Task Admin_can_register_after_the_deadline_without_override()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var round = await PublishedRound(db);
+        await PassDeadline(db, round.Id);
+        var user = CreateParticipant(db);
+
+        await service.SaveManualAsync(round.Id, FullRequest(user, round), Admin, Ct);
+
+        Assert.Equal(round.Matches.Count, await db.Predictions.CountAsync(p => p.UserId == user));
+    }
+
+    [Fact]
+    public async Task Admin_can_register_on_a_locked_round_without_override()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var round = await PublishedRound(db);
+        await PassDeadline(db, round.Id);
+        await SetStatus(db, round.Id, RoundStatus.Locked);
+        var user = CreateParticipant(db);
+
+        await service.SaveManualAsync(round.Id, FullRequest(user, round), Admin, Ct);
+
+        Assert.Equal(round.Matches.Count, await db.Predictions.CountAsync(p => p.UserId == user));
+    }
+
+    [Fact]
+    public async Task Admin_cannot_register_on_a_finalized_round_even_with_override()
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var round = await PublishedRound(db);
+        await SetStatus(db, round.Id, RoundStatus.Scored);
+        var user = CreateParticipant(db);
+        var request = FullRequest(user, round, justification: "Chegou tarde.");
+        request.AllowAfterDeadline = true;
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.SaveManualAsync(round.Id, request, Admin, Ct));
+
+        Assert.Equal("adminPrediction.roundScored", ex.Key);
+        Assert.False(await db.Predictions.AnyAsync(p => p.UserId == user));
+    }
+
+    [Theory]
+    [InlineData(RoundStatus.Draft, "adminPrediction.roundNotPublished")]
+    [InlineData(RoundStatus.Cancelled, "adminPrediction.roundCancelled")]
+    public async Task Admin_cannot_register_outside_the_published_to_locked_window(RoundStatus status, string key)
+    {
+        using var db = CreateContext();
+        var service = Service(db);
+        var round = await PublishedRound(db);
+        await SetStatus(db, round.Id, status);
+        var user = CreateParticipant(db);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.SaveManualAsync(round.Id, FullRequest(user, round), Admin, Ct));
+
+        Assert.Equal(key, ex.Key);
+    }
+
+    private static async Task PassDeadline(AppDbContext db, Guid roundId)
+    {
+        var round = await db.Rounds.SingleAsync(r => r.Id == roundId);
+        round.FirstMatchStartsAt = DateTime.UtcNow.AddHours(-1);
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task SetStatus(AppDbContext db, Guid roundId, RoundStatus status)
+    {
+        var round = await db.Rounds.SingleAsync(r => r.Id == roundId);
+        round.Status = status;
+        await db.SaveChangesAsync();
+    }
+
     [Fact]
     public async Task Admin_cannot_overwrite_without_confirmation()
     {

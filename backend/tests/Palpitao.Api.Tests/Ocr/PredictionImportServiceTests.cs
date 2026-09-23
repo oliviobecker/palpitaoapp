@@ -1205,6 +1205,42 @@ public class PredictionImportServiceTests
         Assert.Contains(await db.AuditLogs.ToListAsync(), a => a.Action == "OcrImportConfirmed");
     }
 
+    // The board often imports the screenshots after the deadline: the clock alone does not
+    // close a round to the admin, only finalizing it does.
+    [Fact]
+    public async Task Confirm_saves_on_a_published_round_past_its_deadline()
+    {
+        using var db = CreateContext();
+        var (roundId, matchId, userId) = SeedRound(db);
+        var round = await db.Rounds.SingleAsync(r => r.Id == roundId);
+        round.Status = RoundStatus.Published;
+        round.FirstMatchStartsAt = DateTime.UtcNow.AddHours(-2);
+        await db.SaveChangesAsync();
+        var batchId = SeedBatch(db, roundId, matchId, userId, 2, 1);
+
+        await ImportService(db).ConfirmAsync(batchId, Admin, Ct);
+
+        Assert.Equal(PredictionSource.AdminOcr, (await db.Predictions.SingleAsync()).Source);
+    }
+
+    [Fact]
+    public async Task Confirm_is_refused_once_the_round_is_finalized()
+    {
+        using var db = CreateContext();
+        var (roundId, matchId, userId) = SeedRound(db);
+        var batchId = SeedBatch(db, roundId, matchId, userId, 2, 1);
+        // Finalized while the batch sat in review.
+        (await db.Rounds.SingleAsync(r => r.Id == roundId)).Status = RoundStatus.Scored;
+        await db.SaveChangesAsync();
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => ImportService(db).ConfirmAsync(batchId, Admin, Ct));
+
+        Assert.Equal("adminPrediction.roundScored", ex.Key);
+        Assert.False(await db.Predictions.AnyAsync());
+        Assert.Equal(OcrBatchStatus.Processed, (await db.OcrImportBatches.SingleAsync()).Status);
+    }
+
     [Fact]
     public async Task Confirm_fails_with_incomplete_candidate()
     {

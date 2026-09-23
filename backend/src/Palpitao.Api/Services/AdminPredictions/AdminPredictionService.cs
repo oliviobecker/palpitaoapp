@@ -49,7 +49,7 @@ public class AdminPredictionService : IAdminPredictionService
             throw new BusinessRuleException("adminPrediction.eliminatedNeedsOverride");
         }
 
-        EnsureRoundOpen(round, request.AllowAfterDeadline, hasJustification);
+        AdminPredictionWindow.EnsureOpen(round);
         ValidateBatch(round, request.Predictions);
 
         var existing = await _db.Predictions
@@ -189,26 +189,6 @@ public class AdminPredictionService : IAdminPredictionService
                 : participants.Count(u => predictedCounts.GetValueOrDefault(u.Id) >= matchCount),
             Missing = missing,
         };
-    }
-
-    private static void EnsureRoundOpen(Round round, bool allowAfterDeadline, bool hasJustification)
-    {
-        // "On time" = the window in which participants themselves could still predict,
-        // i.e. up to one minute before the first kickoff.
-        var openOnTime = round.Status == RoundStatus.Published
-            && round.PredictionDeadlineUtc is DateTime deadline
-            && DateTime.UtcNow < deadline;
-
-        if (openOnTime)
-        {
-            return;
-        }
-
-        // Round closed (Locked/Scored/Cancelled) or past deadline -> needs override.
-        if (!(allowAfterDeadline && hasJustification))
-        {
-            throw new BusinessRuleException("adminPrediction.roundNotOpenOverride");
-        }
     }
 
     private static void ValidateBatch(Round round, List<PredictionItemRequest> items)

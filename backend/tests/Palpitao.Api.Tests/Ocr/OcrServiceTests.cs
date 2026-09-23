@@ -136,6 +136,7 @@ public class OcrServiceTests
             AwayTeamId = SeedIds.Chelsea,
             StartsAt = DateTime.UtcNow.AddDays(2),
         }, Admin, Ct);
+        await rounds.PublishAsync(round.Id, Admin, Ct);
 
         var userId = Guid.NewGuid();
         db.Users.Add(new User { Id = userId, Name = "João", Email = $"{userId}@x.com", PasswordHash = "x", Role = UserRole.Participant, IsActive = true, CreatedAt = DateTime.UtcNow });
@@ -421,6 +422,25 @@ public class OcrServiceTests
         // a Failed batch or a stored image behind, and the admin must not be told to try another
         // photo — no photo would work.
         Assert.Equal("ocr.tessdataMissing", ex.Key);
+        Assert.Empty(await db.OcrImportBatches.ToListAsync());
+        Assert.Empty(await db.OcrImportImages.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Process_on_a_finalized_round_is_refused_without_recording_an_upload()
+    {
+        using var db = CreateContext();
+        var roundId = SeedRound(db);
+        (await db.Rounds.SingleAsync(r => r.Id == roundId)).Status = RoundStatus.Scored;
+        await db.SaveChangesAsync();
+        var service = CreateService(db, engine: new FakeOcrEngine { Result = "João\nArsenal 2x1 Chelsea" });
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.ProcessAsync(roundId, "palpites.png", PngBytes(1), "por", Admin, Ct));
+
+        // Refused before the batch, not at confirm: the admin would otherwise review every
+        // candidate only to be told to reopen the round.
+        Assert.Equal("adminPrediction.roundScored", ex.Key);
         Assert.Empty(await db.OcrImportBatches.ToListAsync());
         Assert.Empty(await db.OcrImportImages.ToListAsync());
     }

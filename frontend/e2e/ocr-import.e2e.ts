@@ -156,4 +156,53 @@ test.describe('Admin OCR import', () => {
     // Process button is disabled until a file is chosen.
     await expect(page.getByRole('button', { name: 'Processar imagem' })).toBeDisabled();
   });
+
+  test('a finalized round keeps the upload off and points to reopen it', async ({ page }) => {
+    await seedAuth(page, 'pt-BR');
+    await installApi(page, [
+      {
+        method: 'GET',
+        match: path('/rounds/r1'),
+        respond: () => ({ json: { ...round, status: 'Scored' } }),
+      },
+      { method: 'GET', match: path('/admin/users'), respond: () => ({ json: participants }) },
+    ]);
+
+    await page.goto('/admin/rounds/r1/import-predictions');
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles({ name: 'palpites.png', mimeType: 'image/png', buffer: pngBytes });
+
+    await expect(page.getByRole('alert')).toContainText('Esta rodada já foi finalizada.');
+    await expect(page.getByRole('button', { name: 'Processar imagem' })).toBeDisabled();
+  });
+
+  test('warns that a Flávio leader imported past their deadline counts as late', async ({
+    page,
+  }) => {
+    await seedAuth(page, 'pt-BR');
+    const flavioRound = {
+      ...round,
+      flavio: {
+        applies: true,
+        leaderNames: ['João Silva'],
+        deadlineUtc: '2026-01-01T12:00:00Z',
+        windowHours: 24,
+      },
+    };
+    await installApi(page, [
+      { method: 'GET', match: path('/rounds/r1'), respond: () => ({ json: flavioRound }) },
+      { method: 'GET', match: path('/admin/users'), respond: () => ({ json: participants }) },
+    ]);
+
+    await page.goto('/admin/rounds/r1/import-predictions');
+
+    await expect(page.getByText(/Regra Flávio: o prazo especial de João Silva/)).toBeVisible();
+    // Informational only: the import itself stays available.
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await page
+      .locator('input[type="file"]')
+      .setInputFiles({ name: 'palpites.png', mimeType: 'image/png', buffer: pngBytes });
+    await expect(page.getByRole('button', { name: 'Processar imagem' })).toBeEnabled();
+  });
 });

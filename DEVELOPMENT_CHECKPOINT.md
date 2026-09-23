@@ -246,6 +246,23 @@ overall standings update.
   **and** `Locked` and offers *Marcar presente* / *Marcar ausente* with a mandatory justification.
 - **No history was rewritten** — deliberately; see §4.
 
+**Late admin entry: import and adjust until the round is finalized (this session).**
+
+- **The clock no longer stops the admin.** The board often imports the WhatsApp screenshots after
+  the deadline. Manual entry refused anything past it unless the admin ticked *Substituir palpites
+  existentes* (the only way to reveal the justification box, even for someone with no predictions)
+  and justified it. OCR had the opposite problem: **no** gate at all, so it wrote into `Scored`
+  and `Cancelled` rounds and left the scores silently stale.
+- **One status window for both** (`Common/AdminPredictionWindow`): `Published`/`Locked` open, with
+  no override; `Scored` refused until the round is reopened (then *Finalizar* re-scores it);
+  `Draft`/`Cancelled` refused. OCR checks it at upload (no batch or image left behind) and at
+  confirm (a round can be finalized mid-review). Candidate edit/discard/cancel stay open.
+- **The override is now only for eliminated participants**; `allowAfterDeadline` keeps its name so
+  the API contract does not move. `adminPrediction.roundNotOpenOverride` is gone.
+- **Flávio stays honest**: what the admin enters is stamped with the entry time, so once a leader's
+  special deadline has passed both screens say so and point at the exemption panel (PR #49).
+- Participants still close at the deadline — unchanged.
+
 ## 4. Pending / not implemented (roadmap)
 
 - **Server-side autosave** of predictions (current draft is client-side only; needs partial/incremental
