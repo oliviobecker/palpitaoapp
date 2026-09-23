@@ -155,6 +155,9 @@ public static class DomainMessages
             ["round.mustBeLockedToScore"] = ("A rodada precisa estar bloqueada para ser calculada.", "The round must be locked to be scored."),
             ["round.noMatches"] = ("A rodada não possui jogos.", "The round has no matches."),
             ["round.allResultsRequired"] = ("Cadastre o resultado de todos os jogos antes de calcular a rodada.", "Enter the result of every match before scoring the round."),
+            ["round.allMatchesFinishedRequired"] = (
+                "Todos os jogos precisam estar encerrados para finalizar a rodada. Atualize os resultados ou lance o placar final do jogo que ainda está em andamento.",
+                "Every match must be finished before the round can be finalized. Refresh the results or enter the final score of any match still in play."),
             ["round.cannotEditMatchClosedNoJustification"] = (
                 "Não é possível alterar jogos de uma rodada bloqueada, pontuada ou cancelada sem justificativa administrativa.",
                 "Cannot change matches of a locked, scored or cancelled round without an administrative justification."),

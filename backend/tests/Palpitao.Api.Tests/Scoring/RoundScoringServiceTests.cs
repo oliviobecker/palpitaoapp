@@ -146,6 +146,18 @@ public partial class RoundScoringServiceTests
         }
     }
 
+    /// <summary>What the results refresh stores mid-match: the score so far, still in play.</summary>
+    private static async Task SetInPlay(AppDbContext db, Guid matchId, int home, int away)
+    {
+        var match = await db.RoundMatches.SingleAsync(m => m.Id == matchId, Ct);
+        match.HomeScore = home;
+        match.AwayScore = away;
+        match.Status = MatchStatus.InProgress;
+        match.IsFinished = false;
+        match.ResultSource = "OneFootball";
+        await db.SaveChangesAsync(Ct);
+    }
+
     // -----------------------------------------------------------------------
 
     [Fact]
@@ -158,6 +170,84 @@ public partial class RoundScoringServiceTests
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => kit.Scoring.ScoreRoundAsync(round.Id, Admin, Ct));
         Assert.Contains("resultado de todos os jogos", ex.Message);
+    }
+
+    [Fact]
+    public async Task Cannot_finalize_while_a_match_is_still_in_play()
+    {
+        using var db = CreateContext();
+        var kit = Build(db);
+        var user = CreateParticipant(db);
+        var round = await PublishedRound(kit, 1,
+            (Competition.Championship, MatchPhase.Regular),
+            (Competition.Championship, MatchPhase.Regular));
+        await SavePredictions(kit, round, user, (1, 0), (0, 1));
+        await kit.Rounds.LockAsync(round.Id, Admin, Ct);
+        await SetResults(kit, round, (1, 0), (0, 0));
+        // The refresh stored a live 0x0 minutes after kickoff: every match has a score, but one
+        // of them is still being played.
+        await SetInPlay(db, round.Matches[1].Id, 0, 0);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => kit.Scoring.ScoreRoundAsync(round.Id, Admin, Ct));
+
+        Assert.Equal("round.allMatchesFinishedRequired", ex.Key);
+        Assert.Contains("Todos os jogos precisam estar encerrados", ex.Message);
+        Assert.Contains("still in play", DomainMessages.Resolve(ex.Key, "en"));
+        db.ChangeTracker.Clear();
+        Assert.Equal(RoundStatus.Locked, (await db.Rounds.SingleAsync(r => r.Id == round.Id, Ct)).Status);
+        Assert.False(await db.RoundParticipantResults.AnyAsync(r => r.RoundId == round.Id, Ct));
+    }
+
+    [Fact]
+    public async Task Entering_the_in_play_result_by_hand_lets_the_round_finalize()
+    {
+        using var db = CreateContext();
+        var kit = Build(db);
+        var user = CreateParticipant(db);
+        var round = await PublishedRound(kit, 1,
+            (Competition.Championship, MatchPhase.Regular),
+            (Competition.Championship, MatchPhase.Regular));
+        await SavePredictions(kit, round, user, (1, 0), (0, 1));
+        await kit.Rounds.LockAsync(round.Id, Admin, Ct);
+        await SetResults(kit, round, (1, 0), (0, 0));
+        await SetInPlay(db, round.Matches[1].Id, 0, 0);
+        await Assert.ThrowsAsync<BusinessRuleException>(() => kit.Scoring.ScoreRoundAsync(round.Id, Admin, Ct));
+
+        // The admin types in the final 0x1; a manual result counts as finished.
+        await kit.Scoring.SetMatchResultAsync(round.Matches[1].Id,
+            new MatchResultRequest { HomeScore = 0, AwayScore = 1 }, Admin, Ct);
+        var results = await kit.Scoring.ScoreRoundAsync(round.Id, Admin, Ct);
+
+        Assert.Equal(RoundStatus.Scored, results.Status);
+        // Two exact Traditional hits (3 + 3). On the live 0x0 the 0x1 pick would have paid nothing.
+        Assert.Equal(6, results.Participants.Single(x => x.UserId == user).FinalPoints);
+    }
+
+    [Fact]
+    public async Task Season_recalculation_refuses_a_scored_round_holding_a_match_not_finished()
+    {
+        using var db = CreateContext();
+        var kit = Build(db);
+        var user = CreateParticipant(db);
+        var round = await PublishedRound(kit, 1);
+        await SavePredictions(kit, round, user, (0, 1));
+        await kit.Rounds.LockAsync(round.Id, Admin, Ct);
+        await SetResults(kit, round, (0, 0));
+        await kit.Scoring.ScoreRoundAsync(round.Id, Admin, Ct);
+        // A round finalized on a live score before this rule existed: its match never finished.
+        await SetInPlay(db, round.Matches[0].Id, 0, 0);
+        var resultIds = await db.RoundParticipantResults.OrderBy(r => r.Id).Select(r => r.Id).ToListAsync(Ct);
+        var standingIds = await db.Standings.OrderBy(s => s.Id).Select(s => s.Id).ToListAsync(Ct);
+
+        // Both entry points replay the season: the season's Recalculate and the round's own button.
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => kit.Scoring.RecalculateSeasonAsync(SeasonId, Admin, Ct));
+        Assert.Equal("round.allMatchesFinishedRequired", ex.Key);
+        ex = await Assert.ThrowsAsync<BusinessRuleException>(() => kit.Scoring.ScoreRoundAsync(round.Id, Admin, Ct));
+        Assert.Equal("round.allMatchesFinishedRequired", ex.Key);
+
+        db.ChangeTracker.Clear(); // the committed state, not the entities the refused replay touched
+        Assert.Equal(resultIds, await db.RoundParticipantResults.OrderBy(r => r.Id).Select(r => r.Id).ToListAsync(Ct));
+        Assert.Equal(standingIds, await db.Standings.OrderBy(s => s.Id).Select(s => s.Id).ToListAsync(Ct));
     }
 
     [Fact]
