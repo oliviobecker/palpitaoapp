@@ -21,6 +21,16 @@ public interface ICurrentGroupService
     /// </summary>
     bool IsSuperAdmin { get; }
 
+    /// <summary>
+    /// The group this request has <em>already</em> resolved and validated, or <c>null</c> when
+    /// nothing has resolved it yet or the resolution was denied. Never the raw
+    /// <c>X-Group-Id</c> header. Unlike <see cref="GetGroupIdAsync"/> it never triggers the
+    /// resolution, never touches the database and never throws, so paths that also run
+    /// outside a group request (login, background jobs) can read it safely — the audit trail
+    /// uses it to stamp each entry with the acting group.
+    /// </summary>
+    Guid? ResolvedGroupId { get; }
+
     /// <summary>Returns the current group id, validating approved membership. Throws when
     /// the header is missing/invalid or the user is not an approved member.</summary>
     Task<Guid> GetGroupIdAsync(CancellationToken ct);

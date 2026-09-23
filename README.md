@@ -1176,7 +1176,10 @@ rows pointing at a seeded **default group** — _Palpitão England 2025/2026_
 - A participant only accesses a group where `GroupUser.Status = Approved`; pending/rejected/inactive
   is blocked.
 - The header's `GroupId` is always revalidated in the backend; relevant actions go to the `AuditLog`
-  with `GroupId`; Sentry receives the `group_id` tag.
+  with `GroupId`; Sentry receives the `group_id` tag. An audit entry whose caller names no group
+  takes the one `CurrentGroupService` already **validated** for the request (never the raw header),
+  so it shows in that group's `GET /api/admin/audit`; outside a group request (login, background
+  jobs) it stays global (`GroupId` null).
 
 ### Current limitations
 

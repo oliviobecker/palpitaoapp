@@ -205,4 +205,36 @@ public class CurrentGroupServiceTests
         await service.RequireApprovedMemberAsync(Ct); // ok
         await Assert.ThrowsAsync<ForbiddenException>(() => service.RequireGroupAdminAsync(Ct));
     }
+
+    [Fact]
+    public async Task Resolved_group_id_is_null_until_the_request_resolves_its_group()
+    {
+        using var db = CreateContext();
+        var userId = SeedUser(db);
+        SeedMembership(db, SeedIds.DefaultGroup, userId, GroupRole.Participant, GroupUserStatus.Approved);
+
+        var service = Service(db, userId, SeedIds.DefaultGroup.ToString());
+
+        // Reading it neither resolves the group nor spends the one-shot resolution.
+        Assert.Null(service.ResolvedGroupId);
+        Assert.Equal(SeedIds.DefaultGroup, await service.GetGroupIdAsync(Ct));
+        Assert.Equal(SeedIds.DefaultGroup, service.ResolvedGroupId);
+    }
+
+    [Fact]
+    public async Task Deactivated_member_stays_denied_and_reports_no_resolved_group()
+    {
+        using var db = CreateContext();
+        var userId = SeedUser(db);
+        SeedMembership(db, SeedIds.DefaultGroup, userId, GroupRole.Participant, GroupUserStatus.Approved, isActive: false);
+
+        var service = Service(db, userId, SeedIds.DefaultGroup.ToString());
+
+        var denied = await Assert.ThrowsAsync<ForbiddenException>(() => service.RequireApprovedMemberAsync(Ct));
+        Assert.Equal("group.membershipInactive", denied.Key);
+        // The denied membership is not cached, so a later call on the same request is denied
+        // too and the group is never reported as resolved (e.g. to stamp an audit entry).
+        await Assert.ThrowsAsync<ForbiddenException>(() => service.GetGroupIdAsync(Ct));
+        Assert.Null(service.ResolvedGroupId);
+    }
 }

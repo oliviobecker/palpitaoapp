@@ -6,7 +6,10 @@ public interface IAuditService
 {
     /// <summary>
     /// Adds an audit entry to the current unit of work (not saved here — the
-    /// caller persists it together with the operation).
+    /// caller persists it together with the operation). Without an explicit
+    /// <paramref name="groupId"/> the entry takes the group this request has already
+    /// validated (<see cref="Groups.ICurrentGroupService.ResolvedGroupId"/>), or none
+    /// outside a group request (login, background jobs).
     /// </summary>
     void Add(Guid? userId, string action, string entityName, string? entityId, object? details = null, Guid? groupId = null);
 
