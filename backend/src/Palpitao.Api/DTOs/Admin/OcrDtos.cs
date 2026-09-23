@@ -40,6 +40,30 @@ public class OcrBatchDto
 
     /// <summary>The rounds those lines belong to, ascending. Only on the upload response.</summary>
     public List<int> IgnoredRoundNumbers { get; set; } = new();
+
+    /// <summary>
+    /// Participants whose predictions confirming this batch would change. Only for a batch still
+    /// under review — empty once it is confirmed, cancelled or failed.
+    /// </summary>
+    public List<OcrOverwriteDto> Overwrites { get; set; } = new();
+}
+
+/// <summary>
+/// A participant who already has predictions in the round, at least one of which a batch row
+/// would replace with a different score. A confirm overwrites without asking and keeps no copy
+/// of the old values, so a screenshot filed under the wrong person silently replaces that
+/// person's own predictions.
+/// </summary>
+public class OcrOverwriteDto
+{
+    public Guid UserId { get; set; }
+    public string UserName { get; set; } = string.Empty;
+
+    /// <summary>Predictions the participant already has in the round.</summary>
+    public int ExistingCount { get; set; }
+
+    /// <summary>Rows of the batch that would replace one of them with a different score.</summary>
+    public int ChangedCount { get; set; }
 }
 
 /// <summary>One past import of a round. Deliberately omits ExtractedText (large) and the bytes.</summary>
@@ -60,6 +84,13 @@ public class OcrBatchSummaryDto
 
     /// <summary>The participant every candidate is filed against, or null when they differ or none is set.</summary>
     public Guid? ParticipantUserId { get; set; }
+
+    /// <summary>
+    /// Rows that would replace an existing prediction with a different score (see
+    /// <see cref="OcrOverwriteDto"/>). Only counted for batches still under review; such a batch is
+    /// opened before it is confirmed, never confirmed straight from the list.
+    /// </summary>
+    public int OverwriteCount { get; set; }
 
     public Guid UploadedByUserId { get; set; }
     public string? UploadedByName { get; set; }

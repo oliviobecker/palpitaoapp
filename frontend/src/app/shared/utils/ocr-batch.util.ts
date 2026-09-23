@@ -15,14 +15,17 @@ export function isPendingOcrBatch(status: string): boolean {
 }
 
 /**
- * A pending batch that can be confirmed straight from the list: it has rows, and none of them is
- * flagged — no missing participant, match or score, and no doubt the import raised about a score.
+ * A pending batch that can be confirmed straight from the list: it has rows, none of them is
+ * flagged — no missing participant, match or score, and no doubt the import raised about a score —
+ * and it would not replace anybody's stored predictions. That last case is how a screenshot filed
+ * under the wrong person overwrote that person's own round, so it is always opened first.
  */
 export function isReadyToConfirm(batch: OcrBatchSummary): boolean {
   return (
     isPendingOcrBatch(batch.status) &&
     batch.candidateCount > 0 &&
-    (batch.needsReviewCount ?? 0) === 0
+    (batch.needsReviewCount ?? 0) === 0 &&
+    (batch.overwriteCount ?? 0) === 0
   );
 }
 

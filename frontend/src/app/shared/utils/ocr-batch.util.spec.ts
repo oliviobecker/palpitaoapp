@@ -52,6 +52,11 @@ describe('isReadyToConfirm', () => {
     expect(isReadyToConfirm(summary({ candidateCount: 0 }))).toBe(false);
     expect(isReadyToConfirm(summary({ status: 'Confirmed' }))).toBe(false);
   });
+
+  it('never confirms from the list a batch that would replace stored predictions', () => {
+    expect(isReadyToConfirm(summary({ overwriteCount: 3 }))).toBe(false);
+    expect(isReadyToConfirm(summary({ overwriteCount: 0 }))).toBe(true);
+  });
 });
 
 describe('ocrRetryDelayMs', () => {

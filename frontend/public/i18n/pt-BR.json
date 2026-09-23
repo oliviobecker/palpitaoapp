@@ -850,7 +850,14 @@
       "confirm": "Confirmar",
       "confirmReady": "Confirmar prontas ({{count}})",
       "confirmReadyQuestion": "Confirmar as {{count}} importações sem pendências? Os palpites serão salvos.",
-      "confirmedMany": "{{count}} importações confirmadas."
+      "confirmedMany": "{{count}} importações confirmadas.",
+      "overwrites": "substitui {{count}} palpite(s) já gravado(s)"
+    },
+    "overwrite": {
+      "title": "Este print substitui palpites já gravados",
+      "line": "{{name}} já tem {{existing}} palpite(s) nesta rodada — confirmar muda {{changed}}.",
+      "hint": "Confira se o print é mesmo dessa pessoa antes de confirmar: os palpites antigos não ficam guardados.",
+      "confirmQuestion": "Confirmar vai substituir palpites já gravados de {{names}}. Continuar?"
     }
   },
   "ocrHistory": {

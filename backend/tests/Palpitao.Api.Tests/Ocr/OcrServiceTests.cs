@@ -270,6 +270,88 @@ public class OcrServiceTests
         Assert.Null(summary.ParticipantUserId);
     }
 
+    /// <summary>
+    /// A complete candidate filed under the seeded participant, reading <paramref name="read"/>,
+    /// and — when <paramref name="stored"/> is given — a prediction the participant already has
+    /// for that match, as another import would have left it.
+    /// </summary>
+    private static (Guid BatchId, Guid RoundId, Guid UserId) SeedCandidateOverStoredPrediction(
+        AppDbContext db, (int Home, int Away) read, (int Home, int Away)? stored,
+        OcrBatchStatus status = OcrBatchStatus.Processed)
+    {
+        var (batchId, candidateId, matchId, userId) = SeedBatchWithCandidate(db, status);
+        var candidate = db.OcrPredictionCandidates.Single(c => c.Id == candidateId);
+        candidate.UserId = userId;
+        candidate.RoundMatchId = matchId;
+        candidate.PredictedHomeScore = read.Home;
+        candidate.PredictedAwayScore = read.Away;
+        candidate.NeedsReview = false;
+        if (stored is { } s)
+        {
+            db.Predictions.Add(new Prediction
+            {
+                Id = Guid.NewGuid(),
+                RoundId = candidate.RoundId,
+                RoundMatchId = matchId,
+                UserId = userId,
+                PredictedHomeScore = s.Home,
+                PredictedAwayScore = s.Away,
+                SubmittedAt = DateTime.UtcNow,
+                Source = PredictionSource.AdminOcr,
+                CreatedByUserId = Admin,
+            });
+        }
+        db.SaveChanges();
+        return (batchId, candidate.RoundId, userId);
+    }
+
+    [Fact]
+    public async Task A_batch_that_would_replace_someones_predictions_says_whose_and_how_many()
+    {
+        // Production, round 8: a screenshot filed under the wrong person replaced that person's own
+        // predictions, and nothing on the review screen or the pending list said so.
+        using var db = CreateContext();
+        var (batchId, roundId, userId) = SeedCandidateOverStoredPrediction(db, read: (0, 1), stored: (2, 1));
+        var service = CreateService(db);
+
+        var overwrite = Assert.Single((await service.GetBatchAsync(batchId, Ct)).Overwrites);
+        Assert.Equal(userId, overwrite.UserId);
+        Assert.Equal("João", overwrite.UserName);
+        Assert.Equal(1, overwrite.ExistingCount);
+        Assert.Equal(1, overwrite.ChangedCount);
+
+        var summary = Assert.Single(await service.ListBatchesAsync(roundId, Ct));
+        Assert.Equal(1, summary.OverwriteCount);
+    }
+
+    [Theory]
+    [InlineData(true)] // the same screenshot imported again: every row restates the stored score
+    [InlineData(false)] // the participant's first predictions of the round
+    public async Task A_batch_that_changes_no_stored_score_warns_about_nothing(bool alreadyStored)
+    {
+        using var db = CreateContext();
+        var (batchId, roundId, _) = SeedCandidateOverStoredPrediction(
+            db, read: (2, 1), stored: alreadyStored ? (2, 1) : null);
+        var service = CreateService(db);
+
+        Assert.Empty((await service.GetBatchAsync(batchId, Ct)).Overwrites);
+        Assert.Equal(0, Assert.Single(await service.ListBatchesAsync(roundId, Ct)).OverwriteCount);
+    }
+
+    [Fact]
+    public async Task A_confirmed_batch_warns_about_nothing()
+    {
+        // Its rows are the stored predictions now (or were, before a later import) — there is
+        // nothing left for it to overwrite.
+        using var db = CreateContext();
+        var (batchId, roundId, _) = SeedCandidateOverStoredPrediction(
+            db, read: (0, 1), stored: (2, 1), status: OcrBatchStatus.Confirmed);
+        var service = CreateService(db);
+
+        Assert.Empty((await service.GetBatchAsync(batchId, Ct)).Overwrites);
+        Assert.Equal(0, Assert.Single(await service.ListBatchesAsync(roundId, Ct)).OverwriteCount);
+    }
+
     /// <summary>A complete candidate the import flagged: its readings disagreed on the score.</summary>
     private static (Guid BatchId, Guid CandidateId, Guid MatchId, Guid UserId) SeedDoubtfulCandidate(AppDbContext db)
     {

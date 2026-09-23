@@ -566,6 +566,16 @@ Endpoints: `POST /api/admin/rounds/{id}/predictions/import-image` (per-admin rat
 `POST .../confirm`, `POST .../cancel`. A confirmed batch is immutable (confirm/cancel/edit
 return 4xx), and confirm rejects duplicate participant+match candidates.
 
+**Overwrites are announced.** A confirm replaces whatever the participant already has for those
+matches and keeps no copy of the old values, so a screenshot filed under the wrong person silently
+replaces that person's own round — which is what happened in production (round 8: Vilaça's
+screenshot filed under Becker). A batch still under review therefore reports, per participant,
+how many predictions they already have in the round and how many of its rows would change one
+(`overwrites` on the batch, `overwriteCount` on the pending list). Rows that restate the stored
+score — the same screenshot imported again — or fill a match with no prediction are not counted.
+The review screen shows the warning and asks before confirming, and such a batch is never
+confirmed straight from the pending list (**Confirm ready ones** skips it).
+
 The import follows the same **status window as manual entry** (§18): it works before or after the
 deadline on a `Published` or `Locked` round, and is refused on a `Scored`, `Draft` or `Cancelled`
 one. Both the **upload** (before any batch or image is stored) and the **confirm** check it, since a
