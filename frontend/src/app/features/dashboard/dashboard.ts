@@ -32,13 +32,23 @@ import { CompetitionBadge } from '../../shared/components/competition-badge/comp
 import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Icon } from '../../shared/components/icon/icon';
 import { Skeleton } from '../../shared/components/skeleton/skeleton';
+import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
 import { deadlinePassed, predictionDeadlineIso } from '../../shared/utils/deadline.util';
 import { avatarColor, initials } from '../../shared/utils/avatar.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-dashboard',
-  imports: [RouterLink, DatePipe, TranslatePipe, CompetitionBadge, ErrorState, Skeleton, Icon],
+  imports: [
+    RouterLink,
+    DatePipe,
+    TranslatePipe,
+    CompetitionBadge,
+    ErrorState,
+    Skeleton,
+    Icon,
+    RoundLabelPipe,
+  ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
@@ -54,6 +64,8 @@ export class Dashboard implements OnInit, OnDestroy {
   protected readonly loading = signal(true);
   protected readonly error = signal(false);
   protected readonly openRound = signal<Round | null>(null);
+  /** Other rounds open at the same time — the second list of a week played in parts. */
+  protected readonly otherOpenRounds = signal<RoundSummary[]>([]);
   protected readonly lockedRound = signal<RoundSummary | null>(null);
   protected readonly myPredictions = signal<MyPredictions | null>(null);
   protected readonly standings = signal<Standing[]>([]);
@@ -144,7 +156,8 @@ export class Dashboard implements OnInit, OnDestroy {
       .getAll()
       .pipe(
         switchMap((list) => {
-          const open = list.find((r) => r.status === RoundStatus.Published);
+          const [open, ...others] = list.filter((r) => r.status === RoundStatus.Published);
+          this.otherOpenRounds.set(others);
           this.lockedRound.set(list.find((r) => r.status === RoundStatus.Locked) ?? null);
 
           // Standings belong to the group's active season (certame); deriving it

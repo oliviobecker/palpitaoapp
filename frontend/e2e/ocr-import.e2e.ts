@@ -333,7 +333,7 @@ test.describe('Admin OCR import', () => {
     const doubtful = {
       ...batch,
       ignoredLineCount: 11,
-      ignoredRoundNumbers: [9],
+      ignoredRoundLabels: ['9'],
       candidates: [
         {
           ...batch.candidates[0],

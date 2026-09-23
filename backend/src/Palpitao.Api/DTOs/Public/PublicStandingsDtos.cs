@@ -5,8 +5,8 @@ namespace Palpitao.Api.DTOs.Public;
 
 /// <summary>
 /// Identity and navigation of a season reached by its public key. Carries no ids of its
-/// own beyond the participants' — rounds are addressed by number, so a shared link stays
-/// readable and exposes no internal keys.
+/// own beyond the participants' — rounds are addressed by number (plus the part, for a round
+/// played in parts: "10.2"), so a shared link stays readable and exposes no internal keys.
 /// </summary>
 public class PublicSeasonDto
 {
@@ -24,6 +24,10 @@ public class PublicSeasonDto
 public class PublicRoundSummaryDto
 {
     public int Number { get; set; }
+
+    /// <summary>0 for a standalone round; 1..k for the parts of a round played in parts.</summary>
+    public int Part { get; set; }
+
     public string? Title { get; set; }
     public RoundStatus Status { get; set; }
     public DateTime? StartDate { get; set; }
@@ -56,6 +60,7 @@ public class PublicStandingRowDto
 public class PublicStandingRoundDto
 {
     public int Number { get; set; }
+    public int Part { get; set; }
     public int Points { get; set; }
     public bool WasAbsent { get; set; }
     public bool FlavioRuleApplied { get; set; }
@@ -79,6 +84,7 @@ public class PublicRulesetDto
 public class PublicRoundDto
 {
     public int Number { get; set; }
+    public int Part { get; set; }
     public string? Title { get; set; }
     public RoundStatus Status { get; set; }
 

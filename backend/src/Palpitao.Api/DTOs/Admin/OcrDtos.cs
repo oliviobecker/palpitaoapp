@@ -38,8 +38,11 @@ public class OcrBatchDto
     /// </summary>
     public int IgnoredLineCount { get; set; }
 
-    /// <summary>The rounds those lines belong to, ascending. Only on the upload response.</summary>
-    public List<int> IgnoredRoundNumbers { get; set; } = new();
+    /// <summary>
+    /// The rounds those lines belong to, as labels ("7", "10.1"), ascending. Only on the upload
+    /// response.
+    /// </summary>
+    public List<string> IgnoredRoundLabels { get; set; } = new();
 
     /// <summary>
     /// Participants whose predictions confirming this batch would change. Only for a batch still

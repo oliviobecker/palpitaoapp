@@ -97,7 +97,8 @@ public class PublicStandingsServiceTests
         return id;
     }
 
-    private static Round AddRound(AppDbContext db, Guid seasonId, Guid groupId, int number, RoundStatus status)
+    private static Round AddRound(
+        AppDbContext db, Guid seasonId, Guid groupId, int number, RoundStatus status, int part = 0)
     {
         var round = new Round
         {
@@ -105,6 +106,7 @@ public class PublicStandingsServiceTests
             SeasonId = seasonId,
             GroupId = groupId,
             Number = number,
+            Part = part,
             Status = status,
             CreatedByUserId = SeedIds.AdminUser,
             CreatedAt = DateTime.UtcNow,
@@ -219,7 +221,7 @@ public class PublicStandingsServiceTests
         var season = await Build(db).GetSeasonAsync(KeyA, Ct);
 
         Assert.Equal(new[] { 1 }, season.Rounds.Select(r => r.Number).ToArray());
-        await Assert.ThrowsAsync<NotFoundException>(() => Build(db).GetRoundAsync(KeyA, 2, Ct));
+        await Assert.ThrowsAsync<NotFoundException>(() => Build(db).GetRoundAsync(KeyA, 2, null, Ct));
     }
 
     [Fact]
@@ -246,6 +248,33 @@ public class PublicStandingsServiceTests
     }
 
     // ---------------------------------------------------------------------
+    // Rounds played in parts ("10.1", "10.2")
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task A_part_is_addressed_by_number_and_part_and_an_older_link_still_opens()
+    {
+        using var db = CreateContext();
+        AddRound(db, SeasonA, GroupA, 10, RoundStatus.Scored, part: 1);
+        AddRound(db, SeasonA, GroupA, 10, RoundStatus.Locked, part: 2);
+        AddRound(db, SeasonA, GroupA, 11, RoundStatus.Locked);
+        db.SaveChanges();
+
+        var season = await Build(db).GetSeasonAsync(KeyA, Ct);
+        Assert.Equal(new[] { (11, 0), (10, 2), (10, 1) }, season.Rounds.Select(r => (r.Number, r.Part)).ToArray());
+
+        var exact = await Build(db).GetRoundAsync(KeyA, 10, 2, Ct);
+        Assert.Equal((10, 2), (exact.Number, exact.Part));
+
+        // "?rodada=10" shared before the round was split opens its first part; "?rodada=11.2"
+        // shared before a regrouping undid the part opens the round now standing there.
+        var legacy = await Build(db).GetRoundAsync(KeyA, 10, null, Ct);
+        Assert.Equal((10, 1), (legacy.Number, legacy.Part));
+        var merged = await Build(db).GetRoundAsync(KeyA, 11, 2, Ct);
+        Assert.Equal((11, 0), (merged.Number, merged.Part));
+    }
+
+    // ---------------------------------------------------------------------
     // Only closed rounds are visible
     // ---------------------------------------------------------------------
 
@@ -264,7 +293,7 @@ public class PublicStandingsServiceTests
         Assert.Empty(season.Rounds);
         // A prediction is still copyable while the round is open, so the breakdown is denied
         // outright rather than merely hidden from the list.
-        await Assert.ThrowsAsync<NotFoundException>(() => Build(db).GetRoundAsync(KeyA, 7, Ct));
+        await Assert.ThrowsAsync<NotFoundException>(() => Build(db).GetRoundAsync(KeyA, 7, null, Ct));
     }
 
     [Theory]
@@ -309,7 +338,7 @@ public class PublicStandingsServiceTests
         });
         db.SaveChanges();
 
-        var dto = await Build(db).GetRoundAsync(KeyA, 3, Ct);
+        var dto = await Build(db).GetRoundAsync(KeyA, 3, null, Ct);
 
         Assert.False(dto.IsPartial);
         var participant = Assert.Single(dto.Participants);
@@ -338,7 +367,7 @@ public class PublicStandingsServiceTests
         AddPrediction(db, round, match, user, 2, 1);
         db.SaveChanges();
 
-        var dto = await Build(db).GetRoundAsync(KeyA, 4, Ct);
+        var dto = await Build(db).GetRoundAsync(KeyA, 4, null, Ct);
 
         Assert.True(dto.IsPartial);
         Assert.Equal(1, dto.ComputedMatches);
@@ -364,7 +393,7 @@ public class PublicStandingsServiceTests
         AddPrediction(db, round, match, user, 2, 1);
         db.SaveChanges();
 
-        var dto = await Build(db).GetRoundAsync(KeyA, 5, Ct);
+        var dto = await Build(db).GetRoundAsync(KeyA, 5, null, Ct);
 
         var score = Assert.Single(Assert.Single(dto.Participants).MatchScores);
         Assert.Equal(5, score.Multiplier);

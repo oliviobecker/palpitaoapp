@@ -22,4 +22,8 @@ describe('publicStandingsUrl', () => {
     expect(publicStandingsUrl('A7C39F2E4BD8', 18)).toContain('?rodada=18');
     expect(publicStandingsUrl('A7C39F2E4BD8', null)).not.toContain('rodada');
   });
+
+  it('deep-links a part of a round played in parts by its label', () => {
+    expect(publicStandingsUrl('A7C39F2E4BD8', '10.2')).toMatch(/\?rodada=10\.2$/);
+  });
 });

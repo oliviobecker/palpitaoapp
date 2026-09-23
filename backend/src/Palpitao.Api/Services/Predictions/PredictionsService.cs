@@ -189,6 +189,7 @@ public class PredictionsService : IPredictionsService
         {
             RoundId = round.Id,
             Status = round.Status,
+            Part = round.Part,
             Matches = matches.Select(m => new MirrorMatchDto
             {
                 RoundMatchId = m.Id,

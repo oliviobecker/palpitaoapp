@@ -47,12 +47,16 @@ public class PublicStandingsController : ControllerBase
         return Ok(await _public.GetStandingsAsync(key, ct));
     }
 
-    /// <summary>One round's per-participant, per-match scoring breakdown.</summary>
+    /// <summary>
+    /// One round's per-participant, per-match scoring breakdown. <c>?part=2</c> addresses part 2
+    /// of a round played in parts ("10.2"); without it the standalone round answers.
+    /// </summary>
     [HttpGet("{key}/rounds/{number:int}")]
-    public async Task<ActionResult<PublicRoundDto>> Round(string key, int number, CancellationToken ct)
+    public async Task<ActionResult<PublicRoundDto>> Round(
+        string key, int number, [FromQuery] int? part, CancellationToken ct)
     {
         NoIndex();
-        return Ok(await _public.GetRoundAsync(key, number, ct));
+        return Ok(await _public.GetRoundAsync(key, number, part, ct));
     }
 
     /// <summary>

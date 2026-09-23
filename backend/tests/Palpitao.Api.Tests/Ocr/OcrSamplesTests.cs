@@ -116,7 +116,7 @@ public class OcrSamplesTests(ITestOutputHelper output)
                 report.AppendLine(
                     $"{file,-16} {result.Reading.Variant,-18} jogos {matched,2}/{round.Matches.Count,-2} "
                     + $"linhas {result.Candidates.Count,2}  revisar {review.Count,2}  ignoradas {result.IgnoredLineCount,2}"
-                    + (result.IgnoredRoundNumbers.Count > 0 ? $" (rodada {string.Join(",", result.IgnoredRoundNumbers)})" : string.Empty)
+                    + (result.IgnoredRoundLabels.Count > 0 ? $" (rodada {string.Join(",", result.IgnoredRoundLabels)})" : string.Empty)
                     + $"  participante [{string.Join(" / ", people)}]");
                 foreach (var c in review)
                 {

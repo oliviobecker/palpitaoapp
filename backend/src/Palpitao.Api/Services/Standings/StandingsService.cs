@@ -27,22 +27,43 @@ public class StandingsService : IStandingsService
             .Select(s => s.GroupId)
             .FirstAsync(ct);
 
-        // Aggregate per participant in the database: one row per user instead of
-        // loading every per-round result into memory (scales with participants, not
-        // participants × rounds). Conditional sums translate to SQL CASE expressions.
-        var aggregates = await _db.RoundParticipantResults
+        // Aggregate per participant and round number in the database, then per participant in
+        // memory. The parts of a round played in parts ("10.1", "10.2") share its number and
+        // count as one round: played if the participant is not absent in it, one absence if
+        // they are (only the last part records it). Conditional sums translate to SQL CASE
+        // expressions; the rows scale with participants × round numbers, not × results.
+        var perRound = await _db.RoundParticipantResults
             .AsNoTracking()
             .Where(r => r.SeasonId == seasonId)
-            .GroupBy(r => r.UserId)
+            .Join(_db.Rounds, r => r.RoundId, round => round.Id, (r, round) => new
+            {
+                r.UserId,
+                round.Number,
+                r.FinalPoints,
+                r.PenaltyPoints,
+                r.WasAbsent,
+            })
+            .GroupBy(x => new { x.UserId, x.Number })
+            .Select(g => new
+            {
+                g.Key.UserId,
+                FinalPoints = g.Sum(x => x.FinalPoints),
+                PenaltyPoints = g.Sum(x => x.PenaltyPoints),
+                Absences = g.Sum(x => x.WasAbsent ? 1 : 0),
+            })
+            .ToListAsync(ct);
+
+        var aggregates = perRound
+            .GroupBy(x => x.UserId)
             .Select(g => new
             {
                 UserId = g.Key,
-                FinalPoints = g.Sum(r => r.FinalPoints),
-                PenaltyPoints = g.Sum(r => r.PenaltyPoints),
-                PlayedRounds = g.Sum(r => r.WasAbsent ? 0 : 1),
-                AbsenceCount = g.Sum(r => r.WasAbsent ? 1 : 0),
+                FinalPoints = g.Sum(x => x.FinalPoints),
+                PenaltyPoints = g.Sum(x => x.PenaltyPoints),
+                PlayedRounds = g.Count(x => x.Absences == 0),
+                AbsenceCount = g.Count(x => x.Absences > 0),
             })
-            .ToListAsync(ct);
+            .ToList();
 
         // Exact-score counts per participant across the season's scored rounds.
         var exactCounts = await _db.PredictionScores

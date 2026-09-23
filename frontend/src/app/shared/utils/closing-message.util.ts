@@ -22,10 +22,11 @@ const ABSENCE_MARK = '✱';
  * relevance (knockouts first, then the regular block, then League One), the
  * points earned in the round per participant and the overall ranking with
  * absence markers and eliminations. Ready to copy — the `*…*` around the headings
- * is WhatsApp's bold syntax, rendered on paste.
+ * is WhatsApp's bold syntax, rendered on paste. `roundNumber` is the round's label: "41", or
+ * "10.2" for a part of a round played in parts (see `roundLabel`).
  */
 export function buildClosingMessage(
-  roundNumber: number,
+  roundNumber: number | string,
   results: RoundResults,
   standings: Standing[],
   groupTitle = '',

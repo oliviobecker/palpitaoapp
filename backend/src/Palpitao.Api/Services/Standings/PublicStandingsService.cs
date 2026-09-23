@@ -67,9 +67,11 @@ public class PublicStandingsService : IPublicStandingsService
                 && r.GroupId == season.GroupId
                 && VisibleStates.Contains(r.Status))
             .OrderByDescending(r => r.Number)
+            .ThenByDescending(r => r.Part)
             .Select(r => new PublicRoundSummaryDto
             {
                 Number = r.Number,
+                Part = r.Part,
                 Title = r.Title,
                 Status = r.Status,
                 StartDate = r.StartDate,
@@ -162,6 +164,7 @@ public class PublicStandingsService : IPublicStandingsService
                 {
                     result.UserId,
                     round.Number,
+                    round.Part,
                     result.FinalPoints,
                     result.WasAbsent,
                     result.FlavioRuleApplied,
@@ -174,9 +177,11 @@ public class PublicStandingsService : IPublicStandingsService
                 g => g.Key,
                 g => g
                     .OrderBy(e => e.Number)
+                    .ThenBy(e => e.Part)
                     .Select(e => new PublicStandingRoundDto
                     {
                         Number = e.Number,
+                        Part = e.Part,
                         Points = e.FinalPoints,
                         WasAbsent = e.WasAbsent,
                         FlavioRuleApplied = e.FlavioRuleApplied,
@@ -184,20 +189,33 @@ public class PublicStandingsService : IPublicStandingsService
                     .ToList());
     }
 
-    public async Task<PublicRoundDto> GetRoundAsync(string key, int roundNumber, CancellationToken ct)
+    public async Task<PublicRoundDto> GetRoundAsync(string key, int roundNumber, int? part, CancellationToken ct)
     {
         var season = await ResolveSeasonAsync(key, ct);
+
+        // Exact (number, part) first. Links outlive regrouping: "?rodada=10" sent before round 10
+        // was split must still open it — now 10.1, the lowest visible part — and "10.2" after
+        // the parts were merged back must open the standalone 10.
+        var candidates = await _db.Rounds
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(r => r.SeasonId == season.Id
+                && r.GroupId == season.GroupId
+                && r.Number == roundNumber
+                && VisibleStates.Contains(r.Status))
+            .OrderBy(r => r.Part)
+            .Select(r => new { r.Id, r.Part })
+            .ToListAsync(ct);
+        var wanted = part ?? 0;
+        var pick = candidates.FirstOrDefault(r => r.Part == wanted) ?? candidates.FirstOrDefault()
+            ?? throw new NotFoundException("notFound.round");
 
         var round = await _db.Rounds
             .AsNoTracking()
             .IgnoreQueryFilters()
             .Include(r => r.Matches).ThenInclude(m => m.HomeTeam)
             .Include(r => r.Matches).ThenInclude(m => m.AwayTeam)
-            .FirstOrDefaultAsync(r => r.SeasonId == season.Id
-                && r.GroupId == season.GroupId
-                && r.Number == roundNumber
-                && VisibleStates.Contains(r.Status), ct)
-            ?? throw new NotFoundException("notFound.round");
+            .FirstAsync(r => r.Id == pick.Id, ct);
 
         var ruleSet = await _config.GetRuleSetAsync(season.Id, ct);
         var orderedMatches = round.Matches.OrderBy(m => m.Order).ThenBy(m => m.StartsAt).ToList();
@@ -212,6 +230,7 @@ public class PublicStandingsService : IPublicStandingsService
         var dto = new PublicRoundDto
         {
             Number = round.Number,
+            Part = round.Part,
             Title = round.Title,
             Status = round.Status,
             IsPartial = round.Status != RoundStatus.Scored,

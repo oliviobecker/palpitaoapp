@@ -67,6 +67,10 @@ public class TemporaryStandingsDto
 {
     public Guid RoundId { get; set; }
     public int RoundNumber { get; set; }
+
+    /// <summary>0 = rodada avulsa; 1..k = parte de uma rodada jogada em partes ("10.2").</summary>
+    public int RoundPart { get; set; }
+
     public bool IsTemporary { get; set; } = true;
     public RoundStatus RoundStatus { get; set; }
     public DateTime? LastUpdatedAt { get; set; }

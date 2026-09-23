@@ -6,6 +6,10 @@ public class AbsenceDto
 {
     public Guid RoundId { get; set; }
     public int RoundNumber { get; set; }
+
+    /// <summary>0 = rodada avulsa; 1..k = parte de uma rodada jogada em partes ("10.2").</summary>
+    public int RoundPart { get; set; }
+
     public Guid UserId { get; set; }
     public int AbsenceNumber { get; set; }
     public int PenaltyPoints { get; set; }
@@ -40,6 +44,9 @@ public class AbsenceCandidateRoundDto
 
     public int Number { get; set; }
 
+    /// <summary>0 = rodada avulsa; 1..k = parte de uma rodada jogada em partes.</summary>
+    public int Part { get; set; }
+
     public string? Title { get; set; }
 
     public RoundStatus Status { get; set; }
@@ -68,6 +75,12 @@ public class AbsenceReviewRoundDto
     public Guid RoundId { get; set; }
 
     public int Number { get; set; }
+
+    /// <summary>
+    /// 0 = rodada avulsa; 1..k = parte de uma rodada jogada em partes, que só conta ausência
+    /// quando o participante consta ausente em todas as partes.
+    /// </summary>
+    public int Part { get; set; }
 
     public string? Title { get; set; }
 

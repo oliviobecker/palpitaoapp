@@ -61,7 +61,10 @@
             <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
               <strong>{{ p.name }}</strong>
               @if (p.isAbsent) {
-                <span class="badge text-bg-secondary">{{ 'mirror.absent' | translate }}</span>
+                <!-- On a part, nothing sent here is only an absence if every part is missed. -->
+                <span class="badge text-bg-secondary">{{
+                  (data.part ? 'mirror.nothingInPart' : 'mirror.absent') | translate
+                }}</span>
               }
               @if (p.isEliminated) {
                 <span class="badge text-bg-danger">{{ 'mirror.eliminated' | translate }}</span>

@@ -623,7 +623,8 @@ public partial class RoundScoringServiceTests
     /// later) with its result already entered, so <c>SubmittedAt</c> can sit on either side of
     /// the special deadline. Neutral pair: multiplier 1.
     /// </summary>
-    private static Round InsertLockedRound(AppDbContext db, int number, DateTime published, int homeScore, int awayScore)
+    private static Round InsertLockedRound(
+        AppDbContext db, int number, DateTime published, int homeScore, int awayScore, int part = 0)
     {
         var firstMatch = published.AddHours(48);
         var round = new Round
@@ -632,6 +633,7 @@ public partial class RoundScoringServiceTests
             GroupId = SeedIds.DefaultGroup,
             SeasonId = SeasonId,
             Number = number,
+            Part = part,
             Status = RoundStatus.Locked,
             PublishedAt = published,
             FirstMatchStartsAt = firstMatch,

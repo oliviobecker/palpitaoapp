@@ -471,6 +471,11 @@ app-form-field.is-invalid .form-select:focus {
   font-weight: 800;
   line-height: 1;
 }
+/* A part of a round played in parts ("10.2") needs to fit the same fixed tile. */
+.round-tile__num--part {
+  font-size: 0.9rem;
+  letter-spacing: -0.02em;
+}
 .round-item__body {
   flex: 1 1 auto;
   min-width: 0;

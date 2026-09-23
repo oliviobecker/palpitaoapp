@@ -72,10 +72,19 @@ public class PredictionCoverageParticipantDto
     /// <summary>
     /// Whether scoring this round now would mark them absent. Comes from
     /// <c>IAbsenceService</c> (so admin overrides win) rather than being recomputed here:
-    /// the label must never drift from what the scoring actually does.
+    /// the label must never drift from what the scoring actually does. For a round played in
+    /// parts it is the whole round's verdict: only the last part decides, and only for someone
+    /// who also sent nothing in every other part.
     /// </summary>
     public bool WillBeAbsent { get; set; }
 
-    /// <summary>An <c>AbsenceOverride</c> exists, so the flag above was decided by an admin.</summary>
+    /// <summary>
+    /// Absent in this round alone (sent nothing, or forced absent). Equal to
+    /// <see cref="WillBeAbsent"/> on a standalone round; on a part it is what the present/absent
+    /// override toggles, since that override is per part.
+    /// </summary>
+    public bool AbsentInPart { get; set; }
+
+    /// <summary>An <c>AbsenceOverride</c> exists, so the flags above were decided by an admin.</summary>
     public bool HasOverride { get; set; }
 }

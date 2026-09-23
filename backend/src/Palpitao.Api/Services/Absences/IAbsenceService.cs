@@ -6,6 +6,24 @@ namespace Palpitao.Api.Services.Absences;
 public record AbsenceOutcome(Guid UserId, int AbsenceNumber, int PenaltyPoints, bool Eliminated);
 
 /// <summary>
+/// Who is absent in a round, in the round alone and for the whole round played in parts
+/// ("10.1" + "10.2" count as one round for absences). On a standalone round both sets agree.
+/// On a part, <see cref="WeekAbsentees"/> stays empty unless this part decides — it is the last
+/// one — and then holds only those who also sent nothing in every other part with matches.
+/// </summary>
+/// <param name="PartAbsentees">Absent in this round alone (override, else "sent nothing"), in roster order.</param>
+/// <param name="WeekAbsentees">Absent for the whole round: the ones scoring records as absences.</param>
+/// <param name="IsPart">The round is a part of a round played in parts.</param>
+/// <param name="DecidesWeek">No later part exists, so scoring this round decides the absences.</param>
+/// <param name="OtherPartsClosed">Every other part is closed for predictions (trivially true when standalone).</param>
+public record WeekAbsence(
+    IReadOnlyList<Guid> PartAbsentees,
+    IReadOnlySet<Guid> WeekAbsentees,
+    bool IsPart,
+    bool DecidesWeek,
+    bool OtherPartsClosed);
+
+/// <summary>
 /// What an absence review staged: the active season the rounds belong to, the rounds whose
 /// effective state changed and whether any of them is already Scored — in which case only a
 /// season recalculation makes the change (and everyone's absence ladder) real.
@@ -20,6 +38,13 @@ public interface IAbsenceService
     /// <summary>Active, non-eliminated participants considered absent in the round.</summary>
     Task<IReadOnlyList<Guid>> DetectAbsenteesAsync(Guid roundId, CancellationToken ct);
 
+    /// <summary>
+    /// <see cref="DetectAbsenteesAsync"/> plus the verdict for the whole round when the round is
+    /// a part of a round played in parts: only the last part decides, and only someone absent in
+    /// every part (parts without matches are neutral) counts as absent.
+    /// </summary>
+    Task<WeekAbsence> DetectWeekAbsenteesAsync(Guid roundId, CancellationToken ct);
+
     /// <summary>Number of absences a participant has accumulated in the season.</summary>
     Task<int> CountSeasonAbsencesAsync(Guid seasonId, Guid userId, CancellationToken ct);
 
@@ -27,6 +52,9 @@ public interface IAbsenceService
     /// Detects absentees of a round and applies the punishment rules (records
     /// the absence, removes points on the 3rd/4th and eliminates on the 5th).
     /// Idempotent: re-processing a round replaces its previous absence records.
+    /// On a part of a round played in parts, whoever sent nothing in this part alone gets a
+    /// zeroed result that is not an absence; only the last part records absences, for those
+    /// who missed every part.
     /// </summary>
     Task<IReadOnlyList<AbsenceOutcome>> ProcessRoundAbsencesAsync(Guid roundId, Guid actingUserId, CancellationToken ct);
 

@@ -51,12 +51,14 @@ public sealed record OcrImportContext(
 
 /// <summary>What one image produced: the reading chosen, its candidates, and what was left out.</summary>
 /// <param name="IgnoredLineCount">Lines that were another round's fixtures and were not turned into candidates.</param>
-/// <param name="IgnoredRoundNumbers">The rounds those lines belong to, ascending.</param>
+/// <param name="IgnoredRoundLabels">
+/// The rounds those lines belong to, as labels ("7", "10.1" for a part), ascending.
+/// </param>
 public sealed record OcrImportResult(
     OcrReading Reading,
     IReadOnlyList<OcrPredictionCandidate> Candidates,
     int IgnoredLineCount,
-    IReadOnlyList<int> IgnoredRoundNumbers);
+    IReadOnlyList<string> IgnoredRoundLabels);
 
 public interface IPredictionImportService
 {

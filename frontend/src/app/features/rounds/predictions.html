@@ -3,10 +3,12 @@
 } @else if (error()) {
   <app-error-state (retry)="load()" />
 } @else if (round(); as r) {
-  <app-page-header [title]="('dashboard.round' | translate) + ' ' + r.number">
+  <app-page-header
+    [title]="('dashboard.round' | translate) + ' ' + (r.number | roundLabel: r.part)"
+  >
     <div trail class="page-trail">
       <a routerLink="/rounds">{{ 'nav.rounds' | translate }}</a> ·
-      {{ 'dashboard.round' | translate }} {{ r.number }}
+      {{ 'dashboard.round' | translate }} {{ r.number | roundLabel: r.part }}
     </div>
     @if (editable()) {
       <span

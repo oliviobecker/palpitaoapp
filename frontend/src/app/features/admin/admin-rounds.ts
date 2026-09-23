@@ -18,6 +18,8 @@ import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Icon } from '../../shared/components/icon/icon';
 import { PageHeader } from '../../shared/components/page-header/page-header';
 import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
+import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
+import { compareRounds } from '../../shared/utils/round-name.util';
 
 type Filter = 'all' | RoundStatus;
 
@@ -32,7 +34,16 @@ const STATUS_ORDER: RoundStatus[] = [
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-rounds',
-  imports: [RouterLink, TranslatePipe, EmptyState, ErrorState, Icon, PageHeader, SkeletonList],
+  imports: [
+    RouterLink,
+    TranslatePipe,
+    EmptyState,
+    ErrorState,
+    Icon,
+    PageHeader,
+    SkeletonList,
+    RoundLabelPipe,
+  ],
   template: `
     <app-page-header
       [trail]="'Admin · ' + ('adminRounds.title' | translate)"
@@ -75,11 +86,13 @@ const STATUS_ORDER: RoundStatus[] = [
           >
             <span class="round-tile">
               <span class="round-tile__label">{{ 'adminRounds.tile' | translate }}</span>
-              <span class="round-tile__num">{{ r.number }}</span>
+              <span class="round-tile__num" [class.round-tile__num--part]="!!r.part">{{
+                r.number | roundLabel: r.part
+              }}</span>
             </span>
             <div class="round-item__body">
               <div class="fw-semibold text-truncate">
-                {{ 'dashboard.round' | translate }} {{ r.number }}
+                {{ 'dashboard.round' | translate }} {{ r.number | roundLabel: r.part }}
                 @if (r.title) {
                   · {{ r.title }}
                 }
@@ -161,7 +174,7 @@ export class AdminRounds implements OnInit {
   protected readonly rounds = signal<RoundSummary[]>([]);
   protected readonly filter = signal<Filter>('all');
 
-  private readonly sorted = computed(() => [...this.rounds()].sort((a, b) => b.number - a.number));
+  private readonly sorted = computed(() => [...this.rounds()].sort((a, b) => compareRounds(b, a)));
 
   protected readonly filtered = computed(() => {
     const f = this.filter();

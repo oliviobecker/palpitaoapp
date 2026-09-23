@@ -39,9 +39,11 @@ export class PublicStandingsService {
     );
   }
 
-  round(key: string, number: number): Observable<PublicRound> {
+  /** `part` addresses a part of a round played in parts ("10.2"); 0 or absent = standalone. */
+  round(key: string, number: number, part?: number | null): Observable<PublicRound> {
+    const query = part && part > 0 ? `?part=${part}` : '';
     return this.http.get<PublicRound>(
-      `${this.base}/${PublicStandingsService.normalize(key)}/rounds/${number}`,
+      `${this.base}/${PublicStandingsService.normalize(key)}/rounds/${number}${query}`,
       { context: this.context },
     );
   }

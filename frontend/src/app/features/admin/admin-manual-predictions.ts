@@ -24,6 +24,7 @@ import { RoundsService } from '../../core/services/rounds.service';
 import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
 import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
+import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
 import { AdminEntryNotice } from './admin-entry-notice';
 import { adminEntryBlockKey } from './admin-entry.util';
 
@@ -79,13 +80,14 @@ export function manualPredictionItems(
     CompetitionBadge,
     Icon,
     Loading,
+    RoundLabelPipe,
   ],
   template: `
     <div class="mb-3">
       <div class="page-trail">
         <a routerLink="/admin/rounds">{{ 'nav.rounds' | translate }}</a> ·
         <a [routerLink]="['/admin/rounds', roundId]"
-          >{{ 'dashboard.round' | translate }} {{ round()?.number }}</a
+          >{{ 'dashboard.round' | translate }} {{ round()?.number | roundLabel: round()?.part }}</a
         >
         · {{ 'manual.crumb' | translate }}
       </div>

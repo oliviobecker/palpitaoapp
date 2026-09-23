@@ -2,6 +2,7 @@ import { Competition } from '../../core/models/enums';
 import { Round, ScoringConfig } from '../../core/models/models';
 import { predictionDeadlineIso } from './deadline.util';
 import { computeMultiplier, phaseLabel } from './match.util';
+import { roundLabel } from './round-name.util';
 import { shortTeamName } from './team-name.util';
 
 const COMP_LABEL: Record<Competition, string> = {
@@ -42,8 +43,9 @@ export function buildRoundMessage(
   }
   // The participant replaces "Nome" with their own when sending the predictions back;
   // bold so it reads as a field to fill in, not as part of the heading. The round's own
-  // title deliberately stays out — the line belongs to whoever is answering.
-  lines.push(`*Nome*, Rodada ${round.number}`);
+  // title deliberately stays out — the line belongs to whoever is answering. A part of a round
+  // played in parts prints as "10.2": the dot keeps the OCR from reading it as a score.
+  lines.push(`*Nome*, Rodada ${roundLabel(round.number, round.part)}`);
 
   const matches = [...(round.matches ?? [])];
   if (matches.length === 0) {

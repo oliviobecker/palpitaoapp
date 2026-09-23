@@ -146,6 +146,15 @@ describe('buildClosingMessage', () => {
   });
 });
 
+describe('buildClosingMessage — round played in parts', () => {
+  it('heads every section with the part label', () => {
+    const text = buildClosingMessage('10.2', results, standings, 'Palpitão');
+    expect(text).toContain('Rodada 10.2\n');
+    expect(text).toContain('*Pontuação 10.2*');
+    expect(text).toContain('*Rank 10.2*');
+  });
+});
+
 describe('buildClosingMessage — public link', () => {
   it('omits the link block when no URL is given', () => {
     const text = buildClosingMessage(41, results, standings, 'Palpitão');

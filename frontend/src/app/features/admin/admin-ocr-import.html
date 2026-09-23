@@ -2,7 +2,7 @@
   <div class="page-trail">
     <a routerLink="/admin/rounds">{{ 'nav.rounds' | translate }}</a> ·
     <a [routerLink]="['/admin/rounds', roundId]"
-      >{{ 'dashboard.round' | translate }} {{ round()?.number }}</a
+      >{{ 'dashboard.round' | translate }} {{ round()?.number | roundLabel: round()?.part }}</a
     >
     · {{ 'ocr.crumb' | translate }}
   </div>

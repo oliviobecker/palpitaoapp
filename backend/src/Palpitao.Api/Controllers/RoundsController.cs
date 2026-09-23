@@ -19,15 +19,18 @@ namespace Palpitao.Api.Controllers;
 public class RoundsController : ControllerBase
 {
     private readonly IRoundService _rounds;
+    private readonly IRoundWeekService _weeks;
     private readonly IRoundScoringService _scoring;
     private readonly ITemporaryStandingsService _temporaryStandings;
 
     public RoundsController(
         IRoundService rounds,
+        IRoundWeekService weeks,
         IRoundScoringService scoring,
         ITemporaryStandingsService temporaryStandings)
     {
         _rounds = rounds;
+        _weeks = weeks;
         _scoring = scoring;
         _temporaryStandings = temporaryStandings;
     }
@@ -44,11 +47,14 @@ public class RoundsController : ControllerBase
     [RequireGroupAdmin]
     public async Task<ActionResult<RoundDto>> Create(CreateRoundRequest request, CancellationToken ct)
     {
-        var round = await _rounds.CreateAsync(request, User.GetUserId(), ct);
+        var round = request.JoinPreviousWeek
+            ? await _weeks.CreateInPreviousWeekAsync(request, User.GetUserId(), ct)
+            : await _rounds.CreateAsync(request, User.GetUserId(), ct);
         SentrySdk.AddBreadcrumb("Round created.", "rounds", data: new Dictionary<string, string>
         {
             ["roundId"] = round.Id.ToString(),
             ["number"] = round.Number.ToString(),
+            ["part"] = round.Part.ToString(),
         });
         return CreatedAtAction(nameof(GetById), new { id = round.Id }, round);
     }
@@ -87,7 +93,39 @@ public class RoundsController : ControllerBase
     [HttpPost("{id:guid}/cancel")]
     [RequireGroupAdmin]
     public async Task<ActionResult<RoundDto>> Cancel(Guid id, CancellationToken ct)
-        => Ok(await _rounds.CancelAsync(id, User.GetUserId(), ct));
+        => Ok(await _weeks.CancelAsync(id, User.GetUserId(), ct));
+
+    /// <summary>
+    /// Plays a standalone round as the next part of the previous round ("11" → "10.2"), for a
+    /// week with two rounds that should count as one for absences.
+    /// </summary>
+    [HttpPost("{id:guid}/join-previous-week")]
+    [RequireGroupAdmin]
+    public async Task<ActionResult<RoundDto>> JoinPreviousWeek(Guid id, CancellationToken ct)
+    {
+        var round = await _weeks.JoinPreviousWeekAsync(id, User.GetUserId(), ct);
+        SentrySdk.AddBreadcrumb("Round joined the previous round.", "rounds", data: new Dictionary<string, string>
+        {
+            ["roundId"] = round.Id.ToString(),
+            ["number"] = round.Number.ToString(),
+            ["part"] = round.Part.ToString(),
+        });
+        return Ok(round);
+    }
+
+    /// <summary>Takes the last part out of its round played in parts ("10.2" → "11").</summary>
+    [HttpPost("{id:guid}/leave-week")]
+    [RequireGroupAdmin]
+    public async Task<ActionResult<RoundDto>> LeaveWeek(Guid id, CancellationToken ct)
+    {
+        var round = await _weeks.LeaveWeekAsync(id, User.GetUserId(), ct);
+        SentrySdk.AddBreadcrumb("Round left its grouped round.", "rounds", data: new Dictionary<string, string>
+        {
+            ["roundId"] = round.Id.ToString(),
+            ["number"] = round.Number.ToString(),
+        });
+        return Ok(round);
+    }
 
     [HttpPost("{id:guid}/reopen")]
     [RequireGroupAdmin]

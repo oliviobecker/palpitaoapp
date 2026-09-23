@@ -38,11 +38,13 @@ public class RoundService : IRoundService
         return await _db.Rounds
             .Where(r => r.GroupId == groupId)
             .OrderBy(r => r.Number)
+            .ThenBy(r => r.Part)
             .Select(r => new RoundSummaryDto
             {
                 Id = r.Id,
                 SeasonId = r.SeasonId,
                 Number = r.Number,
+                Part = r.Part,
                 Title = r.Title,
                 Status = r.Status,
                 StartDate = r.StartDate,
@@ -86,8 +88,52 @@ public class RoundService : IRoundService
         dto.AllowParticipantsToSubmitPredictions = season.AllowParticipantsToSubmitPredictions;
         dto.FaCupEnabled = season.FaCupEnabled;
         dto.Flavio = await BuildFlavioAsync(round, ct);
+        dto.Week = await BuildWeekAsync(round, ct);
         return dto;
     }
+
+    /// <summary>
+    /// The round among the rounds sharing its number: which part decides the absences, whether
+    /// it can be finalized yet, and a preview of joining the previous round or leaving this one
+    /// — worked out by the same planner that applies them, so the screen never promises a move
+    /// the server would refuse.
+    /// </summary>
+    private async Task<RoundWeekDto> BuildWeekAsync(Round round, CancellationToken ct)
+    {
+        var season = await _db.Rounds
+            .AsNoTracking()
+            .Where(r => r.SeasonId == round.SeasonId)
+            .Select(r => new RoundSlot(r.Id, r.Number, r.Part, r.Status, r.CreatedAt))
+            .ToListAsync(ct);
+
+        var parts = season.Where(r => r.Number == round.Number).OrderBy(r => r.Part).ToList();
+        var siblings = parts.Where(r => r.Id != round.Id && r.Status != RoundStatus.Cancelled).ToList();
+        var decides = siblings.All(s => s.Part < round.Part);
+
+        return new RoundWeekDto
+        {
+            Parts = parts
+                .Select(p => new RoundWeekPartDto { Id = p.Id, Number = p.Number, Part = p.Part, Status = p.Status })
+                .ToList(),
+            DecidesAbsences = decides,
+            OpenPartBlocksFinalize = decides
+                && siblings.Any(s => s.Status is RoundStatus.Draft or RoundStatus.Published),
+            LaterPartScored = siblings.Any(s => s.Part > round.Part && s.Status == RoundStatus.Scored),
+            JoinPrevious = Preview(RoundWeekPlanner.PlanJoinPrevious(season, round.Id)),
+            Leave = Preview(RoundWeekPlanner.PlanLeave(season, round.Id)),
+        };
+    }
+
+    private static RoundWeekMoveDto Preview(RoundWeekPlan plan) => plan.Allowed
+        ? new RoundWeekMoveDto
+        {
+            Allowed = true,
+            TargetNumber = plan.TargetNumber,
+            TargetPart = plan.TargetPart,
+            RenumberedRounds = plan.Moves.Count,
+            RequiresRecalculation = plan.RequiresReplay,
+        }
+        : new RoundWeekMoveDto();
 
     /// <summary>
     /// Flávio-rule info for the group message: only from the season's configured
@@ -172,6 +218,13 @@ public class RoundService : IRoundService
         if (round.Status is RoundStatus.Locked or RoundStatus.Scored or RoundStatus.Cancelled)
         {
             throw new BusinessRuleException("round.cannotEditClosed");
+        }
+
+        // A part moves with its round played in parts, through join/leave: renumbering it
+        // alone would split the parts or land on a number that is somebody else's.
+        if (round.Part > 0 && request.Number != round.Number)
+        {
+            throw new BusinessRuleException("round.partNumberLocked");
         }
 
         if (request.Number != round.Number)
@@ -621,6 +674,7 @@ public class RoundService : IRoundService
         Id = round.Id,
         SeasonId = round.SeasonId,
         Number = round.Number,
+        Part = round.Part,
         Title = round.Title,
         StartDate = round.StartDate,
         EndDate = round.EndDate,

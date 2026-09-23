@@ -25,8 +25,9 @@ import {
 import { FormField } from '../../shared/components/form-field/form-field';
 import { Icon } from '../../shared/components/icon/icon';
 import { PageHeader } from '../../shared/components/page-header/page-header';
+import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
 import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util';
-import { ordinalRoundName } from '../../shared/utils/round-name.util';
+import { joinPreview, ordinalRoundName } from '../../shared/utils/round-name.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,6 +40,7 @@ import { ordinalRoundName } from '../../shared/utils/round-name.util';
     FormField,
     Icon,
     PageHeader,
+    RoundLabelPipe,
   ],
   template: `
     <app-page-header
@@ -89,6 +91,34 @@ import { ordinalRoundName } from '../../shared/utils/round-name.util';
               />
             </div>
           </app-form-field>
+
+          <!-- A second list in the same week: one round played in parts (10.1 + 10.2). -->
+          @if (joinTarget(); as t) {
+            <div class="form-check">
+              <input
+                id="rf-join"
+                type="checkbox"
+                class="form-check-input"
+                formControlName="joinPreviousWeek"
+              />
+              <label for="rf-join" class="form-check-label">{{
+                'roundForm.joinPrevious' | translate: { round: t.number }
+              }}</label>
+              @if (form.controls.joinPreviousWeek.value) {
+                <div class="form-text">
+                  {{
+                    'roundForm.joinPreviousPreview'
+                      | translate: { label: (t.number | roundLabel: t.part) }
+                  }}
+                </div>
+                @if (t.scored) {
+                  <div class="form-text text-warning-emphasis">
+                    {{ 'roundForm.joinPreviousScored' | translate: { round: t.number } }}
+                  </div>
+                }
+              }
+            </div>
+          }
 
           <app-form-field
             [label]="('roundForm.name' | translate) + ' ' + ('common.optional' | translate)"
@@ -232,6 +262,8 @@ export class AdminRoundForm implements OnInit, HasUnsavedChanges {
   protected readonly form = this.fb.nonNullable.group({
     seasonId: ['', Validators.required],
     number: [1, [Validators.required, Validators.min(1)]],
+    /** Play the new round as the next part of the previous round ("10.2"). */
+    joinPreviousWeek: [false],
     title: [''],
     // Default the round window to today → +10 days (admin can adjust).
     startDate: [isoDateFromToday(0), Validators.required],
@@ -240,13 +272,13 @@ export class AdminRoundForm implements OnInit, HasUnsavedChanges {
 
   constructor() {
     // Keep the name in sync with the number while it's still auto-generated.
-    this.form.controls.number.valueChanges.pipe(takeUntilDestroyed()).subscribe((n) => {
-      if (this.autoTitle && n) {
-        this.form.controls.title.setValue(ordinalRoundName(n, this.language.current()), {
-          emitEvent: false,
-        });
-      }
-    });
+    this.form.controls.number.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.refreshAutoTitle());
+    // A part takes the name of the round it joins ("Décima Rodada" for 10.2).
+    this.form.controls.joinPreviousWeek.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.refreshAutoTitle());
     // A manual edit of the name stops the auto-sync.
     this.form.controls.title.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
       this.autoTitle = false;
@@ -291,8 +323,28 @@ export class AdminRoundForm implements OnInit, HasUnsavedChanges {
       .map((r) => r.number);
     const next = numbers.length ? Math.max(...numbers) + 1 : 1;
     this.form.controls.number.setValue(next, { emitEvent: false });
-    if (this.autoTitle) {
-      this.form.controls.title.setValue(ordinalRoundName(next, this.language.current()), {
+    this.refreshAutoTitle();
+  }
+
+  /**
+   * Where the new round lands when played in the previous round's week — the same rule the
+   * server applies — or null when the season has no previous round to join.
+   */
+  protected joinTarget(): { number: number; part: number; scored: boolean } | null {
+    const { seasonId, number } = this.form.getRawValue();
+    return joinPreview(
+      this.rounds().filter((r) => r.seasonId === seasonId),
+      number,
+    );
+  }
+
+  /** The default name follows the number — or, for a part, the round it joins. */
+  private refreshAutoTitle(): void {
+    if (!this.autoTitle) return;
+    const { number, joinPreviousWeek } = this.form.getRawValue();
+    const n = (joinPreviousWeek ? this.joinTarget()?.number : null) ?? number;
+    if (n) {
+      this.form.controls.title.setValue(ordinalRoundName(n, this.language.current()), {
         emitEvent: false,
       });
     }
@@ -383,7 +435,8 @@ export class AdminRoundForm implements OnInit, HasUnsavedChanges {
       return;
     }
     this.saving.set(true);
-    const { seasonId, number, title, startDate, endDate } = this.form.getRawValue();
+    const { seasonId, number, joinPreviousWeek, title, startDate, endDate } =
+      this.form.getRawValue();
     this.roundsApi
       .create({
         seasonId,
@@ -391,6 +444,8 @@ export class AdminRoundForm implements OnInit, HasUnsavedChanges {
         title: title || null,
         startDate: `${startDate}T00:00:00`,
         endDate: `${endDate}T23:59:59`,
+        // Hidden once there is nothing to join (another season picked): never sent stale.
+        joinPreviousWeek: joinPreviousWeek && this.joinTarget() !== null,
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

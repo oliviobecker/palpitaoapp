@@ -34,6 +34,13 @@ public class MirrorDto
 {
     public Guid RoundId { get; set; }
     public RoundStatus Status { get; set; }
+
+    /// <summary>
+    /// 1..k when the round is a part of a round played in parts: sending nothing here is then
+    /// not an absence by itself, so the mirror labels it "no predictions" instead.
+    /// </summary>
+    public int Part { get; set; }
+
     public List<MirrorMatchDto> Matches { get; set; } = new();
     public List<MirrorParticipantDto> Participants { get; set; } = new();
 }

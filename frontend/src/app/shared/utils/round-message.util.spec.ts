@@ -237,4 +237,9 @@ describe('buildRoundMessage', () => {
     expect(msg).toContain('Sem jogos cadastrados ainda.');
     expect(msg).not.toContain('Palpites até');
   });
+
+  it('prints a part of a round played in parts with a dot, which OCR never reads as a score', () => {
+    const msg = buildRoundMessage(round([match({})], { number: 10, part: 2 }));
+    expect(msg).toContain('*Nome*, Rodada 10.2');
+  });
 });

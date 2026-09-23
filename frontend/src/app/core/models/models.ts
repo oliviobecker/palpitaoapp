@@ -178,6 +178,8 @@ export interface TemporaryStanding {
 export interface TemporaryStandings {
   roundId: string;
   roundNumber: number;
+  /** 0 for a standalone round; 1..k for the parts of a round played in parts ("10.2"). */
+  roundPart?: number;
   isTemporary: boolean;
   roundStatus: RoundStatus;
   lastUpdatedAt?: string | null;
@@ -213,14 +215,53 @@ export interface ScoutMatch {
 export interface RoundScout {
   roundId: string;
   roundNumber: number;
+  roundPart?: number;
   roundTitle?: string | null;
   matches: ScoutMatch[];
+}
+
+/** One round sharing a number with others: a part of a round played in parts. */
+export interface RoundWeekPart {
+  id: string;
+  number: number;
+  part: number;
+  status: RoundStatus;
+}
+
+/** Preview of joining the previous round, or leaving a round played in parts. */
+export interface RoundWeekMove {
+  allowed: boolean;
+  targetNumber?: number | null;
+  targetPart?: number | null;
+  /** Rounds whose number or part changes, the moved one included. */
+  renumberedRounds: number;
+  /** A Scored round is affected: the season is recalculated in the same transaction. */
+  requiresRecalculation: boolean;
+}
+
+/**
+ * A round played in parts ("10.1" + "10.2") counts as one round for absences, decided by its
+ * last part. What the round-detail screen needs to explain that and offer join/leave.
+ */
+export interface RoundWeek {
+  /** Every round sharing the number (cancelled ones included), in part order. */
+  parts: RoundWeekPart[];
+  /** Standalone round or last part: finalizing it decides the absences. */
+  decidesAbsences: boolean;
+  /** Decides, but another part still takes predictions: it cannot be finalized yet. */
+  openPartBlocksFinalize: boolean;
+  /** A later part is already finalized: finalizing this one recalculates the season. */
+  laterPartScored: boolean;
+  joinPrevious: RoundWeekMove;
+  leave: RoundWeekMove;
 }
 
 export interface Round {
   id: string;
   seasonId: string;
   number: number;
+  /** 0 for a standalone round; 1..k for the parts of a round played in parts ("10.2"). */
+  part?: number;
   title?: string | null;
   startDate?: string | null;
   endDate?: string | null;
@@ -242,12 +283,16 @@ export interface Round {
   allowParticipantsToSubmitPredictions?: boolean;
   /** From the round's season: whether FA Cup fixtures may be added to this round. */
   faCupEnabled?: boolean;
+  /** The round among the rounds sharing its number (absent from older API builds). */
+  week?: RoundWeek;
 }
 
 export interface RoundSummary {
   id: string;
   seasonId: string;
   number: number;
+  /** 0 for a standalone round; 1..k for the parts of a round played in parts ("10.2"). */
+  part?: number;
   title?: string | null;
   startDate?: string | null;
   endDate?: string | null;
@@ -323,6 +368,7 @@ export interface Standing {
 export interface Absence {
   roundId: string;
   roundNumber: number;
+  roundPart?: number;
   userId: string;
   absenceNumber: number;
   penaltyPoints: number;
@@ -333,6 +379,7 @@ export interface Absence {
 export interface AbsenceCandidateRound {
   roundId: string;
   number: number;
+  part?: number;
   title?: string | null;
   status: RoundStatus;
   matchCount: number;
@@ -347,6 +394,8 @@ export interface AbsenceCandidateRound {
 export interface AbsenceReviewRound {
   roundId: string;
   number: number;
+  /** A part of a round played in parts only counts as an absence if every part is missed. */
+  part?: number;
   title?: string | null;
   status: RoundStatus;
   matchCount: number;
@@ -414,8 +463,8 @@ export interface OcrBatch {
    * out. Only on the upload response — a reloaded batch does not carry it.
    */
   ignoredLineCount?: number;
-  /** The rounds those lines belong to. Only on the upload response. */
-  ignoredRoundNumbers?: number[];
+  /** The rounds those lines belong to, as labels ("7", "10.1"). Only on the upload response. */
+  ignoredRoundLabels?: string[];
   /**
    * Participants whose predictions confirming this batch would change. Only for a batch still
    * under review; empty when nothing stored would change.
@@ -483,9 +532,15 @@ export interface PredictionCoverageParticipant {
   /**
    * Scoring the round right now would zero them. Not derivable from `predictedCount`:
    * an admin override wins over the count, so the backend is the only source of truth.
+   * On a round played in parts it is the whole round's verdict, decided by the last part.
    */
   willBeAbsent: boolean;
-  /** An admin decided this one by hand, so the flag above is not the automatic rule. */
+  /**
+   * Absent in this round alone. Same as `willBeAbsent` on a standalone round; on a part it is
+   * what the present/absent toggle flips, since that override belongs to the part.
+   */
+  absentInPart?: boolean;
+  /** An admin decided this one by hand, so the flags above are not the automatic rule. */
   hasOverride: boolean;
 }
 
@@ -560,6 +615,8 @@ export interface RoundResults {
 
 export interface PublicRoundSummary {
   number: number;
+  /** 0 for a standalone round; 1..k for the parts of a round played in parts ("10.2"). */
+  part?: number;
   title?: string | null;
   status: RoundStatus;
   startDate?: string | null;
@@ -580,6 +637,7 @@ export interface PublicRuleset {
 /** One scored round in a participant's history, as shown when a standings row opens. */
 export interface PublicStandingRound {
   number: number;
+  part?: number;
   points: number;
   wasAbsent: boolean;
   flavioRuleApplied: boolean;
@@ -618,6 +676,7 @@ export interface PublicParticipantScore {
 
 export interface PublicRound {
   number: number;
+  part?: number;
   title?: string | null;
   status: RoundStatus;
   /** Locked but not scored: computed live, without absences/Flávio/elimination. */
@@ -646,6 +705,8 @@ export interface MirrorParticipant {
 export interface Mirror {
   roundId: string;
   status: RoundStatus;
+  /** 1..k for a part of a round played in parts: sending nothing there is not an absence alone. */
+  part?: number;
   matches: {
     roundMatchId: string;
     competition: Competition;

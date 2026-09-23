@@ -238,7 +238,8 @@ public class AppDbContext : DbContext
         {
             e.Property(x => x.Title).HasMaxLength(160);
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(40);
-            e.HasIndex(x => new { x.SeasonId, x.Number }).IsUnique();
+            // Part 0 = standalone round; the parts of a round played in parts share its Number.
+            e.HasIndex(x => new { x.SeasonId, x.Number, x.Part }).IsUnique();
             ConfigureGroupOwnership<Round>(e);
 
             e.HasOne(x => x.Season)

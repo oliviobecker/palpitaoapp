@@ -20,11 +20,12 @@ import { ErrorState } from '../../shared/components/error-state/error-state';
 import { Icon } from '../../shared/components/icon/icon';
 import { PageHeader } from '../../shared/components/page-header/page-header';
 import { Skeleton } from '../../shared/components/skeleton/skeleton';
+import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin',
-  imports: [RouterLink, TranslatePipe, ErrorState, PageHeader, Icon, Skeleton],
+  imports: [RouterLink, TranslatePipe, ErrorState, PageHeader, Icon, Skeleton, RoundLabelPipe],
   template: `
     <app-page-header
       [trail]="('adminDash.panel' | translate) + ' · Admin'"
@@ -91,13 +92,14 @@ import { Skeleton } from '../../shared/components/skeleton/skeleton';
         </div>
       </div>
 
-      @if (openRound(); as open) {
+      <!-- Every open round: a week played in parts can have 10.1 and 10.2 open together. -->
+      @for (open of openRounds(); track open.id) {
         <a class="action-card mb-3" routerLink="/admin/rounds/{{ open.id }}">
           <span class="icon-tile icon-tile--green"><app-icon name="play" [size]="20" /></span>
           <div>
             <div class="action-card__title">
               {{ 'adminDash.openRound' | translate }}: {{ 'dashboard.round' | translate }}
-              {{ open.number }}
+              {{ open.number | roundLabel: open.part }}
             </div>
           </div>
           <span class="action-card__arrow"><app-icon name="arrow-right" [size]="18" /></span>
@@ -149,8 +151,8 @@ export class Admin implements OnInit {
   protected readonly participants = signal<Participant[]>([]);
   protected readonly pendingRequests = signal(0);
 
-  protected readonly openRound = computed(
-    () => this.rounds().find((r) => r.status === RoundStatus.Published) ?? null,
+  protected readonly openRounds = computed(() =>
+    this.rounds().filter((r) => r.status === RoundStatus.Published),
   );
   protected readonly counts = computed(() => ({
     draft: this.rounds().filter((r) => r.status === RoundStatus.Draft).length,

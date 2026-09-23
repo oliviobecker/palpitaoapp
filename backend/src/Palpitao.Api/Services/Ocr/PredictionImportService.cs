@@ -78,13 +78,18 @@ public class PredictionImportService : IPredictionImportService
             chosen.Reading,
             candidates,
             chosen.IgnoredRounds.Count,
-            chosen.IgnoredRounds.Distinct().Order().ToList());
+            chosen.IgnoredRounds
+                .Distinct()
+                .OrderBy(r => r.Number)
+                .ThenBy(r => r.Part)
+                .Select(r => RoundNames.Label(r.Number, r.Part))
+                .ToList());
     }
 
     /// <summary>One parsed line on its way to becoming a candidate, with what it was resolved from.</summary>
     private sealed record Row(OcrPredictionCandidate Candidate, ParsedPrediction Parsed, List<string> Notes);
 
-    private sealed record ReadingBuild(OcrReading Reading, List<Row> Rows, List<int> IgnoredRounds)
+    private sealed record ReadingBuild(OcrReading Reading, List<Row> Rows, List<(int Number, int Part)> IgnoredRounds)
     {
         public int ResolvedFixtures => Rows
             .Where(r => r.Candidate.RoundMatchId is not null)
@@ -115,7 +120,7 @@ public class PredictionImportService : IPredictionImportService
         DateTime now)
     {
         var rows = new List<Row>();
-        var ignoredRounds = new List<int>();
+        var ignoredRounds = new List<(int Number, int Part)>();
 
         foreach (var parsed in OcrTextParser.Parse(reading.Text))
         {
@@ -186,7 +191,7 @@ public class PredictionImportService : IPredictionImportService
     /// fixture of another round counts — a line that fits nothing anywhere stays for review, so
     /// a prediction is never dropped just because it could not be read.
     /// </summary>
-    private static int? OtherRoundOf(ParsedPrediction parsed, OcrImportContext context)
+    private static (int Number, int Part)? OtherRoundOf(ParsedPrediction parsed, OcrImportContext context)
     {
         if (context.OtherRoundMatches is not { Count: > 0 } others)
         {
@@ -194,7 +199,13 @@ public class PredictionImportService : IPredictionImportService
         }
 
         var id = OcrTeamMatcher.ResolveMatch(parsed.HomeTeamRaw, parsed.AwayTeamRaw, others);
-        return id is null ? null : others.First(m => m.Id == id).Round?.Number ?? 0;
+        if (id is null)
+        {
+            return null;
+        }
+
+        var round = others.First(m => m.Id == id).Round;
+        return (round?.Number ?? 0, round?.Part ?? 0);
     }
 
     /// <summary>

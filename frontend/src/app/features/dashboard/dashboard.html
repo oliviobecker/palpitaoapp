@@ -72,7 +72,7 @@
         <div class="hero-card h-100">
           <span class="hero-badge">● {{ 'dashboard.roundOpen' | translate }}</span>
           <h2 class="hero-title">
-            {{ 'dashboard.round' | translate }} {{ round.number }}
+            {{ 'dashboard.round' | translate }} {{ round.number | roundLabel: round.part }}
             @if (round.title) {
               · {{ round.title }}
             }
@@ -124,12 +124,24 @@
               <app-icon name="eye" [size]="16" /> {{ 'predictionsMirror.view' | translate }}
             </a>
           }
+          <!-- A week with two lists can have both open at once (10.1 and 10.2). -->
+          @for (other of otherOpenRounds(); track other.id) {
+            <a class="hero-link mt-2" [routerLink]="['/rounds', other.id, 'predictions']">
+              <app-icon name="pencil" [size]="16" />
+              {{
+                'dashboard.alsoOpen' | translate: { round: (other.number | roundLabel: other.part) }
+              }}
+            </a>
+          }
         </div>
       } @else if (lockedRound(); as locked) {
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center text-center">
             <p class="mb-3">
-              {{ 'dashboard.roundLocked' | translate: { number: locked.number } }}
+              {{
+                'dashboard.roundLocked'
+                  | translate: { number: (locked.number | roundLabel: locked.part) }
+              }}
             </p>
             <a class="btn btn-outline-primary" [routerLink]="['/rounds', locked.id, 'mirror']">{{
               'dashboard.viewMirror' | translate

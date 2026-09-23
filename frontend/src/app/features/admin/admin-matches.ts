@@ -41,6 +41,7 @@ import { Icon } from '../../shared/components/icon/icon';
 import { Loading } from '../../shared/components/loading/loading';
 import { MatchList } from '../../shared/components/match-list/match-list';
 import { PageHeader } from '../../shared/components/page-header/page-header';
+import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
 import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util';
 
 @Component({
@@ -57,6 +58,7 @@ import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util'
     Loading,
     MatchList,
     PageHeader,
+    RoundLabelPipe,
   ],
   templateUrl: './admin-matches.html',
   styles: [
