@@ -26,6 +26,9 @@ public sealed class FakeCurrentGroupService : ICurrentGroupService
 
     public bool IsSuperAdmin { get; }
 
+    /// <summary>The fixed group, as if the request's group filter had already resolved it.</summary>
+    public Guid? ResolvedGroupId => _groupId;
+
     public Task<Guid> GetGroupIdAsync(CancellationToken ct) => Task.FromResult(_groupId);
 
     public Task<GroupRole> GetRoleAsync(CancellationToken ct) => Task.FromResult(_role);

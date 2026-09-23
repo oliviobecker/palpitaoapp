@@ -3,16 +3,25 @@ using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Admin;
 using Palpitao.Api.Entities;
+using Palpitao.Api.Services.Groups;
 
 namespace Palpitao.Api.Services.Audit;
 
 public class AuditService : IAuditService
 {
     private readonly AppDbContext _db;
+    private readonly ICurrentGroupService? _currentGroup;
 
-    public AuditService(AppDbContext db)
+    /// <param name="db">The unit of work the entries are added to.</param>
+    /// <param name="currentGroup">
+    /// Supplies the group the request has already validated, stamped on entries whose caller
+    /// passes no group. The DI container always injects it; it is optional only so unit tests
+    /// that do not care about the group can omit it (their entries stay unscoped).
+    /// </param>
+    public AuditService(AppDbContext db, ICurrentGroupService? currentGroup = null)
     {
         _db = db;
+        _currentGroup = currentGroup;
     }
 
     public void Add(Guid? userId, string action, string entityName, string? entityId, object? details = null, Guid? groupId = null)
@@ -20,7 +29,11 @@ public class AuditService : IAuditService
         _db.AuditLogs.Add(new AuditLog
         {
             Id = Guid.NewGuid(),
-            GroupId = groupId,
+            // An explicit group wins; otherwise the group this request already validated —
+            // never the raw X-Group-Id header, so a forged header cannot plant entries in
+            // another group's trail. Outside a group request (login, background jobs) it
+            // stays null: a global event.
+            GroupId = groupId ?? _currentGroup?.ResolvedGroupId,
             UserId = userId,
             Action = action,
             EntityName = entityName,

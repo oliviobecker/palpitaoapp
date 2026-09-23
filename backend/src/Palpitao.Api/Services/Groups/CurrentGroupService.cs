@@ -16,7 +16,8 @@ public class CurrentGroupService : ICurrentGroupService
     private readonly AppDbContext _db;
     private readonly IHttpContextAccessor _http;
 
-    // Per-request cache of the resolved membership (the service is scoped).
+    // Per-request cache of the resolved membership (the service is scoped). Assigned only
+    // once every gate has passed, so it never holds a membership that was denied.
     private GroupUser? _resolved;
     private bool _resolvedOnce;
 
@@ -38,6 +39,9 @@ public class CurrentGroupService : ICurrentGroupService
     /// <inheritdoc />
     public bool IsSuperAdmin
         => _http.HttpContext?.User.IsInRole(UserRole.Admin.ToString()) == true;
+
+    /// <inheritdoc />
+    public Guid? ResolvedGroupId => _resolved?.GroupId;
 
     public async Task<Guid> GetGroupIdAsync(CancellationToken ct)
         => (await ResolveAsync(ct)).GroupId;
@@ -83,7 +87,7 @@ public class CurrentGroupService : ICurrentGroupService
             throw new ForbiddenException("group.headerMissing");
         }
 
-        _resolved = await _db.GroupUsers
+        var membership = await _db.GroupUsers
             .FirstOrDefaultAsync(
                 gu => gu.GroupId == groupId
                     && gu.UserId == userId
@@ -92,7 +96,7 @@ public class CurrentGroupService : ICurrentGroupService
 
         // A member deactivated in this group (per-group IsActive = false) is blocked
         // from the group entirely — not just excluded from scoring. SuperAdmins bypass.
-        if (_resolved is not null && !_resolved.IsActive && !IsSuperAdmin)
+        if (membership is not null && !membership.IsActive && !IsSuperAdmin)
         {
             throw new ForbiddenException("group.membershipInactive");
         }
@@ -100,11 +104,11 @@ public class CurrentGroupService : ICurrentGroupService
         // Platform SuperAdmin: full GroupAdmin access to any existing group, even
         // without an explicit membership row. Still requires a valid header pointing
         // at a real group, so isolation for non-SuperAdmins is unaffected.
-        if (_resolved is null
+        if (membership is null
             && IsSuperAdmin
             && await _db.Groups.AnyAsync(g => g.Id == groupId, ct))
         {
-            _resolved = new GroupUser
+            membership = new GroupUser
             {
                 GroupId = groupId,
                 UserId = userId.Value,
@@ -113,6 +117,9 @@ public class CurrentGroupService : ICurrentGroupService
             };
         }
 
+        // Cached only now that every gate has passed: a denied membership must be neither
+        // served by a later call nor reported by ResolvedGroupId.
+        _resolved = membership;
         return _resolved ?? throw new ForbiddenException();
     }
 }
