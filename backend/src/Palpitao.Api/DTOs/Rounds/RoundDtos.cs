@@ -91,6 +91,10 @@ public class RoundDto
     public DateTime? LockedAt { get; set; }
     public DateTime? MirrorPublishedAt { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>Cancelled rounds only: the status restoring it goes back to (the one it was cancelled from).</summary>
+    public RoundStatus? RestoreStatus { get; set; }
+
     public List<MatchDto> Matches { get; set; } = new();
 
     /// <summary>From the round's season: the certame type (drives allowed competitions/phases).</summary>
@@ -140,6 +144,12 @@ public class RoundWeekDto
     public RoundWeekMoveDto JoinPrevious { get; set; } = new();
 
     public RoundWeekMoveDto Leave { get; set; } = new();
+
+    /// <summary>
+    /// Deleting the round (Draft or Cancelled only): no target, and the rounds renumbered to close
+    /// the gap are the other ones — the deleted round is gone.
+    /// </summary>
+    public RoundWeekMoveDto Delete { get; set; } = new();
 }
 
 public class RoundWeekPartDto
@@ -150,7 +160,7 @@ public class RoundWeekPartDto
     public RoundStatus Status { get; set; }
 }
 
-/// <summary>Preview of a join/leave: whether it is allowed, where the round lands and its cost.</summary>
+/// <summary>Preview of a join/leave/delete: whether it is allowed, where the round lands and its cost.</summary>
 public class RoundWeekMoveDto
 {
     public bool Allowed { get; set; }
@@ -159,10 +169,13 @@ public class RoundWeekMoveDto
 
     public int? TargetPart { get; set; }
 
-    /// <summary>Rounds whose number or part changes, the moved round included.</summary>
+    /// <summary>Rounds whose number or part changes, the moved round included (a deleted one is not).</summary>
     public int RenumberedRounds { get; set; }
 
-    /// <summary>A Scored round is affected, so the season is recalculated in the same transaction.</summary>
+    /// <summary>
+    /// A Scored round is affected (or a deleted round still holds results), so the season is
+    /// recalculated in the same transaction.
+    /// </summary>
     public bool RequiresRecalculation { get; set; }
 }
 

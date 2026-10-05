@@ -23,8 +23,9 @@ public sealed record RoundWeekPlan(
 
 /// <summary>
 /// Works out how a round joins the previous round as its next part ("11" → "10.2") or leaves
-/// its round played in parts ("10.2" → "11"), renumbering the rounds after it so the numbering
-/// has no gap. Pure: <see cref="RoundWeekService"/> applies the plan and replays the season.
+/// its round played in parts ("10.2" → "11"), or is deleted, renumbering the rounds after it so
+/// the numbering has no gap. Pure: <see cref="RoundWeekService"/> applies the plan and replays
+/// the season.
 /// Cancelled rounds keep a slot in the unique (season, number, part) index, so they move along
 /// with the rest; they just never count as a part that decides anything.
 /// </summary>
@@ -77,7 +78,7 @@ public static class RoundWeekPlanner
             }
         }
 
-        return Build(season, round, destination, involved: members);
+        return Build(season, destination[round.Id], destination, involved: members);
     }
 
     public static RoundWeekPlan PlanLeave(IReadOnlyList<RoundSlot> season, Guid roundId)
@@ -117,12 +118,56 @@ public static class RoundWeekPlanner
             destination[remaining[i].Id] = (round.Number, remaining.Count == 1 ? 0 : i + 1);
         }
 
-        return Build(season, round, destination, involved: remaining);
+        return Build(season, destination[round.Id], destination, involved: remaining);
+    }
+
+    /// <summary>
+    /// Deletes a Draft or Cancelled round and closes the hole it leaves: the other parts of its
+    /// round are renumbered 1..k (standalone again when one is left), or — when nothing else holds
+    /// its number — every later round moves down one ("6" → "5"). A cancelled part still holds the
+    /// number, so deleting its live sibling leaves the later rounds where they are.
+    /// </summary>
+    /// <remarks>
+    /// The plan describes the season without the deleted round: the target is (0, 0) and the
+    /// moves only cover the rounds that stay.
+    /// </remarks>
+    public static RoundWeekPlan PlanDelete(IReadOnlyList<RoundSlot> season, Guid roundId)
+    {
+        var round = season.Single(r => r.Id == roundId);
+        if (round.Status is not (RoundStatus.Draft or RoundStatus.Cancelled))
+        {
+            return RoundWeekPlan.Refused("round.deleteOnlyDraftOrCancelled");
+        }
+
+        var rest = season.Where(r => r.Id != round.Id).ToList();
+        var destination = new Dictionary<Guid, (int Number, int Part)>();
+
+        var remaining = rest
+            .Where(r => r.Number == round.Number)
+            .OrderBy(r => r.Part)
+            .ThenBy(r => r.CreatedAt)
+            .ToList();
+        if (remaining.Count == 0)
+        {
+            foreach (var later in rest.Where(r => r.Number > round.Number))
+            {
+                destination[later.Id] = (later.Number - 1, later.Part);
+            }
+        }
+        else
+        {
+            for (var i = 0; i < remaining.Count; i++)
+            {
+                destination[remaining[i].Id] = (round.Number, remaining.Count == 1 ? 0 : i + 1);
+            }
+        }
+
+        return Build(rest, (0, 0), destination, involved: remaining);
     }
 
     private static RoundWeekPlan Build(
         IReadOnlyList<RoundSlot> season,
-        RoundSlot round,
+        (int Number, int Part) target,
         Dictionary<Guid, (int Number, int Part)> destination,
         IReadOnlyList<RoundSlot> involved)
     {
@@ -147,7 +192,6 @@ public static class RoundWeekPlanner
             .Where(r => movedIds.Contains(r.Id) || involved.Any(i => i.Id == r.Id))
             .Any(r => r.Status == RoundStatus.Scored);
 
-        var target = destination[round.Id];
         return new RoundWeekPlan(null, target.Number, target.Part, moves, requiresReplay);
     }
 }

@@ -385,4 +385,222 @@ public partial class RoundScoringServiceTests
         Assert.Equal((first.Id, user), (absence.RoundId, absence.UserId));
         Assert.True(ResultOf(db, first, user).WasAbsent);
     }
+
+    [Fact]
+    public async Task Restoring_the_last_part_takes_the_decision_back()
+    {
+        using var db = CreateContext();
+        var kit = Build(db);
+        var weeks = Weeks(db, kit);
+        CreateParticipant(db);
+        var first = InsertLockedRound(db, 10, Published, 1, 0, part: 1);
+        var second = InsertLockedRound(db, 10, Published.AddDays(3), 2, 1, part: 2);
+        await weeks.CancelAsync(second.Id, Admin, Ct);
+        await kit.Scoring.ScoreRoundAsync(first.Id, Admin, Ct);
+        Assert.Single(db.Absences);
+
+        var restored = await weeks.RestoreAsync(second.Id, Admin, Ct);
+
+        Assert.Equal(RoundStatus.Locked, restored.Status);
+        db.ChangeTracker.Clear();
+        // 10.2 decides again and is not finalized yet: nobody has missed round 10 so far.
+        Assert.Empty(db.Absences);
+        Assert.Contains(db.AuditLogs, a => a.Action == "RoundRestored");
+        Assert.Contains(db.AuditLogs, a => a.Action == "SeasonRecalculated");
+    }
+
+    [Fact]
+    public async Task Deleting_a_round_that_kept_its_results_removes_everything_and_replays()
+    {
+        using var db = CreateContext();
+        var kit = Build(db);
+        var weeks = Weeks(db, kit);
+        var present = CreateParticipant(db, "Presente");
+        var absent = CreateParticipant(db, "Ausente");
+        var r1 = InsertLockedRound(db, 1, Published, 1, 0);
+        var r2 = InsertLockedRound(db, 2, Published.AddDays(7), 2, 1);
+        InsertPrediction(db, r2, present, 2, 1, Published.AddDays(7).AddHours(1));
+        await kit.Scoring.ScoreRoundAsync(r1.Id, Admin, Ct);
+        await kit.Scoring.ScoreRoundAsync(r2.Id, Admin, Ct);
+
+        // Reopened and cancelled: round 2 keeps its scores, results and absences.
+        await kit.Rounds.ReopenAsync(r2.Id, Admin, Ct);
+        await weeks.CancelAsync(r2.Id, Admin, Ct);
+        Excuse(db, r2, absent, isAbsent: true);
+        db.FlavioOverrides.Add(new FlavioOverride
+        {
+            Id = Guid.NewGuid(),
+            RoundId = r2.Id,
+            UserId = present,
+            IsExempt = true,
+            Justification = "Decisão do admin",
+            CreatedByUserId = Admin,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedByUserId = Admin,
+            UpdatedAt = DateTime.UtcNow,
+        });
+        var batch = new OcrImportBatch
+        {
+            Id = Guid.NewGuid(),
+            RoundId = r2.Id,
+            UploadedByUserId = Admin,
+            OriginalFileName = "lista.png",
+            CreatedAt = DateTime.UtcNow,
+        };
+        db.OcrImportBatches.Add(batch);
+        db.OcrImportImages.Add(new OcrImportImage
+        {
+            OcrImportBatchId = batch.Id,
+            Content = [1, 2, 3],
+            ContentType = "image/png",
+            FileExtension = ".png",
+            ByteSize = 3,
+            Sha256 = "x",
+            CreatedAt = DateTime.UtcNow,
+        });
+        db.OcrPredictionCandidates.Add(new OcrPredictionCandidate
+        {
+            Id = Guid.NewGuid(),
+            OcrImportBatchId = batch.Id,
+            RoundId = r2.Id,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        });
+        db.SaveChanges();
+        Assert.Equal(2, await AbsencesOf(absent));
+
+        var round = await kit.Rounds.GetByIdAsync(r2.Id, Ct);
+        Assert.Equal(RoundStatus.Locked, round.RestoreStatus);
+        Assert.True(round.Week.Delete.Allowed);
+        Assert.True(round.Week.Delete.RequiresRecalculation);
+
+        var deletion = await weeks.DeleteAsync(r2.Id, Admin, Ct);
+
+        Assert.Equal((2, 0, 0, true), (deletion.Number, deletion.Part, deletion.Renumbered, deletion.Recalculated));
+        db.ChangeTracker.Clear();
+        Assert.False(db.Rounds.Any(r => r.Id == r2.Id));
+        Assert.False(db.RoundMatches.Any(m => m.RoundId == r2.Id));
+        Assert.False(db.Predictions.Any(p => p.RoundId == r2.Id));
+        Assert.False(db.PredictionScores.Any(s => s.RoundId == r2.Id));
+        Assert.False(db.RoundParticipantResults.Any(r => r.RoundId == r2.Id));
+        Assert.False(db.Absences.Any(a => a.RoundId == r2.Id));
+        Assert.False(db.AbsenceOverrides.Any(o => o.RoundId == r2.Id));
+        Assert.False(db.FlavioOverrides.Any(o => o.RoundId == r2.Id));
+        Assert.False(db.OcrImportBatches.Any(b => b.RoundId == r2.Id));
+        Assert.False(db.OcrImportImages.Any(i => i.OcrImportBatchId == batch.Id));
+        Assert.False(db.OcrPredictionCandidates.Any(c => c.OcrImportBatchId == batch.Id));
+        // Round 1 is untouched, and the standings no longer count round 2.
+        Assert.True(db.Rounds.Any(r => r.Id == r1.Id));
+        Assert.Equal(1, await AbsencesOf(absent));
+        Assert.Contains(db.AuditLogs, a => a.Action == "RoundDeleted");
+        Assert.Contains(db.AuditLogs, a => a.Action == "SeasonRecalculated");
+
+        async Task<int> AbsencesOf(Guid user) =>
+            (await kit.Standings.GetStandingsAsync(SeasonId, Ct)).Single(s => s.UserId == user).AbsenceCount;
+    }
+
+    [Fact]
+    public async Task Deleting_a_cancelled_round_closes_the_gap_and_replays_the_later_ones()
+    {
+        using var db = CreateContext();
+        var kit = Build(db);
+        var weeks = Weeks(db, kit);
+        var user = CreateParticipant(db);
+        var rounds = new[]
+        {
+            InsertLockedRound(db, 1, Published, 1, 0),
+            InsertLockedRound(db, 2, Published.AddDays(3), 1, 0),
+            InsertLockedRound(db, 3, Published.AddDays(7), 1, 0),
+            InsertLockedRound(db, 4, Published.AddDays(14), 1, 0),
+        };
+        rounds[0].Title = "Primeira Rodada";
+        rounds[1].Title = "Segunda Rodada";
+        rounds[2].Title = "Terceira Rodada";
+        rounds[3].Title = "Clássico de sábado";
+        db.SaveChanges();
+        await weeks.CancelAsync(rounds[1].Id, Admin, Ct);
+        foreach (var round in rounds.Where(r => r.Id != rounds[1].Id))
+        {
+            await kit.Scoring.ScoreRoundAsync(round.Id, Admin, Ct);
+        }
+
+        var deletion = await weeks.DeleteAsync(rounds[1].Id, Admin, Ct);
+
+        Assert.Equal((2, true), (deletion.Renumbered, deletion.Recalculated));
+        db.ChangeTracker.Clear();
+        Assert.Equal(
+            new[] { (1, 0, "Primeira Rodada"), (2, 0, "Segunda Rodada"), (3, 0, "Clássico de sábado") },
+            db.Rounds.OrderBy(r => r.Number).Select(r => new { r.Number, r.Part, r.Title })
+                .AsEnumerable().Select(r => (r.Number, r.Part, r.Title ?? "")));
+        Assert.Equal(2, db.AuditLogs.Count(a => a.Action == "RoundRenumbered"));
+        // Three rounds missed, three absences: the ladder is the same after the replay.
+        var row = (await kit.Standings.GetStandingsAsync(SeasonId, Ct)).Single(s => s.UserId == user);
+        Assert.Equal((3, 20), (row.AbsenceCount, row.PenaltyPoints));
+    }
+
+    [Fact]
+    public async Task Deleting_the_draft_last_part_hands_the_decision_back_to_the_previous_one()
+    {
+        using var db = CreateContext();
+        var kit = Build(db);
+        var weeks = Weeks(db, kit);
+        var user = CreateParticipant(db);
+        var first = InsertLockedRound(db, 10, Published, 1, 0, part: 1);
+        var second = InsertLockedRound(db, 10, Published.AddDays(3), 2, 1, part: 2);
+        second.Status = RoundStatus.Draft;
+        second.PublishedAt = null;
+        second.LockedAt = null;
+        db.SaveChanges();
+        await kit.Scoring.ScoreRoundAsync(first.Id, Admin, Ct);
+        Assert.Empty(db.Absences);
+
+        await weeks.DeleteAsync(second.Id, Admin, Ct);
+
+        db.ChangeTracker.Clear();
+        var standalone = db.Rounds.Single(r => r.Id == first.Id);
+        Assert.Equal((10, 0), (standalone.Number, standalone.Part));
+        var absence = Assert.Single(db.Absences);
+        Assert.Equal((first.Id, user), (absence.RoundId, absence.UserId));
+    }
+
+    [Fact]
+    public async Task A_failed_replay_rolls_the_delete_back()
+    {
+        using var db = CreateContext();
+        var kit = Build(db);
+        var weeks = Weeks(db, kit);
+        CreateParticipant(db);
+        var r1 = InsertLockedRound(db, 1, Published, 1, 0);
+        var r2 = InsertLockedRound(db, 2, Published.AddDays(3), 1, 0);
+        var r3 = InsertLockedRound(db, 3, Published.AddDays(7), 1, 0);
+        await weeks.CancelAsync(r2.Id, Admin, Ct);
+        await kit.Scoring.ScoreRoundAsync(r1.Id, Admin, Ct);
+        await kit.Scoring.ScoreRoundAsync(r3.Id, Admin, Ct);
+
+        // A reopened round still holds its results, which the replay refuses to erase.
+        await kit.Rounds.ReopenAsync(r1.Id, Admin, Ct);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => weeks.DeleteAsync(r2.Id, Admin, Ct));
+        Assert.Equal("scoring.reopenedRoundPending", ex.Key);
+
+        db.ChangeTracker.Clear();
+        Assert.True(db.Rounds.Any(r => r.Id == r2.Id));
+        Assert.True(db.RoundMatches.Any(m => m.RoundId == r2.Id));
+        Assert.Equal(3, db.Rounds.Single(r => r.Id == r3.Id).Number);
+        Assert.DoesNotContain(db.AuditLogs, a => a.Action == "RoundRenumbered" || a.Action == "RoundDeleted");
+    }
+
+    [Fact]
+    public async Task A_published_round_cannot_be_deleted()
+    {
+        using var db = CreateContext();
+        var kit = Build(db);
+        var weeks = Weeks(db, kit);
+        var round = await PublishedRound(kit, 1);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => weeks.DeleteAsync(round.Id, Admin, Ct));
+
+        Assert.Equal("round.deleteOnlyDraftOrCancelled", ex.Key);
+        Assert.True(db.Rounds.Any(r => r.Id == round.Id));
+    }
 }

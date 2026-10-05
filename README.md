@@ -47,7 +47,7 @@ name, not the app's name.
 
 ## 1. Overview
 
-- **Rounds** created manually by the admin, with the lifecycle `Draft → Published → Locked → Scored` (or `Cancelled`), driven by a **guided stepper** (one action per step); a Scored round can be **reopened** back to Locked, and a Locked round can be **unlocked** back to Published (undo of an early lock — the publication data, and therefore the deadline, stays frozen).
+- **Rounds** created manually by the admin, with the lifecycle `Draft → Published → Locked → Scored` (or `Cancelled`), driven by a **guided stepper** (one action per step); a Scored round can be **reopened** back to Locked, and a Locked round can be **unlocked** back to Published (undo of an early lock — the publication data, and therefore the deadline, stays frozen). A Cancelled round can be **restored** to the status it was cancelled from, and a Draft or Cancelled round can be **deleted** for good, the later rounds moving down to close the gap (§14).
 - **Predictions** of the score per match, editable while the round is open; the deadline is **one minute before** the first match kickoff.
 - **Prediction mirror** released once predictions close (or live from publication, per season setting).
 - **Scoring** by column/exact score, with **multipliers** by competition/phase/classic (§13).
@@ -94,7 +94,7 @@ provider's spelling can't silently create a duplicate club.
 | Backend | C# / .NET 10, ASP.NET Core Web API (controllers) |
 | ORM / Database | EF Core 10 (code-first) + PostgreSQL 16 |
 | Auth | JWT Bearer (access + rotating refresh tokens) + BCrypt |
-| Backend tests | xUnit + SQLite in-memory (362 tests) |
+| Backend tests | xUnit + SQLite in-memory (1048 tests) |
 | Frontend | Angular 21 (standalone, signals), TypeScript |
 | UI | Bootstrap 5 (mobile-first), Lucide icons (`@lucide/angular`), light/dark theme (`data-bs-theme`) |
 | Frontend tests | Vitest (Angular 21 default runner) |
@@ -295,7 +295,8 @@ Jwt__Key=<long random secret, >= 32 bytes>
 
 **Rounds / Matches** (mutations: Admin)
 - `GET /api/rounds` · `GET /api/rounds/{id}` · `POST /api/rounds` · `PUT /api/rounds/{id}` (round with `startDate`/`endDate`; `joinPreviousWeek: true` on create plays it as the next part of the previous round — §14)
-- `POST /api/rounds/{id}/publish|lock|cancel|score|reopen|unlock` · `GET /api/rounds/{id}/results`
+- `POST /api/rounds/{id}/publish|lock|cancel|score|reopen|unlock|restore` · `GET /api/rounds/{id}/results`
+- `DELETE /api/rounds/{id}` (Draft or Cancelled only; closes the numbering gap — §14)
 - `POST /api/rounds/{id}/join-previous-week` · `POST /api/rounds/{id}/leave-week` (rounds played in parts, "10.1"/"10.2" — §14)
 - `POST /api/rounds/{roundId}/matches` · `PUT /api/matches/{id}` · `DELETE /api/matches/{id}`
 - `POST /api/matches/{id}/result`
@@ -462,6 +463,20 @@ round still holds results or a scored round has a match that is not finished. A 
 cannot be edited on its own. Links and messages already sent keep the old numbering; `?rodada=10`
 still opens `10.1` (§28).
 
+**Restoring and deleting.** A Cancelled round can be **restored** (`POST .../restore`) to the
+status it was cancelled from — Locked if it had been locked, else Published if it had been
+published, else Draft — with its matches and predictions intact. A **Draft** or **Cancelled**
+round can be **deleted** (`DELETE /api/rounds/{id}`; Published/Locked must be cancelled first, a
+Scored round reopened and cancelled): its matches, predictions, OCR imports and any results it
+still holds go for good, and the gap closes like a grouping's — the other parts of its round are
+renumbered (standalone again when one is left), or, when nothing else holds its number, every
+later round moves down one. A cancelled part still holds the number, so deleting its live
+sibling leaves the later rounds in place. The season is **replayed in the same transaction**
+when an affected round is Scored, when a part is restored next to a Scored part (as the cancel
+already does), or when the deleted round still held results (a round reopened and then
+cancelled keeps them). The dialog warns before any of that, and it is all or nothing like a
+grouping.
+
 Regrouping the rounds of a running season: go from the most recent double week back to the
 oldest, so the numbers of the weeks still to do do not move under you. Afterwards, review *Regras
 de pontuação* — `AbsenceFromRound`/`FlavioFromRound` now count rounds, i.e. weeks — and redo any
@@ -526,7 +541,8 @@ participant is not absent in it, one absence when they are.
 **Recalculate season** (`POST /api/seasons/{id}/recalculate`) clears the calculations (standings
 included), resets eliminations and re-scores the finished rounds in order (number, then part),
 rebuilding the standings after each one so the Flávio Rule targets the leader **at that point** —
-**idempotent**.
+**idempotent**. Grouping, cancelling, restoring and deleting rounds run this same replay when
+they affect a scored round (§14).
 
 ## 17. Implemented decisions and ambiguities
 
@@ -857,13 +873,13 @@ That endpoint returns 404 outside `Development` and requires admin.
 ## 22. How to run the tests
 
 ```bash
-# Backend (466 tests — xUnit + SQLite in-memory)
+# Backend (1048 tests — xUnit + SQLite in-memory)
 cd backend && dotnet test
 
-# Frontend (Vitest — 73 unit tests)
+# Frontend (Vitest — 199 unit tests)
 cd frontend && npm test -- --watch=false   # run once
 
-# Frontend e2e (Playwright — 38 tests; starts ng serve and mocks the API)
+# Frontend e2e (Playwright — 93 tests; starts ng serve and mocks the API)
 cd frontend && npm run e2e
 ```
 

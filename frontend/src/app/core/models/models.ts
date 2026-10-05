@@ -228,14 +228,18 @@ export interface RoundWeekPart {
   status: RoundStatus;
 }
 
-/** Preview of joining the previous round, or leaving a round played in parts. */
+/** Preview of joining the previous round, leaving a round played in parts, or deleting the round. */
 export interface RoundWeekMove {
   allowed: boolean;
+  /** Where the round lands (none for a delete). */
   targetNumber?: number | null;
   targetPart?: number | null;
-  /** Rounds whose number or part changes, the moved one included. */
+  /** Rounds whose number or part changes, the moved one included (a deleted one is not). */
   renumberedRounds: number;
-  /** A Scored round is affected: the season is recalculated in the same transaction. */
+  /**
+   * A Scored round is affected (or a deleted round still holds results): the season is
+   * recalculated in the same transaction.
+   */
   requiresRecalculation: boolean;
 }
 
@@ -254,6 +258,8 @@ export interface RoundWeek {
   laterPartScored: boolean;
   joinPrevious: RoundWeekMove;
   leave: RoundWeekMove;
+  /** Deleting the round: Draft or Cancelled only; the later rounds close the gap. */
+  delete?: RoundWeekMove;
 }
 
 export interface Round {
@@ -273,6 +279,8 @@ export interface Round {
   lockedAt?: string | null;
   mirrorPublishedAt?: string | null;
   createdAt: string;
+  /** Cancelled rounds only: the status restoring it goes back to (the one it was cancelled from). */
+  restoreStatus?: RoundStatus | null;
   matches: RoundMatch[];
   flavio?: RoundFlavio | null;
   /** From the round's season: the certame type (drives allowed competitions/phases). */

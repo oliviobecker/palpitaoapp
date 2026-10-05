@@ -152,6 +152,10 @@ public static class DomainMessages
             ["round.alreadyCancelled"] = ("A rodada já está cancelada.", "The round is already cancelled."),
             ["round.onlyScoredReopened"] = ("Apenas rodadas pontuadas podem ser reabertas.", "Only scored rounds can be reopened."),
             ["round.onlyLockedUnlocked"] = ("Apenas rodadas bloqueadas podem ser desbloqueadas.", "Only locked rounds can be unlocked."),
+            ["round.onlyCancelledRestored"] = ("Apenas rodadas canceladas podem ser restauradas.", "Only cancelled rounds can be restored."),
+            ["round.deleteOnlyDraftOrCancelled"] = (
+                "Só é possível excluir uma rodada em rascunho ou cancelada. Cancele-a antes (uma rodada pontuada precisa ser reaberta e cancelada).",
+                "Only a draft or cancelled round can be deleted. Cancel it first (a scored round has to be reopened and cancelled)."),
             ["round.mustBeLockedToScore"] = ("A rodada precisa estar bloqueada para ser calculada.", "The round must be locked to be scored."),
             ["round.noMatches"] = ("A rodada não possui jogos.", "The round has no matches."),
             ["round.allResultsRequired"] = ("Cadastre o resultado de todos os jogos antes de calcular a rodada.", "Enter the result of every match before scoring the round."),

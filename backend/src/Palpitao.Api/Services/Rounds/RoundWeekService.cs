@@ -82,6 +82,109 @@ public class RoundWeekService : IRoundWeekService
             return await _rounds.GetByIdAsync(roundId, ct);
         }, ct);
 
+    public Task<RoundDto> RestoreAsync(Guid roundId, Guid actingUserId, CancellationToken ct)
+        => InTransactionAsync(async () =>
+        {
+            var round = await LoadAsync(roundId, ct);
+
+            // The mirror of the cancel: the restored part counts again, so it may take the
+            // decision on absences back from a Scored part, or change who sent nothing.
+            var otherPartScored = await RoundWeek.Siblings(_db, round)
+                .AnyAsync(r => r.Status == RoundStatus.Scored, ct);
+
+            var dto = await _rounds.RestoreAsync(roundId, actingUserId, ct);
+            if (!otherPartScored)
+            {
+                return dto;
+            }
+
+            await _scoring.RecalculateSeasonAsync(round.SeasonId, actingUserId, ct);
+            return await _rounds.GetByIdAsync(roundId, ct);
+        }, ct);
+
+    public Task<RoundDeletion> DeleteAsync(Guid roundId, Guid actingUserId, CancellationToken ct)
+        => InTransactionAsync(async () =>
+        {
+            var round = await LoadAsync(roundId, ct);
+            var plan = RoundWeekPlanner.PlanDelete(await SlotsAsync(round.SeasonId, ct), round.Id);
+            if (!plan.Allowed)
+            {
+                throw new BusinessRuleException(plan.Error!);
+            }
+
+            // A round reopened and then cancelled still holds its results and absences: the
+            // standings count them and they may have eliminated someone, so they go by replay.
+            var hadScoring = await RoundLifecycle.HasScoringRowsAsync(_db, round.Id, ct);
+            var recalculate = plan.RequiresReplay || hadScoring;
+
+            var removed = await PurgeAsync(round, ct);
+
+            // Only now is the round's slot in the (season, number, part) index free for the
+            // round that closes the gap.
+            await ApplyAsync(round.SeasonId, plan, "RoundDeleted", round.Id, actingUserId, ct);
+
+            _audit.Add(actingUserId, "RoundDeleted", nameof(Round), round.Id.ToString(), new
+            {
+                label = RoundNames.Label(round.Number, round.Part),
+                round.Number,
+                round.Part,
+                round.Title,
+                status = round.Status.ToString(),
+                round.PublishedAt,
+                round.LockedAt,
+                removed.Matches,
+                removed.Predictions,
+                removed.OcrBatches,
+                hadScoring,
+                renumbered = plan.Moves.Count,
+                recalculated = recalculate,
+            });
+            await _db.SaveChangesAsync(ct);
+
+            if (recalculate)
+            {
+                await _scoring.RecalculateSeasonAsync(round.SeasonId, actingUserId, ct);
+            }
+
+            return new RoundDeletion(round.Number, round.Part, plan.Moves.Count, recalculate);
+        }, ct);
+
+    /// <summary>
+    /// Removes the round and everything hanging off it with set-based deletes, children first.
+    /// The cascades cannot be left to the database: predictions point at the round and scores at
+    /// the matches with RESTRICT, so the order matters. Nothing is loaded (the OCR images carry
+    /// the screenshots), and the round itself is detached so no later SaveChanges touches it.
+    /// </summary>
+    private async Task<(int Matches, int Predictions, int OcrBatches)> PurgeAsync(Round round, CancellationToken ct)
+    {
+        var id = round.Id;
+        var batchIds = _db.OcrImportBatches.Where(b => b.RoundId == id).Select(b => b.Id);
+
+        await _db.OcrImportImages.Where(i => batchIds.Contains(i.OcrImportBatchId)).ExecuteDeleteAsync(ct);
+        await _db.OcrPredictionCandidates.Where(c => batchIds.Contains(c.OcrImportBatchId)).ExecuteDeleteAsync(ct);
+        var ocrBatches = await _db.OcrImportBatches.Where(b => b.RoundId == id).ExecuteDeleteAsync(ct);
+
+        await _db.PredictionScores.Where(s => s.RoundId == id).ExecuteDeleteAsync(ct);
+        await _db.RoundParticipantResults.Where(r => r.RoundId == id).ExecuteDeleteAsync(ct);
+        await _db.Absences.Where(a => a.RoundId == id).ExecuteDeleteAsync(ct);
+        await _db.AbsenceOverrides.Where(o => o.RoundId == id).ExecuteDeleteAsync(ct);
+        await _db.FlavioOverrides.Where(o => o.RoundId == id).ExecuteDeleteAsync(ct);
+        var predictions = await _db.Predictions.Where(p => p.RoundId == id).ExecuteDeleteAsync(ct);
+        var matches = await _db.RoundMatches.Where(m => m.RoundId == id).ExecuteDeleteAsync(ct);
+
+        await _db.Rounds.Where(r => r.Id == id).ExecuteDeleteAsync(ct);
+        _db.Entry(round).State = EntityState.Detached;
+
+        return (matches, predictions, ocrBatches);
+    }
+
+    private Task<List<RoundSlot>> SlotsAsync(Guid seasonId, CancellationToken ct) =>
+        _db.Rounds
+            .AsNoTracking()
+            .Where(r => r.SeasonId == seasonId)
+            .Select(r => new RoundSlot(r.Id, r.Number, r.Part, r.Status, r.CreatedAt))
+            .ToListAsync(ct);
+
     private async Task RegroupAsync(
         Guid roundId,
         Func<IReadOnlyList<RoundSlot>, Guid, RoundWeekPlan> planner,
@@ -92,13 +195,7 @@ public class RoundWeekService : IRoundWeekService
         var round = await LoadAsync(roundId, ct);
         var from = RoundNames.Label(round.Number, round.Part);
 
-        var season = await _db.Rounds
-            .AsNoTracking()
-            .Where(r => r.SeasonId == round.SeasonId)
-            .Select(r => new RoundSlot(r.Id, r.Number, r.Part, r.Status, r.CreatedAt))
-            .ToListAsync(ct);
-
-        var plan = planner(season, round.Id);
+        var plan = planner(await SlotsAsync(round.SeasonId, ct), round.Id);
         if (!plan.Allowed)
         {
             throw new BusinessRuleException(plan.Error!);
@@ -133,6 +230,11 @@ public class RoundWeekService : IRoundWeekService
         Guid seasonId, RoundWeekPlan plan, string operation, Guid triggerRoundId, Guid actingUserId,
         CancellationToken ct)
     {
+        if (plan.Moves.Count == 0)
+        {
+            return;
+        }
+
         var ids = plan.Moves.Select(m => m.Id).ToList();
         var rounds = await _db.Rounds.Where(r => ids.Contains(r.Id)).ToDictionaryAsync(r => r.Id, ct);
 

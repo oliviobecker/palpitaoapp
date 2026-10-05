@@ -267,6 +267,35 @@
           </button>
         </div>
       }
+
+      <!-- Undo of a cancellation: back to the status it was cancelled from -->
+      @if (r.status === RoundStatus.Cancelled && r.restoreStatus) {
+        <div class="d-grid gap-2 mt-3">
+          <button class="btn btn-outline-primary" (click)="restore(r)">
+            <app-icon name="undo-2" [size]="16" /> {{ 'roundDetail.restoreRound' | translate }}
+          </button>
+          <p class="text-muted small mb-0">
+            {{
+              'roundDetail.restoreHint'
+                | translate: { status: ('status.' + r.restoreStatus | translate) }
+            }}
+          </p>
+        </div>
+      }
+
+      <!-- Delete: Draft or Cancelled only, for good -->
+      @if (r.week?.delete?.allowed) {
+        <div class="d-grid mt-3">
+          <button class="btn btn-outline-danger" (click)="deleteRound(r)" [disabled]="deleting()">
+            @if (deleting()) {
+              <span class="spinner-border spinner-border-sm me-2"></span>
+            } @else {
+              <app-icon name="trash-2" [size]="16" />
+            }
+            {{ 'roundDetail.deleteRound' | translate }}
+          </button>
+        </div>
+      }
     </div>
   </div>
 
