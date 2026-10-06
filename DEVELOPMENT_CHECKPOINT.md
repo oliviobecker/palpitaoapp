@@ -1,24 +1,25 @@
 # DEVELOPMENT_CHECKPOINT
 
-_Last updated: 2026-09-23 (rounds played in parts — `10.1` + `10.2` count as one round for absences; regrouping scored rounds renumbers and replays the season — branch `claude/grouped-rounds`)._
+_Last updated: 2026-10-05 (a cancelled round can be restored, and a draft/cancelled round deleted, closing the numbering gap — branch `claude/rodada-delete-cancel-f71491`)._
 
 ## 0. Status at a glance
 
 | Check | Result |
 |---|---|
 | Backend build (`dotnet build`) | ✅ 0 errors (1 pre-existing xUnit2012 analyzer warning) |
-| Backend tests (`dotnet test`) | ✅ **1026** passed, 0 failed (1 skipped: `OcrSamplesTests`, runs only with `OCR_SAMPLES_DIR`) |
+| Backend tests (`dotnet test`) | ✅ **1048** passed, 0 failed (1 skipped: `OcrSamplesTests`, runs only with `OCR_SAMPLES_DIR`) |
 | Frontend build (`ng build` prod) | ✅ success |
 | Frontend lint (`ng lint`) | ✅ 0 errors |
 | Frontend unit tests (Vitest) | ✅ **199** passed (31 files) |
-| Frontend e2e (Playwright) | ✅ **90** passed |
+| Frontend e2e (Playwright) | ✅ **93** passed |
 | Frontend prod budgets | ✅ within budget (no warnings) |
-| i18n parity | ✅ 886 = 886 (`en-US` / `pt-BR`) |
+| i18n parity | ✅ 896 = 896 (`en-US` / `pt-BR`) |
 | OCR on real screenshots (`OcrSamplesTests`) | ✅ **574/575** fixtures over rounds 4–9 (was 557) — not re-run this session |
-| Working tree | branch `claude/grouped-rounds` from `main` at `b67f315` (#52). |
+| Working tree | branch `claude/rodada-delete-cancel-f71491` from `main` at `f6547ee` (#58). |
 
-> Measured on branch `claude/grouped-rounds` (2026-09-23), cut from `main` at `b67f315`. The new
-> migration `AddRoundPart` was only exercised on SQLite (tests): run it on staging before production.
+> Measured on branch `claude/rodada-delete-cancel-f71491` (2026-10-05), cut from `main` at
+> `f6547ee`. No migration. The round delete was only exercised on SQLite (FKs enforced): try it on
+> staging (a cancelled round with predictions) before production.
 >
 > ⚠️ **`format:check` fails locally and that is expected.** The working copy is CRLF
 > (`core.autocrlf=true`) while Prettier's default `endOfLine` is `lf`, so ~56 files report as
@@ -60,6 +61,9 @@ overall standings update.
 - Round lifecycle `Draft → Published → Locked → Scored` (+ `Cancelled`), now with a **guided stepper**
   in the admin round-detail screen (one primary action per state, prerequisites enforced).
 - **Reopen** a Scored round back to Locked (admin), keeping scores until recalculated.
+- **Restore** a Cancelled round to the status it was cancelled from, and **delete** a Draft or
+  Cancelled round for good (matches, predictions, OCR imports, leftover results); the later rounds
+  close the gap and the season replays in the same transaction when a scored round is affected.
 - Predictions per match (editable while Published, deadline = **one minute before** the first
   kickoff); prediction **mirror** released when predictions close (or live, per season setting);
   **scoring** by column/exact score with **multipliers** by competition/phase/classic.
@@ -400,6 +404,11 @@ overall standings update.
   absent only when absent in every part; the last part not cancelled records it (one rung). The
   missed part of someone present scores 0. Flávio: every part targets the leader before the round.
   Standings count rounds (numbers), not parts. README §14.
+- **Restore / delete:** restore goes back to Locked (`LockedAt` set), else Published (`PublishedAt`
+  set), else Draft. Delete only Draft/Cancelled (cancel first; a Scored round is reopened and
+  cancelled); it closes the gap like a grouping (a cancelled sibling part keeps the number) and
+  replays when a scored round moves or shares the number, or the round still held results.
+  README §14.
 - **Flávio Rule:** leader gets a 24h (or 12h) special deadline; missing it = lose half the round,
   an incomplete set included; sending **nothing** = treated as absence; ties apply to all leaders.
   The starting round is a per-season setting (default 16); the World Cup variant goes by phase.
@@ -521,6 +530,16 @@ the real API and asserts the result. Phases: `all | seed | score | verify | rese
 4. Resume the product roadmap (§4): **server-side autosave** of predictions (highest value).
 
 ## 9. Files changed this session (highlights)
+
+**Restore and delete rounds (branch `claude/rodada-delete-cancel-f71491`).** Backend:
+`RoundWeekPlanner.PlanDelete` (`Build` now takes the target explicitly), new
+`Services/Rounds/RoundLifecycle.cs` (`RestoreTarget`, `HasScoringRowsAsync`),
+`RoundWeekService.{RestoreAsync,DeleteAsync,PurgeAsync}` (set-based deletes, children first — the
+`Prediction.RoundId` and `PredictionScore.RoundMatchId` FKs are RESTRICT), `RoundService.RestoreAsync`,
+`RoundDto.RestoreStatus` + `RoundWeekDto.Delete` preview, `RoundsController`
+(`POST {id}/restore`, `DELETE {id}`), two `DomainMessages`. Frontend: restore + delete buttons on
+`admin-round-detail`, `RoundsService.{restore,delete}`, models, i18n (`roundDetail.*`), e2e
+`round-delete-restore.e2e.ts`. Docs: README §1, §11, §14, §16.
 
 **Rounds played in parts — 10.1 / 10.2 (branch `claude/grouped-rounds`).** Backend: `Round.Part`
 (migration `20260923205101_AddRoundPart`, unique `(SeasonId, Number, Part)`); new

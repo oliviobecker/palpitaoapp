@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable, catchError, forkJoin, of } from 'rxjs';
 import { RoundStatus } from '../../core/models/enums';
@@ -92,6 +92,7 @@ import { AdminFlavioOverrides } from './admin-flavio-overrides';
 })
 export class AdminRoundDetail implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly api = inject(RoundsService);
   private readonly adminApi = inject(AdminService);
   private readonly standingsApi = inject(StandingsService);
@@ -111,6 +112,8 @@ export class AdminRoundDetail implements OnInit {
   protected readonly refreshing = signal(false);
   /** A join/leave is on its way: it may renumber rounds and replay the season. */
   protected readonly regrouping = signal(false);
+  /** A delete is on its way: it may renumber rounds and replay the season. */
+  protected readonly deleting = signal(false);
   protected readonly refreshSummary = signal<RefreshResultsResponse | null>(null);
   protected readonly round = signal<Round | null>(null);
   /** Sorted matches (stable reference per load) — feeds the inline results editor. */
@@ -333,6 +336,66 @@ export class AdminRoundDetail implements OnInit {
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({ next: () => this.after('roundDetail.cancelled') });
     }
+  }
+
+  /** Undo of a cancellation: the round goes back to the status it was cancelled from. */
+  async restore(r: Round): Promise<void> {
+    let message = this.translate.instant('roundDetail.confirmRestore', {
+      status: this.translate.instant('status.' + r.restoreStatus),
+    });
+    // Same as the cancel: the restored part may take the decision on absences back.
+    if (r.week?.parts.some((p) => p.id !== r.id && p.status === RoundStatus.Scored)) {
+      message += ' ' + this.translate.instant('roundDetail.restorePartRecalc');
+    }
+    const ok = await this.confirm.ask(message, {
+      title: this.translate.instant('roundDetail.restoreRound'),
+      confirmText: this.translate.instant('roundDetail.restoreRound'),
+    });
+    if (!ok) {
+      return;
+    }
+    this.api
+      .restore(r.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ next: () => this.after('roundDetail.restored') });
+  }
+
+  /**
+   * Deletes a Draft or Cancelled round for good. The later rounds close the gap and, when a
+   * scored round is involved, the season is replayed — the dialog says so up front.
+   */
+  async deleteRound(r: Round): Promise<void> {
+    const move = r.week?.delete;
+    if (!move?.allowed) return;
+    let message = this.translate.instant('roundDetail.confirmDelete', {
+      round: roundLabel(r.number, r.part),
+    });
+    if (move.renumberedRounds > 0) {
+      message +=
+        ' ' +
+        this.translate.instant('roundDetail.deleteRenumbers', { count: move.renumberedRounds });
+    }
+    if (move.requiresRecalculation) {
+      message += ' ' + this.translate.instant('roundDetail.deleteRecalc');
+    }
+    const ok = await this.confirm.ask(message, {
+      title: this.translate.instant('roundDetail.deleteRound'),
+      confirmText: this.translate.instant('roundDetail.deleteRound'),
+      danger: true,
+    });
+    if (!ok) return;
+    this.deleting.set(true);
+    this.api
+      .delete(r.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.deleting.set(false);
+          this.toast.success(this.translate.instant('roundDetail.deleted'));
+          void this.router.navigate(['/admin/rounds']);
+        },
+        error: () => this.deleting.set(false),
+      });
   }
 
   async reopen(r: Round): Promise<void> {

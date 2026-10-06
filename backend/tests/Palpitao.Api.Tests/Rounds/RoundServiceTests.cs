@@ -284,6 +284,92 @@ public class RoundServiceTests
         Assert.Contains("desbloqueadas", ex.Message);
     }
 
+    [Theory]
+    [InlineData("draft", RoundStatus.Draft)]
+    [InlineData("published", RoundStatus.Published)]
+    [InlineData("locked", RoundStatus.Locked)]
+    [InlineData("unlocked", RoundStatus.Published)]
+    public async Task Restore_puts_a_cancelled_round_back_where_it_was(string before, RoundStatus expected)
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+        if (before != "draft")
+        {
+            await service.AddMatchAsync(round.Id, Match(SeedIds.Arsenal, SeedIds.Chelsea, new DateTime(2025, 8, 10, 14, 0, 0, DateTimeKind.Utc)), ActingUser, Ct);
+            await service.PublishAsync(round.Id, ActingUser, Ct);
+        }
+
+        if (before is "locked" or "unlocked")
+        {
+            await service.LockAsync(round.Id, ActingUser, Ct);
+        }
+
+        if (before == "unlocked")
+        {
+            await service.UnlockAsync(round.Id, ActingUser, Ct);
+        }
+
+        var cancelled = await service.CancelAsync(round.Id, ActingUser, Ct);
+        Assert.Equal(expected, cancelled.RestoreStatus);
+
+        var restored = await service.RestoreAsync(round.Id, ActingUser, Ct);
+
+        Assert.Equal(expected, restored.Status);
+        Assert.Null(restored.RestoreStatus);
+        Assert.Equal(before == "draft" ? 0 : 1, restored.Matches.Count);
+        var audit = Assert.Single(db.AuditLogs, a => a.Action == "RoundRestored");
+        Assert.Contains($"\"{expected}\"", audit.Details!);
+    }
+
+    [Fact]
+    public async Task Restore_non_cancelled_round_is_rejected()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.RestoreAsync(round.Id, ActingUser, Ct));
+
+        Assert.Equal("round.onlyCancelledRestored", ex.Key);
+    }
+
+    [Fact]
+    public async Task A_cancelled_round_keeps_its_number_so_the_restore_never_collides()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service, number: 3);
+        await service.CancelAsync(round.Id, ActingUser, Ct);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => CreateDraftRound(service, number: 3));
+        Assert.Equal("round.duplicateNumber", ex.Key);
+
+        Assert.Equal(RoundStatus.Draft, (await service.RestoreAsync(round.Id, ActingUser, Ct)).Status);
+    }
+
+    [Fact]
+    public async Task Only_draft_and_cancelled_rounds_offer_the_delete()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var draft = await CreateDraftRound(service, number: 1);
+        var published = await CreateDraftRound(service, number: 2);
+        await service.AddMatchAsync(published.Id, Match(SeedIds.Arsenal, SeedIds.Chelsea, new DateTime(2025, 8, 10, 14, 0, 0, DateTimeKind.Utc)), ActingUser, Ct);
+        await service.PublishAsync(published.Id, ActingUser, Ct);
+
+        var draftDelete = (await service.GetByIdAsync(draft.Id, Ct)).Week.Delete;
+        Assert.True(draftDelete.Allowed);
+        Assert.Null(draftDelete.TargetNumber);
+        // Round 2 moves down to close the gap; nothing scored, nothing to replay.
+        Assert.Equal((1, false), (draftDelete.RenumberedRounds, draftDelete.RequiresRecalculation));
+
+        Assert.False((await service.GetByIdAsync(published.Id, Ct)).Week.Delete.Allowed);
+        await service.CancelAsync(published.Id, ActingUser, Ct);
+        Assert.True((await service.GetByIdAsync(published.Id, Ct)).Week.Delete.Allowed);
+    }
+
     [Fact]
     public async Task Cannot_add_match_to_locked_round_without_override()
     {

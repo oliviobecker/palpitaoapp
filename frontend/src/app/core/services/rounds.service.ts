@@ -67,6 +67,16 @@ export class RoundsService {
     return this.http.post<Round>(`${this.base}/${id}/unlock`, {});
   }
 
+  /** Undoes a cancellation: back to the status the round was cancelled from. */
+  restore(id: string): Observable<Round> {
+    return this.http.post<Round>(`${this.base}/${id}/restore`, {});
+  }
+
+  /** Deletes a Draft or Cancelled round for good; the later rounds close the gap. */
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
   /** Plays a standalone round as the next part of the previous round ("11" → "10.2"). */
   joinPreviousWeek(id: string): Observable<Round> {
     return this.http.post<Round>(`${this.base}/${id}/join-previous-week`, {});

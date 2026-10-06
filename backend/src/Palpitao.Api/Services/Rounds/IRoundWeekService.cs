@@ -30,4 +30,20 @@ public interface IRoundWeekService
     /// replayed, since the part that decides the absences may have changed.
     /// </summary>
     Task<RoundDto> CancelAsync(Guid roundId, Guid actingUserId, CancellationToken ct);
+
+    /// <summary>
+    /// Undoes a cancellation (back to the status it was cancelled from); like the cancel, the
+    /// season is replayed when another part is already Scored.
+    /// </summary>
+    Task<RoundDto> RestoreAsync(Guid roundId, Guid actingUserId, CancellationToken ct);
+
+    /// <summary>
+    /// Deletes a Draft or Cancelled round for good — matches, predictions, OCR imports and any
+    /// results it still holds — and closes the gap it leaves in the numbering. The season is
+    /// replayed when a Scored round moves or shares its number, or when it still held results.
+    /// </summary>
+    Task<RoundDeletion> DeleteAsync(Guid roundId, Guid actingUserId, CancellationToken ct);
 }
+
+/// <summary>What a round deletion did: the slot it freed, how many rounds moved, whether it replayed.</summary>
+public sealed record RoundDeletion(int Number, int Part, int Renumbered, bool Recalculated);

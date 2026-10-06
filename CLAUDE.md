@@ -97,7 +97,9 @@ Four patterns to understand before touching backend logic:
 **Scoring is idempotent**: re-scoring a round clears its `PredictionScores`/`RoundParticipantResults`
 and recomputes; `recalculate` on a season resets eliminations and re-scores finished rounds in order.
 Round lifecycle is `Draft → Published → Locked → Scored` (+ `Cancelled`); a Scored round can be
-reopened to Locked without wiping scores.
+reopened to Locked without wiping scores, a Cancelled one restored to the status it was cancelled
+from, and a Draft/Cancelled one deleted (`RoundWeekService.DeleteAsync`: purges children
+explicitly — two of the FKs to the round/its matches are RESTRICT — and closes the numbering gap).
 
 External integrations are isolated behind interfaces with no domain/DB access — `IFixtureProvider`
 (OneFootball default; selectable via `Fixtures:Provider`) and `IResultsProvider`. Swapping a provider

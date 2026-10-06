@@ -95,6 +95,40 @@ public class RoundsController : ControllerBase
     public async Task<ActionResult<RoundDto>> Cancel(Guid id, CancellationToken ct)
         => Ok(await _weeks.CancelAsync(id, User.GetUserId(), ct));
 
+    /// <summary>Undoes a cancellation: the round goes back to the status it was cancelled from.</summary>
+    [HttpPost("{id:guid}/restore")]
+    [RequireGroupAdmin]
+    public async Task<ActionResult<RoundDto>> Restore(Guid id, CancellationToken ct)
+    {
+        var round = await _weeks.RestoreAsync(id, User.GetUserId(), ct);
+        SentrySdk.AddBreadcrumb("Round restored.", "rounds", data: new Dictionary<string, string>
+        {
+            ["roundId"] = round.Id.ToString(),
+            ["number"] = round.Number.ToString(),
+            ["status"] = round.Status.ToString(),
+        });
+        return Ok(round);
+    }
+
+    /// <summary>
+    /// Deletes a Draft or Cancelled round for good and closes the gap in the numbering.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    [RequireGroupAdmin]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        var deletion = await _weeks.DeleteAsync(id, User.GetUserId(), ct);
+        SentrySdk.AddBreadcrumb("Round deleted.", "rounds", data: new Dictionary<string, string>
+        {
+            ["roundId"] = id.ToString(),
+            ["number"] = deletion.Number.ToString(),
+            ["part"] = deletion.Part.ToString(),
+            ["renumbered"] = deletion.Renumbered.ToString(),
+            ["recalculated"] = deletion.Recalculated.ToString(),
+        });
+        return NoContent();
+    }
+
     /// <summary>
     /// Plays a standalone round as the next part of the previous round ("11" → "10.2"), for a
     /// week with two rounds that should count as one for absences.

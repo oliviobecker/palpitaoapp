@@ -110,6 +110,13 @@ public class RoundService : IRoundService
         var siblings = parts.Where(r => r.Id != round.Id && r.Status != RoundStatus.Cancelled).ToList();
         var decides = siblings.All(s => s.Part < round.Part);
 
+        // The same test the delete itself makes: leftover results also mean a replay. Only a
+        // cancelled round can have any (a Draft one never got that far).
+        var deletion = RoundWeekPlanner.PlanDelete(season, round.Id);
+        var deleteReplaysLeftovers = deletion.Allowed
+            && round.Status == RoundStatus.Cancelled
+            && await RoundLifecycle.HasScoringRowsAsync(_db, round.Id, ct);
+
         return new RoundWeekDto
         {
             Parts = parts
@@ -121,17 +128,19 @@ public class RoundService : IRoundService
             LaterPartScored = siblings.Any(s => s.Part > round.Part && s.Status == RoundStatus.Scored),
             JoinPrevious = Preview(RoundWeekPlanner.PlanJoinPrevious(season, round.Id)),
             Leave = Preview(RoundWeekPlanner.PlanLeave(season, round.Id)),
+            Delete = Preview(deletion, deleteReplaysLeftovers),
         };
     }
 
-    private static RoundWeekMoveDto Preview(RoundWeekPlan plan) => plan.Allowed
+    private static RoundWeekMoveDto Preview(RoundWeekPlan plan, bool alsoReplays = false) => plan.Allowed
         ? new RoundWeekMoveDto
         {
             Allowed = true,
-            TargetNumber = plan.TargetNumber,
-            TargetPart = plan.TargetPart,
+            // A deleted round lands nowhere.
+            TargetNumber = plan.TargetNumber > 0 ? plan.TargetNumber : null,
+            TargetPart = plan.TargetNumber > 0 ? plan.TargetPart : null,
             RenumberedRounds = plan.Moves.Count,
-            RequiresRecalculation = plan.RequiresReplay,
+            RequiresRecalculation = plan.RequiresReplay || alsoReplays,
         }
         : new RoundWeekMoveDto();
 
@@ -380,6 +389,26 @@ public class RoundService : IRoundService
         round.LockedAt = null;
 
         _audit.Add(actingUserId, "RoundUnlocked", nameof(Round), round.Id.ToString(), null);
+        await _db.SaveChangesAsync(ct);
+
+        return await GetByIdAsync(round.Id, ct);
+    }
+
+    public async Task<RoundDto> RestoreAsync(Guid roundId, Guid actingUserId, CancellationToken ct)
+    {
+        var round = await LoadRoundWithMatches(roundId, ct);
+
+        if (round.Status != RoundStatus.Cancelled)
+        {
+            throw new BusinessRuleException("round.onlyCancelledRestored");
+        }
+
+        // Undo of a cancellation. Cancelling touched nothing but the status, so the matches,
+        // predictions and publication data (deadline, Flávio target) are all still there.
+        var to = RoundLifecycle.RestoreTarget(round);
+        round.Status = to;
+
+        _audit.Add(actingUserId, "RoundRestored", nameof(Round), round.Id.ToString(), new { to = to.ToString() });
         await _db.SaveChangesAsync(ct);
 
         return await GetByIdAsync(round.Id, ct);
@@ -684,6 +713,7 @@ public class RoundService : IRoundService
         LockedAt = round.LockedAt,
         MirrorPublishedAt = round.MirrorPublishedAt,
         CreatedAt = round.CreatedAt,
+        RestoreStatus = round.Status == RoundStatus.Cancelled ? RoundLifecycle.RestoreTarget(round) : null,
         Matches = round.Matches
             .OrderBy(m => m.Order)
             .ThenBy(m => m.StartsAt)
