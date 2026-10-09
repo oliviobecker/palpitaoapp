@@ -1,9 +1,10 @@
 name: Build and deploy on IIS Staging
 
 # Auto-deploys to the staging/test environment on every push to main (i.e. after a
-# PR is merged). Production is manual — see deploy-iis.yml. Configure the staging
-# target with repo/environment Variables and the `staging` environment Secrets
-# (see the names referenced below).
+# PR is merged). Production deploys from release.yml when semantic-release cuts a
+# version, behind the `production` environment's reviewers — see deploy-iis.yml.
+# Configure the staging target with repo/environment Variables and the `staging`
+# environment Secrets (see the names referenced below).
 on:
   push:
     branches:
