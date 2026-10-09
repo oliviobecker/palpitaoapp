@@ -22,7 +22,7 @@ public static partial class OcrTextParser
     [GeneratedRegex(@"^(.+?)\s+([0-9OoQqDIiLlSsBbZzGg]{1,2})\s+(.+?)\s+([0-9OoQqDIiLlSsBbZzGg]{1,2})$")]
     private static partial Regex TeamScoreTeamScore();
 
-    // "Pedro - Arsenal 2 Chelsea 1" (name, then content)
+    // "Bento - Arsenal 2 Chelsea 1" (name, then content)
     [GeneratedRegex(@"^(.+?)\s+-\s+(.+)$")]
     private static partial Regex NameDashContent();
 
@@ -42,12 +42,12 @@ public static partial class OcrTextParser
     [GeneratedRegex(@"(?<!\d)\d{1,2}:\d{2}(?!\d)")]
     private static partial Regex ClockTime();
 
-    // Header with the participant's name, e.g. "Gilberto, Rodada 2 (1a fase de grupos)" or
+    // Header with the participant's name, e.g. "Leonardo, Rodada 2 (1a fase de grupos)" or
     // "*Flavio Rodada 1 (RODADA TESTE". The separator is optional: WhatsApp bold markers and
     // OCR both eat the comma often enough that requiring it loses the name outright.
     //
     // The keyword itself gets one wrong character, spelled out rather than fuzzy-matched because
-    // it is a fixed six-letter word: OCR returned "Feunppe, Kodada 1" for a real header, and a
+    // it is a fixed six-letter word: OCR returned "Tniaqgo, Kodada 1" for a real header, and a
     // capital R read as a K threw the whole name away. "odada" anchors it — nothing else spells
     // that, so the extra room costs nothing.
     [GeneratedRegex(
@@ -55,13 +55,13 @@ public static partial class OcrTextParser
         RegexOptions.IgnoreCase)]
     private static partial Regex ParticipantHeader();
 
-    // "PALPITES Felippe", "Palpites do Edson", "PALPITES PL" — the line the group actually
+    // "PALPITES Thiaggo", "Palpites do Vitor", "PALPITES TB" — the line the group actually
     // writes above a block of scores. The name after the prefix is taken as-is (it is often
     // ALL-CAPS, which LooksLikeName alone rejects).
     [GeneratedRegex(@"^palpites?\s+(?:d[oea]\s+)?(.+)$", RegexOptions.IgnoreCase)]
     private static partial Regex PredictionsHeader();
 
-    // WhatsApp emphasis markers and quotes wrapped around a name: *Flavio*, _Edson_, "Paraguaio".
+    // WhatsApp emphasis markers and quotes wrapped around a name: *Flavio*, _Edson_, "Careca".
     [GeneratedRegex(@"[*_~""“”'‘’]")]
     private static partial Regex NameDecoration();
 
@@ -70,7 +70,7 @@ public static partial class OcrTextParser
     private static partial Regex TemplatePlaceholder();
 
     // A phone number WhatsApp prints next to a sender who is not a contact
-    // ("~Gilberto Sales +55 85 98934-0476"). Its "4-0476" otherwise reads as a 4-0 score.
+    // ("~Leonardo Borba +55 00 91234-0476"). Its "4-0476" otherwise reads as a 4-0 score.
     [GeneratedRegex(@"(?:\+\d{1,3}\s*)?(?:\(?\d{2}\)?\s*)?(?<!\d)\d{4,5}\s?-\s?\d{4}(?!\d)")]
     private static partial Regex PhoneNumber();
 
@@ -245,8 +245,8 @@ public static partial class OcrTextParser
         if (predictions.Success)
         {
             // The prefix already establishes that a name follows, so an ALL-CAPS one is fine
-            // ("PALPITES PL"): only the shape is checked, not the casing. The round rides on
-            // that same line often enough ("PALPITES PL, Rodada 1") that it has to come off
+            // ("PALPITES TB"): only the shape is checked, not the casing. The round rides on
+            // that same line often enough ("PALPITES TB, Rodada 1") that it has to come off
             // first: left in, its comma and digit fail the shape check and the header is lost.
             var candidate = NormalizeName(StripRoundTail(predictions.Groups[1].Value));
             return IsNameShaped(candidate) ? new ParticipantLine(candidate, true) : null;
@@ -257,7 +257,7 @@ public static partial class OcrTextParser
         {
             // Checked, not trusted: "Palpitão England 2026/2027 — Rodada 1" also matches the
             // header, and filing every fixture against a season title helps nobody. Initials are
-            // the exception to the lowercase rule ("JP Rodada 9", "PL Rodada 8"): the header has
+            // the exception to the lowercase rule ("CN Rodada 9", "TB Rodada 8"): the header has
             // already said a name comes first, and a lone short token cannot be a title.
             var candidate = StripPlaceholder(NormalizeName(header.Groups[1].Value));
             return LooksLikeName(candidate) || IsInitials(candidate)
@@ -286,7 +286,7 @@ public static partial class OcrTextParser
 
     /// <summary>
     /// Drops the "Nome" placeholder the round message prints where the participant's name goes,
-    /// which people leave in front of their name ("Nome, Defarias, Rodada 9") or do not replace at
+    /// which people leave in front of their name ("Nome, Decastro, Rodada 9") or do not replace at
     /// all ("Nome, Rodada 5" — then nothing is left, and no name is read).
     /// </summary>
     private static string StripPlaceholder(string name)
@@ -326,7 +326,7 @@ public static partial class OcrTextParser
 
     /// <summary>
     /// The participant a screenshot's file name points at: admins name each print after its
-    /// participant ("Valter.png", "Valter1.jpeg", "DeFarias.jpeg", "ezau4e5.jpeg"). Returns the
+    /// participant ("Renato.png", "Renato1.jpeg", "DeCastro.jpeg", "luis4e5.jpeg"). Returns the
     /// name part — cut at the first digit, separators turned into spaces, camel case split — or
     /// null when the name says nothing about a person ("9.png", "IMG_2041.jpg",
     /// "WhatsApp Image 2026-09-18 at 14.42.jpeg").
@@ -406,7 +406,7 @@ public static partial class OcrTextParser
     };
 
     /// <summary>
-    /// True for plain participant names ("João", "Pedro Silva"): name-shaped and with at least
+    /// True for plain participant names ("João", "Bento Silva"): name-shaped and with at least
     /// one lowercase letter. The casing rule is what keeps ALL-CAPS OCR noise from stealing the
     /// participant context — it is dropped only after an explicit "PALPITES" prefix, which has
     /// already established that a name follows.
@@ -578,7 +578,7 @@ public static partial class OcrTextParser
     private static (string? Name, string? Content) SplitNameAndContent(string line)
     {
         // Only when what follows the colon really holds a fixture. A digit alone is not enough:
-        // the round message's own "REGRA FLÁVIO: @Bruno tem até 24 horas" line then named the
+        // the round message's own "REGRA FLÁVIO: @Diego tem até 24 horas" line then named the
         // participant of every fixture below it, and OCR turning a "(×2)" tag into "(:2)" made
         // "Luton 1 x O Bradford (:2)" a name with no fixture at all.
         // The label itself must not hold a score, or "Luton 1 x 0 Bradford - Arsenal 2 x 1 Chelsea"

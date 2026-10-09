@@ -91,7 +91,7 @@ public class StandingsServiceTests
         using var db = CreateContext();
         var service = new StandingsService(db, new FakeCurrentGroupService());
         var a = CreateParticipant(db, "Ana");
-        var b = CreateParticipant(db, "Bruno");
+        var b = CreateParticipant(db, "Diego");
         AddResult(db, 1, a, final: 10);
         AddResult(db, 1, b, final: 20);
 
@@ -109,7 +109,7 @@ public class StandingsServiceTests
         using var db = CreateContext();
         var service = new StandingsService(db, new FakeCurrentGroupService());
         var a = CreateParticipant(db, "Ana");
-        var b = CreateParticipant(db, "Bruno");
+        var b = CreateParticipant(db, "Diego");
 
         // Both total 10, but A has one absence.
         AddResult(db, 1, a, final: 10);
@@ -128,17 +128,17 @@ public class StandingsServiceTests
     {
         using var db = CreateContext();
         var service = new StandingsService(db, new FakeCurrentGroupService());
-        var bruno = CreateParticipant(db, "Bruno");
+        var diego = CreateParticipant(db, "Diego");
         var ana = CreateParticipant(db, "Ana");
 
         // Same points, same absences -> alphabetical by name.
-        AddResult(db, 1, bruno, final: 10);
+        AddResult(db, 1, diego, final: 10);
         AddResult(db, 1, ana, final: 10);
 
         await service.RecomputeSeasonStandingsAsync(SeasonId, Ct);
         var standings = await service.GetStandingsAsync(SeasonId, Ct);
 
         Assert.Equal(ana, standings[0].UserId);
-        Assert.Equal(bruno, standings[1].UserId);
+        Assert.Equal(diego, standings[1].UserId);
     }
 }

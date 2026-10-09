@@ -585,7 +585,7 @@ public partial class RoundScoringServiceTests
         using var db = CreateContext();
         var kit = Build(db);
         var a = CreateParticipant(db, "Ana");
-        var b = CreateParticipant(db, "Bruno");
+        var b = CreateParticipant(db, "Diego");
 
         // Round 1
         var r1 = await PublishedRound(kit, 1);
@@ -612,7 +612,7 @@ public partial class RoundScoringServiceTests
             before.Select(s => (s.Position, s.UserId, s.TotalPoints)),
             after.Select(s => (s.Position, s.UserId, s.TotalPoints)));
 
-        // Ana: 3 + 5 = 8, Bruno: 1 + 0 = 1
+        // Ana: 3 + 5 = 8, Diego: 1 + 0 = 1
         Assert.Equal(a, after[0].UserId);
         Assert.Equal(8, after[0].TotalPoints);
         Assert.Equal(1, after[1].TotalPoints);
@@ -682,12 +682,12 @@ public partial class RoundScoringServiceTests
         using var db = CreateContext();
         var kit = Build(db);
         var a = CreateParticipant(db, "Ana");
-        var b = CreateParticipant(db, "Bruno");
+        var b = CreateParticipant(db, "Diego");
         var published = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         var early = published.AddHours(1);
         var late = published.AddHours(30); // past the 24h special deadline, before the lock
 
-        // Round 16 (Flávio applies from 16): nobody leads yet. Ana exact -> 3, Bruno wrong -> 0.
+        // Round 16 (Flávio applies from 16): nobody leads yet. Ana exact -> 3, Diego wrong -> 0.
         var r16 = InsertLockedRound(db, 16, published, 2, 1);
         InsertPrediction(db, r16, a, 2, 1, early);
         InsertPrediction(db, r16, b, 0, 1, early);
@@ -699,7 +699,7 @@ public partial class RoundScoringServiceTests
         InsertPrediction(db, r17, b, 2, 1, late.AddDays(7));
         await kit.Scoring.ScoreRoundAsync(r17.Id, Admin, Ct);
 
-        // Round 18: Bruno exact 0x0 -> 5 and takes the lead; Ana (still leader, early) -> 0.
+        // Round 18: Diego exact 0x0 -> 5 and takes the lead; Ana (still leader, early) -> 0.
         var r18 = InsertLockedRound(db, 18, published.AddDays(14), 0, 0);
         InsertPrediction(db, r18, a, 1, 0, early.AddDays(14));
         InsertPrediction(db, r18, b, 0, 0, early.AddDays(14));
@@ -711,7 +711,7 @@ public partial class RoundScoringServiceTests
 
         await kit.Scoring.RecalculateSeasonAsync(SeasonId, Admin, Ct);
 
-        // A replay that read the final standings would target Bruno in round 17 instead of
+        // A replay that read the final standings would target Diego in round 17 instead of
         // Ana, halving the wrong participant (6 x 6 instead of 4 x 8).
         var after = await kit.Standings.GetStandingsAsync(SeasonId, Ct);
         Assert.Equal(

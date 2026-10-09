@@ -120,8 +120,8 @@ public class TemporaryStandingsServiceTests
     public async Task Participant_without_predictions_is_listed_on_zero_and_flagged_absent()
     {
         using var db = CreateContext();
-        var predictor = CreateParticipant(db, "Bruno");
-        var silent = CreateParticipant(db, "João Paulo");
+        var predictor = CreateParticipant(db, "Diego");
+        var silent = CreateParticipant(db, "Caio Nunes");
         var round = await OpenRound(db);
         await Predict(db, round, predictor, 1, 0);
         await GoLive(db, round);
@@ -139,7 +139,7 @@ public class TemporaryStandingsServiceTests
     public async Task Nobody_is_flagged_while_predictions_are_still_open()
     {
         using var db = CreateContext();
-        var silent = CreateParticipant(db, "João Paulo");
+        var silent = CreateParticipant(db, "Caio Nunes");
         // Kickoff still ahead: the deadline has not passed, so they can still submit.
         var round = await PublishedRound(db, DateTime.UtcNow.AddHours(3));
         var match = await db.RoundMatches.FirstAsync(m => m.RoundId == round.Id, Ct);
@@ -160,7 +160,7 @@ public class TemporaryStandingsServiceTests
     public async Task Participant_excused_by_an_override_is_listed_but_not_flagged()
     {
         using var db = CreateContext();
-        var silent = CreateParticipant(db, "João Paulo");
+        var silent = CreateParticipant(db, "Caio Nunes");
         var round = await OpenRound(db);
         await GoLive(db, round);
 
@@ -180,7 +180,7 @@ public class TemporaryStandingsServiceTests
     public async Task Override_flags_a_participant_who_predicted_without_zeroing_their_points()
     {
         using var db = CreateContext();
-        var user = CreateParticipant(db, "Bruno");
+        var user = CreateParticipant(db, "Diego");
         var round = await OpenRound(db);
         await Predict(db, round, user, 1, 0); // exact hit on the live 1-0
         await GoLive(db, round);
@@ -204,7 +204,7 @@ public class TemporaryStandingsServiceTests
     public async Task Inactive_participants_stay_out_of_the_list()
     {
         using var db = CreateContext();
-        var active = CreateParticipant(db, "Bruno");
+        var active = CreateParticipant(db, "Diego");
         var inactive = CreateParticipant(db, "Fora", isActive: false);
         var round = await OpenRound(db);
         await Predict(db, round, active, 1, 0);

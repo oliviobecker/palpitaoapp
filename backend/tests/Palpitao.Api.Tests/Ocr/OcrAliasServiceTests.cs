@@ -27,32 +27,32 @@ public class OcrAliasServiceTests
     public async Task Lists_the_groups_aliases_with_the_participant_name()
     {
         using var db = CreateContext();
-        var pl = SeedParticipant(db, "PL");
-        SeedAlias(db, SeedIds.DefaultGroup, pl, "Paraguaio");
+        var tb = SeedParticipant(db, "TB");
+        SeedAlias(db, SeedIds.DefaultGroup, tb, "Careca");
 
         var list = await CreateService(db).ListAsync(Ct);
 
         var alias = Assert.Single(list);
-        Assert.Equal("Paraguaio", alias.AliasRaw);
-        Assert.Equal("paraguaio", alias.Alias);
-        Assert.Equal(pl, alias.UserId);
-        Assert.Equal("PL", alias.UserName);
+        Assert.Equal("Careca", alias.AliasRaw);
+        Assert.Equal("careca", alias.Alias);
+        Assert.Equal(tb, alias.UserId);
+        Assert.Equal("TB", alias.UserName);
     }
 
     [Fact]
     public async Task Creates_an_alias_under_its_normalized_key()
     {
         using var db = CreateContext();
-        var pl = SeedParticipant(db, "PL");
+        var tb = SeedParticipant(db, "TB");
 
         var created = await CreateService(db).CreateAsync(
-            new CreateOcrParticipantAliasRequest { AliasRaw = "  Paraguáio ", UserId = pl }, Admin, Ct);
+            new CreateOcrParticipantAliasRequest { AliasRaw = "  Caréca ", UserId = tb }, Admin, Ct);
 
         // The raw form is what the admin recognises; the key is what a screenshot has to hit.
-        Assert.Equal("Paraguáio", created.AliasRaw);
-        Assert.Equal("paraguaio", created.Alias);
-        Assert.Equal(pl, created.UserId);
-        Assert.Equal("PL", created.UserName);
+        Assert.Equal("Caréca", created.AliasRaw);
+        Assert.Equal("careca", created.Alias);
+        Assert.Equal(tb, created.UserId);
+        Assert.Equal("TB", created.UserName);
         Assert.Contains(await db.AuditLogs.ToListAsync(Ct), a => a.Action == "OcrParticipantAliasCreated");
     }
 
@@ -61,14 +61,14 @@ public class OcrAliasServiceTests
     {
         // The point of the screen: teach it once, before any screenshot has needed it.
         using var db = CreateContext();
-        var pl = SeedParticipant(db, "PL");
+        var tb = SeedParticipant(db, "TB");
         var service = CreateService(db);
         await service.CreateAsync(
-            new CreateOcrParticipantAliasRequest { AliasRaw = "Paraguaio", UserId = pl }, Admin, Ct);
+            new CreateOcrParticipantAliasRequest { AliasRaw = "Careca", UserId = tb }, Admin, Ct);
 
         var aliases = await service.GetForGroupAsync(SeedIds.DefaultGroup, Ct);
 
-        Assert.Equal(pl, aliases[OcrTeamMatcher.NormalizeAlias("PARAGUAIO")]);
+        Assert.Equal(tb, aliases[OcrTeamMatcher.NormalizeAlias("CARECA")]);
     }
 
     [Theory]
@@ -77,10 +77,10 @@ public class OcrAliasServiceTests
     public async Task Refuses_an_empty_alias(string raw)
     {
         using var db = CreateContext();
-        var pl = SeedParticipant(db, "PL");
+        var tb = SeedParticipant(db, "TB");
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => CreateService(db).CreateAsync(
-            new CreateOcrParticipantAliasRequest { AliasRaw = raw, UserId = pl }, Admin, Ct));
+            new CreateOcrParticipantAliasRequest { AliasRaw = raw, UserId = tb }, Admin, Ct));
 
         Assert.Equal("ocr.aliasEmpty", ex.Key);
     }
@@ -91,15 +91,15 @@ public class OcrAliasServiceTests
         // The existing row is already on the admin's screen; overwriting it here would hide that
         // somebody else's mapping just changed.
         using var db = CreateContext();
-        var pl = SeedParticipant(db, "PL");
+        var tb = SeedParticipant(db, "TB");
         var flavio = SeedParticipant(db, "Flavio");
-        SeedAlias(db, SeedIds.DefaultGroup, pl, "Paraguaio");
+        SeedAlias(db, SeedIds.DefaultGroup, tb, "Careca");
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => CreateService(db).CreateAsync(
-            new CreateOcrParticipantAliasRequest { AliasRaw = "PARAGUAIO", UserId = flavio }, Admin, Ct));
+            new CreateOcrParticipantAliasRequest { AliasRaw = "CARECA", UserId = flavio }, Admin, Ct));
 
         Assert.Equal("ocr.aliasAlreadyExists", ex.Key);
-        Assert.Equal(pl, (await db.OcrParticipantAliases.SingleAsync(Ct)).UserId);
+        Assert.Equal(tb, (await db.OcrParticipantAliases.SingleAsync(Ct)).UserId);
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class OcrAliasServiceTests
         var stranger = SeedUser(db, "Estranho"); // no membership
 
         var ex = await Assert.ThrowsAsync<NotFoundException>(() => CreateService(db).CreateAsync(
-            new CreateOcrParticipantAliasRequest { AliasRaw = "Paraguaio", UserId = stranger }, Admin, Ct));
+            new CreateOcrParticipantAliasRequest { AliasRaw = "Careca", UserId = stranger }, Admin, Ct));
 
         Assert.Equal("notFound.participant", ex.Key);
         Assert.Empty(await db.OcrParticipantAliases.ToListAsync(Ct));
@@ -119,9 +119,9 @@ public class OcrAliasServiceTests
     public async Task Repoints_an_alias_at_another_participant()
     {
         using var db = CreateContext();
-        var pl = SeedParticipant(db, "PL");
+        var tb = SeedParticipant(db, "TB");
         var flavio = SeedParticipant(db, "Flavio");
-        var aliasId = SeedAlias(db, SeedIds.DefaultGroup, pl, "nAc");
+        var aliasId = SeedAlias(db, SeedIds.DefaultGroup, tb, "nAc");
 
         var updated = await CreateService(db).UpdateAsync(
             aliasId, new UpdateOcrParticipantAliasRequest { UserId = flavio }, Admin, Ct);
@@ -137,8 +137,8 @@ public class OcrAliasServiceTests
     public async Task Deletes_an_alias()
     {
         using var db = CreateContext();
-        var pl = SeedParticipant(db, "PL");
-        var aliasId = SeedAlias(db, SeedIds.DefaultGroup, pl, "nAc");
+        var tb = SeedParticipant(db, "TB");
+        var aliasId = SeedAlias(db, SeedIds.DefaultGroup, tb, "nAc");
 
         await CreateService(db).DeleteAsync(aliasId, Admin, Ct);
 
@@ -152,8 +152,8 @@ public class OcrAliasServiceTests
         // A nickname means different people in different pools, so this is not a cosmetic leak.
         using var db = CreateContext();
         SeedOtherGroup(db);
-        var outsider = SeedParticipant(db, "PL");
-        var foreignAlias = SeedAlias(db, OtherGroup, outsider, "Paraguaio");
+        var outsider = SeedParticipant(db, "TB");
+        var foreignAlias = SeedAlias(db, OtherGroup, outsider, "Careca");
         var service = CreateService(db);
 
         Assert.Empty(await service.ListAsync(Ct));
@@ -175,12 +175,12 @@ public class OcrAliasServiceTests
     {
         using var db = CreateContext();
         SeedOtherGroup(db);
-        var here = SeedParticipant(db, "PL");
+        var here = SeedParticipant(db, "TB");
         var there = SeedParticipant(db, "Outro");
-        SeedAlias(db, OtherGroup, there, "Paraguaio");
+        SeedAlias(db, OtherGroup, there, "Careca");
 
         var created = await CreateService(db).CreateAsync(
-            new CreateOcrParticipantAliasRequest { AliasRaw = "Paraguaio", UserId = here }, Admin, Ct);
+            new CreateOcrParticipantAliasRequest { AliasRaw = "Careca", UserId = here }, Admin, Ct);
 
         // The unique index is (GroupId, Alias) — the other group's row must not block this one.
         Assert.Equal(here, created.UserId);

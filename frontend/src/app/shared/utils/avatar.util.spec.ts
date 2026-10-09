@@ -23,6 +23,6 @@ describe('avatarColor', () => {
   });
 
   it('separates different names', () => {
-    expect(avatarColor('Ana Prado')).not.toBe(avatarColor('Flavio Barros'));
+    expect(avatarColor('Ana Prado')).not.toBe(avatarColor('Flavio Costa'));
   });
 });

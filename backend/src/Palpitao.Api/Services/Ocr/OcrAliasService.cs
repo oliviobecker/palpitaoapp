@@ -30,19 +30,19 @@ public class OcrAliasService : IOcrAliasService
             .ToDictionaryAsync(a => a.Alias, a => a.UserId, ct);
 
     /// <summary>
-    /// The admin has just told us who "Paraguaio" is by filing the rows against them; remembering
+    /// The admin has just told us who "Careca" is by filing the rows against them; remembering
     /// it is the difference between fixing the same screenshot format once and fixing it every
     /// round.
     ///
     /// Only names that resolve to <em>nobody</em> on their own are stored — never one that already
-    /// points at a participant, or a mislabelled "Ezau.jpg" filed under Bruno would teach "ezau" →
-    /// Bruno and take Ezaú's own name away from him on every later import. Only when every row
+    /// points at a participant, or a mislabelled "Luis.jpg" filed under Diego would teach "luis" →
+    /// Diego and take Luís's own name away from him on every later import. Only when every row
     /// bearing that name agrees on the participant — one image can carry two people, and a name
     /// that pointed at both would be a coin flip on the next import. And never a word of the round
     /// message itself: "REGRA FLÁVIO" or "palpitar" read as a name once must not file someone
     /// else's predictions later.
     ///
-    /// A file name that names someone ("JP.jpeg") is what the admin labelled the image with, so it
+    /// A file name that names someone ("CN.jpeg") is what the admin labelled the image with, so it
     /// is the name learned for the batch, and the names OCR read off the image are left out.
     /// </summary>
     public async Task<int> LearnAsync(

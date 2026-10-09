@@ -606,12 +606,12 @@ the round's **pending imports** with their participant and how many rows still n
 nothing flagged can be confirmed straight from the list (or all of them with **Confirm ready ones**),
 anything flagged is opened for review first.
 
-**Name each file after its participant** (`Valter.png`, `Valter1.jpeg`, `DeFarias.jpeg`): the file
+**Name each file after its participant** (`Renato.png`, `Renato1.jpeg`, `DeCastro.jpeg`): the file
 name is the admin's own label, so it decides whose predictions the rows are — ahead of anything OCR
 reads off the image. It is cut at the first digit, camel case is split, and generic names
 (`IMG_2041`, `WhatsApp Image …`, `9.png`) are ignored, which leaves the header to decide. Resolution
-is stricter than for OCR text: a learned alias, the same name, whole words of it (`Valter` for
-`Valter Silva`), or one wrong letter in a longer word (`Vilacao`) — never a bare substring. When a
+is stricter than for OCR text: a learned alias, the same name, whole words of it (`Renato` for
+`Renato Paiva`), or one wrong letter in a longer word (`Cabacao`) — never a bare substring. When a
 header in the image names somebody else, the rows keep the file's participant but go to review.
 
 Flow (never saves without review):
@@ -625,8 +625,8 @@ return 4xx), and confirm rejects duplicate participant+match candidates.
 
 **Overwrites are announced.** A confirm replaces whatever the participant already has for those
 matches and keeps no copy of the old values, so a screenshot filed under the wrong person silently
-replaces that person's own round — which is what happened in production (round 8: Vilaça's
-screenshot filed under Becker). A batch still under review therefore reports, per participant,
+replaces that person's own round — which is what happened in production (round 8: Cabaça's
+screenshot filed under Coelho). A batch still under review therefore reports, per participant,
 how many predictions they already have in the round and how many of its rows would change one
 (`overwrites` on the batch, `overwriteCount` on the pending list). Rows that restate the stored
 score — the same screenshot imported again — or fill a match with no prediction are not counted.
@@ -724,13 +724,13 @@ goes to review, pre-filled, with a note saying so.
 **Reading a WhatsApp screenshot.** What surrounds the scores is furniture, and the parser is built
 to ignore it: the clock stamped on every screenshot (`Cardiff 1x2 Wrexham 17:35`) is stripped before
 anything else — its colon otherwise reads as `Name: content` and swallows the fixture — as are the
-emphasis markers and quotes around a name (`*Flavio*`, `"Paraguaio"`), the day separators (`Hoje`)
+emphasis markers and quotes around a name (`*Flavio*`, `"Careca"`), the day separators (`Hoje`)
 and the app's own vocabulary.
 
 The participant is read from `PALPITES <nome>` (the line the group actually writes, ALL-CAPS
 included) or from `<Nome>, Rodada N`, where the comma is optional and the keyword itself may carry
-one wrong character — `Feunppe, Kodada 1` is a real header, and a capital R read as a K used to
-throw the whole name away. The two arrive combined often enough (`PALPITES PL, Rodada 1`) that the
+one wrong character — `Tniaqgo, Kodada 1` is a real header, and a capital R read as a K used to
+throw the whole name away. The two arrive combined often enough (`PALPITES TB, Rodada 1`) that the
 round is peeled off before the name is judged; left in, its comma and digit fail the shape check and
 the header is lost, so the sender's contact name at the top of the bubble wins instead. The season
 title in that same shape is rejected rather than filed as a person.
@@ -743,11 +743,11 @@ characters, and no word of the round message itself (`Palpitão`, `Rodada`, `Reg
 `palpitar` — the tail of the Flávio rule once the bubble wraps it) is ever a name.
 
 `Nome: fixtures` still labels the fixtures on its line, but only when what follows the colon really
-holds a fixture: the message's own `REGRA FLÁVIO: @Bruno tem até 24 horas` line used to name the
+holds a fixture: the message's own `REGRA FLÁVIO: @Diego tem até 24 horas` line used to name the
 participant of every row below it, and a `(×2)` tag OCR read as `(:2)` used to turn the Luton line
-into a name. Initials are accepted in a round header (`JP Rodada 9`, `PL Rodada 8`), and the `Nome`
-placeholder the message prints is dropped when it is left in (`Nome, Defarias, Rodada 9` →
-`Defarias`; an untouched `Nome, Rodada 5` names nobody).
+into a name. Initials are accepted in a round header (`CN Rodada 9`, `TB Rodada 8`), and the `Nome`
+placeholder the message prints is dropped when it is left in (`Nome, Decastro, Rodada 9` →
+`Decastro`; an untouched `Nome, Rodada 5` names nobody).
 
 A score whose zeros OCR returned as the letter `O` on **both** sides is accepted when it stands
 alone as its own token (`Norwich O x O West Brom`), while `Arsenal x Leeds` — where the same letters
@@ -756,10 +756,10 @@ are stolen from the ends of two club names — stays rejected. The separator may
 against it (`Bolton OxO0 Cardiff`). A score read off any letter other than `O` (`bxO0` was a `5x0`)
 is a guess, and goes to review unless another reading got the same score from real digits. Across a
 colon or a dash, a digit glued to another digit is part of a longer number — a phone number next to
-a non-contact sender (`+55 85 98934-0476`), a mangled time — never a score.
+a non-contact sender (`+55 00 91234-0476`), a mangled time — never a score.
 
 **Two rounds in one screenshot.** Some people send the next round's predictions in the same message
-(`Ezaú, Rodada 6 e 7`, one header over both lists). A line that is one of the season's *other*
+(`Luís, Rodada 6 e 7`, one header over both lists). A line that is one of the season's *other*
 fixtures, read cleanly, is left out of this round's import and counted, and the upload says so
 ("11 lines from another round (round 7) were left out"); import the same screenshot into the other
 round for those. A line that fits no round at all stays for review — a prediction is never dropped
@@ -774,13 +774,13 @@ swallowed.
 
 **Learned participant aliases.** When an admin confirms a batch after correcting who a name belongs
 to, that correction is remembered per group (`OcrParticipantAliases`) and consulted on the next
-import, so a nickname the roster does not carry (`Paraguaio` → `PL`) is only fixed once. Only
+import, so a nickname the roster does not carry (`Careca` → `TB`) is only fixed once. Only
 names that resolve to **nobody** on their own are stored — never one that already points at a
-participant, or a mislabelled `Ezau.jpg` filed under Bruno would take Ezaú's own name away from him
+participant, or a mislabelled `Luis.jpg` filed under Diego would take Luís's own name away from him
 — only names shaped like a name and not a word of the round message, and only when every row
 bearing that name agreed on the same participant; a later confirmation re-points an alias that
 turned out to be wrong. When the file name names someone, it is the file name that is learned
-(`JP.jpeg` for a member registered as João Paulo), and the names read off the image are left alone.
+(`CN.jpeg` for a member registered as Caio Nunes), and the names read off the image are left alone.
 
 They are not a black box: **Admin → Apelidos** (`/admin/ocr-aliases`) lists what the group has
 learned, re-points an alias at another participant, deletes one, and teaches one by hand before any
@@ -792,7 +792,7 @@ a single place.
 ### Limitations and why review is needed
 
 OCR is heuristic: it depends on the image quality and the text format. The parser recognizes
-common formats (`Arsenal 2x1 Chelsea`, `Maria: Arsenal 1-0 Chelsea`, `Pedro - Arsenal 2 Chelsea 1`)
+common formats (`Arsenal 2x1 Chelsea`, `Maria: Arsenal 1-0 Chelsea`, `Bento - Arsenal 2 Chelsea 1`)
 and tries to match names/abbreviations (`Man City`, `Spurs`...), but **any uncertain item is marked
 `NeedsReview` and is never saved without admin confirmation** — hence the mandatory review screen.
 A complete row can be flagged too, and the card says why: readings that disagreed on the score, a
@@ -964,7 +964,7 @@ fail if you don't.
 
 **Flávio Rule in the message:** when the Flávio Rule applies to the round (England: from the
 season's configured round, default 16; World Cup: quarter-finals+), and only then, the message includes a line with the current leader(s) and
-their **special deadline** (e.g. "Leader @Manoel Neto has until
+their **special deadline** (e.g. "Leader @Murilo Nery has until
 23:59 on Friday (22/05/2026) to predict."). The backend computes this in `RoundDto.Flavio` (leaders
 = top of the season standings; deadline = 24h, or 12h if the round was published less than 24h
 before the first match, with the general lock prevailing). The line only appears when the round has

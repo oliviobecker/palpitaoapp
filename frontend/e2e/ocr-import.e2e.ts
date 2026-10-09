@@ -223,13 +223,13 @@ test.describe('Admin OCR import', () => {
   });
 
   test('warns before an import replaces predictions someone already has', async ({ page }) => {
-    // Production, round 8: Vilaça's screenshot was filed under Becker and replaced Becker's own
+    // Production, round 8: Cabaça's screenshot was filed under Coelho and replaced Coelho's own
     // round — every row complete, nothing flagged, nothing said.
     await seedAuth(page, 'pt-BR');
 
     const overwriting = {
       ...batch,
-      originalFileName: 'Vilaca.jpeg',
+      originalFileName: 'Cabaca.jpeg',
       overwrites: [{ userId: 'p1', userName: 'João Silva', existingCount: 12, changedCount: 10 }],
     };
     let confirmed = false;
@@ -254,7 +254,7 @@ test.describe('Admin OCR import', () => {
     await page.goto('/admin/rounds/r1/import-predictions');
     await page
       .locator('input[type="file"]')
-      .setInputFiles({ name: 'Vilaca.jpeg', mimeType: 'image/jpeg', buffer: pngBytes });
+      .setInputFiles({ name: 'Cabaca.jpeg', mimeType: 'image/jpeg', buffer: pngBytes });
     await page.getByRole('button', { name: 'Processar imagem' }).click();
 
     // Every row is complete, yet the review says whose predictions a confirm would change.
@@ -356,7 +356,7 @@ test.describe('Admin OCR import', () => {
     await page.goto('/admin/rounds/r1/import-predictions');
     await page
       .locator('input[type="file"]')
-      .setInputFiles({ name: 'Ezau.png', mimeType: 'image/png', buffer: pngBytes });
+      .setInputFiles({ name: 'Luis.png', mimeType: 'image/png', buffer: pngBytes });
     await page.getByRole('button', { name: 'Processar imagem' }).click();
 
     await expect(

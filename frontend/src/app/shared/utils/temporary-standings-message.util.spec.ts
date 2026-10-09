@@ -31,21 +31,21 @@ function standings(partial: Partial<TemporaryStandings> = {}): TemporaryStanding
       row({
         position: 1,
         userId: 'u1',
-        name: 'Bruno Vilaça',
+        name: 'Diego Cabaça',
         roundTemporaryPoints: 15,
         projectedTotalPoints: 476,
       }),
       row({
         position: 2,
         userId: 'u2',
-        name: 'Edson',
+        name: 'Vitor',
         roundTemporaryPoints: 11,
         projectedTotalPoints: 472,
       }),
       row({
         position: 3,
         userId: 'u3',
-        name: 'Gilberto',
+        name: 'Leonardo',
         roundTemporaryPoints: 11,
         projectedTotalPoints: 468,
       }),
@@ -80,9 +80,9 @@ describe('buildTemporaryStandingsMessage', () => {
 
   it('prints one line per participant with the round points and the projected total', () => {
     const text = buildTemporaryStandingsMessage(standings());
-    expect(text).toContain('1. Bruno Vilaça: +15 (476)');
-    expect(text).toContain('2. Edson: +11 (472)');
-    expect(text).toContain('3. Gilberto: +11 (468)');
+    expect(text).toContain('1. Diego Cabaça: +15 (476)');
+    expect(text).toContain('2. Vitor: +11 (472)');
+    expect(text).toContain('3. Leonardo: +11 (468)');
   });
 
   it('keeps the server order even when the projected totals disagree with it', () => {
@@ -154,19 +154,19 @@ describe('buildTemporaryStandingsMessage', () => {
           row({
             position: 1,
             userId: 'u1',
-            name: 'Bruno Vilaça',
+            name: 'Diego Cabaça',
             roundTemporaryPoints: 15,
             projectedTotalPoints: 476,
           }),
-          row({ position: 2, userId: 'u9', name: 'João Paulo', willBeAbsent: true }),
+          row({ position: 2, userId: 'u9', name: 'Caio Nunes', willBeAbsent: true }),
         ],
       }),
     );
 
-    expect(text).toContain('2. João Paulo: +0 (0) — Ausente');
+    expect(text).toContain('2. Caio Nunes: +0 (0) — Ausente');
     // The format the group already knows must not shift for everyone else.
-    expect(text).toContain('1. Bruno Vilaça: +15 (476)');
-    expect(text).not.toContain('1. Bruno Vilaça: +15 (476) —');
+    expect(text).toContain('1. Diego Cabaça: +15 (476)');
+    expect(text).not.toContain('1. Diego Cabaça: +15 (476) —');
   });
 
   it('says so when there is nothing to rank yet', () => {

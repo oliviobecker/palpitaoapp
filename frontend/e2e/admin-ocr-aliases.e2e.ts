@@ -24,8 +24,8 @@ function aliases(): AliasRow[] {
     },
     {
       id: 'a2',
-      alias: 'paraguaio',
-      aliasRaw: 'Paraguaio',
+      alias: 'careca',
+      aliasRaw: 'Careca',
       userId: 'p2',
       userName: 'Maria Souza',
       createdAt: '2026-08-14T12:31:00Z',
@@ -55,7 +55,7 @@ test.describe('Admin OCR aliases', () => {
     await page.goto('/admin/ocr-aliases');
     await expect(page.getByRole('heading', { name: 'Apelidos do OCR' })).toBeVisible();
     await expect(page.getByText('nAc')).toBeVisible();
-    await expect(page.getByText('Paraguaio')).toBeVisible();
+    await expect(page.getByText('Careca')).toBeVisible();
 
     // Re-point the junk alias at the other participant.
     await page.locator('.oa-row').first().locator('select').selectOption('p2');
@@ -82,7 +82,7 @@ test.describe('Admin OCR aliases', () => {
             json: {
               id: 'a3',
               alias: 'dourado',
-              aliasRaw: 'Dourado',
+              aliasRaw: 'Pacheco',
               userId: 'p1',
               userName: 'João Silva',
               createdAt: '2026-08-15T10:00:00Z',
@@ -97,14 +97,14 @@ test.describe('Admin OCR aliases', () => {
     // Nothing learned yet: the empty state explains where aliases come from.
     await expect(page.getByText(/Nenhum apelido ainda/)).toBeVisible();
 
-    await page.locator('#alias-raw').fill('Dourado');
+    await page.locator('#alias-raw').fill('Pacheco');
     await page.locator('#alias-user').selectOption({ label: 'João Silva' });
     await page.getByRole('button', { name: 'Cadastrar' }).click();
 
-    await expect(page.locator('.toast-body')).toHaveText('"Dourado" agora aponta para João Silva.');
-    expect(posted).toEqual([{ aliasRaw: 'Dourado', userId: 'p1' }]);
+    await expect(page.locator('.toast-body')).toHaveText('"Pacheco" agora aponta para João Silva.');
+    expect(posted).toEqual([{ aliasRaw: 'Pacheco', userId: 'p1' }]);
     // The new row joins the list without a reload, and the form is cleared for the next one.
-    await expect(page.locator('.oa-row__name')).toContainText('Dourado');
+    await expect(page.locator('.oa-row__name')).toContainText('Pacheco');
     await expect(page.locator('#alias-raw')).toHaveValue('');
   });
 

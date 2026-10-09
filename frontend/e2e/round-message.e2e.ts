@@ -15,7 +15,7 @@ const roundWithMatches = {
   mirrorPublishedAt: null,
   flavio: {
     applies: true,
-    leaderNames: ['Manoel Neto'],
+    leaderNames: ['Murilo Nery'],
     deadlineUtc: '2026-05-22T23:59:00Z',
     windowHours: 24,
     deadlineCappedByLock: false,
@@ -116,7 +116,7 @@ test.describe('Round group message', () => {
     await expect(pre).toContainText('Millwall x West Ham (×2)');
     await expect(pre).toContainText('Bolton x Stockport (×2)');
     await expect(pre).toContainText('Palpites até');
-    await expect(pre).toContainText('*REGRA FLÁVIO:* @Manoel Neto tem até 24 horas para palpitar');
+    await expect(pre).toContainText('*REGRA FLÁVIO:* @Murilo Nery tem até 24 horas para palpitar');
 
     await page.getByRole('button', { name: /Copiar/ }).click();
     await expect(page.locator('.toast-body')).toHaveText('Mensagem copiada!');

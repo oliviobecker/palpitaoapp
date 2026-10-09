@@ -75,32 +75,32 @@ public partial class RoundScoringServiceTests
         }
     }
 
-    private static async Task<(Kit Kit, Guid Vilaca, Guid Bruno, RoundDto Five, RoundDto Six)> History(
+    private static async Task<(Kit Kit, Guid Cabaca, Guid Diego, RoundDto Five, RoundDto Six)> History(
         AppDbContext db, PredictionSource source = PredictionSource.AdminManual)
     {
         ConfigureFlavioFromFive(db);
         var kit = Build(db);
-        var vilaca = CreateParticipant(db, "Vilaça");
-        var bruno = CreateParticipant(db, "Bruno");
+        var cabaca = CreateParticipant(db, "Cabaça");
+        var diego = CreateParticipant(db, "Diego");
         var one = await PublishedRound(kit, 1);
-        await SavePredictions(kit, one, vilaca, (2, 1));
-        await SavePredictions(kit, one, bruno, (1, 0));
+        await SavePredictions(kit, one, cabaca, (2, 1));
+        await SavePredictions(kit, one, diego, (1, 0));
         await kit.Rounds.LockAsync(one.Id, Admin, Ct);
         await SetResults(kit, one, (2, 1));
         await kit.Scoring.ScoreRoundAsync(one.Id, Admin, Ct); // 3 vs 1
         var five = await PublishedRound(kit, 5);
-        await EnterLateExternal(db, five, vilaca, source, 0, 0);
-        await EnterLateExternal(db, five, bruno, source, 0, 0);
+        await EnterLateExternal(db, five, cabaca, source, 0, 0);
+        await EnterLateExternal(db, five, diego, source, 0, 0);
         await kit.Rounds.LockAsync(five.Id, Admin, Ct);
         await SetResults(kit, five, (0, 0));
-        await kit.Scoring.ScoreRoundAsync(five.Id, Admin, Ct); // 5 vs 6 after halving Vilaça
+        await kit.Scoring.ScoreRoundAsync(five.Id, Admin, Ct); // 5 vs 6 after halving Cabaça
         var six = await PublishedRound(kit, 6);
-        await EnterLateExternal(db, six, vilaca, source, 2, 1);
-        await EnterLateExternal(db, six, bruno, source, 2, 1);
+        await EnterLateExternal(db, six, cabaca, source, 2, 1);
+        await EnterLateExternal(db, six, diego, source, 2, 1);
         await kit.Rounds.LockAsync(six.Id, Admin, Ct);
         await SetResults(kit, six, (2, 1));
-        await kit.Scoring.ScoreRoundAsync(six.Id, Admin, Ct); // Bruno halved this time
-        return (kit, vilaca, bruno, five, six);
+        await kit.Scoring.ScoreRoundAsync(six.Id, Admin, Ct); // Diego halved this time
+        return (kit, cabaca, diego, five, six);
     }
 
     private static FlavioOverrideRequest Exempt(Guid user, bool isExempt = true) => new()
@@ -116,22 +116,22 @@ public partial class RoundScoringServiceTests
         var service = Overrides(db);
         var before = await service.GetAsync(h.Five.Id, Ct);
         Assert.True(before.Applies); // custom activation in round 5
-        var vilacaBefore = before.Participants.Single(p => p.UserId == h.Vilaca);
-        Assert.True(vilacaBefore.IsTarget);
-        Assert.True(vilacaBefore.SubmittedAt > before.DeadlineUtc);
-        Assert.Equal(5, vilacaBefore.GrossPoints);
-        Assert.Equal(2, vilacaBefore.FinalPoints);
+        var cabacaBefore = before.Participants.Single(p => p.UserId == h.Cabaca);
+        Assert.True(cabacaBefore.IsTarget);
+        Assert.True(cabacaBefore.SubmittedAt > before.DeadlineUtc);
+        Assert.Equal(5, cabacaBefore.GrossPoints);
+        Assert.Equal(2, cabacaBefore.FinalPoints);
         var predictionsBefore = await db.Predictions.AsNoTracking().OrderBy(p => p.Id)
             .Select(p => new { p.Id, p.SubmittedAt, p.UpdatedAt, p.Source, p.PredictedHomeScore, p.PredictedAwayScore }).ToListAsync();
 
-        await service.SaveAsync(h.Five.Id, Exempt(h.Vilaca), Admin, Ct);
+        await service.SaveAsync(h.Five.Id, Exempt(h.Cabaca), Admin, Ct);
         var five = await h.Kit.Scoring.GetRoundResultsAsync(h.Five.Id, Ct);
-        Assert.False(five.Participants.Single(p => p.UserId == h.Vilaca).FlavioRuleApplied);
-        Assert.Equal(5, five.Participants.Single(p => p.UserId == h.Vilaca).FinalPoints);
+        Assert.False(five.Participants.Single(p => p.UserId == h.Cabaca).FlavioRuleApplied);
+        Assert.Equal(5, five.Participants.Single(p => p.UserId == h.Cabaca).FinalPoints);
         var six = await h.Kit.Scoring.GetRoundResultsAsync(h.Six.Id, Ct);
-        Assert.True(six.Participants.Single(p => p.UserId == h.Vilaca).FlavioRuleApplied);
-        Assert.False(six.Participants.Single(p => p.UserId == h.Bruno).FlavioRuleApplied);
-        Assert.Equal(new[] { "Vilaça" }, (await h.Kit.Rounds.GetByIdAsync(h.Six.Id, Ct)).Flavio!.LeaderNames);
+        Assert.True(six.Participants.Single(p => p.UserId == h.Cabaca).FlavioRuleApplied);
+        Assert.False(six.Participants.Single(p => p.UserId == h.Diego).FlavioRuleApplied);
+        Assert.Equal(new[] { "Cabaça" }, (await h.Kit.Rounds.GetByIdAsync(h.Six.Id, Ct)).Flavio!.LeaderNames);
         var standings = await h.Kit.Standings.GetStandingsAsync(SeasonId, Ct);
         Assert.All(standings, s => Assert.Equal(9, s.TotalPoints));
         await h.Kit.Scoring.ScoreRoundAsync(h.Five.Id, Admin, Ct); // existing button must also replay chronologically
@@ -142,10 +142,10 @@ public partial class RoundScoringServiceTests
             .Select(p => new { p.Id, p.SubmittedAt, p.UpdatedAt, p.Source, p.PredictedHomeScore, p.PredictedAwayScore }).ToListAsync());
 
         var createdAt = (await db.FlavioOverrides.SingleAsync()).CreatedAt;
-        await service.SaveAsync(h.Five.Id, Exempt(h.Vilaca, false), Admin, Ct);
+        await service.SaveAsync(h.Five.Id, Exempt(h.Cabaca, false), Admin, Ct);
         Assert.Equal(createdAt, (await db.FlavioOverrides.SingleAsync()).CreatedAt);
-        Assert.True((await h.Kit.Scoring.GetRoundResultsAsync(h.Five.Id, Ct)).Participants.Single(p => p.UserId == h.Vilaca).FlavioRuleApplied);
-        Assert.True((await h.Kit.Scoring.GetRoundResultsAsync(h.Six.Id, Ct)).Participants.Single(p => p.UserId == h.Bruno).FlavioRuleApplied);
+        Assert.True((await h.Kit.Scoring.GetRoundResultsAsync(h.Five.Id, Ct)).Participants.Single(p => p.UserId == h.Cabaca).FlavioRuleApplied);
+        Assert.True((await h.Kit.Scoring.GetRoundResultsAsync(h.Six.Id, Ct)).Participants.Single(p => p.UserId == h.Diego).FlavioRuleApplied);
         var logs = await db.AuditLogs.Where(a => a.Action == "FlavioOverrideChanged").OrderBy(a => a.CreatedAt).ToListAsync();
         Assert.Equal(2, logs.Count);
         Assert.All(logs, log => { Assert.Equal(Admin, log.UserId); Assert.Equal(SeedIds.DefaultGroup, log.GroupId); });
@@ -185,7 +185,7 @@ public partial class RoundScoringServiceTests
         var resultIds = await db.RoundParticipantResults.OrderBy(r => r.Id).Select(r => r.Id).ToListAsync();
         var standingIds = await db.Standings.OrderBy(s => s.Id).Select(s => s.Id).ToListAsync();
         var auditCount = await db.AuditLogs.CountAsync();
-        await Assert.ThrowsAsync<BusinessRuleException>(() => Overrides(db).SaveAsync(h.Five.Id, Exempt(h.Vilaca), Admin, Ct));
+        await Assert.ThrowsAsync<BusinessRuleException>(() => Overrides(db).SaveAsync(h.Five.Id, Exempt(h.Cabaca), Admin, Ct));
         db.ChangeTracker.Clear(); // verify committed DB state, not rolled-back tracked entities
         Assert.Empty(await db.FlavioOverrides.ToListAsync());
         Assert.Equal(auditCount, await db.AuditLogs.CountAsync());
@@ -204,16 +204,16 @@ public partial class RoundScoringServiceTests
         if (unlocked) await h.Kit.Rounds.UnlockAsync(h.Six.Id, Admin, Ct);
         var resultIds = await db.RoundParticipantResults.OrderBy(r => r.Id).Select(r => r.Id).ToListAsync();
         await Assert.ThrowsAsync<BusinessRuleException>(() => h.Kit.Scoring.ScoreRoundAsync(h.Five.Id, Admin, Ct));
-        await Assert.ThrowsAsync<BusinessRuleException>(() => Overrides(db).SaveAsync(h.Five.Id, Exempt(h.Vilaca), Admin, Ct));
+        await Assert.ThrowsAsync<BusinessRuleException>(() => Overrides(db).SaveAsync(h.Five.Id, Exempt(h.Cabaca), Admin, Ct));
         db.ChangeTracker.Clear();
         Assert.Empty(await db.FlavioOverrides.ToListAsync());
         Assert.Equal(resultIds, await db.RoundParticipantResults.OrderBy(r => r.Id).Select(r => r.Id).ToListAsync());
         // Completing the reopened round makes the season recalculable again.
         if (unlocked) await h.Kit.Rounds.LockAsync(h.Six.Id, Admin, Ct);
         await h.Kit.Scoring.ScoreRoundAsync(h.Six.Id, Admin, Ct);
-        await Overrides(db).SaveAsync(h.Five.Id, Exempt(h.Vilaca), Admin, Ct);
+        await Overrides(db).SaveAsync(h.Five.Id, Exempt(h.Cabaca), Admin, Ct);
         Assert.Equal(5, (await h.Kit.Scoring.GetRoundResultsAsync(h.Five.Id, Ct))
-            .Participants.Single(p => p.UserId == h.Vilaca).FinalPoints);
+            .Participants.Single(p => p.UserId == h.Cabaca).FinalPoints);
     }
 
     [Fact]
@@ -225,7 +225,7 @@ public partial class RoundScoringServiceTests
         foreach (var id in new[] { h.Five.Id, h.Six.Id })
         {
             var round = await db.Rounds.FindAsync(id);
-            round!.FlavioRuleTargetUserId = h.Bruno; // intentionally different from historical England leader
+            round!.FlavioRuleTargetUserId = h.Diego; // intentionally different from historical England leader
             var match = await db.RoundMatches.SingleAsync(m => m.RoundId == id);
             match.Competition = Competition.FifaWorldCup;
             match.Phase = MatchPhase.WorldCupQuarterFinal;
@@ -236,13 +236,13 @@ public partial class RoundScoringServiceTests
         var service = Overrides(db);
         var panel = await service.GetAsync(h.Five.Id, Ct);
         Assert.True(panel.Applies);
-        Assert.Equal(h.Bruno, panel.Participants.Single(p => p.IsTarget).UserId);
-        Assert.Equal(new[] { "Bruno" }, (await h.Kit.Rounds.GetByIdAsync(h.Five.Id, Ct)).Flavio!.LeaderNames);
-        Assert.True(panel.Participants.Single(p => p.UserId == h.Bruno).FlavioRuleApplied);
-        await service.SaveAsync(h.Five.Id, Exempt(h.Bruno), Admin, Ct);
-        Assert.False((await service.GetAsync(h.Five.Id, Ct)).Participants.Single(p => p.UserId == h.Bruno).FlavioRuleApplied);
-        Assert.True((await service.GetAsync(h.Six.Id, Ct)).Participants.Single(p => p.UserId == h.Bruno).FlavioRuleApplied);
-        Assert.Equal(h.Bruno, (await db.Rounds.FindAsync(h.Five.Id))!.FlavioRuleTargetUserId);
+        Assert.Equal(h.Diego, panel.Participants.Single(p => p.IsTarget).UserId);
+        Assert.Equal(new[] { "Diego" }, (await h.Kit.Rounds.GetByIdAsync(h.Five.Id, Ct)).Flavio!.LeaderNames);
+        Assert.True(panel.Participants.Single(p => p.UserId == h.Diego).FlavioRuleApplied);
+        await service.SaveAsync(h.Five.Id, Exempt(h.Diego), Admin, Ct);
+        Assert.False((await service.GetAsync(h.Five.Id, Ct)).Participants.Single(p => p.UserId == h.Diego).FlavioRuleApplied);
+        Assert.True((await service.GetAsync(h.Six.Id, Ct)).Participants.Single(p => p.UserId == h.Diego).FlavioRuleApplied);
+        Assert.Equal(h.Diego, (await db.Rounds.FindAsync(h.Five.Id))!.FlavioRuleTargetUserId);
     }
 
     [Fact]
@@ -258,19 +258,19 @@ public partial class RoundScoringServiceTests
         db.Rounds.Add(new Round { Id = otherRound, GroupId = otherGroup, SeasonId = otherSeason,
             Number = 5, Status = RoundStatus.Scored, CreatedByUserId = Admin });
         var otherResult = new RoundParticipantResult { Id = Guid.NewGuid(), GroupId = otherGroup,
-            SeasonId = otherSeason, RoundId = otherRound, UserId = h.Vilaca, FinalPoints = 999 };
+            SeasonId = otherSeason, RoundId = otherRound, UserId = h.Cabaca, FinalPoints = 999 };
         db.RoundParticipantResults.Add(otherResult);
         var otherOverride = new FlavioOverride { Id = Guid.NewGuid(), RoundId = otherRound,
-            UserId = h.Vilaca, IsExempt = true, Justification = "Outro grupo." };
+            UserId = h.Cabaca, IsExempt = true, Justification = "Outro grupo." };
         db.FlavioOverrides.Add(otherOverride);
         await db.SaveChangesAsync();
         var service = Overrides(db);
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetAsync(otherRound, Ct));
-        await Assert.ThrowsAsync<NotFoundException>(() => service.SaveAsync(otherRound, Exempt(h.Vilaca, false), Admin, Ct));
-        await service.SaveAsync(h.Five.Id, Exempt(h.Vilaca), Admin, Ct);
+        await Assert.ThrowsAsync<NotFoundException>(() => service.SaveAsync(otherRound, Exempt(h.Cabaca, false), Admin, Ct));
+        await service.SaveAsync(h.Five.Id, Exempt(h.Cabaca), Admin, Ct);
         Assert.Equal(999, (await db.RoundParticipantResults.AsNoTracking().SingleAsync(r => r.Id == otherResult.Id)).FinalPoints);
         Assert.True((await db.FlavioOverrides.AsNoTracking().SingleAsync(o => o.Id == otherOverride.Id)).IsExempt);
-        Assert.Equal(new[] { "Vilaça" }, (await h.Kit.Rounds.GetByIdAsync(h.Five.Id, Ct)).Flavio!.LeaderNames);
+        Assert.Equal(new[] { "Cabaça" }, (await h.Kit.Rounds.GetByIdAsync(h.Five.Id, Ct)).Flavio!.LeaderNames);
     }
 
     [Fact]

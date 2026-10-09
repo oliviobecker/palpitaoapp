@@ -19,7 +19,7 @@ const STANDINGS = [
   {
     position: 1,
     userId: 'u1',
-    name: 'Flávio Barros',
+    name: 'Flávio Costa',
     totalPoints: 187,
     playedRounds: 17,
     absenceCount: 0,
@@ -69,7 +69,7 @@ const ROUND = {
   participants: [
     {
       userId: 'u1',
-      name: 'Flávio Barros',
+      name: 'Flávio Costa',
       grossPoints: 6,
       finalPoints: 6,
       penaltyPoints: 0,
@@ -135,7 +135,7 @@ test.describe('Public standings link', () => {
 
     await expect(page.getByText('Turma do Zé')).toBeVisible();
     await expect(page.getByText('England 2025/26')).toBeVisible();
-    await expect(page.getByText('Flávio Barros')).toBeVisible();
+    await expect(page.getByText('Flávio Costa')).toBeVisible();
     await expect(page.getByText('187')).toBeVisible();
   });
 
@@ -151,7 +151,7 @@ test.describe('Public standings link', () => {
     await installApi(page, publicApi([]));
     await page.goto(`/p/${KEY}?rodada=18`);
 
-    await page.getByRole('button', { name: /Flávio Barros/ }).click();
+    await page.getByRole('button', { name: /Flávio Costa/ }).click();
 
     await expect(page.getByText('Arsenal')).toBeVisible();
     await expect(page.getByText('Clássico')).toBeVisible();
@@ -171,7 +171,7 @@ test.describe('Public standings link', () => {
     await installApi(page, publicApi(seen));
 
     await page.goto(`/p/${KEY}`);
-    await expect(page.getByText('Flávio Barros')).toBeVisible();
+    await expect(page.getByText('Flávio Costa')).toBeVisible();
 
     expect(seen.length).toBeGreaterThan(0);
     for (const req of seen) {
@@ -217,14 +217,14 @@ test.describe('Public standings link', () => {
     const retry = page.getByRole('button', { name: /Tentar novamente|Try again|Recarregar/i });
     await expect(retry).toBeVisible();
     await retry.click();
-    await expect(page.getByText('Flávio Barros')).toBeVisible();
+    await expect(page.getByText('Flávio Costa')).toBeVisible();
   });
 
   test('keeps the page out of search indexes', async ({ page }) => {
     await installApi(page, publicApi([]));
 
     await page.goto(`/p/${KEY}`);
-    await expect(page.getByText('Flávio Barros')).toBeVisible();
+    await expect(page.getByText('Flávio Costa')).toBeVisible();
 
     // The API's X-Robots-Tag never reaches a crawler: what gets indexed is this document.
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
@@ -242,7 +242,7 @@ test.describe('Public standings link', () => {
     await card.click();
 
     // Open, it is the same arithmetic as the participant cut, transposed.
-    await expect(page.getByText('Flávio Barros')).toBeVisible();
+    await expect(page.getByText('Flávio Costa')).toBeVisible();
     await expect(page.getByText('3 × 2 =')).toBeVisible();
   });
 
@@ -250,7 +250,7 @@ test.describe('Public standings link', () => {
     await installApi(page, publicApi([]));
     await page.goto(`/p/${KEY}`);
 
-    await page.getByRole('button', { name: /Flávio Barros/ }).click();
+    await page.getByRole('button', { name: /Flávio Costa/ }).click();
     // The strip carries one chip per scored round; pressing one is a deep link.
     await page.getByRole('button', { name: /17.*9/ }).click();
 

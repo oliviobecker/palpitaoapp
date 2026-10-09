@@ -12,8 +12,8 @@ const scout = {
       homeTeamName: 'Man United',
       awayTeamName: 'Man City',
       groups: [
-        { homeScore: 1, awayScore: 1, names: ['Felipe'] },
-        { homeScore: 2, awayScore: 0, names: ['Bruno', 'Dourado'] },
+        { homeScore: 1, awayScore: 1, names: ['Thiago'] },
+        { homeScore: 2, awayScore: 0, names: ['Diego', 'Pacheco'] },
       ],
     },
     {
@@ -39,8 +39,8 @@ test.describe('Round scout', () => {
     await expect(page.getByRole('combobox')).toContainText(
       /\d{2}\/\d{2}\s+\d{2}:\d{2}\s+·\s+Arsenal\s+×\s+Chelsea/,
     );
-    await expect(page.getByText('- 1x1 @Felipe')).toBeVisible();
-    await expect(page.getByText('- 2x0 @Bruno @Dourado')).toBeVisible();
+    await expect(page.getByText('- 1x1 @Thiago')).toBeVisible();
+    await expect(page.getByText('- 2x0 @Diego @Pacheco')).toBeVisible();
   });
 
   test('admin can switch to another match via the dropdown', async ({ page }) => {

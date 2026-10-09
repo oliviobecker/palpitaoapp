@@ -170,9 +170,9 @@ public class OcrServiceTests
 
     /// <summary>
     /// Round 1 (Arsenal x Chelsea, Newcastle x Tottenham) and round 2 (Liverpool x Manchester City)
-    /// of one season, and the participants João and Valter Silva.
+    /// of one season, and the participants João and Renato Paiva.
     /// </summary>
-    private static async Task<(Guid Round1, Guid Joao, Guid Valter)> SeedTwoRoundsAsync(AppDbContext db)
+    private static async Task<(Guid Round1, Guid Joao, Guid Renato)> SeedTwoRoundsAsync(AppDbContext db)
     {
         var rounds = new RoundService(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db));
         var first = await rounds.CreateAsync(new CreateRoundRequest { SeasonId = SeasonId, Number = 1 }, Admin, Ct);
@@ -198,13 +198,13 @@ public class OcrServiceTests
         await rounds.PublishAsync(first.Id, Admin, Ct);
 
         var joao = Guid.NewGuid();
-        var valter = Guid.NewGuid();
+        var renato = Guid.NewGuid();
         db.Users.Add(new User { Id = joao, Name = "João", Email = $"{joao}@x.com", PasswordHash = "x", Role = UserRole.Participant, IsActive = true, CreatedAt = DateTime.UtcNow });
-        db.Users.Add(new User { Id = valter, Name = "Valter Silva", Email = $"{valter}@x.com", PasswordHash = "x", Role = UserRole.Participant, IsActive = true, CreatedAt = DateTime.UtcNow });
+        db.Users.Add(new User { Id = renato, Name = "Renato Paiva", Email = $"{renato}@x.com", PasswordHash = "x", Role = UserRole.Participant, IsActive = true, CreatedAt = DateTime.UtcNow });
         TestSeed.AddDefaultGroupMembership(db, joao);
-        TestSeed.AddDefaultGroupMembership(db, valter);
+        TestSeed.AddDefaultGroupMembership(db, renato);
         db.SaveChanges();
-        return (first.Id, joao, valter);
+        return (first.Id, joao, renato);
     }
 
     [Fact]
@@ -239,17 +239,17 @@ public class OcrServiceTests
     public async Task Process_files_the_rows_under_the_participant_the_file_is_named_after()
     {
         using var db = CreateContext();
-        var (round1, _, valter) = await SeedTwoRoundsAsync(db);
+        var (round1, _, renato) = await SeedTwoRoundsAsync(db);
         var service = CreateService(db, engine: new FakeOcrEngine { Result = "João\nArsenal 2x1 Chelsea" });
 
-        var batch = await service.ProcessAsync(round1, "Valter1.jpeg", JpegBytes(), "por", Admin, Ct);
+        var batch = await service.ProcessAsync(round1, "Renato1.jpeg", JpegBytes(), "por", Admin, Ct);
 
         var candidate = Assert.Single(batch.Candidates);
-        Assert.Equal(valter, candidate.UserId);
+        Assert.Equal(renato, candidate.UserId);
         Assert.False(candidate.NeedsReview);
 
         var summary = Assert.Single(await service.ListBatchesAsync(round1, Ct));
-        Assert.Equal(valter, summary.ParticipantUserId);
+        Assert.Equal(renato, summary.ParticipantUserId);
         Assert.Equal(0, summary.NeedsReviewCount);
     }
 

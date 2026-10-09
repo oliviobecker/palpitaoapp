@@ -22,7 +22,7 @@ public interface IOcrAliasService
     /// were learned. Enqueues its changes on the caller's unit of work — the caller saves.
     /// </summary>
     /// <param name="fileName">
-    /// The batch's uploaded file name. When it names a participant ("JP.jpeg") that name is the one
+    /// The batch's uploaded file name. When it names a participant ("CN.jpeg") that name is the one
     /// learned, and the names OCR read off the image are left alone.
     /// </param>
     Task<int> LearnAsync(
