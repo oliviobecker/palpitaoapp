@@ -1,0 +1,35 @@
+name: Bug report
+description: Something does not work as described.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please don't paste real participants' names, phone numbers or screenshots — use fictional data.
+        Security problems go through **Security → Report a vulnerability**, not an issue.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to …
+        2. Click …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Shown in the app footer (e.g. v1.24.0).
+  - type: input
+    id: trace
+    attributes:
+      label: Trace id
+      description: Error responses and toasts carry a traceId — it finds the matching log line.
