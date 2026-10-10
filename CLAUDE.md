@@ -133,9 +133,16 @@ Dates/times are stored in **UTC**, displayed in pt-BR locale. Backend messages a
 ## Frontend architecture
 
 Angular 21 **standalone components + signals + OnPush** throughout. Layout: `core/` (auth,
-interceptors, models, services, theme, i18n), `shared/` (reusable components + utils), `layout/`
-(responsive Shell: desktop topbar + mobile bottom nav), `features/` (auth, dashboard, rounds,
-standings, admin).
+interceptors, theme, i18n; `models/` — one `<area>.models.ts` per backend area behind the
+`@core/models` barrel; `services/` — `services/admin/` has one service per backend admin controller),
+`shared/` (reusable components, validators, pipes, utils), `layout/` (responsive Shell: desktop
+topbar + mobile bottom nav), `features/` (auth, dashboard, rounds, standings, public, admin — admin in
+sub-features with its own `admin.routes.ts`). Import through the aliases `@core/*`, `@shared/*`,
+`@env/*`, `@version`; ESLint enforces the layers (no `../../`, `core` never imports `shared`/features,
+`shared` never imports features, features never import each other, models via the barrel). Pure
+logic goes in a tested `*.util.ts` beside its component; templates over ~100 lines in `.html`.
+`core/services/admin-http-contract.spec.ts` pins every admin request — update it with any admin API
+change. See `frontend/README.md`.
 
 UX conventions (mirror existing patterns rather than inventing new ones):
 

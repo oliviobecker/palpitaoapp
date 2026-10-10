@@ -158,7 +158,7 @@ dotnet test backend/Palpitao.slnx --filter "FullyQualifiedName~ScoringServiceTes
 # Backend — the schema must match the migrations (no database needed; CI runs it too)
 dotnet ef migrations has-pending-model-changes --project backend/src/Palpitao.Infrastructure --startup-project backend/src/Palpitao.Api
 
-# Frontend — Vitest unit tests (199)
+# Frontend — Vitest unit tests (272)
 cd frontend && npm test -- --watch=false
 
 # Frontend — Playwright e2e (93); starts `ng serve` and mocks every API call in e2e/support.ts
