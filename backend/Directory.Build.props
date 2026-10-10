@@ -8,6 +8,10 @@
     <AnalysisLevel>latest</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- The XML files feed the compiler's cref checks (and later the OpenAPI document, at build
+         time); the server has no use for them. -->
+    <PublishDocumentationFile>false</PublishDocumentationFile>
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
     <!-- XML docs are written where they add something: undocumented members (CS1591) and
          partly documented parameter lists (CS1573) are fine; broken crefs are not. -->
     <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
