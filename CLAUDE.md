@@ -9,10 +9,13 @@ isolated tenant (its own admins, participants, seasons, rounds, matches, predict
 data never crosses groups. Monorepo: `.NET 10` backend (`backend/`) + `Angular 21` frontend
 (`frontend/`). Mobile-first, PT/EN at runtime.
 
-The full domain spec (scoring tables, multipliers, absences, Flávio Rule, fixture/results
-providers, multi-tenant rules) lives in [README.md](README.md) — sections are numbered; consult it
-before changing business logic. [DEVELOPMENT_CHECKPOINT.md](DEVELOPMENT_CHECKPOINT.md) tracks the
-current working state, build/test status, and the roadmap.
+The domain rulebook (scoring tables, multipliers, absences, Flávio Rule) lives in
+[docs/domain-rules.md](docs/domain-rules.md), feature behaviour (accounts and groups, OCR import,
+fixtures/results providers, public link) in [docs/features/](docs/features/), the system design in
+[docs/architecture.md](docs/architecture.md) and the decisions behind it in [docs/adr/](docs/adr/) —
+consult them before changing business logic, and update them with it.
+[docs/internal/development-checkpoint.md](docs/internal/development-checkpoint.md) tracks the current
+working state, build/test status, and the roadmap.
 
 ## Environment note
 
@@ -59,15 +62,17 @@ xUnit + **SQLite in-memory**.
 Four patterns to understand before touching backend logic:
 
 1. **Multi-tenant isolation chokepoint.** `GroupId` lives only on tenant *roots* (`Season`, `Round`,
-   `Standing`, `RoundParticipantResult`, `AuditLog`, `GroupUser`); per-round entities
+   `Standing`, `RoundParticipantResult`, `SeasonScoringConfig`, `OcrParticipantAlias`, `AuditLog`,
+   `GroupUser`); per-round entities
    (`Prediction`, `RoundMatch`, `Absence`, `Ocr*`…) derive their group from the parent. The frontend
    sends an `X-Group-Id` header on every authenticated call (`group.interceptor`); the backend
    **always revalidates** it in `CurrentGroupService` (the primary access chokepoint — requires an
    `Approved` + active `GroupUser`), guarded by `[RequireGroupAdmin]`/`[RequireGroupParticipant]`.
    Never trust the client's group claim. `Team` is the one **global** (non-tenant) catalogue.
-   *Defence in depth:* tenant roots implement `IGroupOwned`, so `AppDbContext` adds an EF Core
-   **global query filter** (driven by the DB-free `IRequestGroupContext` / `RequestGroupContext`)
-   that scopes reads to the request group, and `SaveChanges` **stamps** the group on inserts with an
+   *Defence in depth:* the roots that implement `IGroupOwned` (all but `GroupUser` and `AuditLog`, whose
+   lookups span groups) get an EF Core **global query filter** (driven by the DB-free
+   `IRequestGroupContext` / `RequestGroupContext`) that scopes reads to the request group, and
+   `SaveChanges` **stamps** the group on inserts with an
    unset `GroupId`. Both are **inert when there is no HTTP context** (background refresh, EF seeding,
    design-time, unit tests) — so a test or background job sees all groups; don't rely on the filter there.
 
@@ -154,4 +159,4 @@ when asked; if on `main`, branch first; never force-push or rewrite `main`'s his
 
 Real secrets (connection string, `Jwt:Key`, `Sentry:Dsn`, `Fixtures:ApiKey`) come only from env /
 user-secrets / GitHub Secrets — versioned `appsettings*.json` and `.env.example` hold placeholders
-only. See [PUBLIC_RELEASE_CHECKLIST.md](PUBLIC_RELEASE_CHECKLIST.md).
+only. See [docs/operations.md](docs/operations.md#secrets-and-security-hardening).

@@ -1,4 +1,9 @@
-# DEVELOPMENT_CHECKPOINT
+# Development checkpoint
+
+> Internal working log: current state, open items and per-session notes. Public documentation lives
+> in [docs/](../). "README §N" references below point at the pre-October 2026 README, whose sections
+> moved into `docs/` (rules → `domain-rules.md`, features → `features/`, setup → `development.md`,
+> CI/CD → `operations.md`).
 
 _Last updated: 2026-10-05 (a cancelled round can be restored, and a draft/cancelled round deleted, closing the numbering gap — branch `claude/rodada-delete-cancel-f71491`)._
 
@@ -566,7 +571,7 @@ policy). Frontend: new `features/public/public-standings.ts`,
 `SKIP_TENANT_HEADERS` opt-out), `features/admin/{admin-seasons,admin-round-detail}.ts`,
 `shared/utils/closing-message.util.ts` (the link in the group message), `index.html` (Open Graph),
 `styles.scss` (`.podium*`/`.rank-avatar` moved out of two component stylesheets), both i18n files.
-Docs: README §24 and §28, `PUBLIC_STANDINGS_PLAN.md`.
+Docs: README §24 and §28 (now `docs/features/`); the original plan file was retired once shipped.
 
 ### Earlier sessions
 
