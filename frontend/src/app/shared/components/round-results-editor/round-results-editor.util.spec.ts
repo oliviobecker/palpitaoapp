@@ -1,6 +1,6 @@
 import { FormBuilder } from '@angular/forms';
 import { describe, expect, it } from 'vitest';
-import { completePairs, pairsToSave, scorePairValidator } from './round-results-editor';
+import { completePairs, pairsToSave, scorePairValidator } from './round-results-editor.util';
 
 const fb = new FormBuilder();
 

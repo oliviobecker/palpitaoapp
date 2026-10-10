@@ -6,7 +6,7 @@ import {
   absenceReviewToastKey,
   isPreselectedAbsence,
   toAbsenceReviewDecisions,
-} from './admin-participants';
+} from './admin-participants.util';
 
 function candidate(partial: Partial<AbsenceCandidateRound> = {}): AbsenceCandidateRound {
   return {

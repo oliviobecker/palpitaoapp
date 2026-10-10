@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { manualPredictionItems, missingScoreCount, typedScore } from './admin-manual-predictions';
+import {
+  manualPredictionItems,
+  missingScoreCount,
+  typedScore,
+} from './admin-manual-predictions.util';
 
 describe('typedScore', () => {
   it('keeps a typed number, including 0', () => {

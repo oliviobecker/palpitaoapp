@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { OcrParticipantAlias } from '@core/models';
-import { filterAliases } from './admin-ocr-aliases';
+import { filterAliases } from './admin-ocr-aliases.util';
 
 function alias(aliasRaw: string, userName: string): OcrParticipantAlias {
   return {

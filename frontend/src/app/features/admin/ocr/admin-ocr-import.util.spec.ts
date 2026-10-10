@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { OcrCandidate } from '@core/models';
-import { commonParticipantId, validateOcrFile } from './admin-ocr-import';
+import { commonParticipantId, validateOcrFile } from './admin-ocr-import.util';
 
 const MB = 1024 * 1024;
 
