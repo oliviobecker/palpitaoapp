@@ -1,6 +1,4 @@
 using System.Globalization;
-using System.Net;
-using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Palpitao.Application.Fixtures;
@@ -8,6 +6,7 @@ using Palpitao.Application.Results;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
+using Palpitao.Infrastructure.ExternalData.OneFootball;
 
 namespace Palpitao.Infrastructure.ExternalData.Results;
 
@@ -24,15 +23,6 @@ namespace Palpitao.Infrastructure.ExternalData.Results;
 /// </summary>
 public class OneFootballResultsProvider : IResultsProvider
 {
-    private static readonly IReadOnlyDictionary<Competition, string> Slugs = new Dictionary<Competition, string>
-    {
-        [Competition.PremierLeague] = "premier-league-9",
-        [Competition.Championship] = "efl-championship-27",
-        [Competition.LeagueOne] = "efl-league-one-42",
-        [Competition.FACup] = "fa-cup-17",
-        [Competition.FifaWorldCup] = "fifa-world-cup-12",
-    };
-
     private readonly HttpClient _http;
     private readonly ResultsProviderOptions _options;
     private readonly ILogger<OneFootballResultsProvider> _logger;
@@ -47,18 +37,10 @@ public class OneFootballResultsProvider : IResultsProvider
         _options = options.Value;
         _logger = logger;
 
-        _http.Timeout = TimeSpan.FromSeconds(Math.Clamp(_options.TimeoutSeconds, 5, 60));
-        var baseUrl = string.IsNullOrWhiteSpace(fixtureOptions.Value.OneFootballApiBaseUrl)
-            ? "https://api.onefootball.com/web-experience/en/competition"
-            : fixtureOptions.Value.OneFootballApiBaseUrl;
-        _http.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
-        if (!_http.DefaultRequestHeaders.UserAgent.Any())
-        {
-            _http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PalpitaoEngland", "1.0"));
-        }
+        OneFootballApi.Configure(_http, fixtureOptions.Value.OneFootballApiBaseUrl, _options.TimeoutSeconds);
     }
 
-    public string Name => "OneFootball";
+    public string Name => OneFootballApi.SourceName;
 
     public bool IsEnabled => _options.Enabled;
 
@@ -75,7 +57,7 @@ public class OneFootballResultsProvider : IResultsProvider
 
         foreach (var competition in competitions)
         {
-            if (!Slugs.TryGetValue(competition, out var slug))
+            if (!OneFootballApi.Slugs.TryGetValue(competition, out var slug))
             {
                 continue;
             }
@@ -104,42 +86,8 @@ public class OneFootballResultsProvider : IResultsProvider
         return byKey.Values.ToList();
     }
 
-    private async Task<JsonElement> FetchAsync(string path, CancellationToken ct)
-    {
-        string payload;
-        try
-        {
-            using var response = await _http.GetAsync(path, ct);
-            if (response.StatusCode == HttpStatusCode.NotFound)
-            {
-                return default;
-            }
-
-            response.EnsureSuccessStatusCode();
-            payload = await response.Content.ReadAsStringAsync(ct);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
-        {
-            if (ct.IsCancellationRequested)
-            {
-                throw;
-            }
-
-            _logger.LogWarning(ex, "Failed to fetch results from OneFootball ({Path}).", path);
-            throw new BusinessRuleException("results.fetchFailed");
-        }
-
-        try
-        {
-            using var doc = JsonDocument.Parse(payload);
-            return doc.RootElement.Clone();
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogWarning(ex, "Could not parse OneFootball payload as JSON.");
-            throw new BusinessRuleException("results.fetchFailed");
-        }
-    }
+    private Task<JsonElement> FetchAsync(string path, CancellationToken ct)
+        => OneFootballApi.FetchAsync(_http, path, "results.fetchFailed", "results", _logger, ct);
 
     private void ParseInto(
         Dictionary<string, ExternalMatchResultDto> acc, JsonElement root, Competition competition)
@@ -150,7 +98,7 @@ public class OneFootballResultsProvider : IResultsProvider
         }
 
         var cards = new List<JsonElement>();
-        CollectMatchCards(root, cards);
+        OneFootballApi.VisitCards(root, OneFootballApi.HasHomeAndAwayNames, cards.Add);
 
         foreach (var card in cards)
         {
@@ -163,7 +111,7 @@ public class OneFootballResultsProvider : IResultsProvider
 
             var matchId = card.TryGetProperty("matchId", out var mid)
                 ? mid.ToString()
-                : GetString(card, "link");
+                : OneFootballApi.GetString(card, "link");
             var externalId = matchId is null ? null : $"onefootball-{matchId}";
             var key = externalId ?? $"{competition}|{home}|{away}";
 
@@ -171,7 +119,7 @@ public class OneFootballResultsProvider : IResultsProvider
             var candidate = new ExternalMatchResultDto
             {
                 ExternalMatchId = externalId,
-                ExternalMatchUrl = GetString(card, "link"),
+                ExternalMatchUrl = OneFootballApi.GetString(card, "link"),
                 Competition = competition,
                 HomeTeamName = home!.Trim(),
                 AwayTeamName = away!.Trim(),
@@ -224,7 +172,7 @@ public class OneFootballResultsProvider : IResultsProvider
             return (home, away);
         }
 
-        var line = GetString(card, "scoreLine") ?? GetString(card, "score");
+        var line = OneFootballApi.GetString(card, "scoreLine") ?? OneFootballApi.GetString(card, "score");
         if (!string.IsNullOrWhiteSpace(line))
         {
             var parts = line.Split(':', '-');
@@ -252,13 +200,13 @@ public class OneFootballResultsProvider : IResultsProvider
     /// </summary>
     private MatchStatus ReadStatus(JsonElement card, int? homeScore, int? awayScore)
     {
-        var raw = GetString(card, "period")
-            ?? GetString(card, "status")
-            ?? GetString(card, "matchStatus")
-            ?? GetString(card, "state");
+        var raw = OneFootballApi.GetString(card, "period")
+            ?? OneFootballApi.GetString(card, "status")
+            ?? OneFootballApi.GetString(card, "matchStatus")
+            ?? OneFootballApi.GetString(card, "state");
 
         var status = MatchStatusParser.Parse(
-            raw, homeScore, awayScore, GetString(card, "timePeriod"), out var unknownLabel);
+            raw, homeScore, awayScore, OneFootballApi.GetString(card, "timePeriod"), out var unknownLabel);
 
         if (unknownLabel)
         {
@@ -268,47 +216,6 @@ public class OneFootballResultsProvider : IResultsProvider
 
         return status;
     }
-
-    // --- JSON walking (mirrors the OneFootball fixture provider) -------------
-
-    private static void CollectMatchCards(JsonElement node, List<JsonElement> cards)
-    {
-        switch (node.ValueKind)
-        {
-            case JsonValueKind.Object:
-                if (IsMatchCard(node))
-                {
-                    cards.Add(node);
-                }
-
-                foreach (var prop in node.EnumerateObject())
-                {
-                    CollectMatchCards(prop.Value, cards);
-                }
-
-                break;
-
-            case JsonValueKind.Array:
-                foreach (var item in node.EnumerateArray())
-                {
-                    CollectMatchCards(item, cards);
-                }
-
-                break;
-        }
-    }
-
-    private static bool IsMatchCard(JsonElement o)
-        => o.TryGetProperty("homeTeam", out var h) && HasName(h)
-            && o.TryGetProperty("awayTeam", out var a) && HasName(a);
-
-    private static bool HasName(JsonElement team)
-        => team.ValueKind == JsonValueKind.Object
-            && team.TryGetProperty("name", out var n)
-            && n.ValueKind == JsonValueKind.String;
-
-    private static string? GetString(JsonElement e, string property)
-        => e.TryGetProperty(property, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 
     private static int? GetInt(JsonElement e, string property)
     {

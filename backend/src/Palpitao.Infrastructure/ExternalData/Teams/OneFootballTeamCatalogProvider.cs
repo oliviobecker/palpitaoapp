@@ -1,11 +1,10 @@
-using System.Net;
-using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Palpitao.Application.Fixtures;
 using Palpitao.Application.Teams;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Enums;
+using Palpitao.Infrastructure.ExternalData.OneFootball;
 
 namespace Palpitao.Infrastructure.ExternalData.Teams;
 
@@ -23,13 +22,6 @@ namespace Palpitao.Infrastructure.ExternalData.Teams;
 /// </remarks>
 public class OneFootballTeamCatalogProvider : ITeamCatalogProvider
 {
-    private static readonly IReadOnlyDictionary<Competition, string> Slugs = new Dictionary<Competition, string>
-    {
-        [Competition.PremierLeague] = "premier-league-9",
-        [Competition.Championship] = "efl-championship-27",
-        [Competition.LeagueOne] = "efl-league-one-42",
-    };
-
     private readonly HttpClient _http;
     private readonly ILogger<OneFootballTeamCatalogProvider> _logger;
 
@@ -42,22 +34,15 @@ public class OneFootballTeamCatalogProvider : ITeamCatalogProvider
         _logger = logger;
 
         var options = fixtureOptions.Value;
-        _http.Timeout = TimeSpan.FromSeconds(Math.Clamp(options.TimeoutSeconds, 5, 60));
-        var baseUrl = string.IsNullOrWhiteSpace(options.OneFootballApiBaseUrl)
-            ? "https://api.onefootball.com/web-experience/en/competition"
-            : options.OneFootballApiBaseUrl;
-        _http.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
-        if (!_http.DefaultRequestHeaders.UserAgent.Any())
-        {
-            _http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PalpitaoEngland", "1.0"));
-        }
+        OneFootballApi.Configure(_http, options.OneFootballApiBaseUrl, options.TimeoutSeconds);
     }
 
-    public string SourceName => "OneFootball";
+    public string SourceName => OneFootballApi.SourceName;
 
     public async Task<IReadOnlyList<string>> GetTeamNamesAsync(Competition competition, CancellationToken cancellationToken)
     {
-        if (!Slugs.TryGetValue(competition, out var slug))
+        if (!OneFootballApi.Leagues.Contains(competition)
+            || !OneFootballApi.Slugs.TryGetValue(competition, out var slug))
         {
             return Array.Empty<string>();
         }
@@ -74,73 +59,18 @@ public class OneFootballTeamCatalogProvider : ITeamCatalogProvider
         return names.Values.ToList();
     }
 
-    private async Task<JsonElement> FetchAsync(string path, CancellationToken ct)
-    {
-        string payload;
-        try
+    // Unlike the results refresh, a partial answer here is worse than none: every club missing
+    // from a half-loaded roster would be reported as "not found in the source", so a failed tab
+    // fails the whole sync.
+    private Task<JsonElement> FetchAsync(string path, CancellationToken ct)
+        => OneFootballApi.FetchAsync(_http, path, "teams.syncFailed", "team catalogue", _logger, ct);
+
+    private static void CollectNames(JsonElement root, Dictionary<string, string> names)
+        => OneFootballApi.VisitCards(root, OneFootballApi.HasHomeAndAwayNames, card =>
         {
-            using var response = await _http.GetAsync(path, ct);
-            if (response.StatusCode == HttpStatusCode.NotFound)
-            {
-                return default;
-            }
-
-            response.EnsureSuccessStatusCode();
-            payload = await response.Content.ReadAsStringAsync(ct);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
-        {
-            if (ct.IsCancellationRequested)
-            {
-                throw;
-            }
-
-            // Unlike the results refresh, a partial answer here is worse than none:
-            // every club missing from a half-loaded roster would be reported as
-            // "not found in the source", so a failed tab fails the whole sync.
-            _logger.LogWarning(ex, "Failed to fetch the team catalogue from OneFootball ({Path}).", path);
-            throw new BusinessRuleException("teams.syncFailed");
-        }
-
-        try
-        {
-            using var doc = JsonDocument.Parse(payload);
-            return doc.RootElement.Clone();
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogWarning(ex, "Could not parse the OneFootball team catalogue payload as JSON.");
-            throw new BusinessRuleException("teams.syncFailed");
-        }
-    }
-
-    private static void CollectNames(JsonElement node, Dictionary<string, string> names)
-    {
-        switch (node.ValueKind)
-        {
-            case JsonValueKind.Object:
-                if (IsMatchCard(node))
-                {
-                    AddName(node, "homeTeam", names);
-                    AddName(node, "awayTeam", names);
-                }
-
-                foreach (var prop in node.EnumerateObject())
-                {
-                    CollectNames(prop.Value, names);
-                }
-
-                break;
-
-            case JsonValueKind.Array:
-                foreach (var item in node.EnumerateArray())
-                {
-                    CollectNames(item, names);
-                }
-
-                break;
-        }
-    }
+            AddName(card, "homeTeam", names);
+            AddName(card, "awayTeam", names);
+        });
 
     private static void AddName(JsonElement card, string teamProperty, Dictionary<string, string> names)
     {
@@ -153,17 +83,4 @@ public class OneFootballTeamCatalogProvider : ITeamCatalogProvider
         var trimmed = name.Trim();
         names.TryAdd(FootballReference.Normalize(trimmed), trimmed);
     }
-
-    // --- JSON walking (mirrors the OneFootball results provider) --------------
-    // A results-tab card carries no kickoff, so the home/away names are the only
-    // reliable marker of a match card here.
-
-    private static bool IsMatchCard(JsonElement o)
-        => o.TryGetProperty("homeTeam", out var h) && HasName(h)
-            && o.TryGetProperty("awayTeam", out var a) && HasName(a);
-
-    private static bool HasName(JsonElement team)
-        => team.ValueKind == JsonValueKind.Object
-            && team.TryGetProperty("name", out var n)
-            && n.ValueKind == JsonValueKind.String;
 }

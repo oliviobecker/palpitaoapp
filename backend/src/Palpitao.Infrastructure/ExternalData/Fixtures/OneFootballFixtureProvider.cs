@@ -1,11 +1,10 @@
 using System.Globalization;
-using System.Net;
-using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Palpitao.Application.Fixtures;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Enums;
+using Palpitao.Infrastructure.ExternalData.OneFootball;
 
 namespace Palpitao.Infrastructure.ExternalData.Fixtures;
 
@@ -25,16 +24,6 @@ namespace Palpitao.Infrastructure.ExternalData.Fixtures;
 /// </summary>
 public class OneFootballFixtureProvider : IFixtureProvider
 {
-    private static readonly IReadOnlyDictionary<Competition, string> Slugs = new Dictionary<Competition, string>
-    {
-        [Competition.PremierLeague] = "premier-league-9",
-        [Competition.Championship] = "efl-championship-27",
-        [Competition.LeagueOne] = "efl-league-one-42",
-        [Competition.FACup] = "fa-cup-17",
-        // https://onefootball.com/en/competition/fifa-world-cup-12/fixtures
-        [Competition.FifaWorldCup] = "fifa-world-cup-12",
-    };
-
     private readonly HttpClient _http;
     private readonly FixtureOptions _options;
     private readonly ILogger<OneFootballFixtureProvider> _logger;
@@ -48,18 +37,10 @@ public class OneFootballFixtureProvider : IFixtureProvider
         _options = options.Value;
         _logger = logger;
 
-        _http.Timeout = TimeSpan.FromSeconds(Math.Clamp(_options.TimeoutSeconds, 5, 60));
-        var baseUrl = string.IsNullOrWhiteSpace(_options.OneFootballApiBaseUrl)
-            ? "https://api.onefootball.com/web-experience/en/competition"
-            : _options.OneFootballApiBaseUrl;
-        _http.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
-        if (!_http.DefaultRequestHeaders.UserAgent.Any())
-        {
-            _http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("PalpitaoEngland", "1.0"));
-        }
+        OneFootballApi.Configure(_http, _options.OneFootballApiBaseUrl, _options.TimeoutSeconds);
     }
 
-    public string SourceName => "OneFootball";
+    public string SourceName => OneFootballApi.SourceName;
 
     public async Task<IReadOnlyList<FixtureCandidateDto>> SearchFixturesAsync(
         DateTime startDate,
@@ -67,7 +48,7 @@ public class OneFootballFixtureProvider : IFixtureProvider
         IReadOnlyList<Competition> competitions,
         CancellationToken cancellationToken)
     {
-        var allowed = (competitions.Count > 0 ? competitions.Distinct() : Slugs.Keys).ToList();
+        var allowed = (competitions.Count > 0 ? competitions.Distinct() : OneFootballApi.Slugs.Keys).ToList();
 
         var result = new List<FixtureCandidateDto>();
         var seen = new HashSet<string>();
@@ -76,7 +57,7 @@ public class OneFootballFixtureProvider : IFixtureProvider
 
         foreach (var competition in allowed)
         {
-            if (!Slugs.TryGetValue(competition, out var slug))
+            if (!OneFootballApi.Slugs.TryGetValue(competition, out var slug))
             {
                 continue;
             }
@@ -104,42 +85,8 @@ public class OneFootballFixtureProvider : IFixtureProvider
         return result;
     }
 
-    private async Task<JsonElement> FetchAsync(string path, CancellationToken ct)
-    {
-        string payload;
-        try
-        {
-            using var response = await _http.GetAsync(path, ct);
-            if (response.StatusCode == HttpStatusCode.NotFound)
-            {
-                return default; // competition not available -> empty
-            }
-
-            response.EnsureSuccessStatusCode();
-            payload = await response.Content.ReadAsStringAsync(ct);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
-        {
-            if (ct.IsCancellationRequested)
-            {
-                throw;
-            }
-
-            _logger.LogWarning(ex, "Failed to fetch fixtures from OneFootball ({Path}).", path);
-            throw new BusinessRuleException("fixtures.fetchFailed");
-        }
-
-        try
-        {
-            using var doc = JsonDocument.Parse(payload);
-            return doc.RootElement.Clone();
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogWarning(ex, "Could not parse OneFootball payload as JSON.");
-            throw new BusinessRuleException("fixtures.fetchFailed");
-        }
-    }
+    private Task<JsonElement> FetchAsync(string path, CancellationToken ct)
+        => OneFootballApi.FetchAsync(_http, path, "fixtures.fetchFailed", "fixtures", _logger, ct);
 
     private void ParseInto(
         List<FixtureCandidateDto> acc,
@@ -155,11 +102,11 @@ public class OneFootballFixtureProvider : IFixtureProvider
         }
 
         var cards = new List<JsonElement>();
-        CollectMatchCards(root, cards);
+        OneFootballApi.VisitCards(root, IsMatchCard, cards.Add);
 
         foreach (var card in cards)
         {
-            if (!TryParseDate(GetString(card, "kickoff"), out var startsAt) || startsAt < start || startsAt > end)
+            if (!TryParseDate(OneFootballApi.GetString(card, "kickoff"), out var startsAt) || startsAt < start || startsAt > end)
             {
                 continue;
             }
@@ -173,7 +120,7 @@ public class OneFootballFixtureProvider : IFixtureProvider
 
             var matchId = card.TryGetProperty("matchId", out var mid)
                 ? mid.ToString()
-                : GetString(card, "link") ?? Guid.NewGuid().ToString("N");
+                : OneFootballApi.GetString(card, "link") ?? Guid.NewGuid().ToString("N");
             var id = $"onefootball-{matchId}";
             if (!seen.Add(id))
             {
@@ -190,37 +137,6 @@ public class OneFootballFixtureProvider : IFixtureProvider
                 StartsAt = startsAt,
                 Source = SourceName,
             });
-        }
-    }
-
-    /// <summary>
-    /// Recursively collects match-card objects: any object carrying a string
-    /// <c>kickoff</c> and <c>homeTeam.name</c> / <c>awayTeam.name</c>.
-    /// </summary>
-    private static void CollectMatchCards(JsonElement node, List<JsonElement> cards)
-    {
-        switch (node.ValueKind)
-        {
-            case JsonValueKind.Object:
-                if (IsMatchCard(node))
-                {
-                    cards.Add(node);
-                }
-
-                foreach (var prop in node.EnumerateObject())
-                {
-                    CollectMatchCards(prop.Value, cards);
-                }
-
-                break;
-
-            case JsonValueKind.Array:
-                foreach (var item in node.EnumerateArray())
-                {
-                    CollectMatchCards(item, cards);
-                }
-
-                break;
         }
     }
 
@@ -288,7 +204,7 @@ public class OneFootballFixtureProvider : IFixtureProvider
         var parts = new List<string>();
         foreach (var key in keys)
         {
-            var value = GetString(card, key);
+            var value = OneFootballApi.GetString(card, key);
             if (!string.IsNullOrWhiteSpace(value))
             {
                 parts.Add(value!);
@@ -298,20 +214,10 @@ public class OneFootballFixtureProvider : IFixtureProvider
         return string.Join(" ", parts).ToLowerInvariant();
     }
 
+    /// <summary>A fixture card: a match card with a string <c>kickoff</c>.</summary>
     private static bool IsMatchCard(JsonElement o)
         => o.TryGetProperty("kickoff", out var k) && k.ValueKind == JsonValueKind.String
-            && o.TryGetProperty("homeTeam", out var h) && HasName(h)
-            && o.TryGetProperty("awayTeam", out var a) && HasName(a);
-
-    private static bool HasName(JsonElement team)
-        => team.ValueKind == JsonValueKind.Object
-            && team.TryGetProperty("name", out var n)
-            && n.ValueKind == JsonValueKind.String;
-
-    private static string? GetString(JsonElement element, string property)
-        => element.TryGetProperty(property, out var v) && v.ValueKind == JsonValueKind.String
-            ? v.GetString()
-            : null;
+            && OneFootballApi.HasHomeAndAwayNames(o);
 
     private static bool TryParseDate(string? raw, out DateTime value)
     {
