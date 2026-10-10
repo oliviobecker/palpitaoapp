@@ -1,8 +1,28 @@
 # HTTP API
 
 The main endpoints, grouped by area. In deployed environments the API is mounted under `/api`
-(an IIS sub-application); a local `dotnet run` serves the same routes from the root. Running the
-backend in Development also serves the OpenAPI document at `/openapi/v1.json`.
+(an IIS sub-application); a local `dotnet run` serves the same routes from the root.
+
+**Browse it:** in Development the backend serves the **Scalar** reference at
+`https://localhost:7099/scalar` (try requests there: sign in with `POST /Auth/login`, paste the
+token into the bearer field, and set `X-Group-Id`), and the raw OpenAPI document at
+`/openapi/v1.json`. Both follow `OpenApi:Enabled`, which only appsettings.Development.json turns on.
+
+**Errors** are RFC 7807 problems (`application/problem+json`) localized by `Accept-Language`:
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "The e-mail is required.",
+  "message": "The e-mail is required.",
+  "traceId": "0HNP6VDAKSFFA:00000001"
+}
+```
+
+`message` repeats `detail` for the SPA; `traceId` matches the server logs and Sentry
+([ADR 0007](adr/0007-problem-details-with-message.md)).
 
 **Auth** · `POST /api/auth/login` (returns access + refresh token) · `POST /api/auth/refresh` (rotate) · `POST /api/auth/logout` (revoke) · `POST /api/auth/register` (public sign-up, pending group approval) · `POST /api/auth/create-group` (public) · `GET /api/auth/my-groups` · `GET /api/auth/my-groups/pending` (pending/rejected/deactivated, for the `/pending` screen)
 
