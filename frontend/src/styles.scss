@@ -716,3 +716,33 @@ app-form-field.is-invalid .form-select:focus {
     animation: none;
   }
 }
+
+/* --- Public standings link (features/public) -------------------------------
+   Global because the page's markup is split across its child components. */
+.public-wrap {
+  max-width: 720px;
+  margin-inline: auto;
+  padding: 1rem 0.75rem 3rem;
+}
+/* Desktop gets room for the extra columns instead of a phone-width column
+   stranded in the middle of a monitor. */
+@media (min-width: 768px) {
+  .public-wrap {
+    max-width: 960px;
+  }
+}
+.public-wrap .calc {
+  font-variant-numeric: tabular-nums;
+}
+.public-wrap .match-row:last-child {
+  border-bottom: 0 !important;
+}
+/* The accordion header is a bare button over a card body: without this it gives no
+   sign at all that it can be pressed. */
+.public-wrap .row-toggle {
+  transition: background-color 0.15s ease;
+}
+.public-wrap .row-toggle:hover,
+.public-wrap .row-toggle:focus-visible {
+  background-color: var(--surface-2) !important;
+}
