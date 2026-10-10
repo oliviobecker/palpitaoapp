@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Palpitao.Api.Auth;
 using Palpitao.Api.DTOs.Auth;
 using Palpitao.Api.DTOs.Groups;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Auth;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Localization;

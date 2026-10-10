@@ -1,7 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Data;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Enums;
 using Xunit;
 
 namespace Palpitao.Api.Tests.Data;

@@ -1,6 +1,6 @@
 using Palpitao.Api.Data;
-using Palpitao.Api.Entities;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Entities;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Groups;

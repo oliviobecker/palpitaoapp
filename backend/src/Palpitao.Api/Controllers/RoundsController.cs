@@ -6,7 +6,9 @@ using Palpitao.Api.DTOs.Results;
 using Palpitao.Api.DTOs.Rounds;
 using Palpitao.Api.DTOs.Scoring;
 using Palpitao.Api.Services.Rounds;
+using Palpitao.Domain.Rounds;
 using Palpitao.Api.Services.Scoring;
+using Palpitao.Domain.Scoring;
 using Palpitao.Api.Services.Standings;
 using Sentry;
 

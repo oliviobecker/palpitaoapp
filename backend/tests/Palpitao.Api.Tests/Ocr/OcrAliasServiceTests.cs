@@ -1,10 +1,11 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Admin;
-using Palpitao.Api.Entities;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Entities;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Ocr;
 using Palpitao.Api.Tests.TestSupport;

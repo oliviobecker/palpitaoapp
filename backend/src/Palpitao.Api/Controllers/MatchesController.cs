@@ -4,7 +4,9 @@ using Palpitao.Api.Auth;
 using Palpitao.Api.DTOs.Matches;
 using Palpitao.Api.DTOs.Scoring;
 using Palpitao.Api.Services.Rounds;
+using Palpitao.Domain.Rounds;
 using Palpitao.Api.Services.Scoring;
+using Palpitao.Domain.Scoring;
 
 namespace Palpitao.Api.Controllers;
 

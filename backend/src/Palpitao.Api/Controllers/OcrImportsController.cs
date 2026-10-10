@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Net.Http.Headers;
 using Palpitao.Api.Auth;
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Palpitao.Api.DTOs.Admin;
 using Palpitao.Api.Services.Ocr;
 using Sentry;

@@ -1,5 +1,6 @@
 using Palpitao.Api.Common;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Common;
+using Palpitao.Domain.Enums;
 
 namespace Palpitao.Api.DTOs.Predictions;
 

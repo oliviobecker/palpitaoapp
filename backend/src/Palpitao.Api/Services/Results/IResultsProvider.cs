@@ -1,5 +1,5 @@
 using Palpitao.Api.DTOs.Results;
-using Palpitao.Api.Entities;
+using Palpitao.Domain.Entities;
 
 namespace Palpitao.Api.Services.Results;
 

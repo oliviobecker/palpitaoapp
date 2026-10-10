@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Palpitao.Api.Data;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Flavio;

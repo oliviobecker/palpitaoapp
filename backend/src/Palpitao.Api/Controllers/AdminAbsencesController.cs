@@ -4,6 +4,7 @@ using Palpitao.Api.Auth;
 using Palpitao.Api.DTOs.Absences;
 using Palpitao.Api.Services.Absences;
 using Palpitao.Api.Services.Scoring;
+using Palpitao.Domain.Scoring;
 
 namespace Palpitao.Api.Controllers;
 

@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Scouts;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Abstractions;
 

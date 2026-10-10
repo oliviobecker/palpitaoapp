@@ -25,6 +25,10 @@
     <PackageReference Include="Tesseract" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Palpitao.Domain\Palpitao.Domain.csproj" />
+  </ItemGroup>
+
   <!-- Copy the Tesseract language files (por/eng .traineddata) to the output. -->
   <ItemGroup>
     <Content Include="..\..\tessdata\**" Link="tessdata\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />

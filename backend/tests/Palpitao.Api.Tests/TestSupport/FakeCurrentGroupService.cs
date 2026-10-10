@@ -1,5 +1,5 @@
 using Palpitao.Api.Data;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Groups;
 
 namespace Palpitao.Api.Tests.TestSupport;

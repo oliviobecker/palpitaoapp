@@ -1,8 +1,9 @@
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Palpitao.Api.DTOs.Auth;
 using Palpitao.Api.DTOs.Matches;
 using Palpitao.Api.DTOs.Predictions;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Validation;
 using Xunit;
 

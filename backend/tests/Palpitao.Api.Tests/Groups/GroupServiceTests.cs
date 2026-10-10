@@ -1,8 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Data;
-using Palpitao.Api.Entities;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Entities;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Groups;
 using Xunit;
 

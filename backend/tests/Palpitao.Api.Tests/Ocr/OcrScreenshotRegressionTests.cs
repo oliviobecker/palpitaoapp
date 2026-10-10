@@ -1,7 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Data;
-using Palpitao.Api.Entities;
+using Palpitao.Domain.Entities;
 using Palpitao.Api.Services.Ocr;
 using Xunit;
 

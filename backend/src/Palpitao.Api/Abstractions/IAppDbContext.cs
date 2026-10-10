@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Palpitao.Api.Entities;
+using Palpitao.Domain.Entities;
 
 namespace Palpitao.Api.Abstractions;
 

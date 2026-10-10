@@ -2,12 +2,13 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Auth;
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Auth;
-using Palpitao.Api.Entities;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Entities;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Audit;
-using Group = Palpitao.Api.Entities.Group;
+using Group = Palpitao.Domain.Entities.Group;
 using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Auth;
@@ -99,7 +100,7 @@ public partial class AuthService : IAuthService
         await _db.SaveChangesAsync(ct);
     }
 
-    public async Task CreateGroupAsync(DTOs.Groups.CreateGroupRequest request, CancellationToken ct)
+    public async Task CreateGroupAsync(Palpitao.Api.DTOs.Groups.CreateGroupRequest request, CancellationToken ct)
     {
         var groupName = (request.GroupName ?? string.Empty).Trim();
         var adminName = (request.AdminName ?? string.Empty).Trim();

@@ -3,7 +3,8 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Palpitao.Api.Common;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Common;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Fixtures;
 
 namespace Palpitao.Api.Services.Teams;

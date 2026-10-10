@@ -1,4 +1,5 @@
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Palpitao.Api.Services.Localization;
 
 namespace Palpitao.Api.Tests.TestSupport;

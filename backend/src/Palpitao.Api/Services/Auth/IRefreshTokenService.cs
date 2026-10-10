@@ -1,4 +1,4 @@
-using Palpitao.Api.Entities;
+using Palpitao.Domain.Entities;
 
 namespace Palpitao.Api.Services.Auth;
 

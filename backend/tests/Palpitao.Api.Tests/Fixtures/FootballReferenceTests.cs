@@ -1,4 +1,5 @@
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Xunit;
 
 namespace Palpitao.Api.Tests.Fixtures;

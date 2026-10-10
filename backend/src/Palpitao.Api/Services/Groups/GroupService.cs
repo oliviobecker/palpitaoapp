@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Groups;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Groups;

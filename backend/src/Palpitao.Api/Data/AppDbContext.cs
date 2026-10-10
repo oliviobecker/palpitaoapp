@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Palpitao.Api.Common;
-using Palpitao.Api.Entities;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Common;
+using Palpitao.Domain.Entities;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Data;
@@ -592,8 +593,8 @@ public class AppDbContext : DbContext, IAppDbContext
             Id = SeedIds.DefaultGroupAdminMembership,
             GroupId = SeedIds.DefaultGroup,
             UserId = SeedIds.AdminUser,
-            Role = Enums.GroupRole.GroupAdmin,
-            Status = Enums.GroupUserStatus.Approved,
+            Role = GroupRole.GroupAdmin,
+            Status = GroupUserStatus.Approved,
             ApprovedAt = seededAt,
             CreatedAt = seededAt,
             UpdatedAt = seededAt,

@@ -1,12 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Scoring;
-using Palpitao.Api.Entities;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Entities;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Abstractions;
+using Palpitao.Domain.Scoring;
 
 namespace Palpitao.Api.Services.Scoring;
 

@@ -1,7 +1,8 @@
 using Palpitao.Api.Data;
-using Palpitao.Api.Entities;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Entities;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Abstractions;
+using Palpitao.Domain.Rounds;
 
 namespace Palpitao.Api.Services.Rounds;
 

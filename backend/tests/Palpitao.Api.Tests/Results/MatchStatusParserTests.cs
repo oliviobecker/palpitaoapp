@@ -1,4 +1,4 @@
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Results;
 using Xunit;
 

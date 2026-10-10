@@ -1,13 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Results;
-using Palpitao.Api.Entities;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Entities;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Absences;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Rounds;
+using Palpitao.Domain.Rounds;
 using Palpitao.Api.Services.Scoring;
+using Palpitao.Domain.Scoring;
 using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Standings;

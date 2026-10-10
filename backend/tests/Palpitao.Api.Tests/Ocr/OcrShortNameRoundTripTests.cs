@@ -1,8 +1,9 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Palpitao.Api.Data;
-using Palpitao.Api.Entities;
+using Palpitao.Domain.Entities;
 using Palpitao.Api.Services.Ocr;
 using Xunit;
 
@@ -19,7 +20,7 @@ namespace Palpitao.Api.Tests.Ocr;
 /// is ambiguous (matches two clubs) fails here instead of silently degrading to a
 /// manual-review row in production. The table mirrors the frontend one — adding an
 /// entry there means adding one here, and a row in the
-/// <see cref="Palpitao.Api.Common.FootballReference"/> alias map when the short name is
+/// <see cref="Palpitao.Domain.Common.FootballReference"/> alias map when the short name is
 /// not a substring of the full name.
 ///
 /// One documented exception: the frontend also shortens "Liverpool FC", the spelling the

@@ -5,6 +5,7 @@ using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Flavio;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Scoring;
+using Palpitao.Domain.Scoring;
 using Palpitao.Api.Services.Standings;
 using Palpitao.Api.Services.Users;
 using Palpitao.Api.Auth;

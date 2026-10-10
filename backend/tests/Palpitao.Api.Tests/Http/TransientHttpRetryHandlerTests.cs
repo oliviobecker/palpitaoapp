@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.Extensions.Logging.Abstractions;
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Xunit;
 
 namespace Palpitao.Api.Tests.Http;

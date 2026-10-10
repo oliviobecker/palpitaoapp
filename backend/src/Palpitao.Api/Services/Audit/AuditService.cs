@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Admin;
-using Palpitao.Api.Entities;
+using Palpitao.Domain.Entities;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Abstractions;
 

@@ -4,8 +4,9 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Palpitao.Api.DTOs.Fixtures;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Enums;
 
 namespace Palpitao.Api.Services.Fixtures;
 

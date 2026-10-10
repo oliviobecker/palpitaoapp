@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Palpitao.Api.Auth;
 using Palpitao.Api.DTOs.Teams;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Teams;
 
 namespace Palpitao.Api.Controllers;

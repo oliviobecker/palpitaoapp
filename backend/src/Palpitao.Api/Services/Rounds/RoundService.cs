@@ -1,16 +1,19 @@
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Matches;
 using Palpitao.Api.DTOs.Rounds;
-using Palpitao.Api.Entities;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Entities;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Flavio;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Scoring;
-using Palpitao.Api.Services.Tournaments;
+using Palpitao.Domain.Scoring;
+using Palpitao.Domain.Tournaments;
 using Palpitao.Api.Abstractions;
+using Palpitao.Domain.Rounds;
 
 namespace Palpitao.Api.Services.Rounds;
 

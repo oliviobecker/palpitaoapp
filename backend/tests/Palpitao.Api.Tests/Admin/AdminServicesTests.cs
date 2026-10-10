@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Admin;
 using Palpitao.Api.DTOs.Seasons;
@@ -48,10 +49,10 @@ public class AdminServicesTests
                 StartDate = new DateOnly(2026, 6, 1),
                 EndDate = new DateOnly(2026, 7, 31),
                 IsActive = true,
-                TournamentType = Palpitao.Api.Enums.TournamentType.FifaWorldCup,
+                TournamentType = Palpitao.Domain.Enums.TournamentType.FifaWorldCup,
             },
             Admin, Ct);
-        Assert.Equal(Palpitao.Api.Enums.TournamentType.FifaWorldCup, created.TournamentType);
+        Assert.Equal(Palpitao.Domain.Enums.TournamentType.FifaWorldCup, created.TournamentType);
 
         // The certame type is fixed after creation: an update ignores a different
         // TournamentType and keeps the original.
@@ -62,10 +63,10 @@ public class AdminServicesTests
                 StartDate = new DateOnly(2026, 6, 1),
                 EndDate = new DateOnly(2026, 7, 31),
                 IsActive = true,
-                TournamentType = Palpitao.Api.Enums.TournamentType.PalpitaoEngland,
+                TournamentType = Palpitao.Domain.Enums.TournamentType.PalpitaoEngland,
             },
             Admin, Ct);
-        Assert.Equal(Palpitao.Api.Enums.TournamentType.FifaWorldCup, updated.TournamentType);
+        Assert.Equal(Palpitao.Domain.Enums.TournamentType.FifaWorldCup, updated.TournamentType);
     }
 
     [Fact]

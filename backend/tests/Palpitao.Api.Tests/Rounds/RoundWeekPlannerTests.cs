@@ -1,6 +1,8 @@
 using Palpitao.Api.Common;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Common;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Rounds;
+using Palpitao.Domain.Rounds;
 using Xunit;
 
 namespace Palpitao.Api.Tests.Rounds;

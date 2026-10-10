@@ -6,11 +6,12 @@ using Palpitao.Api.DTOs.Absences;
 using Palpitao.Api.DTOs.Matches;
 using Palpitao.Api.DTOs.Predictions;
 using Palpitao.Api.DTOs.Rounds;
-using Palpitao.Api.Entities;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Entities;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Predictions;
 using Palpitao.Api.Services.Rounds;
+using Palpitao.Domain.Rounds;
 using Palpitao.Api.Tests.TestSupport;
 using Xunit;
 

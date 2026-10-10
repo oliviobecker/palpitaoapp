@@ -1,5 +1,5 @@
 using Palpitao.Api.DTOs.Fixtures;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Enums;
 
 namespace Palpitao.Api.Services.Fixtures;
 

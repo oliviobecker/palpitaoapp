@@ -6,7 +6,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Palpitao.Api.Data;
-using Palpitao.Api.Entities;
+using Palpitao.Domain.Entities;
 using Palpitao.Api.Services.Ocr;
 using Xunit;
 using Xunit.Abstractions;

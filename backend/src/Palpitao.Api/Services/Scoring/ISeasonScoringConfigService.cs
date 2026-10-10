@@ -1,4 +1,5 @@
 using Palpitao.Api.DTOs.Scoring;
+using Palpitao.Domain.Scoring;
 
 namespace Palpitao.Api.Services.Scoring;
 

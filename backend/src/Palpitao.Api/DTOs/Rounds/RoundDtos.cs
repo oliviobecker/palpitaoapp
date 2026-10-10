@@ -1,6 +1,7 @@
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Palpitao.Api.DTOs.Matches;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Enums;
 
 namespace Palpitao.Api.DTOs.Rounds;
 

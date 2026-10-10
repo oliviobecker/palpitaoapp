@@ -25,7 +25,7 @@ public interface IAuthService
     /// Public create-group flow: creates the admin account, the group and the
     /// creator's approved <c>GroupAdmin</c> membership. No JWT (user signs in next).
     /// </summary>
-    Task CreateGroupAsync(DTOs.Groups.CreateGroupRequest request, CancellationToken ct);
+    Task CreateGroupAsync(Palpitao.Api.DTOs.Groups.CreateGroupRequest request, CancellationToken ct);
 
     /// <summary>Authenticates a user, enforcing approval status and active flag.</summary>
     Task<LoginOutcome> LoginAsync(LoginRequest request, CancellationToken ct);

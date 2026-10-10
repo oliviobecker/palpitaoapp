@@ -1,14 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Fixtures;
-using Palpitao.Api.Entities;
-using Palpitao.Api.Enums;
+using Palpitao.Domain.Entities;
+using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Scoring;
-using Palpitao.Api.Services.Tournaments;
+using Palpitao.Domain.Scoring;
+using Palpitao.Domain.Tournaments;
 using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Fixtures;

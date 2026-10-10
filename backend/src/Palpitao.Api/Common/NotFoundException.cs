@@ -1,3 +1,5 @@
+using Palpitao.Domain.Common;
+
 namespace Palpitao.Api.Common;
 
 /// <summary>

@@ -1,5 +1,6 @@
 using Palpitao.Api.DTOs.Matches;
 using Palpitao.Api.DTOs.Rounds;
+using Palpitao.Domain.Rounds;
 
 namespace Palpitao.Api.Services.Rounds;
 

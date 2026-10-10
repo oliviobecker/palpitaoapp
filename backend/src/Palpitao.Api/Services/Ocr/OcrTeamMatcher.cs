@@ -1,7 +1,8 @@
 using System.Globalization;
 using System.Text;
 using Palpitao.Api.Common;
-using Palpitao.Api.Entities;
+using Palpitao.Domain.Common;
+using Palpitao.Domain.Entities;
 
 namespace Palpitao.Api.Services.Ocr;
 

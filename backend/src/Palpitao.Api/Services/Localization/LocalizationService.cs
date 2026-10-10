@@ -1,4 +1,5 @@
 using Palpitao.Api.Common;
+using Palpitao.Domain.Common;
 
 namespace Palpitao.Api.Services.Localization;
 
