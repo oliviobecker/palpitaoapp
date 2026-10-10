@@ -10,16 +10,16 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { RoundStatus } from '../../core/models/enums';
-import { RoundSummary } from '../../core/models/models';
-import { RoundsService } from '../../core/services/rounds.service';
-import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { Icon } from '../../shared/components/icon/icon';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
-import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
-import { compareRounds } from '../../shared/utils/round-name.util';
+import { RoundStatus } from '@core/models/enums';
+import { RoundSummary } from '@core/models/models';
+import { RoundsService } from '@core/services/rounds.service';
+import { EmptyState } from '@shared/components/empty-state/empty-state';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { Icon } from '@shared/components/icon/icon';
+import { PageHeader } from '@shared/components/page-header/page-header';
+import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
+import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
+import { compareRounds } from '@shared/utils/round-name.util';
 
 type Filter = 'all' | RoundStatus;
 

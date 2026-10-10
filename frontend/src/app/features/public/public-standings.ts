@@ -11,8 +11,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { Lang, LanguageService } from '../../core/i18n/language.service';
-import { ScoreCategory } from '../../core/models/enums';
+import { Lang, LanguageService } from '@core/i18n/language.service';
+import { ScoreCategory } from '@core/models/enums';
 import {
   PublicMatchScore,
   PublicParticipantScore,
@@ -21,26 +21,26 @@ import {
   PublicSeason,
   PublicStandingRow,
   RoundResultMatch,
-} from '../../core/models/models';
-import { PublicStandingsService } from '../../core/services/public-standings.service';
-import { ThemeService } from '../../core/theme/theme.service';
-import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
-import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { Icon } from '../../shared/components/icon/icon';
-import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
-import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
-import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
-import { avatarColor, initials } from '../../shared/utils/avatar.util';
-import { phaseLabel } from '../../shared/utils/match.util';
+} from '@core/models/models';
+import { PublicStandingsService } from '@core/services/public-standings.service';
+import { ThemeService } from '@core/theme/theme.service';
+import { CompetitionBadge } from '@shared/components/competition-badge/competition-badge';
+import { EmptyState } from '@shared/components/empty-state/empty-state';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { Icon } from '@shared/components/icon/icon';
+import { MultiplierBadge } from '@shared/components/multiplier-badge/multiplier-badge';
+import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
+import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
+import { avatarColor, initials } from '@shared/utils/avatar.util';
+import { phaseLabel } from '@shared/utils/match.util';
 import {
   NumberedRound,
   compareRounds,
   parseRoundLabel,
   roundLabel,
   sameRound,
-} from '../../shared/utils/round-name.util';
-import { shortTeamName } from '../../shared/utils/team-name.util';
+} from '@shared/utils/round-name.util';
+import { shortTeamName } from '@shared/utils/team-name.util';
 
 type Tab = 'overall' | 'round';
 type Cut = 'participant' | 'match';

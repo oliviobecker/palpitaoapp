@@ -10,15 +10,15 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { OcrBatchSummary } from '../../core/models/models';
-import { ImageViewerService } from '../../core/notifications/image-viewer.service';
-import { OcrImageService } from '../../core/services/ocr-image.service';
-import { AdminService } from '../../core/services/admin.service';
-import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { Icon } from '../../shared/components/icon/icon';
-import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
-import { isReviewableOcrBatch, ocrBatchStatusClass } from '../../shared/utils/ocr-batch.util';
+import { OcrBatchSummary } from '@core/models/models';
+import { ImageViewerService } from '@core/notifications/image-viewer.service';
+import { OcrImageService } from '@core/services/ocr-image.service';
+import { AdminService } from '@core/services/admin.service';
+import { EmptyState } from '@shared/components/empty-state/empty-state';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { Icon } from '@shared/components/icon/icon';
+import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
+import { isReviewableOcrBatch, ocrBatchStatusClass } from '@shared/utils/ocr-batch.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

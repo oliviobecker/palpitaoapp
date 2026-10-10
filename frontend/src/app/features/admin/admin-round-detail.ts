@@ -12,7 +12,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable, catchError, forkJoin, of } from 'rxjs';
-import { RoundStatus } from '../../core/models/enums';
+import { RoundStatus } from '@core/models/enums';
 import {
   PredictionCoverage,
   PredictionCoverageParticipant,
@@ -20,27 +20,27 @@ import {
   RoundMatch,
   ScoringConfig,
   Season,
-} from '../../core/models/models';
-import { ConfirmService } from '../../core/notifications/confirm.service';
-import { ToastService } from '../../core/notifications/toast.service';
-import { AdminService } from '../../core/services/admin.service';
-import { GroupContextService } from '../../core/services/group-context.service';
-import { RoundsService } from '../../core/services/rounds.service';
-import { ScoringConfigService } from '../../core/services/scoring-config.service';
-import { SeasonsService } from '../../core/services/seasons.service';
-import { StandingsService } from '../../core/services/standings.service';
-import { RefreshResultsResponse } from '../../core/models/models';
-import { Icon } from '../../shared/components/icon/icon';
-import { MatchList } from '../../shared/components/match-list/match-list';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { RoundResultsEditor } from '../../shared/components/round-results-editor/round-results-editor';
-import { RoundStatusBadge } from '../../shared/components/round-status-badge/round-status-badge';
-import { Skeleton } from '../../shared/components/skeleton/skeleton';
-import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
-import { buildRoundMessage } from '../../shared/utils/round-message.util';
-import { buildClosingMessage } from '../../shared/utils/closing-message.util';
-import { publicStandingsUrl } from '../../shared/utils/public-link.util';
-import { roundLabel } from '../../shared/utils/round-name.util';
+} from '@core/models/models';
+import { ConfirmService } from '@core/notifications/confirm.service';
+import { ToastService } from '@core/notifications/toast.service';
+import { AdminService } from '@core/services/admin.service';
+import { GroupContextService } from '@core/services/group-context.service';
+import { RoundsService } from '@core/services/rounds.service';
+import { ScoringConfigService } from '@core/services/scoring-config.service';
+import { SeasonsService } from '@core/services/seasons.service';
+import { StandingsService } from '@core/services/standings.service';
+import { RefreshResultsResponse } from '@core/models/models';
+import { Icon } from '@shared/components/icon/icon';
+import { MatchList } from '@shared/components/match-list/match-list';
+import { PageHeader } from '@shared/components/page-header/page-header';
+import { RoundResultsEditor } from '@shared/components/round-results-editor/round-results-editor';
+import { RoundStatusBadge } from '@shared/components/round-status-badge/round-status-badge';
+import { Skeleton } from '@shared/components/skeleton/skeleton';
+import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
+import { buildRoundMessage } from '@shared/utils/round-message.util';
+import { buildClosingMessage } from '@shared/utils/closing-message.util';
+import { publicStandingsUrl } from '@shared/utils/public-link.util';
+import { roundLabel } from '@shared/utils/round-name.util';
 import { AdminRoundMessages } from './admin-round-messages';
 import { RoundStepper } from './round-stepper';
 import { AdminFlavioOverrides } from './admin-flavio-overrides';

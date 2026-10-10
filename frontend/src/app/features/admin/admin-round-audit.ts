@@ -10,17 +10,17 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { ScoreCategory } from '../../core/models/enums';
-import { MatchScore, RoundResultMatch, RoundResults } from '../../core/models/models';
-import { RoundsService } from '../../core/services/rounds.service';
-import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
-import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { Icon } from '../../shared/components/icon/icon';
-import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
-import { phaseLabel } from '../../shared/utils/match.util';
+import { ScoreCategory } from '@core/models/enums';
+import { MatchScore, RoundResultMatch, RoundResults } from '@core/models/models';
+import { RoundsService } from '@core/services/rounds.service';
+import { CompetitionBadge } from '@shared/components/competition-badge/competition-badge';
+import { EmptyState } from '@shared/components/empty-state/empty-state';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { Icon } from '@shared/components/icon/icon';
+import { MultiplierBadge } from '@shared/components/multiplier-badge/multiplier-badge';
+import { PageHeader } from '@shared/components/page-header/page-header';
+import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
+import { phaseLabel } from '@shared/utils/match.util';
 
 /**
  * Admin audit: every participant's per-match scoring breakdown for a round, so the admin

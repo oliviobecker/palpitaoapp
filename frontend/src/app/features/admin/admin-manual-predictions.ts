@@ -13,18 +13,18 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
-import { Participant, Round, RoundMatch } from '../../core/models/models';
-import { ToastService } from '../../core/notifications/toast.service';
+import { Participant, Round, RoundMatch } from '@core/models/models';
+import { ToastService } from '@core/notifications/toast.service';
 import {
   AdminParticipantPredictions,
   AdminService,
   ManualPredictionItem,
-} from '../../core/services/admin.service';
-import { RoundsService } from '../../core/services/rounds.service';
-import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
-import { Icon } from '../../shared/components/icon/icon';
-import { Loading } from '../../shared/components/loading/loading';
-import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
+} from '@core/services/admin.service';
+import { RoundsService } from '@core/services/rounds.service';
+import { CompetitionBadge } from '@shared/components/competition-badge/competition-badge';
+import { Icon } from '@shared/components/icon/icon';
+import { Loading } from '@shared/components/loading/loading';
+import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
 import { AdminEntryNotice } from './admin-entry-notice';
 import { adminEntryBlockKey } from './admin-entry.util';
 

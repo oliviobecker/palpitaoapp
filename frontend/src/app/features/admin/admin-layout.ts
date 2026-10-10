@@ -9,8 +9,8 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { AdminService } from '../../core/services/admin.service';
-import { Icon } from '../../shared/components/icon/icon';
+import { AdminService } from '@core/services/admin.service';
+import { Icon } from '@shared/components/icon/icon';
 
 interface AdminTab {
   label: string;

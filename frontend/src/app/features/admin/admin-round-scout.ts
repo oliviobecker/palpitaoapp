@@ -12,14 +12,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { RoundScout } from '../../core/models/models';
-import { ToastService } from '../../core/notifications/toast.service';
-import { AdminService } from '../../core/services/admin.service';
-import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { Icon } from '../../shared/components/icon/icon';
-import { Loading } from '../../shared/components/loading/loading';
-import { copyToClipboard } from '../../shared/utils/clipboard.util';
-import { buildMatchScoutMessage } from '../../shared/utils/scout-message.util';
+import { RoundScout } from '@core/models/models';
+import { ToastService } from '@core/notifications/toast.service';
+import { AdminService } from '@core/services/admin.service';
+import { EmptyState } from '@shared/components/empty-state/empty-state';
+import { Icon } from '@shared/components/icon/icon';
+import { Loading } from '@shared/components/loading/loading';
+import { copyToClipboard } from '@shared/utils/clipboard.util';
+import { buildMatchScoutMessage } from '@shared/utils/scout-message.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

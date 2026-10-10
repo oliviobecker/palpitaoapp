@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, computed, input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
-import { RoundStatus } from '../../../core/models/enums';
+import { RoundStatus } from '@core/models/enums';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

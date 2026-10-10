@@ -12,13 +12,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { AuditLog } from '../../core/models/models';
-import { AdminService, AuditFilter } from '../../core/services/admin.service';
-import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { Icon } from '../../shared/components/icon/icon';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
+import { AuditLog } from '@core/models/models';
+import { AdminService, AuditFilter } from '@core/services/admin.service';
+import { EmptyState } from '@shared/components/empty-state/empty-state';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { Icon } from '@shared/components/icon/icon';
+import { PageHeader } from '@shared/components/page-header/page-header';
+import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

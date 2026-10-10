@@ -12,7 +12,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Observable, catchError, of } from 'rxjs';
-import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
+import { HasUnsavedChanges } from '@core/guards/unsaved-changes.guard';
 import {
   Absence,
   AbsenceCandidateRound,
@@ -20,18 +20,18 @@ import {
   AbsenceReviewResult,
   AbsenceReviewRound,
   Participant,
-} from '../../core/models/models';
-import { ConfirmChoice, ConfirmService } from '../../core/notifications/confirm.service';
-import { ToastService } from '../../core/notifications/toast.service';
-import { AdminService } from '../../core/services/admin.service';
-import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { FormField } from '../../shared/components/form-field/form-field';
-import { Icon } from '../../shared/components/icon/icon';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
-import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
-import { roundLabel } from '../../shared/utils/round-name.util';
+} from '@core/models/models';
+import { ConfirmChoice, ConfirmService } from '@core/notifications/confirm.service';
+import { ToastService } from '@core/notifications/toast.service';
+import { AdminService } from '@core/services/admin.service';
+import { EmptyState } from '@shared/components/empty-state/empty-state';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { FormField } from '@shared/components/form-field/form-field';
+import { Icon } from '@shared/components/icon/icon';
+import { PageHeader } from '@shared/components/page-header/page-header';
+import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
+import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
+import { roundLabel } from '@shared/utils/round-name.util';
 
 /**
  * Whether a candidate round starts out ticked. A locked round's absence lands on its own at

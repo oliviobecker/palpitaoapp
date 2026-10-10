@@ -10,8 +10,8 @@ import {
   signal,
 } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
-import { Competition } from '../../../core/models/enums';
-import { FixtureCandidate } from '../../../core/models/models';
+import { Competition } from '@core/models/enums';
+import { FixtureCandidate } from '@core/models/models';
 
 interface FixtureGroup {
   date: string;

@@ -13,8 +13,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { forkJoin, of, switchMap } from 'rxjs';
-import { AuthService } from '../../core/auth/auth.service';
-import { RoundStatus } from '../../core/models/enums';
+import { AuthService } from '@core/auth/auth.service';
+import { RoundStatus } from '@core/models/enums';
 import {
   MyPredictions,
   Prediction,
@@ -22,19 +22,19 @@ import {
   RoundMatch,
   RoundSummary,
   Standing,
-} from '../../core/models/models';
-import { GroupContextService } from '../../core/services/group-context.service';
-import { PredictionsService } from '../../core/services/predictions.service';
-import { RoundsService } from '../../core/services/rounds.service';
-import { SeasonsService } from '../../core/services/seasons.service';
-import { StandingsService } from '../../core/services/standings.service';
-import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { Icon } from '../../shared/components/icon/icon';
-import { Skeleton } from '../../shared/components/skeleton/skeleton';
-import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
-import { deadlinePassed, predictionDeadlineIso } from '../../shared/utils/deadline.util';
-import { avatarColor, initials } from '../../shared/utils/avatar.util';
+} from '@core/models/models';
+import { GroupContextService } from '@core/services/group-context.service';
+import { PredictionsService } from '@core/services/predictions.service';
+import { RoundsService } from '@core/services/rounds.service';
+import { SeasonsService } from '@core/services/seasons.service';
+import { StandingsService } from '@core/services/standings.service';
+import { CompetitionBadge } from '@shared/components/competition-badge/competition-badge';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { Icon } from '@shared/components/icon/icon';
+import { Skeleton } from '@shared/components/skeleton/skeleton';
+import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
+import { deadlinePassed, predictionDeadlineIso } from '@shared/utils/deadline.util';
+import { avatarColor, initials } from '@shared/utils/avatar.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

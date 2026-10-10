@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { AuthService } from '../../core/auth/auth.service';
-import { Lang, LanguageService } from '../../core/i18n/language.service';
-import { ThemeService } from '../../core/theme/theme.service';
-import { Icon } from '../../shared/components/icon/icon';
+import { AuthService } from '@core/auth/auth.service';
+import { Lang, LanguageService } from '@core/i18n/language.service';
+import { ThemeService } from '@core/theme/theme.service';
+import { Icon } from '@shared/components/icon/icon';
 
 /**
  * Public marketing landing page shown at the root path to signed-out visitors.

@@ -1,4 +1,4 @@
-import { TemporaryStandings } from '../../core/models/models';
+import { TemporaryStandings } from '@core/models/models';
 import { roundLabel } from './round-name.util';
 
 /**

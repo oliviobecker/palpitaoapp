@@ -1,8 +1,8 @@
 import { provideTranslateService } from '@ngx-translate/core';
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
-import { Competition, MatchPhase, MatchStatus } from '../../../core/models/enums';
-import { RoundMatch } from '../../../core/models/models';
+import { Competition, MatchPhase, MatchStatus } from '@core/models/enums';
+import { RoundMatch } from '@core/models/models';
 import { MatchList } from './match-list';
 
 function match(partial: Partial<RoundMatch> = {}): RoundMatch {

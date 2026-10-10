@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, computed, input } from '@angular/core';
-import { Competition } from '../../../core/models/enums';
+import { Competition } from '@core/models/enums';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

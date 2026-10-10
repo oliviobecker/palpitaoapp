@@ -9,11 +9,11 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { AuthService } from '../../core/auth/auth.service';
-import { GroupRole } from '../../core/models/enums';
-import { MyGroup } from '../../core/models/models';
-import { GroupContextService } from '../../core/services/group-context.service';
-import { GroupsService } from '../../core/services/groups.service';
+import { AuthService } from '@core/auth/auth.service';
+import { GroupRole } from '@core/models/enums';
+import { MyGroup } from '@core/models/models';
+import { GroupContextService } from '@core/services/group-context.service';
+import { GroupsService } from '@core/services/groups.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

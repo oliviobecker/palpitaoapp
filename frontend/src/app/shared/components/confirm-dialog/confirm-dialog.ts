@@ -10,7 +10,7 @@ import {
   viewChildren,
 } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
-import { ConfirmService } from '../../../core/notifications/confirm.service';
+import { ConfirmService } from '@core/notifications/confirm.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

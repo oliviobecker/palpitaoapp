@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, computed, input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
-import { RoundStatus } from '../../core/models/enums';
-import { Icon } from '../../shared/components/icon/icon';
+import { RoundStatus } from '@core/models/enums';
+import { Icon } from '@shared/components/icon/icon';
 
 type StepState = 'done' | 'current' | 'upcoming';
 interface Step {

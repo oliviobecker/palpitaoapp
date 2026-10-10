@@ -1,10 +1,10 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { LanguageService } from './core/i18n/language.service';
-import { ThemeService } from './core/theme/theme.service';
-import { ConfirmDialog } from './shared/components/confirm-dialog/confirm-dialog';
-import { ImageViewer } from './shared/components/image-viewer/image-viewer';
-import { ToastContainer } from './shared/components/toast-container/toast-container';
+import { LanguageService } from '@core/i18n/language.service';
+import { ThemeService } from '@core/theme/theme.service';
+import { ConfirmDialog } from '@shared/components/confirm-dialog/confirm-dialog';
+import { ImageViewer } from '@shared/components/image-viewer/image-viewer';
+import { ToastContainer } from '@shared/components/toast-container/toast-container';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

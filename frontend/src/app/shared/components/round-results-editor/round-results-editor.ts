@@ -20,10 +20,10 @@ import {
 } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
-import { MatchStatus } from '../../../core/models/enums';
-import { RoundMatch } from '../../../core/models/models';
-import { ToastService } from '../../../core/notifications/toast.service';
-import { MatchesService } from '../../../core/services/matches.service';
+import { MatchStatus } from '@core/models/enums';
+import { RoundMatch } from '@core/models/models';
+import { ToastService } from '@core/notifications/toast.service';
+import { MatchesService } from '@core/services/matches.service';
 import { CompetitionBadge } from '../competition-badge/competition-badge';
 import { Icon } from '../icon/icon';
 

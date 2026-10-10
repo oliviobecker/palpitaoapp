@@ -2,8 +2,8 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { Round } from '../../core/models/models';
-import { Icon } from '../../shared/components/icon/icon';
+import { Round } from '@core/models/models';
+import { Icon } from '@shared/components/icon/icon';
 import { adminEntryBlockKey, flavioLateNotice } from './admin-entry.util';
 
 /**

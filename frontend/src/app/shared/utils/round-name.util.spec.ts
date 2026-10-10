@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RoundStatus } from '../../core/models/enums';
+import { RoundStatus } from '@core/models/enums';
 import {
   compareRounds,
   joinPreview,

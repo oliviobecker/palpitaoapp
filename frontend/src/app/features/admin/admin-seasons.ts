@@ -16,20 +16,20 @@ import {
 } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
-import { TournamentType } from '../../core/models/enums';
-import { Season } from '../../core/models/models';
-import { ConfirmService } from '../../core/notifications/confirm.service';
-import { ToastService } from '../../core/notifications/toast.service';
-import { SeasonsService } from '../../core/services/seasons.service';
-import { copyToClipboard } from '../../shared/utils/clipboard.util';
-import { publicStandingsUrl } from '../../shared/utils/public-link.util';
-import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { FormField } from '../../shared/components/form-field/form-field';
-import { Icon } from '../../shared/components/icon/icon';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
+import { HasUnsavedChanges } from '@core/guards/unsaved-changes.guard';
+import { TournamentType } from '@core/models/enums';
+import { Season } from '@core/models/models';
+import { ConfirmService } from '@core/notifications/confirm.service';
+import { ToastService } from '@core/notifications/toast.service';
+import { SeasonsService } from '@core/services/seasons.service';
+import { copyToClipboard } from '@shared/utils/clipboard.util';
+import { publicStandingsUrl } from '@shared/utils/public-link.util';
+import { EmptyState } from '@shared/components/empty-state/empty-state';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { FormField } from '@shared/components/form-field/form-field';
+import { Icon } from '@shared/components/icon/icon';
+import { PageHeader } from '@shared/components/page-header/page-header';
+import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
 
 /** Form-level validator: endDate must not be before startDate (yyyy-MM-dd strings). */
 function dateRange(group: AbstractControl): ValidationErrors | null {

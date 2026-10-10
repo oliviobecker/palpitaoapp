@@ -11,16 +11,16 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
-import { RoundStatus } from '../../core/models/enums';
-import { Participant, RoundSummary, Season } from '../../core/models/models';
-import { AdminService } from '../../core/services/admin.service';
-import { RoundsService } from '../../core/services/rounds.service';
-import { SeasonsService } from '../../core/services/seasons.service';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { Icon } from '../../shared/components/icon/icon';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { Skeleton } from '../../shared/components/skeleton/skeleton';
-import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
+import { RoundStatus } from '@core/models/enums';
+import { Participant, RoundSummary, Season } from '@core/models/models';
+import { AdminService } from '@core/services/admin.service';
+import { RoundsService } from '@core/services/rounds.service';
+import { SeasonsService } from '@core/services/seasons.service';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { Icon } from '@shared/components/icon/icon';
+import { PageHeader } from '@shared/components/page-header/page-header';
+import { Skeleton } from '@shared/components/skeleton/skeleton';
+import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

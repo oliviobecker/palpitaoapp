@@ -11,23 +11,23 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
-import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
-import { LanguageService } from '../../core/i18n/language.service';
-import { FixtureCandidate, RoundSummary, Season } from '../../core/models/models';
-import { ToastService } from '../../core/notifications/toast.service';
-import { AdminService } from '../../core/services/admin.service';
-import { RoundsService } from '../../core/services/rounds.service';
-import { SeasonsService } from '../../core/services/seasons.service';
+import { HasUnsavedChanges } from '@core/guards/unsaved-changes.guard';
+import { LanguageService } from '@core/i18n/language.service';
+import { FixtureCandidate, RoundSummary, Season } from '@core/models/models';
+import { ToastService } from '@core/notifications/toast.service';
+import { AdminService } from '@core/services/admin.service';
+import { RoundsService } from '@core/services/rounds.service';
+import { SeasonsService } from '@core/services/seasons.service';
 import {
   FixtureSelection,
   FixtureSelectionState,
-} from '../../shared/components/fixture-selection/fixture-selection';
-import { FormField } from '../../shared/components/form-field/form-field';
-import { Icon } from '../../shared/components/icon/icon';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
-import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util';
-import { joinPreview, ordinalRoundName } from '../../shared/utils/round-name.util';
+} from '@shared/components/fixture-selection/fixture-selection';
+import { FormField } from '@shared/components/form-field/form-field';
+import { Icon } from '@shared/components/icon/icon';
+import { PageHeader } from '@shared/components/page-header/page-header';
+import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
+import { isoDateFromToday, toImportItem } from '@shared/utils/fixture.util';
+import { joinPreview, ordinalRoundName } from '@shared/utils/round-name.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

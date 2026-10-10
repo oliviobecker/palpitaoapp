@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { environment } from '@env/environment';
 import { ScoringConfig, ScoringConfigRequest } from '../models/models';
 
 /** Reads and edits a season's scoring ruleset (base points, categories, multipliers, classic teams). */

@@ -16,7 +16,7 @@ import {
   ScoreCategory,
   TournamentType,
   WORLD_CUP_PHASES,
-} from '../../core/models/enums';
+} from '@core/models/enums';
 import {
   ScoringConfig,
   ScoringConfigRequest,
@@ -24,19 +24,19 @@ import {
   ScoringMultiplierRule,
   ScoringRules,
   Season,
-} from '../../core/models/models';
-import { ConfirmService } from '../../core/notifications/confirm.service';
-import { ToastService } from '../../core/notifications/toast.service';
-import { ScoringConfigService } from '../../core/services/scoring-config.service';
-import { SeasonsService } from '../../core/services/seasons.service';
-import { StandingsService } from '../../core/services/standings.service';
-import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { Icon } from '../../shared/components/icon/icon';
-import { Loading } from '../../shared/components/loading/loading';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { phaseLabel } from '../../shared/utils/match.util';
-import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
+} from '@core/models/models';
+import { ConfirmService } from '@core/notifications/confirm.service';
+import { ToastService } from '@core/notifications/toast.service';
+import { ScoringConfigService } from '@core/services/scoring-config.service';
+import { SeasonsService } from '@core/services/seasons.service';
+import { StandingsService } from '@core/services/standings.service';
+import { CompetitionBadge } from '@shared/components/competition-badge/competition-badge';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { Icon } from '@shared/components/icon/icon';
+import { Loading } from '@shared/components/loading/loading';
+import { PageHeader } from '@shared/components/page-header/page-header';
+import { phaseLabel } from '@shared/utils/match.util';
+import { HasUnsavedChanges } from '@core/guards/unsaved-changes.guard';
 
 const MAX_GOALS = 6;
 

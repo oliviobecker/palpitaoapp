@@ -11,15 +11,15 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { of, switchMap } from 'rxjs';
-import { AuthService } from '../../core/auth/auth.service';
-import { Standing } from '../../core/models/models';
-import { SeasonsService } from '../../core/services/seasons.service';
-import { StandingsService } from '../../core/services/standings.service';
-import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
-import { avatarColor, initials } from '../../shared/utils/avatar.util';
+import { AuthService } from '@core/auth/auth.service';
+import { Standing } from '@core/models/models';
+import { SeasonsService } from '@core/services/seasons.service';
+import { StandingsService } from '@core/services/standings.service';
+import { EmptyState } from '@shared/components/empty-state/empty-state';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { PageHeader } from '@shared/components/page-header/page-header';
+import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
+import { avatarColor, initials } from '@shared/utils/avatar.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -13,14 +13,14 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
-import { OcrBatchSummary, Participant } from '../../core/models/models';
-import { ConfirmService } from '../../core/notifications/confirm.service';
-import { ToastService } from '../../core/notifications/toast.service';
-import { AdminService } from '../../core/services/admin.service';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { Icon } from '../../shared/components/icon/icon';
-import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
-import { isPendingOcrBatch, isReadyToConfirm } from '../../shared/utils/ocr-batch.util';
+import { OcrBatchSummary, Participant } from '@core/models/models';
+import { ConfirmService } from '@core/notifications/confirm.service';
+import { ToastService } from '@core/notifications/toast.service';
+import { AdminService } from '@core/services/admin.service';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { Icon } from '@shared/components/icon/icon';
+import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
+import { isPendingOcrBatch, isReadyToConfirm } from '@shared/utils/ocr-batch.util';
 import { OcrUploadQueue } from './ocr-upload-queue';
 
 /**

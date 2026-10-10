@@ -1,5 +1,5 @@
-import { Competition, MatchPhase } from '../../core/models/enums';
-import { RoundMatch, ScoringConfig } from '../../core/models/models';
+import { Competition, MatchPhase } from '@core/models/enums';
+import { RoundMatch, ScoringConfig } from '@core/models/models';
 
 /** Big Seven clubs of the season (used to mirror the backend multiplier rules). */
 export const BIG_SEVEN = new Set<string>([

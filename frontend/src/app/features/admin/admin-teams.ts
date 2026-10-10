@@ -10,17 +10,17 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Competition, TeamType } from '../../core/models/enums';
-import { Team, TeamSyncResponse } from '../../core/models/models';
-import { ToastService } from '../../core/notifications/toast.service';
-import { AdminService } from '../../core/services/admin.service';
-import { TeamsService } from '../../core/services/teams.service';
-import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
-import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { Icon } from '../../shared/components/icon/icon';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { SkeletonList } from '../../shared/components/skeleton/skeleton-list';
+import { Competition, TeamType } from '@core/models/enums';
+import { Team, TeamSyncResponse } from '@core/models/models';
+import { ToastService } from '@core/notifications/toast.service';
+import { AdminService } from '@core/services/admin.service';
+import { TeamsService } from '@core/services/teams.service';
+import { CompetitionBadge } from '@shared/components/competition-badge/competition-badge';
+import { EmptyState } from '@shared/components/empty-state/empty-state';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { Icon } from '@shared/components/icon/icon';
+import { PageHeader } from '@shared/components/page-header/page-header';
+import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
 
 /** The league divisions a club can be moved to; `null` means "no division". */
 export const TEAM_DIVISIONS: Competition[] = [

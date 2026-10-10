@@ -12,12 +12,12 @@ import { AbstractControl, ReactiveFormsModule, ValidationErrors, Validators } fr
 import { FormBuilder } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Lang, LanguageService } from '../../core/i18n/language.service';
-import { PublicGroup } from '../../core/models/models';
-import { httpErrorMessage } from '../../core/notifications/http-error';
-import { AuthService } from '../../core/auth/auth.service';
-import { GroupsService } from '../../core/services/groups.service';
-import { FormField } from '../../shared/components/form-field/form-field';
+import { Lang, LanguageService } from '@core/i18n/language.service';
+import { PublicGroup } from '@core/models/models';
+import { httpErrorMessage } from '@core/notifications/http-error';
+import { AuthService } from '@core/auth/auth.service';
+import { GroupsService } from '@core/services/groups.service';
+import { FormField } from '@shared/components/form-field/form-field';
 
 /** Form-level validator: confirmPassword must equal password. */
 export function passwordsMatch(group: AbstractControl): ValidationErrors | null {

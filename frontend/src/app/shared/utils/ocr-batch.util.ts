@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { OcrBatchSummary } from '../../core/models/models';
+import { OcrBatchSummary } from '@core/models/models';
 
 /** A batch that was never confirmed, cancelled or failed can still be reopened for review. */
 export function isReviewableOcrBatch(status: string): boolean {

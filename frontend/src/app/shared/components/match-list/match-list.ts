@@ -1,8 +1,8 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
-import { RoundMatch, ScoringConfig } from '../../../core/models/models';
-import { computeMultiplier, isClassic, isLeagueOne } from '../../utils/match.util';
+import { RoundMatch, ScoringConfig } from '@core/models/models';
+import { computeMultiplier, isClassic, isLeagueOne } from '@shared/utils/match.util';
 import { CompetitionBadge } from '../competition-badge/competition-badge';
 import { Icon } from '../icon/icon';
 import { MatchStatusBadge } from '../match-status-badge/match-status-badge';

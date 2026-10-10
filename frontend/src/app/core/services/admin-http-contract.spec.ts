@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { Observable } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { environment } from '../../../environments/environment';
+import { environment } from '@env/environment';
 import { SKIP_ERROR_TOAST } from '../interceptors/http-context';
 import { Competition, MatchPhase } from '../models/enums';
 import { AdminService } from './admin.service';

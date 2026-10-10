@@ -11,23 +11,18 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
-import { AuthService } from '../../core/auth/auth.service';
-import { ScoreCategory } from '../../core/models/enums';
-import {
-  MatchScore,
-  MyPredictions,
-  RoundResultMatch,
-  RoundResults,
-} from '../../core/models/models';
-import { RoundsService } from '../../core/services/rounds.service';
-import { PredictionsService } from '../../core/services/predictions.service';
-import { phaseLabel } from '../../shared/utils/match.util';
-import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
-import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { Icon } from '../../shared/components/icon/icon';
-import { Loading } from '../../shared/components/loading/loading';
-import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
+import { AuthService } from '@core/auth/auth.service';
+import { ScoreCategory } from '@core/models/enums';
+import { MatchScore, MyPredictions, RoundResultMatch, RoundResults } from '@core/models/models';
+import { RoundsService } from '@core/services/rounds.service';
+import { PredictionsService } from '@core/services/predictions.service';
+import { phaseLabel } from '@shared/utils/match.util';
+import { CompetitionBadge } from '@shared/components/competition-badge/competition-badge';
+import { EmptyState } from '@shared/components/empty-state/empty-state';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { Icon } from '@shared/components/icon/icon';
+import { Loading } from '@shared/components/loading/loading';
+import { MultiplierBadge } from '@shared/components/multiplier-badge/multiplier-badge';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

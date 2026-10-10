@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { ToastService } from '../../core/notifications/toast.service';
-import { copyToClipboard } from '../../shared/utils/clipboard.util';
-import { Icon } from '../../shared/components/icon/icon';
+import { ToastService } from '@core/notifications/toast.service';
+import { copyToClipboard } from '@shared/utils/clipboard.util';
+import { Icon } from '@shared/components/icon/icon';
 
 /**
  * Presentational copy-ready message cards for a round: the post-finalize closing

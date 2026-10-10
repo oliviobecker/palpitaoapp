@@ -21,28 +21,28 @@ import {
   TournamentType,
   competitionsForType,
   phasesForType,
-} from '../../core/models/enums';
-import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
-import { FixtureCandidate, Round, RoundMatch, ScoringConfig, Team } from '../../core/models/models';
-import { ConfirmService } from '../../core/notifications/confirm.service';
-import { ToastService } from '../../core/notifications/toast.service';
-import { AdminService } from '../../core/services/admin.service';
-import { MatchesService } from '../../core/services/matches.service';
-import { RoundsService } from '../../core/services/rounds.service';
-import { ScoringConfigService } from '../../core/services/scoring-config.service';
-import { TeamsService } from '../../core/services/teams.service';
+} from '@core/models/enums';
+import { HasUnsavedChanges } from '@core/guards/unsaved-changes.guard';
+import { FixtureCandidate, Round, RoundMatch, ScoringConfig, Team } from '@core/models/models';
+import { ConfirmService } from '@core/notifications/confirm.service';
+import { ToastService } from '@core/notifications/toast.service';
+import { AdminService } from '@core/services/admin.service';
+import { MatchesService } from '@core/services/matches.service';
+import { RoundsService } from '@core/services/rounds.service';
+import { ScoringConfigService } from '@core/services/scoring-config.service';
+import { TeamsService } from '@core/services/teams.service';
 import {
   FixtureSelection,
   FixtureSelectionState,
-} from '../../shared/components/fixture-selection/fixture-selection';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { FormField } from '../../shared/components/form-field/form-field';
-import { Icon } from '../../shared/components/icon/icon';
-import { Loading } from '../../shared/components/loading/loading';
-import { MatchList } from '../../shared/components/match-list/match-list';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
-import { isoDateFromToday, toImportItem } from '../../shared/utils/fixture.util';
+} from '@shared/components/fixture-selection/fixture-selection';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { FormField } from '@shared/components/form-field/form-field';
+import { Icon } from '@shared/components/icon/icon';
+import { Loading } from '@shared/components/loading/loading';
+import { MatchList } from '@shared/components/match-list/match-list';
+import { PageHeader } from '@shared/components/page-header/page-header';
+import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
+import { isoDateFromToday, toImportItem } from '@shared/utils/fixture.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

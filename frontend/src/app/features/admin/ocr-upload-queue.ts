@@ -1,9 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, OnDestroy, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { OcrBatch } from '../../core/models/models';
-import { AdminService } from '../../core/services/admin.service';
-import { ocrRetryDelayMs } from '../../shared/utils/ocr-batch.util';
+import { OcrBatch } from '@core/models/models';
+import { AdminService } from '@core/services/admin.service';
+import { ocrRetryDelayMs } from '@shared/utils/ocr-batch.util';
 
 export type OcrQueueStatus = 'queued' | 'processing' | 'waiting' | 'done' | 'error';
 

@@ -15,33 +15,28 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
-import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
-import { RoundStatus, TournamentType, WORLD_CUP_FLAVIO_PHASES } from '../../core/models/enums';
-import { Round, RoundMatch, ScoringConfig } from '../../core/models/models';
-import { ToastService } from '../../core/notifications/toast.service';
-import { PredictionsService } from '../../core/services/predictions.service';
-import { RoundsService } from '../../core/services/rounds.service';
-import { ScoringConfigService } from '../../core/services/scoring-config.service';
-import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
-import { Countdown } from '../../shared/components/countdown/countdown';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { Icon } from '../../shared/components/icon/icon';
-import { Loading } from '../../shared/components/loading/loading';
-import { MatchStatusBadge } from '../../shared/components/match-status-badge/match-status-badge';
-import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
+import { HasUnsavedChanges } from '@core/guards/unsaved-changes.guard';
+import { RoundStatus, TournamentType, WORLD_CUP_FLAVIO_PHASES } from '@core/models/enums';
+import { Round, RoundMatch, ScoringConfig } from '@core/models/models';
+import { ToastService } from '@core/notifications/toast.service';
+import { PredictionsService } from '@core/services/predictions.service';
+import { RoundsService } from '@core/services/rounds.service';
+import { ScoringConfigService } from '@core/services/scoring-config.service';
+import { CompetitionBadge } from '@shared/components/competition-badge/competition-badge';
+import { Countdown } from '@shared/components/countdown/countdown';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { Icon } from '@shared/components/icon/icon';
+import { Loading } from '@shared/components/loading/loading';
+import { MatchStatusBadge } from '@shared/components/match-status-badge/match-status-badge';
+import { MultiplierBadge } from '@shared/components/multiplier-badge/multiplier-badge';
+import { PageHeader } from '@shared/components/page-header/page-header';
+import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
 import {
   deadlinePassed,
   predictionDeadline,
   predictionDeadlineIso,
-} from '../../shared/utils/deadline.util';
-import {
-  computeMultiplier,
-  isClassic,
-  isLeagueOne,
-  phaseLabel,
-} from '../../shared/utils/match.util';
+} from '@shared/utils/deadline.util';
+import { computeMultiplier, isClassic, isLeagueOne, phaseLabel } from '@shared/utils/match.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { Competition, TeamType } from '../../core/models/enums';
-import { Team, TeamSyncResponse } from '../../core/models/models';
+import { Competition, TeamType } from '@core/models/enums';
+import { Team, TeamSyncResponse } from '@core/models/models';
 import { diffTotals, filterTeams, groupTeams } from './admin-teams';
 
 function team(partial: Partial<Team> & { name: string }): Team {

@@ -11,16 +11,16 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { RoundStatus } from '../../core/models/enums';
-import { Round } from '../../core/models/models';
-import { ConfirmService } from '../../core/notifications/confirm.service';
-import { ToastService } from '../../core/notifications/toast.service';
+import { RoundStatus } from '@core/models/enums';
+import { Round } from '@core/models/models';
+import { ConfirmService } from '@core/notifications/confirm.service';
+import { ToastService } from '@core/notifications/toast.service';
 import {
   AdminService,
   FlavioParticipant,
   RoundFlavioOverrides,
-} from '../../core/services/admin.service';
-import { Skeleton } from '../../shared/components/skeleton/skeleton';
+} from '@core/services/admin.service';
+import { Skeleton } from '@shared/components/skeleton/skeleton';
 
 @Component({
   selector: 'app-admin-flavio-overrides',
