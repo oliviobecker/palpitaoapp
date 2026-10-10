@@ -24,7 +24,7 @@ public sealed record RoundWeekPlan(
 /// <summary>
 /// Works out how a round joins the previous round as its next part ("11" → "10.2") or leaves
 /// its round played in parts ("10.2" → "11"), or is deleted, renumbering the rounds after it so
-/// the numbering has no gap. Pure: <see cref="RoundWeekService"/> applies the plan and replays
+/// the numbering has no gap. Pure: the Application's <c>RoundWeekService</c> applies the plan and replays
 /// the season.
 /// Cancelled rounds keep a slot in the unique (season, number, part) index, so they move along
 /// with the rest; they just never count as a part that decides anything.

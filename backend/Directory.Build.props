@@ -5,5 +5,15 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- XML docs are written where they add something: undocumented members (CS1591) and
+         partly documented parameter lists (CS1573) are fine; broken crefs are not. -->
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- NuGet audit advisories come from an external feed: report them, but a new advisory must
+         not break an unchanged build (Dependabot and CodeQL track them). -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
   </PropertyGroup>
 </Project>

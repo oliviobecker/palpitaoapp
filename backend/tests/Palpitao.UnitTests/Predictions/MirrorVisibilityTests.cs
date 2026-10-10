@@ -14,7 +14,7 @@ namespace Palpitao.UnitTests.Predictions;
 
 /// <summary>
 /// "Participants view others' predictions" feature: the prediction mirror is gated by
-/// the group's <see cref="Group.AllowParticipantsToViewOthersPredictions"/> setting for
+/// the season's <see cref="Season.AllowParticipantsToViewOthersPredictions"/> setting for
 /// participants, while group admins always see it (subject to the post-lock timing).
 /// </summary>
 public class MirrorVisibilityTests

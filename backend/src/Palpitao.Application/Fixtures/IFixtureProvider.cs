@@ -1,3 +1,4 @@
+using Palpitao.Domain.Common;
 using Palpitao.Domain.Enums;
 
 namespace Palpitao.Application.Fixtures;
@@ -15,7 +16,7 @@ public interface IFixtureProvider
 
     /// <summary>
     /// Returns fixtures available in the period for the given competitions.
-    /// Throws <see cref="Common.BusinessRuleException"/> with key
+    /// Throws <see cref="BusinessRuleException"/> with key
     /// <c>fixtures.fetchFailed</c> when the source cannot be reached or parsed.
     /// </summary>
     Task<IReadOnlyList<FixtureCandidateDto>> SearchFixturesAsync(

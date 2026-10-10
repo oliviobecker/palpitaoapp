@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.Filters;
+using Palpitao.Application.Common.Exceptions;
 using Palpitao.Application.Groups;
 
 namespace Palpitao.Api.Auth;
@@ -6,7 +7,7 @@ namespace Palpitao.Api.Auth;
 /// <summary>
 /// Action filter that requires the authenticated user to be an approved
 /// <c>GroupAdmin</c> of the current group (from the <c>X-Group-Id</c> header).
-/// Throws <see cref="Common.ForbiddenException"/> (HTTP 403) otherwise. Combine
+/// Throws <see cref="ForbiddenException"/> (HTTP 403) otherwise. Combine
 /// with <c>[Authorize]</c> so the user is authenticated first.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]

@@ -395,7 +395,7 @@ public class PredictionImportServiceTests
         // Participant comes from the "Leonardo, Rodada 2" header, not the title.
         Assert.All(parsed, p => Assert.Equal("Leonardo", p.ParticipantName));
         // Team names are clean (no emoji/flag surrogate noise left over).
-        Assert.All(parsed, p => Assert.False((p.HomeTeamRaw + p.AwayTeamRaw).Any(char.IsSurrogate)));
+        Assert.All(parsed, p => Assert.DoesNotContain(p.HomeTeamRaw + p.AwayTeamRaw, char.IsSurrogate));
 
         var belgica = parsed[0];
         Assert.Equal("Bélgica", belgica.HomeTeamRaw);

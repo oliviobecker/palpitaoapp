@@ -406,7 +406,7 @@ public static class OcrTeamMatcher
     /// one, because the message prints short names while the catalogue stores full ones:
     /// "coventy" is one edit from "coventry", the first word of "coventry city".
     ///
-    /// <see cref="OcrShortNameRoundTripTests"/> sweeps the whole seeded catalogue pairwise to
+    /// <c>OcrShortNameRoundTripTests</c> sweeps the whole seeded catalogue pairwise to
     /// prove no two clubs collide under these budgets. Tighten the budgets if it ever fails —
     /// an allowlist would only hide the next collision.
     /// </summary>

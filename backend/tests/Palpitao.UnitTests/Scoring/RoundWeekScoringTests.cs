@@ -272,7 +272,7 @@ public partial class RoundScoringServiceTests
         Assert.Equal((1, 2), (joined.Number, joined.Part));
         db.ChangeTracker.Clear();
         Assert.Equal(
-            new[]
+            new (int, int, string?)[]
             {
                 (1, 1, "Primeira Rodada"),
                 (1, 2, "Primeira Rodada"), // an untouched default title follows its number
@@ -291,7 +291,7 @@ public partial class RoundScoringServiceTests
         Assert.Equal((2, 0), (left.Number, left.Part));
         db.ChangeTracker.Clear();
         Assert.Equal(
-            new[]
+            new (int, int, string?)[]
             {
                 (1, 0, "Primeira Rodada"),
                 (2, 0, "Segunda Rodada"),

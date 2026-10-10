@@ -16,7 +16,7 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
 
     /// <summary>
     /// Catalogue names of the default Championship classic pair. Matched by name because these
-    /// clubs carry no flag of their own (unlike <see cref="Entities.Team.IsBigSevenClub"/>) —
+    /// clubs carry no flag of their own (unlike <see cref="Team.IsBigSevenClub"/>) —
     /// once a season saves its config, the selection lives in the config.
     /// </summary>
     private static readonly string[] DefaultChampionshipClassicNames = ["Millwall", "West Ham United"];

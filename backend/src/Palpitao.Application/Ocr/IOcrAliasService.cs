@@ -12,7 +12,7 @@ public interface IOcrAliasService
 {
     /// <summary>
     /// The group's aliases, keyed by <see cref="OcrTeamMatcher.NormalizeAlias"/> and ready for
-    /// <see cref="IPredictionImportService.BuildCandidates"/>.
+    /// <see cref="IPredictionImportService.BuildCandidates(Guid, Guid, string, IReadOnlyList{RoundMatch}, IReadOnlyList{User}, IReadOnlyDictionary{string, Guid})"/>.
     /// </summary>
     Task<IReadOnlyDictionary<string, Guid>> GetForGroupAsync(Guid groupId, CancellationToken ct);
 

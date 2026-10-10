@@ -16,7 +16,7 @@ namespace Palpitao.UnitTests.Predictions;
 
 /// <summary>
 /// "Participants submit via app vs admin-only" feature: the in-app submission endpoint
-/// is gated by <see cref="Group.AllowParticipantsToSubmitPredictions"/>. Admin manual/OCR
+/// is gated by <see cref="Season.AllowParticipantsToSubmitPredictions"/>. Admin manual/OCR
 /// paths are unaffected and keep their own prediction source.
 /// </summary>
 public class PredictionSubmissionModeTests

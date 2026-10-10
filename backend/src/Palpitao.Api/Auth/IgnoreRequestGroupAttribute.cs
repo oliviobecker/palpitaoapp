@@ -2,7 +2,7 @@ namespace Palpitao.Api.Auth;
 
 /// <summary>
 /// Marks an endpoint whose tenant comes from the route itself (a season public key), not
-/// from the <c>X-Group-Id</c> header. On such endpoints <see cref="Services.Groups.RequestGroupContext"/>
+/// from the <c>X-Group-Id</c> header. On such endpoints <see cref="RequestGroupContext"/>
 /// reports no request group, so a stray header — a logged-in browser sends one on every
 /// request — cannot scope, and therefore cannot hide, data the caller is entitled to see.
 /// </summary>

@@ -1,3 +1,4 @@
+using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Enums;
 
 namespace Palpitao.Application.Groups;
@@ -6,7 +7,7 @@ namespace Palpitao.Application.Groups;
 /// Resolves and validates the "current group" for the request from the
 /// <c>X-Group-Id</c> header against the authenticated user's memberships. Never
 /// trust the header alone — every method validates approved membership and throws
-/// <see cref="Common.ForbiddenException"/> (HTTP 403) when access is not allowed.
+/// <see cref="ForbiddenException"/> (HTTP 403) when access is not allowed.
 /// </summary>
 public interface ICurrentGroupService
 {

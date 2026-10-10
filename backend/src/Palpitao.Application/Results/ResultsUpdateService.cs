@@ -75,7 +75,7 @@ public class ResultsUpdateService : IResultsUpdateService
 
     /// <summary>
     /// Background-safe refresh of every in-play round (Published/Locked) across all
-    /// groups — used by the periodic <see cref="ResultsRefreshBackgroundService"/>.
+    /// groups — used by the periodic <c>ResultsRefreshBackgroundService</c>.
     /// Not group-scoped (no HTTP context); never closes a round. Returns the number
     /// of updated matches.
     /// </summary>
