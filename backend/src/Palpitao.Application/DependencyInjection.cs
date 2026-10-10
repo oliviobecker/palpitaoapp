@@ -18,7 +18,6 @@ using Palpitao.Application.Seasons;
 using Palpitao.Application.Standings;
 using Palpitao.Application.Teams;
 using Palpitao.Application.Users;
-using Palpitao.Application.Validation;
 using Palpitao.Domain.Scoring;
 
 namespace Palpitao.Application;
@@ -31,7 +30,7 @@ public static class DependencyInjection
     /// </summary>
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        services.AddValidatorsFromAssemblyContaining<LoginRequestValidator>();
+        services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
         // Scoring
         services.AddSingleton<IScoringService, ScoringService>();

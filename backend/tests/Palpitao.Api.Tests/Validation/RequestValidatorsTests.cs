@@ -1,7 +1,6 @@
 using Palpitao.Application.Auth;
 using Palpitao.Application.Predictions;
 using Palpitao.Application.Rounds;
-using Palpitao.Application.Validation;
 using Palpitao.Domain.Common;
 
 namespace Palpitao.Api.Tests.Validation;

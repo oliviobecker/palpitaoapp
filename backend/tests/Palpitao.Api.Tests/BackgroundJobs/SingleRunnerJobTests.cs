@@ -9,7 +9,6 @@ using Palpitao.Domain.Enums;
 using Palpitao.Infrastructure.BackgroundJobs;
 using Palpitao.Infrastructure.Persistence;
 using Palpitao.Infrastructure.Persistence.Seed;
-using Xunit;
 
 namespace Palpitao.Api.Tests.BackgroundJobs;
 

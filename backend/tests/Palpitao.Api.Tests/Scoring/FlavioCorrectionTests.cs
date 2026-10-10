@@ -7,7 +7,6 @@ using Palpitao.Application.Flavio;
 using Palpitao.Application.Ocr;
 using Palpitao.Application.Predictions;
 using Palpitao.Application.Rounds;
-using Palpitao.Application.Validation;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
