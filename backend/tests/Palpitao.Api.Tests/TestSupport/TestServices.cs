@@ -6,6 +6,7 @@ using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Scoring;
 using Palpitao.Api.Services.Standings;
 using Palpitao.Api.Services.Users;
+using Palpitao.Api.Auth;
 
 namespace Palpitao.Api.Tests.TestSupport;
 
@@ -48,7 +49,8 @@ public static class TestServices
     {
         var group = current ?? new FakeCurrentGroupService();
         return new UserAdminService(
-            db, new AuditService(db), group, Absences(db, group), new FakeLocalizationService());
+            db, new AuditService(db), group, Absences(db, group), new FakeLocalizationService(),
+            new BCryptPasswordHasher());
     }
 
     /// <summary>
@@ -62,6 +64,7 @@ public static class TestServices
         var audit = new AuditService(db);
         return new RoundScoringService(
             db, new ScoringService(), ScoringConfig(db, group), Absences(db, group),
-            new FlavioRuleService(db), new StandingsService(db, group), audit, group);
+            new FlavioRuleService(db), new StandingsService(db, group), audit, group,
+            new EfTransactionRunner(db));
     }
 }

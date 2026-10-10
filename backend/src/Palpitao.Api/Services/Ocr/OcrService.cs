@@ -9,6 +9,7 @@ using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Localization;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Ocr;
 
@@ -21,7 +22,7 @@ public class OcrService : IOcrService
         ".png", ".jpg", ".jpeg", ".webp",
     };
 
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly IOcrEngine _engine;
     private readonly IPredictionImportService _import;
     private readonly IOcrAliasService _aliases;
@@ -32,7 +33,7 @@ public class OcrService : IOcrService
     private readonly ILogger<OcrService> _logger;
 
     public OcrService(
-        AppDbContext db,
+        IAppDbContext db,
         IOcrEngine engine,
         IPredictionImportService import,
         IOcrAliasService aliases,

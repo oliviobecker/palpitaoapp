@@ -1,6 +1,7 @@
 using Palpitao.Api.Data;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Rounds;
 
@@ -17,7 +18,7 @@ namespace Palpitao.Api.Services.Rounds;
 public static class RoundWeek
 {
     /// <summary>The other rounds sharing the round's number that still count (not cancelled).</summary>
-    public static IQueryable<Round> Siblings(AppDbContext db, Round round) =>
+    public static IQueryable<Round> Siblings(IAppDbContext db, Round round) =>
         db.Rounds.Where(r => r.SeasonId == round.SeasonId
             && r.Number == round.Number
             && r.Id != round.Id

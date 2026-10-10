@@ -23,7 +23,8 @@ public partial class RoundScoringServiceTests
     {
         var current = new FakeCurrentGroupService();
         return new RoundWeekService(
-            db, kit.Rounds, kit.Scoring, TestServices.ScoringConfig(db, current), new AuditService(db), current);
+            db, kit.Rounds, kit.Scoring, TestServices.ScoringConfig(db, current), new AuditService(db), current,
+            new EfTransactionRunner(db));
     }
 
     private static void Excuse(AppDbContext db, Round round, Guid user, bool isAbsent)

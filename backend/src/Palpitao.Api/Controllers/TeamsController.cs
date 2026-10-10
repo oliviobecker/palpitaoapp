@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Auth;
-using Palpitao.Api.Data;
+using Palpitao.Api.DTOs.Teams;
 using Palpitao.Api.Enums;
+using Palpitao.Api.Services.Teams;
 
 namespace Palpitao.Api.Controllers;
 
@@ -13,11 +13,11 @@ namespace Palpitao.Api.Controllers;
 [RequireGroupParticipant]
 public class TeamsController : ControllerBase
 {
-    private readonly AppDbContext _db;
+    private readonly ITeamCatalogService _teams;
 
-    public TeamsController(AppDbContext db)
+    public TeamsController(ITeamCatalogService teams)
     {
-        _db = db;
+        _teams = teams;
     }
 
     /// <summary>
@@ -28,29 +28,6 @@ public class TeamsController : ControllerBase
     /// divisions.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> List([FromQuery] Competition? competition, CancellationToken ct)
-    {
-        var query = _db.Teams.AsQueryable();
-
-        if (competition is Competition.PremierLeague or Competition.Championship or Competition.LeagueOne)
-        {
-            query = query.Where(t => t.Division == competition);
-        }
-
-        var teams = await query
-            .OrderBy(t => t.Name)
-            .Select(t => new
-            {
-                t.Id,
-                t.Name,
-                t.ShortName,
-                t.IsBigSevenClub,
-                t.CrestUrl,
-                t.Division,
-                t.TeamType,
-            })
-            .ToListAsync(ct);
-
-        return Ok(teams);
-    }
+    public async Task<ActionResult<IReadOnlyList<TeamDto>>> List([FromQuery] Competition? competition, CancellationToken ct)
+        => Ok(await _teams.ListAsync(competition, ct));
 }

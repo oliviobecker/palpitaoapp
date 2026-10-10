@@ -2,6 +2,16 @@ using Palpitao.Api.Enums;
 
 namespace Palpitao.Api.DTOs.Teams;
 
+/// <summary>A catalogue team as the round screens list it.</summary>
+public record TeamDto(
+    Guid Id,
+    string Name,
+    string ShortName,
+    bool IsBigSevenClub,
+    string? CrestUrl,
+    Competition? Division,
+    TeamType TeamType);
+
 /// <summary>Moves a club to another league division (null clears it).</summary>
 public class UpdateTeamDivisionRequest
 {

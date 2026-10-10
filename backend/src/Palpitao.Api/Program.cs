@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Palpitao.Api.Abstractions;
 using Palpitao.Api.Auth;
 using Palpitao.Api.Common;
 using Palpitao.Api.Validation;
@@ -191,6 +192,13 @@ builder.Services.AddHttpContextAccessor();
 // DB-free per-request group accessor consumed by AppDbContext for the multi-tenant
 // query filter + insert-stamping (defence-in-depth, separate from access validation).
 builder.Services.AddScoped<IRequestGroupContext, RequestGroupContext>();
+// The use cases depend on IAppDbContext; it must be the request's AppDbContext instance, which the
+// transaction runner and the tenant filter also work through.
+builder.Services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+builder.Services.AddScoped<ITransactionRunner, EfTransactionRunner>();
+builder.Services.AddScoped<IDatabaseHealthProbe, EfDatabaseHealthProbe>();
+builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+builder.Services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 builder.Services.AddScoped<ILocalizationService, LocalizationService>();
 builder.Services.AddSingleton<IScoringService, ScoringService>();
 builder.Services.AddScoped<ISeasonScoringConfigService, SeasonScoringConfigService>();

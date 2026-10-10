@@ -8,19 +8,20 @@ using Palpitao.Api.Services.Absences;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Rounds;
 using Palpitao.Api.Services.Scoring;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Standings;
 
 public class TemporaryStandingsService : ITemporaryStandingsService
 {
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly IScoringService _scoring;
     private readonly ISeasonScoringConfigService _config;
     private readonly ICurrentGroupService _current;
     private readonly IAbsenceService _absences;
 
     public TemporaryStandingsService(
-        AppDbContext db,
+        IAppDbContext db,
         IScoringService scoring,
         ISeasonScoringConfigService config,
         ICurrentGroupService current,

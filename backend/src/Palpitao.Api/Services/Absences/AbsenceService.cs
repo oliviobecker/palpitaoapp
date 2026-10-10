@@ -9,6 +9,7 @@ using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Rounds;
 using Palpitao.Api.Services.Scoring;
 using Sentry;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Absences;
 
@@ -21,13 +22,13 @@ public class AbsenceService : IAbsenceService
     /// </summary>
     private const int FirstPenalizedAbsence = 3;
 
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
     private readonly ISeasonScoringConfigService _config;
 
     public AbsenceService(
-        AppDbContext db, IAuditService audit, ICurrentGroupService current, ISeasonScoringConfigService config)
+        IAppDbContext db, IAuditService audit, ICurrentGroupService current, ISeasonScoringConfigService config)
     {
         _db = db;
         _audit = audit;

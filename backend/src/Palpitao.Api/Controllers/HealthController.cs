@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Palpitao.Api.Data;
+using Palpitao.Api.Abstractions;
 using Palpitao.Api.Services.Ocr;
 
 namespace Palpitao.Api.Controllers;
@@ -19,13 +18,13 @@ public class HealthController : ControllerBase
     // Every language the OCR import screen offers (see OcrService.NormalizeLanguage).
     private const string OcrLanguages = "por+eng";
 
-    private readonly AppDbContext _db;
+    private readonly IDatabaseHealthProbe _database;
     private readonly IOcrEngine _ocr;
     private readonly ILogger<HealthController> _logger;
 
-    public HealthController(AppDbContext db, IOcrEngine ocr, ILogger<HealthController> logger)
+    public HealthController(IDatabaseHealthProbe database, IOcrEngine ocr, ILogger<HealthController> logger)
     {
-        _db = db;
+        _database = database;
         _ocr = ocr;
         _logger = logger;
     }
@@ -42,7 +41,7 @@ public class HealthController : ControllerBase
         {
             // CanConnectAsync can throw (not just return false) on auth/host/DNS
             // failures, so wrap it to always return a clean 503 instead of a 500.
-            if (!await _db.Database.CanConnectAsync(cancellationToken))
+            if (!await _database.CanConnectAsync(cancellationToken))
             {
                 return StatusCode(503, new { status = "unavailable", database = "postgres" });
             }
@@ -51,10 +50,10 @@ public class HealthController : ControllerBase
             // serving a stale schema (queries on new columns 500). Only meaningful for a
             // migrated database — tests/dev use EnsureCreated (no migration history), so
             // skip when nothing is recorded as applied.
-            var applied = await _db.Database.GetAppliedMigrationsAsync(cancellationToken);
+            var applied = await _database.GetAppliedMigrationsAsync(cancellationToken);
             if (applied.Any())
             {
-                var pending = (await _db.Database.GetPendingMigrationsAsync(cancellationToken)).ToList();
+                var pending = await _database.GetPendingMigrationsAsync(cancellationToken);
                 if (pending.Count > 0)
                 {
                     // Log the specifics for operators; don't expose schema/migration

@@ -62,7 +62,7 @@ public partial class RoundScoringServiceTests
         var standings = new StandingsService(db, current);
         var scoringConfig = new SeasonScoringConfigService(db, audit, current);
         var scoring = new RoundScoringService(
-            db, new ScoringService(), scoringConfig, new AbsenceService(db, audit, current, TestServices.ScoringConfig(db, current)), new FlavioRuleService(db), standings, audit, current);
+            db, new ScoringService(), scoringConfig, new AbsenceService(db, audit, current, TestServices.ScoringConfig(db, current)), new FlavioRuleService(db), standings, audit, current, new EfTransactionRunner(db));
         return new Kit(scoring, new RoundService(db, audit, current, TestServices.ScoringConfig(db, current)), new PredictionsService(db, audit, current), standings);
     }
 

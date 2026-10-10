@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Seasons;
@@ -6,16 +6,17 @@ using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Seasons;
 
 public class SeasonService : ISeasonService
 {
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
 
-    public SeasonService(AppDbContext db, IAuditService audit, ICurrentGroupService current)
+    public SeasonService(IAppDbContext db, IAuditService audit, ICurrentGroupService current)
     {
         _db = db;
         _audit = audit;

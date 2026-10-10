@@ -10,6 +10,8 @@ using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Tests.TestSupport;
 using Xunit;
+using Palpitao.Api.Auth;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Tests.Audit;
 
@@ -52,12 +54,12 @@ public class AuditServiceTests
     {
         var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
         var ctx = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity(claims, "test")) };
-        ctx.Request.Headers[CurrentGroupService.GroupHeader] = groupHeader.ToString();
+        ctx.Request.Headers[HttpCurrentUser.GroupHeader] = groupHeader.ToString();
         return ctx;
     }
 
     private static CurrentGroupService CurrentGroup(AppDbContext db, HttpContext? request)
-        => new(db, new HttpContextAccessor { HttpContext = request });
+        => new(db, new HttpCurrentUser(new HttpContextAccessor { HttpContext = request }));
 
     /// <summary>The stored row for <paramref name="action"/>, read back from the database.</summary>
     private static AuditLog Entry(AppDbContext db, string action)
@@ -151,6 +153,8 @@ public class AuditServiceTests
         using var provider = new ServiceCollection()
             .AddHttpContextAccessor()
             .AddSingleton(db)
+            .AddSingleton<IAppDbContext>(db)
+            .AddScoped<ICurrentUser, HttpCurrentUser>()
             .AddScoped<ICurrentGroupService, CurrentGroupService>()
             .AddScoped<IAuditService, AuditService>()
             .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });

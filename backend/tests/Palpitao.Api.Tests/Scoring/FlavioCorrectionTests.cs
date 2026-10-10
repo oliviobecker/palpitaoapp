@@ -21,7 +21,7 @@ public partial class RoundScoringServiceTests
 {
     private static FlavioOverrideService Overrides(AppDbContext db, Guid? groupId = null)
         => new(db, new FakeCurrentGroupService(groupId), new AuditService(db), new FlavioRuleService(db),
-            TestServices.ScoringConfig(db), Build(db).Scoring);
+            TestServices.ScoringConfig(db), Build(db).Scoring, new EfTransactionRunner(db));
 
     private static void ConfigureFlavioFromFive(AppDbContext db)
     {

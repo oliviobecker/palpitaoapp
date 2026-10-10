@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -415,5 +417,47 @@ public class TeamCatalogServiceTests
                 SeedIds.AdminUser, Ct));
 
         Assert.Equal("notFound.team", ex.Key);
+    }
+
+    // --- Listing (what the participant-facing /teams endpoint returns) ----------
+
+    [Fact]
+    public async Task Listing_a_league_division_returns_only_its_clubs_ordered_by_name()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db, new FakeTeamCatalogProvider(Rosters()));
+
+        var teams = await service.ListAsync(Competition.Championship, Ct);
+
+        Assert.NotEmpty(teams);
+        Assert.Equal(
+            SeededNames(db, Competition.Championship).OrderBy(n => n, StringComparer.Ordinal),
+            teams.Select(t => t.Name));
+    }
+
+    [Fact]
+    public async Task Listing_the_fa_cup_returns_every_club()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db, new FakeTeamCatalogProvider(Rosters()));
+
+        var teams = await service.ListAsync(Competition.FACup, Ct);
+
+        Assert.Equal(db.Teams.Count(), teams.Count);
+    }
+
+    [Fact]
+    public void A_listed_team_keeps_the_json_shape_the_spa_reads()
+    {
+        // The endpoint used to return an anonymous object; the DTO must serialise identically.
+        var json = JsonSerializer.Serialize(
+            new TeamDto(Guid.Empty, "Arsenal", "ARS", true, null, Competition.PremierLeague, TeamType.Club),
+            new JsonSerializerOptions(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } });
+
+        using var doc = JsonDocument.Parse(json);
+        Assert.Equal(
+            ["id", "name", "shortName", "isBigSevenClub", "crestUrl", "division", "teamType"],
+            doc.RootElement.EnumerateObject().Select(p => p.Name));
+        Assert.Equal("PremierLeague", doc.RootElement.GetProperty("division").GetString());
     }
 }

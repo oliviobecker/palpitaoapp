@@ -1,16 +1,16 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Palpitao.Api.Common;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
-using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Data;
 
 /// <summary>
 /// Entity Framework Core (code-first) database context for Palpitão England 2025/2026.
 /// </summary>
-public class AppDbContext : DbContext
+public class AppDbContext : DbContext, IAppDbContext
 {
     private readonly IRequestGroupContext? _groupContext;
 

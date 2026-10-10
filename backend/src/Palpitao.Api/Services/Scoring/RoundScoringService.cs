@@ -1,4 +1,3 @@
-using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
@@ -13,12 +12,13 @@ using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Rounds;
 using Palpitao.Api.Services.Standings;
 using Sentry;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Scoring;
 
 public class RoundScoringService : IRoundScoringService
 {
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly IScoringService _scoring;
     private readonly ISeasonScoringConfigService _config;
     private readonly IAbsenceService _absences;
@@ -26,16 +26,18 @@ public class RoundScoringService : IRoundScoringService
     private readonly IStandingsService _standings;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
+    private readonly ITransactionRunner _transactions;
 
     public RoundScoringService(
-        AppDbContext db,
+        IAppDbContext db,
         IScoringService scoring,
         ISeasonScoringConfigService config,
         IAbsenceService absences,
         IFlavioRuleService flavio,
         IStandingsService standings,
         IAuditService audit,
-        ICurrentGroupService current)
+        ICurrentGroupService current,
+        ITransactionRunner transactions)
     {
         _db = db;
         _scoring = scoring;
@@ -45,6 +47,7 @@ public class RoundScoringService : IRoundScoringService
         _standings = standings;
         _audit = audit;
         _current = current;
+        _transactions = transactions;
     }
 
     public async Task SetMatchResultAsync(Guid matchId, MatchResultRequest request, Guid actingUserId, CancellationToken ct)
@@ -79,7 +82,7 @@ public class RoundScoringService : IRoundScoringService
     }
 
     public Task<RoundResultsDto> ScoreRoundAsync(Guid roundId, Guid actingUserId, CancellationToken ct)
-        => InTransactionAsync(async () =>
+        => _transactions.InTransactionAsync(async () =>
         {
             var groupId = await _current.GetGroupIdAsync(ct);
             var round = await _db.Rounds.FirstOrDefaultAsync(r => r.Id == roundId && r.GroupId == groupId, ct)
@@ -114,29 +117,12 @@ public class RoundScoringService : IRoundScoringService
         }, ct);
 
     public Task RecalculateSeasonAsync(Guid seasonId, Guid actingUserId, CancellationToken ct)
-        => InTransactionAsync(async () =>
+        => _transactions.InTransactionAsync(async () =>
         {
             await RecalculateSeasonCoreAsync(seasonId, actingUserId, ct);
             return true;
         }, ct);
 
-    /// <summary>
-    /// Runs a multi-step scoring mutation atomically: the delete-then-recompute spans
-    /// several SaveChanges, so a failure mid-way must not leave a round/season partially
-    /// scored. No-op transaction wrapper for non-relational providers (in-memory tests).
-    /// </summary>
-    private async Task<T> InTransactionAsync<T>(Func<Task<T>> action, CancellationToken ct)
-    {
-        if (!_db.Database.IsRelational() || _db.Database.CurrentTransaction is not null)
-        {
-            return await action();
-        }
-
-        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-        var result = await action();
-        await tx.CommitAsync(ct);
-        return result;
-    }
 
     private async Task RecalculateSeasonCoreAsync(Guid seasonId, Guid actingUserId, CancellationToken ct)
     {
@@ -195,7 +181,7 @@ public class RoundScoringService : IRoundScoringService
 
     public Task<AbsenceReviewResultDto> ReviewParticipantAbsencesAsync(
         Guid userId, AbsenceReviewRequest request, Guid actingUserId, CancellationToken ct)
-        => InTransactionAsync(async () =>
+        => _transactions.InTransactionAsync(async () =>
         {
             var staged = await _absences.StageAbsenceReviewAsync(
                 userId, request.Rounds, request.Justification, actingUserId, ct);

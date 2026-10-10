@@ -5,6 +5,7 @@ using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Ocr;
 
@@ -15,13 +16,13 @@ namespace Palpitao.Api.Services.Ocr;
 /// </summary>
 public class PredictionImportService : IPredictionImportService
 {
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
     private readonly IOcrAliasService _aliases;
 
     public PredictionImportService(
-        AppDbContext db, IAuditService audit, ICurrentGroupService current, IOcrAliasService aliases)
+        IAppDbContext db, IAuditService audit, ICurrentGroupService current, IOcrAliasService aliases)
     {
         _db = db;
         _audit = audit;

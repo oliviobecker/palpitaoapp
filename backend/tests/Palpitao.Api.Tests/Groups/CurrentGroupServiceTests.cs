@@ -8,6 +8,7 @@ using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Groups;
 using Xunit;
+using Palpitao.Api.Auth;
 
 namespace Palpitao.Api.Tests.Groups;
 
@@ -40,9 +41,9 @@ public class CurrentGroupServiceTests
         }
         if (groupHeader is not null)
         {
-            ctx.Request.Headers[CurrentGroupService.GroupHeader] = groupHeader;
+            ctx.Request.Headers[HttpCurrentUser.GroupHeader] = groupHeader;
         }
-        return new CurrentGroupService(db, new HttpContextAccessor { HttpContext = ctx });
+        return new CurrentGroupService(db, new HttpCurrentUser(new HttpContextAccessor { HttpContext = ctx }));
     }
 
     private static Guid SeedUser(AppDbContext db, string email = "u@x.com")

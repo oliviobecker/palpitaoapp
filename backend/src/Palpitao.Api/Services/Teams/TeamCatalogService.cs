@@ -8,6 +8,7 @@ using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Fixtures;
 using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Teams;
 
@@ -33,14 +34,14 @@ public class TeamCatalogService : ITeamCatalogService
         Competition.LeagueOne,
     };
 
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly ITeamCatalogProvider _provider;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
     private readonly FixtureOptions _options;
 
     public TeamCatalogService(
-        AppDbContext db,
+        IAppDbContext db,
         ITeamCatalogProvider provider,
         IAuditService audit,
         ICurrentGroupService current,
@@ -51,6 +52,21 @@ public class TeamCatalogService : ITeamCatalogService
         _audit = audit;
         _current = current;
         _options = options.Value;
+    }
+
+    public async Task<IReadOnlyList<TeamDto>> ListAsync(Competition? competition, CancellationToken ct)
+    {
+        var query = _db.Teams.AsQueryable();
+
+        if (competition is Competition.PremierLeague or Competition.Championship or Competition.LeagueOne)
+        {
+            query = query.Where(t => t.Division == competition);
+        }
+
+        return await query
+            .OrderBy(t => t.Name)
+            .Select(t => new TeamDto(t.Id, t.Name, t.ShortName, t.IsBigSevenClub, t.CrestUrl, t.Division, t.TeamType))
+            .ToListAsync(ct);
     }
 
     public async Task<AdminTeamDto> UpdateDivisionAsync(

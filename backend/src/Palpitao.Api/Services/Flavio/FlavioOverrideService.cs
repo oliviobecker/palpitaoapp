@@ -1,4 +1,3 @@
-using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
@@ -8,12 +7,14 @@ using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Scoring;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Flavio;
 
 public class FlavioOverrideService(
-    AppDbContext db, ICurrentGroupService current, IAuditService audit,
-    IFlavioRuleService flavio, ISeasonScoringConfigService config, IRoundScoringService scoring)
+    IAppDbContext db, ICurrentGroupService current, IAuditService audit,
+    IFlavioRuleService flavio, ISeasonScoringConfigService config, IRoundScoringService scoring,
+    ITransactionRunner transactions)
 {
     private async Task<Round> GetRoundAsync(Guid roundId, CancellationToken ct)
     {
@@ -56,8 +57,11 @@ public class FlavioOverrideService(
         if (string.IsNullOrWhiteSpace(request.Justification) || request.Justification.Length > 500)
             throw new BusinessRuleException("flavio.justificationRequired");
 
-        await using var tx = db.Database.IsRelational()
-            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
+        await transactions.InTransactionAsync(() => SaveCoreAsync(roundId, request, adminId, ct), ct);
+    }
+
+    private async Task SaveCoreAsync(Guid roundId, FlavioOverrideRequest request, Guid adminId, CancellationToken ct)
+    {
         var round = await GetRoundAsync(roundId, ct);
         if (round.Status is not (RoundStatus.Published or RoundStatus.Locked or RoundStatus.Scored))
             throw new BusinessRuleException("flavio.overrideRoundStatus");
@@ -86,6 +90,5 @@ public class FlavioOverrideService(
         await db.SaveChangesAsync(ct);
         if (round.Status == RoundStatus.Scored)
             await scoring.RecalculateSeasonAsync(round.SeasonId, adminId, ct);
-        if (tx is not null) await tx.CommitAsync(ct);
     }
 }

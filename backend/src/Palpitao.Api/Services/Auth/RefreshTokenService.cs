@@ -6,15 +6,16 @@ using Palpitao.Api.Auth;
 using Palpitao.Api.Data;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Auth;
 
 public class RefreshTokenService : IRefreshTokenService
 {
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly JwtSettings _settings;
 
-    public RefreshTokenService(AppDbContext db, IOptions<JwtSettings> settings)
+    public RefreshTokenService(IAppDbContext db, IOptions<JwtSettings> settings)
     {
         _db = db;
         _settings = settings.Value;

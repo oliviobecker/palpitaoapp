@@ -7,17 +7,18 @@ using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
 using Sentry;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Results;
 
 public class ResultsUpdateService : IResultsUpdateService
 {
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly IResultsProvider _provider;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
 
-    public ResultsUpdateService(AppDbContext db, IResultsProvider provider, IAuditService audit, ICurrentGroupService current)
+    public ResultsUpdateService(IAppDbContext db, IResultsProvider provider, IAuditService audit, ICurrentGroupService current)
     {
         _db = db;
         _provider = provider;

@@ -6,6 +6,7 @@ using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Scoring;
 
@@ -35,11 +36,11 @@ public class SeasonScoringConfigService : ISeasonScoringConfigService
         ScoreCategory.Uncommon, ScoreCategory.ExtraUncommon,
     };
 
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
 
-    public SeasonScoringConfigService(AppDbContext db, IAuditService audit, ICurrentGroupService current)
+    public SeasonScoringConfigService(IAppDbContext db, IAuditService audit, ICurrentGroupService current)
     {
         _db = db;
         _audit = audit;

@@ -9,6 +9,7 @@ using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Scoring;
 using Palpitao.Api.Services.Tournaments;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Fixtures;
 
@@ -16,7 +17,7 @@ public class FixtureImportService : IFixtureImportService
 {
     private static readonly IReadOnlyDictionary<Guid, Competition> NoClassicTeams = new Dictionary<Guid, Competition>();
 
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly IFixtureProvider _provider;
     private readonly IScoringService _scoring;
     private readonly ISeasonScoringConfigService _config;
@@ -25,7 +26,7 @@ public class FixtureImportService : IFixtureImportService
     private readonly FixtureOptions _options;
 
     public FixtureImportService(
-        AppDbContext db,
+        IAppDbContext db,
         IFixtureProvider provider,
         IScoringService scoring,
         ISeasonScoringConfigService config,

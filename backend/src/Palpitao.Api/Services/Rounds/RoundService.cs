@@ -10,18 +10,19 @@ using Palpitao.Api.Services.Flavio;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Scoring;
 using Palpitao.Api.Services.Tournaments;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Rounds;
 
 public class RoundService : IRoundService
 {
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
     private readonly ISeasonScoringConfigService _config;
 
     public RoundService(
-        AppDbContext db, IAuditService audit, ICurrentGroupService current, ISeasonScoringConfigService config)
+        IAppDbContext db, IAuditService audit, ICurrentGroupService current, ISeasonScoringConfigService config)
     {
         _db = db;
         _audit = audit;
@@ -115,7 +116,7 @@ public class RoundService : IRoundService
         var deletion = RoundWeekPlanner.PlanDelete(season, round.Id);
         var deleteReplaysLeftovers = deletion.Allowed
             && round.Status == RoundStatus.Cancelled
-            && await RoundLifecycle.HasScoringRowsAsync(_db, round.Id, ct);
+            && await RoundScoringRows.ExistAsync(_db, round.Id, ct);
 
         return new RoundWeekDto
         {

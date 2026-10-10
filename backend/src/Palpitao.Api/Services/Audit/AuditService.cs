@@ -4,12 +4,13 @@ using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Admin;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Audit;
 
 public class AuditService : IAuditService
 {
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly ICurrentGroupService? _currentGroup;
 
     /// <param name="db">The unit of work the entries are added to.</param>
@@ -18,7 +19,7 @@ public class AuditService : IAuditService
     /// passes no group. The DI container always injects it; it is optional only so unit tests
     /// that do not care about the group can omit it (their entries stay unscoped).
     /// </param>
-    public AuditService(AppDbContext db, ICurrentGroupService? currentGroup = null)
+    public AuditService(IAppDbContext db, ICurrentGroupService? currentGroup = null)
     {
         _db = db;
         _currentGroup = currentGroup;

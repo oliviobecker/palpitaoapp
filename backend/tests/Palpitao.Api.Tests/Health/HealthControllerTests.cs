@@ -31,7 +31,7 @@ public class HealthControllerTests
     }
 
     private static HealthController CreateController(AppDbContext db, IOcrEngine? ocr = null) =>
-        new(db, ocr ?? new StubOcrEngine(), NullLogger<HealthController>.Instance);
+        new(new EfDatabaseHealthProbe(db), ocr ?? new StubOcrEngine(), NullLogger<HealthController>.Instance);
 
     [Fact]
     public void Liveness_returns_ok()

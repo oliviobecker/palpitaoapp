@@ -1,9 +1,17 @@
 using Palpitao.Api.DTOs.Teams;
+using Palpitao.Api.Enums;
 
 namespace Palpitao.Api.Services.Teams;
 
 public interface ITeamCatalogService
 {
+    /// <summary>
+    /// Lists clubs ordered by name. A tracked league division (Premier League, Championship or
+    /// League One) narrows the list to that division; the FA Cup and any other value return
+    /// every club, since cups draw from all divisions.
+    /// </summary>
+    Task<IReadOnlyList<TeamDto>> ListAsync(Competition? competition, CancellationToken ct);
+
     /// <summary>Moves a club to another league division (or clears it).</summary>
     Task<AdminTeamDto> UpdateDivisionAsync(
         Guid teamId, UpdateTeamDivisionRequest request, Guid actingUserId, CancellationToken ct);

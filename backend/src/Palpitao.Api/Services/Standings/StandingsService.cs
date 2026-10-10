@@ -4,15 +4,16 @@ using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Scoring;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Standings;
 
 public class StandingsService : IStandingsService
 {
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly ICurrentGroupService _current;
 
-    public StandingsService(AppDbContext db, ICurrentGroupService current)
+    public StandingsService(IAppDbContext db, ICurrentGroupService current)
     {
         _db = db;
         _current = current;

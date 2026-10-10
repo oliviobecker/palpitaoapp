@@ -8,29 +8,33 @@ using Palpitao.Api.Services.Absences;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Localization;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Users;
 
 public class UserAdminService : IUserAdminService
 {
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
     private readonly IAbsenceService _absences;
     private readonly ILocalizationService _messages;
+    private readonly IPasswordHasher _passwords;
 
     public UserAdminService(
-        AppDbContext db,
+        IAppDbContext db,
         IAuditService audit,
         ICurrentGroupService current,
         IAbsenceService absences,
-        ILocalizationService messages)
+        ILocalizationService messages,
+        IPasswordHasher passwords)
     {
         _db = db;
         _audit = audit;
         _current = current;
         _absences = absences;
         _messages = messages;
+        _passwords = passwords;
     }
 
     public async Task<IReadOnlyList<ParticipantDto>> ListParticipantsAsync(CancellationToken ct)
@@ -102,7 +106,7 @@ public class UserAdminService : IUserAdminService
             Id = Guid.NewGuid(),
             Name = request.Name,
             Email = request.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            PasswordHash = _passwords.Hash(request.Password),
             Role = UserRole.Participant,
             Status = UserStatus.Approved,
             IsActive = true,

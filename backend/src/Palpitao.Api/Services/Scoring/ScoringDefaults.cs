@@ -1,5 +1,4 @@
 using Palpitao.Api.Enums;
-using Palpitao.Api.Services.Flavio;
 
 namespace Palpitao.Api.Services.Scoring;
 
@@ -14,7 +13,7 @@ public static class ScoringDefaults
     // --- Special rules (Flávio Rule + absence punishments) -------------------
 
     /// <summary>Flávio Rule applies from round 16 on (England variant).</summary>
-    public const int FlavioFromRound = FlavioRuleService.FirstApplicableRound;
+    public const int FlavioFromRound = 16;
 
     /// <summary>Absences count towards the punishment ladder from the very first round.</summary>
     public const int AbsenceFromRound = 1;

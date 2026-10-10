@@ -1,4 +1,3 @@
-using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
@@ -9,26 +8,29 @@ using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Flavio;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Scoring;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Rounds;
 
 /// <inheritdoc />
 public class RoundWeekService : IRoundWeekService
 {
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly IRoundService _rounds;
     private readonly IRoundScoringService _scoring;
     private readonly ISeasonScoringConfigService _config;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
+    private readonly ITransactionRunner _transactions;
 
     public RoundWeekService(
-        AppDbContext db,
+        IAppDbContext db,
         IRoundService rounds,
         IRoundScoringService scoring,
         ISeasonScoringConfigService config,
         IAuditService audit,
-        ICurrentGroupService current)
+        ICurrentGroupService current,
+        ITransactionRunner transactions)
     {
         _db = db;
         _rounds = rounds;
@@ -36,10 +38,11 @@ public class RoundWeekService : IRoundWeekService
         _config = config;
         _audit = audit;
         _current = current;
+        _transactions = transactions;
     }
 
     public Task<RoundDto> CreateInPreviousWeekAsync(CreateRoundRequest request, Guid actingUserId, CancellationToken ct)
-        => InTransactionAsync(async () =>
+        => _transactions.InTransactionAsync(async () =>
         {
             // Created standalone at the number the form proposed, then joined exactly like the
             // round-detail action: one path, one set of rules.
@@ -49,21 +52,21 @@ public class RoundWeekService : IRoundWeekService
         }, ct);
 
     public Task<RoundDto> JoinPreviousWeekAsync(Guid roundId, Guid actingUserId, CancellationToken ct)
-        => InTransactionAsync(async () =>
+        => _transactions.InTransactionAsync(async () =>
         {
             await RegroupAsync(roundId, RoundWeekPlanner.PlanJoinPrevious, "RoundJoinedPreviousWeek", actingUserId, ct);
             return await _rounds.GetByIdAsync(roundId, ct);
         }, ct);
 
     public Task<RoundDto> LeaveWeekAsync(Guid roundId, Guid actingUserId, CancellationToken ct)
-        => InTransactionAsync(async () =>
+        => _transactions.InTransactionAsync(async () =>
         {
             await RegroupAsync(roundId, RoundWeekPlanner.PlanLeave, "RoundLeftWeek", actingUserId, ct);
             return await _rounds.GetByIdAsync(roundId, ct);
         }, ct);
 
     public Task<RoundDto> CancelAsync(Guid roundId, Guid actingUserId, CancellationToken ct)
-        => InTransactionAsync(async () =>
+        => _transactions.InTransactionAsync(async () =>
         {
             var round = await LoadAsync(roundId, ct);
 
@@ -83,7 +86,7 @@ public class RoundWeekService : IRoundWeekService
         }, ct);
 
     public Task<RoundDto> RestoreAsync(Guid roundId, Guid actingUserId, CancellationToken ct)
-        => InTransactionAsync(async () =>
+        => _transactions.InTransactionAsync(async () =>
         {
             var round = await LoadAsync(roundId, ct);
 
@@ -103,7 +106,7 @@ public class RoundWeekService : IRoundWeekService
         }, ct);
 
     public Task<RoundDeletion> DeleteAsync(Guid roundId, Guid actingUserId, CancellationToken ct)
-        => InTransactionAsync(async () =>
+        => _transactions.InTransactionAsync(async () =>
         {
             var round = await LoadAsync(roundId, ct);
             var plan = RoundWeekPlanner.PlanDelete(await SlotsAsync(round.SeasonId, ct), round.Id);
@@ -114,7 +117,7 @@ public class RoundWeekService : IRoundWeekService
 
             // A round reopened and then cancelled still holds its results and absences: the
             // standings count them and they may have eliminated someone, so they go by replay.
-            var hadScoring = await RoundLifecycle.HasScoringRowsAsync(_db, round.Id, ct);
+            var hadScoring = await RoundScoringRows.ExistAsync(_db, round.Id, ct);
             var recalculate = plan.RequiresReplay || hadScoring;
 
             var removed = await PurgeAsync(round, ct);
@@ -294,20 +297,4 @@ public class RoundWeekService : IRoundWeekService
             ?? throw new NotFoundException("notFound.round");
     }
 
-    /// <summary>
-    /// Same contract as the scoring service's: the renumbering and the replay commit together or
-    /// not at all, and an already open transaction (a caller composing operations) is joined.
-    /// </summary>
-    private async Task<T> InTransactionAsync<T>(Func<Task<T>> action, CancellationToken ct)
-    {
-        if (!_db.Database.IsRelational() || _db.Database.CurrentTransaction is not null)
-        {
-            return await action();
-        }
-
-        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-        var result = await action();
-        await tx.CommitAsync(ct);
-        return result;
-    }
 }

@@ -4,15 +4,16 @@ using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Scouts;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Scouts;
 
 public class ScoutService : IScoutService
 {
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly ICurrentGroupService _current;
 
-    public ScoutService(AppDbContext db, ICurrentGroupService current)
+    public ScoutService(IAppDbContext db, ICurrentGroupService current)
     {
         _db = db;
         _current = current;

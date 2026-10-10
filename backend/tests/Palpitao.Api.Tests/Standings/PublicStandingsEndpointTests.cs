@@ -51,7 +51,7 @@ public class PublicStandingsEndpointTests
     private static RequestGroupContext ContextWith(Guid headerGroup, bool marked)
     {
         var http = new DefaultHttpContext();
-        http.Request.Headers[CurrentGroupService.GroupHeader] = headerGroup.ToString();
+        http.Request.Headers[HttpCurrentUser.GroupHeader] = headerGroup.ToString();
         if (marked)
         {
             http.SetEndpoint(new Endpoint(

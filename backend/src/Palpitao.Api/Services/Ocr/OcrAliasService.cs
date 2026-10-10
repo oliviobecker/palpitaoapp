@@ -5,17 +5,18 @@ using Palpitao.Api.DTOs.Admin;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Ocr;
 
 /// <inheritdoc cref="IOcrAliasService"/>
 public class OcrAliasService : IOcrAliasService
 {
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
 
-    public OcrAliasService(AppDbContext db, IAuditService audit, ICurrentGroupService current)
+    public OcrAliasService(IAppDbContext db, IAuditService audit, ICurrentGroupService current)
     {
         _db = db;
         _audit = audit;

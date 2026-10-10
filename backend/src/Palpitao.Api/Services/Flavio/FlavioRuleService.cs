@@ -4,6 +4,8 @@ using Palpitao.Api.Data;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Tournaments;
+using Palpitao.Api.Abstractions;
+using Palpitao.Api.Services.Scoring;
 
 namespace Palpitao.Api.Services.Flavio;
 
@@ -14,13 +16,13 @@ public class FlavioRuleService : IFlavioRuleService
     /// <c>FlavioFromRound</c> setting (see <c>ScoringDefaults</c>). The applicability
     /// methods take the season's configured value explicitly.
     /// </summary>
-    public const int FirstApplicableRound = 16;
+    public const int FirstApplicableRound = ScoringDefaults.FlavioFromRound;
     private const int StandardWindowHours = 24;
     private const int ShortWindowHours = 12;
 
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
 
-    public FlavioRuleService(AppDbContext db)
+    public FlavioRuleService(IAppDbContext db)
     {
         _db = db;
     }

@@ -7,16 +7,17 @@ using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
 using Sentry;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Predictions;
 
 public class PredictionsService : IPredictionsService
 {
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
 
-    public PredictionsService(AppDbContext db, IAuditService audit, ICurrentGroupService current)
+    public PredictionsService(IAppDbContext db, IAuditService audit, ICurrentGroupService current)
     {
         _db = db;
         _audit = audit;

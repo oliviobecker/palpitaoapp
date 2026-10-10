@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
 using Palpitao.Api.Enums;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Flavio;
 
@@ -9,7 +10,7 @@ public static class FlavioLeaders
 {
     /// <summary>Historical net totals, never the current standings cache or future rounds.</summary>
     public static async Task<IReadOnlyList<Guid>> GetBeforeRoundAsync(
-        AppDbContext db, Guid roundId, CancellationToken ct)
+        IAppDbContext db, Guid roundId, CancellationToken ct)
     {
         var round = await db.Rounds.AsNoTracking().FirstOrDefaultAsync(r => r.Id == roundId, ct)
             ?? throw new NotFoundException("notFound.round");

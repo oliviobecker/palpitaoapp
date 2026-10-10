@@ -1,8 +1,6 @@
-using System.Security.Claims;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Palpitao.Api.Abstractions;
 using Palpitao.Api.Common;
-using Palpitao.Api.Data;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 
@@ -11,34 +9,24 @@ namespace Palpitao.Api.Services.Groups;
 /// <inheritdoc />
 public class CurrentGroupService : ICurrentGroupService
 {
-    public const string GroupHeader = "X-Group-Id";
-
-    private readonly AppDbContext _db;
-    private readonly IHttpContextAccessor _http;
+    private readonly IAppDbContext _db;
+    private readonly ICurrentUser _user;
 
     // Per-request cache of the resolved membership (the service is scoped). Assigned only
     // once every gate has passed, so it never holds a membership that was denied.
     private GroupUser? _resolved;
     private bool _resolvedOnce;
 
-    public CurrentGroupService(AppDbContext db, IHttpContextAccessor http)
+    public CurrentGroupService(IAppDbContext db, ICurrentUser user)
     {
         _db = db;
-        _http = http;
+        _user = user;
     }
 
-    public Guid? UserId
-    {
-        get
-        {
-            var value = _http.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            return Guid.TryParse(value, out var id) ? id : null;
-        }
-    }
+    public Guid? UserId => _user.UserId;
 
     /// <inheritdoc />
-    public bool IsSuperAdmin
-        => _http.HttpContext?.User.IsInRole(UserRole.Admin.ToString()) == true;
+    public bool IsSuperAdmin => _user.IsSuperAdmin;
 
     /// <inheritdoc />
     public Guid? ResolvedGroupId => _resolved?.GroupId;
@@ -81,7 +69,7 @@ public class CurrentGroupService : ICurrentGroupService
             throw new ForbiddenException();
         }
 
-        var header = _http.HttpContext?.Request.Headers[GroupHeader].ToString();
+        var header = _user.RequestedGroupId;
         if (string.IsNullOrWhiteSpace(header) || !Guid.TryParse(header, out var groupId))
         {
             throw new ForbiddenException("group.headerMissing");

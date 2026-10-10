@@ -1,6 +1,7 @@
 using Palpitao.Api.Data;
 using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Groups;
 
@@ -14,21 +15,21 @@ public static class GroupQueries
 {
     /// <summary>Active, non-eliminated approved participant users of a group.
     /// Active/eliminated are per-group flags on <see cref="GroupUser"/>.</summary>
-    public static IQueryable<User> ActiveParticipants(AppDbContext db, Guid groupId)
+    public static IQueryable<User> ActiveParticipants(IAppDbContext db, Guid groupId)
         => ApprovedMemberships(db, groupId)
             .Where(gu => gu.IsActive && !gu.IsEliminated)
             .Join(db.Users, gu => gu.UserId, u => u.Id, (gu, u) => u);
 
     /// <summary>All approved participant users of a group (including eliminated/inactive),
     /// e.g. for the predictions mirror which still lists eliminated members.</summary>
-    public static IQueryable<User> AllParticipants(AppDbContext db, Guid groupId)
+    public static IQueryable<User> AllParticipants(IAppDbContext db, Guid groupId)
         => ApprovedMemberships(db, groupId)
             .Join(db.Users, gu => gu.UserId, u => u.Id, (gu, u) => u);
 
     /// <summary>Approved participant <see cref="GroupUser"/> memberships of a group
     /// (carrying the per-group <c>IsActive</c>/<c>IsEliminated</c> flags). Use when
     /// the caller needs those flags, not just the <see cref="User"/>.</summary>
-    public static IQueryable<GroupUser> ApprovedMemberships(AppDbContext db, Guid groupId)
+    public static IQueryable<GroupUser> ApprovedMemberships(IAppDbContext db, Guid groupId)
         => db.GroupUsers
             .Where(gu => gu.GroupId == groupId
                 && gu.Status == GroupUserStatus.Approved

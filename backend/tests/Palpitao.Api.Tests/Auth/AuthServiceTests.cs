@@ -36,7 +36,7 @@ public class AuthServiceTests
         new(db, Microsoft.Extensions.Options.Options.Create(new JwtSettings()));
 
     private static AuthService Service(AppDbContext db) =>
-        new(db, new FakeJwt(), RefreshTokens(db), new AuditService(db));
+        new(db, new FakeJwt(), RefreshTokens(db), new AuditService(db), new BCryptPasswordHasher());
 
     private static RegisterRequest Reg(string email = "novo@x.com", string password = "Senha123", string? confirm = null, Guid? groupId = null) => new()
     {

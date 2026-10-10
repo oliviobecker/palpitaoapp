@@ -7,6 +7,7 @@ using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Scoring;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Standings;
 
@@ -19,11 +20,11 @@ public class PublicStandingsService : IPublicStandingsService
     /// </summary>
     private static readonly RoundStatus[] VisibleStates = [RoundStatus.Locked, RoundStatus.Scored];
 
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly IScoringService _scoring;
     private readonly ISeasonScoringConfigService _config;
 
-    public PublicStandingsService(AppDbContext db, IScoringService scoring, ISeasonScoringConfigService config)
+    public PublicStandingsService(IAppDbContext db, IScoringService scoring, ISeasonScoringConfigService config)
     {
         _db = db;
         _scoring = scoring;

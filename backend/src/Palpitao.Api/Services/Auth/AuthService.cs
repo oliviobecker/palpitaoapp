@@ -8,22 +8,27 @@ using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Audit;
 using Group = Palpitao.Api.Entities.Group;
+using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Auth;
 
 public partial class AuthService : IAuthService
 {
-    private readonly AppDbContext _db;
+    private readonly IAppDbContext _db;
     private readonly IJwtTokenService _jwt;
     private readonly IRefreshTokenService _refreshTokens;
     private readonly IAuditService _audit;
+    private readonly IPasswordHasher _passwords;
 
-    public AuthService(AppDbContext db, IJwtTokenService jwt, IRefreshTokenService refreshTokens, IAuditService audit)
+    public AuthService(
+        IAppDbContext db, IJwtTokenService jwt, IRefreshTokenService refreshTokens, IAuditService audit,
+        IPasswordHasher passwords)
     {
         _db = db;
         _jwt = jwt;
         _refreshTokens = refreshTokens;
         _audit = audit;
+        _passwords = passwords;
     }
 
     public async Task RegisterAsync(RegisterRequest request, CancellationToken ct)
@@ -62,7 +67,7 @@ public partial class AuthService : IAuthService
                 Id = Guid.NewGuid(),
                 Name = name,
                 Email = email,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                PasswordHash = _passwords.Hash(request.Password),
                 Role = UserRole.Participant,
                 Status = UserStatus.Approved,
                 IsActive = true,
@@ -130,7 +135,7 @@ public partial class AuthService : IAuthService
             Id = Guid.NewGuid(),
             Name = adminName,
             Email = email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            PasswordHash = _passwords.Hash(request.Password),
             // Group role (GroupAdmin) is granted via the membership below; the global
             // role stays Participant (no platform-wide admin via the public flow).
             Role = UserRole.Participant,
@@ -218,7 +223,7 @@ public partial class AuthService : IAuthService
     {
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email, ct);
 
-        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+        if (user is null || !_passwords.Verify(request.Password, user.PasswordHash))
         {
             return LoginOutcome.Invalid();
         }
