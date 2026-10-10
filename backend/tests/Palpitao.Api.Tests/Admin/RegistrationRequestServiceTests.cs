@@ -2,14 +2,16 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Auth;
+using Palpitao.Application.Auth;
 using Palpitao.Api.Common;
+using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
 using Palpitao.Api.Controllers;
 using Palpitao.Api.Data;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Api.Services.Audit;
-using Palpitao.Api.Services.Registrations;
+using Palpitao.Application.Audit;
+using Palpitao.Application.Registrations;
 using Palpitao.Api.Tests.TestSupport;
 using Xunit;
 

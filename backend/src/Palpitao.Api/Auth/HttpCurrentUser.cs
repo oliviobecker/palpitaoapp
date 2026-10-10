@@ -1,6 +1,7 @@
 using System.Security.Claims;
-using Palpitao.Api.Abstractions;
+using Palpitao.Application.Abstractions;
 using Palpitao.Domain.Enums;
+using Palpitao.Application.Auth;
 
 namespace Palpitao.Api.Auth;
 

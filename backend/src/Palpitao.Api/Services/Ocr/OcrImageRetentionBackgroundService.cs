@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Palpitao.Api.Data;
+using Palpitao.Application.Ocr;
 
 namespace Palpitao.Api.Services.Ocr;
 

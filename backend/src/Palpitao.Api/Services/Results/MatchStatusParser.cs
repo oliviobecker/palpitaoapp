@@ -1,5 +1,6 @@
 using System.Text;
 using Palpitao.Domain.Enums;
+using Palpitao.Application.Results;
 
 namespace Palpitao.Api.Services.Results;
 

@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Palpitao.Domain.Entities;
+using Palpitao.Application.Auth;
 
 namespace Palpitao.Api.Auth;
 

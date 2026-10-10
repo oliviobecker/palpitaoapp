@@ -4,11 +4,13 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Palpitao.Api.Common;
+using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
-using Palpitao.Api.DTOs.Results;
+using Palpitao.Application.Results;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Fixtures;
+using Palpitao.Application.Fixtures;
 
 namespace Palpitao.Api.Services.Results;
 

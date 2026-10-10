@@ -1,3 +1,5 @@
+using Palpitao.Application.Auth;
+
 namespace Palpitao.Api.Auth;
 
 /// <summary>

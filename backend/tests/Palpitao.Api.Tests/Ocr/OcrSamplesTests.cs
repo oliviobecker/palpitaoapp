@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Palpitao.Api.Data;
 using Palpitao.Domain.Entities;
 using Palpitao.Api.Services.Ocr;
+using Palpitao.Application.Ocr;
 using Xunit;
 using Xunit.Abstractions;
 

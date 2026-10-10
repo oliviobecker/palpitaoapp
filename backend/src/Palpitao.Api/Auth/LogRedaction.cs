@@ -1,3 +1,5 @@
+using Palpitao.Application.Auth;
+
 namespace Palpitao.Api.Auth;
 
 /// <summary>Keeps personal data out of log text while leaving enough to correlate a report.</summary>

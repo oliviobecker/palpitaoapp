@@ -1,3 +1,5 @@
+using Palpitao.Application.Results;
+
 namespace Palpitao.Api.Services.Results;
 
 /// <summary>Bound from the "ResultsRefresh" configuration section. Drives the

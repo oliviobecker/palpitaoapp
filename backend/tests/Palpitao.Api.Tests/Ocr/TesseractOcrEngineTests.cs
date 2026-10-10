@@ -3,6 +3,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Palpitao.Api.Services.Ocr;
+using Palpitao.Application.Ocr;
 using Xunit;
 
 namespace Palpitao.Api.Tests.Ocr;

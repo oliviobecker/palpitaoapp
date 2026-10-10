@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The use cases: one folder per area (service, interface, DTOs), the request validators and the
+       ports they depend on (Abstractions/). EF Core's DbSet is the data-access abstraction, so the
+       base package comes in — never a provider, and nothing from ASP.NET Core. -->
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The Web SDK imported this one implicitly; class libraries do not. -->
+    <Using Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Palpitao.Domain\Palpitao.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

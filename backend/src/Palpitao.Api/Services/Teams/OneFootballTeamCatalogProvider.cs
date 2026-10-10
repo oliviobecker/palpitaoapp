@@ -3,9 +3,12 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Palpitao.Api.Common;
+using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Enums;
 using Palpitao.Api.Services.Fixtures;
+using Palpitao.Application.Fixtures;
+using Palpitao.Application.Teams;
 
 namespace Palpitao.Api.Services.Teams;
 

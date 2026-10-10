@@ -1,14 +1,13 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
+using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
 using Palpitao.Api.Data;
-using Palpitao.Api.DTOs.Matches;
-using Palpitao.Api.DTOs.Rounds;
+using Palpitao.Application.Rounds;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Api.Services.Audit;
-using Palpitao.Api.Services.Rounds;
+using Palpitao.Application.Audit;
 using Palpitao.Domain.Rounds;
 using Palpitao.Domain.Tournaments;
 using Palpitao.Api.Tests.TestSupport;

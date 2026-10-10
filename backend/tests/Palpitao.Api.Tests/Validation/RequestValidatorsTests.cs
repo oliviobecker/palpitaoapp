@@ -1,10 +1,12 @@
 using Palpitao.Api.Common;
+using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
-using Palpitao.Api.DTOs.Auth;
-using Palpitao.Api.DTOs.Matches;
-using Palpitao.Api.DTOs.Predictions;
+using Palpitao.Application.Auth;
+using Palpitao.Application.Rounds;
+using Palpitao.Application.Predictions;
 using Palpitao.Domain.Enums;
 using Palpitao.Api.Validation;
+using Palpitao.Application.Validation;
 using Xunit;
 
 namespace Palpitao.Api.Tests.Validation;

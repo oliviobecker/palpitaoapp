@@ -1,8 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Palpitao.Api.Common;
+using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
-using Palpitao.Api.Services.Localization;
+using Palpitao.Api.Localization;
+using Palpitao.Application.Abstractions;
 
 namespace Palpitao.Api.Middlewares;
 

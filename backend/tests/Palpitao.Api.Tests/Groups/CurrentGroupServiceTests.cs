@@ -3,13 +3,15 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
+using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
 using Palpitao.Api.Data;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Api.Services.Groups;
+using Palpitao.Application.Groups;
 using Xunit;
 using Palpitao.Api.Auth;
+using Palpitao.Application.Auth;
 
 namespace Palpitao.Api.Tests.Groups;
 

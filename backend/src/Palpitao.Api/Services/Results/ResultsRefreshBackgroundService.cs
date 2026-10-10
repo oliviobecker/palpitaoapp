@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Palpitao.Api.Data;
+using Palpitao.Application.Results;
 
 namespace Palpitao.Api.Services.Results;
 

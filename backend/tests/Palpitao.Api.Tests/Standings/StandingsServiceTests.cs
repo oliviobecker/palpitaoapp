@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Data;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Api.Services.Standings;
+using Palpitao.Application.Standings;
 using Palpitao.Api.Tests.TestSupport;
 using Xunit;
 

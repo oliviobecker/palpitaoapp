@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Palpitao.Domain/Palpitao.Domain.csproj" />
+    <Project Path="src/Palpitao.Application/Palpitao.Application.csproj" />
     <Project Path="src/Palpitao.Api/Palpitao.Api.csproj" />
   </Folder>
   <Folder Name="/tests/">

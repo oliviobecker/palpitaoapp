@@ -1,4 +1,4 @@
-using Palpitao.Api.Abstractions;
+using Palpitao.Application.Abstractions;
 
 namespace Palpitao.Api.Tests.TestSupport;
 

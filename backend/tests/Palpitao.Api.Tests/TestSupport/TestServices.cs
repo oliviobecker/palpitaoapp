@@ -1,14 +1,15 @@
 using Palpitao.Api.Data;
 using Microsoft.Extensions.Logging.Abstractions;
-using Palpitao.Api.Services.Absences;
-using Palpitao.Api.Services.Audit;
-using Palpitao.Api.Services.Flavio;
-using Palpitao.Api.Services.Groups;
-using Palpitao.Api.Services.Scoring;
+using Palpitao.Application.Absences;
+using Palpitao.Application.Audit;
+using Palpitao.Application.Flavio;
+using Palpitao.Application.Groups;
+using Palpitao.Application.Scoring;
 using Palpitao.Domain.Scoring;
-using Palpitao.Api.Services.Standings;
-using Palpitao.Api.Services.Users;
+using Palpitao.Application.Standings;
+using Palpitao.Application.Users;
 using Palpitao.Api.Auth;
+using Palpitao.Application.Auth;
 
 namespace Palpitao.Api.Tests.TestSupport;
 

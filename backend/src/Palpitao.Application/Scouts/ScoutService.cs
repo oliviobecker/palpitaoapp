@@ -1,0 +1,87 @@
+using Microsoft.EntityFrameworkCore;
+using Palpitao.Application.Common.Exceptions;
+using Palpitao.Domain.Common;
+using Palpitao.Domain.Enums;
+using Palpitao.Application.Groups;
+using Palpitao.Application.Abstractions;
+
+namespace Palpitao.Application.Scouts;
+
+public class ScoutService : IScoutService
+{
+    private readonly IAppDbContext _db;
+    private readonly ICurrentGroupService _current;
+
+    public ScoutService(IAppDbContext db, ICurrentGroupService current)
+    {
+        _db = db;
+        _current = current;
+    }
+
+    public async Task<RoundScoutDto> GetRoundScoutAsync(Guid roundId, CancellationToken ct)
+    {
+        var groupId = await _current.GetGroupIdAsync(ct);
+        var round = await _db.Rounds
+            .Include(r => r.Matches).ThenInclude(m => m.HomeTeam)
+            .Include(r => r.Matches).ThenInclude(m => m.AwayTeam)
+            .FirstOrDefaultAsync(r => r.Id == roundId && r.GroupId == groupId, ct)
+            ?? throw new NotFoundException("notFound.round");
+
+        // Every participant's prediction for this round, with the participant name.
+        var predictions = await _db.Predictions
+            .Where(p => p.RoundId == roundId && p.User!.Role == UserRole.Participant)
+            .Select(p => new
+            {
+                p.RoundMatchId,
+                p.PredictedHomeScore,
+                p.PredictedAwayScore,
+                Name = p.User!.Name,
+            })
+            .ToListAsync(ct);
+
+        var byMatch = predictions
+            .GroupBy(p => p.RoundMatchId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var dto = new RoundScoutDto
+        {
+            RoundId = round.Id,
+            RoundNumber = round.Number,
+            RoundPart = round.Part,
+            RoundTitle = round.Title,
+        };
+
+        // Chronological: the admin reads the scout in the order the games kick off.
+        foreach (var match in round.Matches.OrderBy(m => m.StartsAt).ThenBy(m => m.Order))
+        {
+            var matchDto = new ScoutMatchDto
+            {
+                RoundMatchId = match.Id,
+                HomeTeamName = match.HomeTeam?.Name ?? string.Empty,
+                AwayTeamName = match.AwayTeam?.Name ?? string.Empty,
+                StartsAt = match.StartsAt,
+            };
+
+            if (byMatch.TryGetValue(match.Id, out var matchPredictions))
+            {
+                matchDto.Groups = matchPredictions
+                    .GroupBy(p => (p.PredictedHomeScore, p.PredictedAwayScore))
+                    .Select(g => new ScoutScoreGroupDto
+                    {
+                        HomeScore = g.Key.PredictedHomeScore,
+                        AwayScore = g.Key.PredictedAwayScore,
+                        Names = g.Select(p => p.Name)
+                            .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase)
+                            .ToList(),
+                    })
+                    .OrderBy(g => g.HomeScore)
+                    .ThenBy(g => g.AwayScore)
+                    .ToList();
+            }
+
+            dto.Matches.Add(matchDto);
+        }
+
+        return dto;
+    }
+}

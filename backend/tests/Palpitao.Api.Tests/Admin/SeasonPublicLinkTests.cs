@@ -1,9 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Data;
-using Palpitao.Api.DTOs.Seasons;
-using Palpitao.Api.Services.Audit;
-using Palpitao.Api.Services.Seasons;
+using Palpitao.Application.Seasons;
+using Palpitao.Application.Audit;
 using Palpitao.Api.Tests.TestSupport;
 using Xunit;
 

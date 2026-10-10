@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Palpitao.Api.Controllers;
 using Palpitao.Api.Data;
 using Palpitao.Api.Services.Ocr;
+using Palpitao.Application.Ocr;
 using Xunit;
 
 namespace Palpitao.Api.Tests.Health;

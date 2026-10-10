@@ -2,12 +2,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Palpitao.Api.Auth;
-using Palpitao.Api.DTOs.Auth;
-using Palpitao.Api.DTOs.Groups;
+using Palpitao.Application.Auth;
+using Palpitao.Application.Groups;
 using Palpitao.Domain.Enums;
-using Palpitao.Api.Services.Auth;
-using Palpitao.Api.Services.Groups;
-using Palpitao.Api.Services.Localization;
+using Palpitao.Api.Localization;
+using Palpitao.Application.Abstractions;
 using Sentry;
 
 namespace Palpitao.Api.Controllers;

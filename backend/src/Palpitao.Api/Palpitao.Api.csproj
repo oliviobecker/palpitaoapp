@@ -26,6 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Palpitao.Application\Palpitao.Application.csproj" />
     <ProjectReference Include="..\Palpitao.Domain\Palpitao.Domain.csproj" />
   </ItemGroup>
 

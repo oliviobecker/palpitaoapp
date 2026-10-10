@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Palpitao.Api.Auth;
-using Palpitao.Api.DTOs.Fixtures;
+using Palpitao.Application.Auth;
+using Palpitao.Application.Fixtures;
 using Palpitao.Api.Services.Fixtures;
 using Sentry;
 

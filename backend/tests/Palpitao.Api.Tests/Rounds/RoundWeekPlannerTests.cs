@@ -1,7 +1,8 @@
 using Palpitao.Api.Common;
+using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Enums;
-using Palpitao.Api.Services.Rounds;
+using Palpitao.Application.Rounds;
 using Palpitao.Domain.Rounds;
 using Xunit;
 

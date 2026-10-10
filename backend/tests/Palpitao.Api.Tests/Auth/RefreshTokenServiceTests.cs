@@ -2,10 +2,10 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Palpitao.Api.Auth;
+using Palpitao.Application.Auth;
 using Palpitao.Api.Data;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Api.Services.Auth;
 using Palpitao.Api.Tests.TestSupport;
 using Xunit;
 

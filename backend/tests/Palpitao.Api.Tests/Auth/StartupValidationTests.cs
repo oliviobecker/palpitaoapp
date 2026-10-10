@@ -1,4 +1,5 @@
 using Palpitao.Api.Auth;
+using Palpitao.Application.Auth;
 using Xunit;
 
 namespace Palpitao.Api.Tests.Auth;

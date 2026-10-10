@@ -3,8 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Data;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Api.Services.Flavio;
-using Palpitao.Api.Services.Scoring;
+using Palpitao.Application.Flavio;
+using Palpitao.Application.Scoring;
 using Palpitao.Domain.Scoring;
 using Xunit;
 

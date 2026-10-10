@@ -3,9 +3,16 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Net.Http.Headers;
 using Palpitao.Api.Auth;
+using Palpitao.Application.Auth;
 using Palpitao.Api.Common;
+using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
-using Palpitao.Api.DTOs.Admin;
+using Palpitao.Application.AdminPredictions;
+using Palpitao.Application.Audit;
+using Palpitao.Application.Flavio;
+using Palpitao.Application.Ocr;
+using Palpitao.Application.Registrations;
+using Palpitao.Application.Users;
 using Palpitao.Api.Services.Ocr;
 using Sentry;
 

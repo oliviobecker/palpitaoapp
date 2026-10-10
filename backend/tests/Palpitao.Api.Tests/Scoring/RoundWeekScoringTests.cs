@@ -1,12 +1,12 @@
 using Palpitao.Api.Common;
+using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
 using Palpitao.Api.Data;
-using Palpitao.Api.DTOs.Rounds;
+using Palpitao.Application.Rounds;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Api.Services.Audit;
-using Palpitao.Api.Services.Flavio;
-using Palpitao.Api.Services.Rounds;
+using Palpitao.Application.Audit;
+using Palpitao.Application.Flavio;
 using Palpitao.Domain.Rounds;
 using Palpitao.Api.Tests.TestSupport;
 using Xunit;

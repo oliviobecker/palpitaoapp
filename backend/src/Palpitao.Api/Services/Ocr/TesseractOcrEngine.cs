@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Tesseract;
+using Palpitao.Application.Ocr;
 
 namespace Palpitao.Api.Services.Ocr;
 

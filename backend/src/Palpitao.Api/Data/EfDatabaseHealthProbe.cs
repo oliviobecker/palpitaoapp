@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Palpitao.Api.Abstractions;
+using Palpitao.Application.Abstractions;
 
 namespace Palpitao.Api.Data;
 
