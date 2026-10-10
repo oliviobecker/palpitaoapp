@@ -8,6 +8,8 @@
     <PackageReference Include="BCrypt.Net-Next" />
     <!-- Relational and the JWT handler are pinned explicitly so their versions stay the ones the
          web project resolved before the split, instead of drifting with whatever pulls them in. -->
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
