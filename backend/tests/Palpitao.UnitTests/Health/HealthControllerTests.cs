@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
@@ -38,7 +39,7 @@ public class HealthControllerTests
     public void Liveness_returns_ok()
     {
         using var db = CreateContext();
-        var result = Assert.IsType<OkObjectResult>(CreateController(db).Get());
+        var result = Assert.IsType<OkObjectResult>(CreateController(db).Get().Result);
         Assert.Equal(200, result.StatusCode);
     }
 
@@ -46,7 +47,7 @@ public class HealthControllerTests
     public async Task Readiness_returns_ok_when_database_is_reachable()
     {
         using var db = CreateContext();
-        var result = Assert.IsType<OkObjectResult>(await CreateController(db).Database(Ct));
+        var result = Assert.IsType<OkObjectResult>((await CreateController(db).Database(Ct)).Result);
         Assert.Equal(200, result.StatusCode);
     }
 
@@ -56,7 +57,7 @@ public class HealthControllerTests
         var db = CreateContext();
         db.Dispose(); // Closing the in-memory connection makes the database unreachable.
 
-        var result = Assert.IsType<ObjectResult>(await CreateController(db).Database(Ct));
+        var result = Assert.IsType<ObjectResult>((await CreateController(db).Database(Ct)).Result);
         Assert.Equal(503, result.StatusCode);
     }
 
@@ -64,7 +65,7 @@ public class HealthControllerTests
     public void Ocr_readiness_returns_ok_when_every_language_model_is_present()
     {
         using var db = CreateContext();
-        var result = Assert.IsType<OkObjectResult>(CreateController(db).Ocr());
+        var result = Assert.IsType<OkObjectResult>(CreateController(db).Ocr().Result);
         Assert.Equal(200, result.StatusCode);
     }
 
@@ -74,17 +75,17 @@ public class HealthControllerTests
         using var db = CreateContext();
         var controller = CreateController(db, new StubOcrEngine("por"));
 
-        var result = Assert.IsType<ObjectResult>(controller.Ocr());
+        var result = Assert.IsType<ObjectResult>(controller.Ocr().Result);
 
         Assert.Equal(503, result.StatusCode);
 
-        var properties = result.Value!.GetType().GetProperties();
-        var missing = properties.Single(p => p.Name == "missing").GetValue(result.Value);
-        Assert.Equal(["por"], Assert.IsAssignableFrom<IReadOnlyList<string>>(missing));
+        var body = Assert.IsType<HealthResponse>(result.Value);
+        Assert.Equal(["por"], body.Missing!);
 
         // Language codes are safe to hand out; the tessdata path is not — it goes to the engine's
         // log instead, because this endpoint is anonymous.
-        Assert.Equal(["status", "missing"], properties.Select(p => p.Name));
+        var json = JsonDocument.Parse(JsonSerializer.Serialize(body, JsonSerializerOptions.Web)).RootElement;
+        Assert.Equal(["status", "missing"], json.EnumerateObject().Select(p => p.Name));
     }
 
     [Fact]

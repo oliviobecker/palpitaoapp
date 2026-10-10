@@ -92,6 +92,7 @@ public class OcrImportsController : ControllerBase
         => Ok(await _ocr.DeleteCandidateAsync(batchId, candidateId, User.GetUserId(), ct));
 
     [HttpPost("ocr-imports/{batchId:guid}/confirm")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Confirm(Guid batchId, CancellationToken ct)
     {
         await _import.ConfirmAsync(batchId, User.GetUserId(), ct);
@@ -99,6 +100,7 @@ public class OcrImportsController : ControllerBase
     }
 
     [HttpPost("ocr-imports/{batchId:guid}/cancel")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Cancel(Guid batchId, CancellationToken ct)
     {
         await _ocr.CancelAsync(batchId, User.GetUserId(), ct);

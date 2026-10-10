@@ -111,6 +111,7 @@ public class RoundsController : ControllerBase
     /// </summary>
     [HttpDelete("{id:guid}")]
     [RequireGroupAdmin]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         var deletion = await _weeks.DeleteAsync(id, User.GetUserId(), ct);

@@ -30,6 +30,7 @@ public class AdminAbsencesController : ControllerBase
         => Ok(await _absences.GetRoundAbsencesAsync(roundId, ct));
 
     [HttpPost("rounds/{roundId:guid}/absences/override")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Override(Guid roundId, AbsenceOverrideRequest request, CancellationToken ct)
     {
         await _absences.ApplyOverrideAsync(roundId, request, User.GetUserId(), ct);
@@ -42,6 +43,7 @@ public class AdminAbsencesController : ControllerBase
         => Ok(await _absences.GetAbsenceCandidateRoundsAsync(userId, ct));
 
     [HttpPost("users/{userId:guid}/reactivate")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Reactivate(Guid userId, ReactivateRequest request, CancellationToken ct)
     {
         await _absences.ReactivateAsync(

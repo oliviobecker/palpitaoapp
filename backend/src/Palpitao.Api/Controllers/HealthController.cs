@@ -31,11 +31,12 @@ public class HealthController : ControllerBase
 
     /// <summary>Basic liveness check — the API process is responding.</summary>
     [HttpGet]
-    public IActionResult Get() => Ok(new { status = "ok", service = "Palpitao.Api" });
+    public ActionResult<HealthResponse> Get() => Ok(new HealthResponse("ok", Service: "Palpitao.Api"));
 
     /// <summary>Readiness check — verifies connectivity to the database.</summary>
     [HttpGet("db")]
-    public async Task<IActionResult> Database(CancellationToken cancellationToken)
+    [ProducesResponseType<HealthResponse>(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<ActionResult<HealthResponse>> Database(CancellationToken cancellationToken)
     {
         try
         {
@@ -43,7 +44,7 @@ public class HealthController : ControllerBase
             // failures, so wrap it to always return a clean 503 instead of a 500.
             if (!await _database.CanConnectAsync(cancellationToken))
             {
-                return StatusCode(503, new { status = "unavailable", database = "postgres" });
+                return StatusCode(503, new HealthResponse("unavailable", Database: "postgres"));
             }
 
             // Schema drift detection: a deploy that didn't run migrations leaves the app
@@ -59,17 +60,17 @@ public class HealthController : ControllerBase
                     // Log the specifics for operators; don't expose schema/migration
                     // names on this anonymous endpoint.
                     _logger.LogError("Pending migrations: {Pending}", string.Join(", ", pending));
-                    return StatusCode(503, new { status = "migrations-pending", database = "postgres" });
+                    return StatusCode(503, new HealthResponse("migrations-pending", Database: "postgres"));
                 }
             }
 
-            return Ok(new { status = "ok", database = "postgres" });
+            return Ok(new HealthResponse("ok", Database: "postgres"));
         }
         catch (Exception ex)
         {
             // The exception detail goes to the logs only, not the anonymous response body.
             _logger.LogError(ex, "Database health check failed.");
-            return StatusCode(503, new { status = "unavailable", database = "postgres" });
+            return StatusCode(503, new HealthResponse("unavailable", Database: "postgres"));
         }
     }
 
@@ -80,14 +81,15 @@ public class HealthController : ControllerBase
     /// an admin uploads a screenshot.
     /// </summary>
     [HttpGet("ocr")]
-    public IActionResult Ocr()
+    [ProducesResponseType<HealthResponse>(StatusCodes.Status503ServiceUnavailable)]
+    public ActionResult<HealthResponse> Ocr()
     {
         var missing = _ocr.MissingLanguages(OcrLanguages);
 
         // The engine logs the resolved tessdata path; this anonymous response only names the
         // language codes, never a server path.
         return missing.Count > 0
-            ? StatusCode(503, new { status = "unavailable", missing })
-            : Ok(new { status = "ok", languages = OcrLanguages.Split('+') });
+            ? StatusCode(503, new HealthResponse("unavailable", Missing: missing))
+            : Ok(new HealthResponse("ok", Languages: OcrLanguages.Split('+')));
     }
 }
