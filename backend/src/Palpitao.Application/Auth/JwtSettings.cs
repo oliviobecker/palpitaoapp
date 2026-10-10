@@ -3,6 +3,8 @@ namespace Palpitao.Application.Auth;
 /// <summary>Strongly-typed JWT configuration (bound from the "Jwt" section).</summary>
 public class JwtSettings
 {
+    public const string SectionName = "Jwt";
+
     public string Issuer { get; set; } = "palpitao";
     public string Audience { get; set; } = "palpitao";
     public string Key { get; set; } = string.Empty;

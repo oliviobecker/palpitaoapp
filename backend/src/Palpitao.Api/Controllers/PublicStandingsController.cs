@@ -6,6 +6,7 @@ using Palpitao.Infrastructure.Identity;
 using Palpitao.Application.Auth;
 using Palpitao.Application.Standings;
 using Palpitao.Application.Scoring;
+using Palpitao.Api.Extensions;
 
 namespace Palpitao.Api.Controllers;
 
@@ -22,7 +23,7 @@ namespace Palpitao.Api.Controllers;
 [Route("public/seasons")]
 [AllowAnonymous]
 [IgnoreRequestGroup]
-[EnableRateLimiting("public")]
+[EnableRateLimiting(RateLimitPolicies.Public)]
 public class PublicStandingsController : ControllerBase
 {
     private readonly IPublicStandingsService _public;
