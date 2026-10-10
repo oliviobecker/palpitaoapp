@@ -1,0 +1,9 @@
+<Project>
+  <!-- Shared by every backend project. Lives in backend/ (not the repo root) so the file-based
+       apps in scripts/ keep their own inline package versions. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+</Project>
