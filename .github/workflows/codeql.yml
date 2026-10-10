@@ -30,7 +30,7 @@ jobs:
         # "actions" scans the workflows themselves (injection, untrusted checkouts).
         language: [csharp, javascript-typescript, actions]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
