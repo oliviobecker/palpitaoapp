@@ -12,3 +12,4 @@ production; new decisions get a record when they are made.
 | [0003](0003-tournament-type-strategy.md) | Tournament type is a strategy fixed when the season is created | Accepted |
 | [0004](0004-localized-errors-via-message-keys.md) | Errors carry stable message keys, localized per request | Accepted |
 | [0005](0005-ocr-always-reviewed.md) | OCR imports are always reviewed before anything is saved | Accepted |
+| [0006](0006-clean-architecture-ef-core.md) | Clean Architecture, with EF Core as the Application's data access | Accepted |

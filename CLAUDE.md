@@ -30,8 +30,8 @@ dotnet build Palpitao.slnx
 dotnet test  tests/Palpitao.UnitTests/Palpitao.UnitTests.csproj
 dotnet test  --filter "FullyQualifiedName~ScoringServiceTests"   # one test class/method
 dotnet run   --project src/Palpitao.Api                          # https://localhost:7099
-dotnet ef database update    --project src/Palpitao.Api          # apply migrations + seed
-dotnet ef migrations add <Name> --project src/Palpitao.Api
+dotnet ef database update    --project src/Palpitao.Infrastructure --startup-project src/Palpitao.Api
+dotnet ef migrations add <Name> --project src/Palpitao.Infrastructure --startup-project src/Palpitao.Api
 ```
 
 Frontend (`frontend/`):
@@ -54,9 +54,15 @@ node -e "const f=o=>Object.entries(o).flatMap(([k,v])=>v&&typeof v==='object'?f(
 
 ## Backend architecture
 
-ASP.NET Core controllers → services (in `src/Palpitao.Api/Services/`, one folder per area:
-`Scoring`, `Tournaments`, `Rounds`, `Predictions`, `Absences`, `Flavio`, `Standings`, `Groups`,
-`Fixtures`, `Results`, `Ocr`, `Auth`, …) → EF Core (`Data/AppDbContext.cs`) → PostgreSQL. Tests are
+Four projects, dependencies pointing inwards: `Palpitao.Api` (controllers, filters, middleware,
+composition root in `Program.cs` + `Extensions/`) → `Palpitao.Infrastructure` (EF Core +
+migrations under `Persistence/`, providers under `ExternalData/`, JWT/BCrypt, Tesseract, jobs) →
+`Palpitao.Application` (use cases, DTOs and validators, one folder per area:
+`Scoring`, `Rounds`, `Predictions`, `Absences`, `Flavio`, `Standings`, `Groups`,
+`Fixtures`, `Results`, `Ocr`, `Auth`, …; ports in `Abstractions/`) → `Palpitao.Domain` (entities,
+enums, pure rules). The Application reaches the database only through `IAppDbContext` (DbSets +
+SaveChanges; transactions via `ITransactionRunner`); `Palpitao.ArchitectureTests` enforces the
+layering, and the build treats warnings as errors (unused usings included). Tests are
 xUnit + **SQLite in-memory**.
 
 Four patterns to understand before touching backend logic:
@@ -97,7 +103,7 @@ Four patterns to understand before touching backend logic:
 4. **Tournament type is a strategy keyed on `Season.TournamentType`** (`PalpitaoEngland` /
    `FifaWorldCup`), fixed after creation. It drives the allowed competitions/phases, the multiplier
    table, and which Flávio Rule variant applies. When adding tournament behaviour, branch on this —
-   see `Services/Tournaments` and `Services/Scoring`.
+   see `Palpitao.Domain/Tournaments` and `Palpitao.Domain/Scoring`.
 
 **Scoring is idempotent**: re-scoring a round clears its `PredictionScores`/`RoundParticipantResults`
 and recomputes; `recalculate` on a season resets eliminations and re-scores finished rounds in order.
@@ -109,14 +115,14 @@ explicitly — two of the FKs to the round/its matches are RESTRICT — and clos
 External integrations are isolated behind interfaces with no domain/DB access — `IFixtureProvider`
 (OneFootball default; selectable via `Fixtures:Provider`) and `IResultsProvider`. Swapping a provider
 is one config line; tests stub the `HttpMessageHandler` so nothing touches the network. Both provider
-HTTP clients wrap a transient-retry `DelegatingHandler` (`Common/TransientHttpRetryHandler`).
+HTTP clients wrap a transient-retry `DelegatingHandler` (`ExternalData/Http/TransientHttpRetryHandler`).
 
 Resilience / abuse-protection invariants (keep these intact when touching the relevant paths):
 unauthenticated auth endpoints are **per-IP rate limited** (`Program.cs`, tunable via
 `RateLimiting:Auth`; configure the real client IP behind a proxy); **scoring runs in a DB
 transaction**; the **background results refresh is single-runner across instances** via a Postgres
-advisory lock (`Services/Results/ResultsRefreshBackgroundService`). Passwords go through the shared
-`Common/PasswordPolicy`. Error responses carry a `traceId`.
+advisory lock (`BackgroundJobs/SingleRunnerJob`). Passwords go through the shared
+`Palpitao.Domain/Common/PasswordPolicy`. Error responses carry a `traceId`.
 
 Dates/times are stored in **UTC**, displayed in pt-BR locale. Backend messages are localized via the
 `Accept-Language` header (`LocalizationService` / `DomainMessages`).

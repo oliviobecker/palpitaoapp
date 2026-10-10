@@ -42,10 +42,14 @@ own admins, seasons and rules.
   [ADR 0001](docs/adr/0001-multi-tenancy-shared-schema.md).
 - **Idempotent, transactional scoring.** Scoring runs in a serializable transaction and a season
   recalculation replays every round in order, because a penalty depends on who led *at that point* —
-  [`RoundScoringService`](backend/src/Palpitao.Api/Services/Scoring/RoundScoringService.cs).
+  [`RoundScoringService`](backend/src/Palpitao.Application/Scoring/RoundScoringService.cs).
 - **Scale-out-safe background jobs.** Live results are pulled by one instance at a time, coordinated
   with a PostgreSQL advisory lock —
-  [`ResultsRefreshBackgroundService`](backend/src/Palpitao.Api/Services/Results/ResultsRefreshBackgroundService.cs).
+  [`SingleRunnerJob`](backend/src/Palpitao.Infrastructure/BackgroundJobs/SingleRunnerJob.cs).
+- **Clean Architecture, enforced.** Domain, Application, Infrastructure and Api projects with the
+  dependency rule checked by architecture tests on the compiled assemblies, EF Core as the
+  data-access abstraction instead of a repository layer, and a build that treats warnings as errors —
+  [backend](docs/architecture.md#backend), [ADR 0006](docs/adr/0006-clean-architecture-ef-core.md).
 - **Third-party data behind ports.** Fixture, result and squad providers are swappable by config,
   wrapped in a transient-fault retry handler, and tested against stubbed HTTP — no test touches the
   network — [architecture](docs/architecture.md#external-data-behind-ports).
@@ -75,8 +79,8 @@ flowchart LR
     api -. errors .-> sentry["Sentry"]
 ```
 
-A single ASP.NET Core Web API (controllers → services → EF Core) serves every group from one
-PostgreSQL schema; the Angular SPA talks to it over REST. The full picture — request pipeline,
+An ASP.NET Core Web API in four layers (Domain, Application, Infrastructure, Api) serves every group
+from one PostgreSQL schema; the Angular SPA talks to it over REST. The full picture — request pipeline,
 tenancy, scoring, background jobs, frontend — is in [docs/architecture.md](docs/architecture.md),
 and the decisions behind it in [docs/adr](docs/adr/README.md).
 
@@ -98,7 +102,7 @@ Prerequisites: .NET SDK 10, Node.js 22, and Docker (or a local PostgreSQL 16).
 ```bash
 cp .env.example .env && docker compose up -d                    # PostgreSQL on localhost:5432
 dotnet tool restore                                              # pinned dotnet-ef
-dotnet ef database update --project backend/src/Palpitao.Api     # schema + seed data
+dotnet ef database update --project backend/src/Palpitao.Infrastructure --startup-project backend/src/Palpitao.Api
 dotnet run --project backend/src/Palpitao.Api                    # API on https://localhost:7099
 cd frontend && npm ci && npm start                               # SPA on http://localhost:4200
 ```
@@ -112,7 +116,7 @@ troubleshooting.
 
 | Suite | Command | Count |
 |---|---|---|
-| Backend (xUnit, SQLite in-memory) | `dotnet test backend/Palpitao.slnx` | 1,048 |
+| Backend unit + architecture (xUnit, SQLite in-memory) | `dotnet test backend/Palpitao.slnx` | 1,061 + 19 |
 | Frontend unit (Vitest) | `cd frontend && npm test -- --watch=false` | 199 |
 | Frontend e2e (Playwright, mocked API) | `cd frontend && npm run e2e` | 93 |
 
@@ -123,8 +127,12 @@ request; CodeQL scans C#, TypeScript and the workflows.
 
 ```
 backend/
-  src/Palpitao.Api/        ASP.NET Core API: controllers, services per area, EF Core model + migrations
-  tests/Palpitao.Api.Tests xUnit tests, one folder per area
+  src/Palpitao.Domain/          entities, enums and the pure rules (scoring, tournaments, deadlines)
+  src/Palpitao.Application/     use cases per area, their DTOs and validators, the ports they need
+  src/Palpitao.Infrastructure/  EF Core + migrations, OneFootball, JWT/BCrypt, Tesseract, jobs
+  src/Palpitao.Api/             controllers, filters, error handling, composition root
+  tests/Palpitao.UnitTests/     xUnit tests, one folder per area
+  tests/Palpitao.ArchitectureTests/  layering, tenant filter and DI checks
 frontend/
   src/app/                 core/ (auth, interceptors, services) · shared/ · layout/ · features/
   e2e/                     Playwright specs with a mocked API

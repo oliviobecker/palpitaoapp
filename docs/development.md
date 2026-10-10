@@ -71,7 +71,7 @@ The default connection string (`backend/src/Palpitao.Api/appsettings.json`) alre
 ```bash
 dotnet tool restore
 cd backend
-dotnet ef database update --project src/Palpitao.Api
+dotnet ef database update --project src/Palpitao.Infrastructure --startup-project src/Palpitao.Api
 ```
 
 > `dotnet ef database update` applies to whatever `ConnectionStrings:DefaultConnection` resolves to —
@@ -82,7 +82,8 @@ This creates all tables and the **initial seed**: the club catalogue (Premier Le
 and League One — currently the **2026/2027** rosters), the seven national-team **world champions**
 (for World Cup certames), the **default group** + its admin membership, and the development admin
 (`admin@palpitao.local` / `Admin@123` — local development only).
-For new migrations: `dotnet ef migrations add <Name> --project src/Palpitao.Api`.
+For new migrations: `dotnet ef migrations add <Name> --project src/Palpitao.Infrastructure --startup-project src/Palpitao.Api`. The migrations live in the Infrastructure project; the Api is
+the startup project that supplies the configuration.
 
 ## Run the backend
 
@@ -142,9 +143,12 @@ Jwt__Key=<long random secret, >= 32 bytes>
 ## Running the tests
 
 ```bash
-# Backend — xUnit + SQLite in-memory (1,048 tests)
+# Backend — unit tests on SQLite in-memory (1,061) and architecture tests (19)
 dotnet test backend/Palpitao.slnx
 dotnet test backend/Palpitao.slnx --filter "FullyQualifiedName~ScoringServiceTests"   # one class
+
+# Backend — the schema must match the migrations (no database needed; CI runs it too)
+dotnet ef migrations has-pending-model-changes --project backend/src/Palpitao.Infrastructure --startup-project backend/src/Palpitao.Api
 
 # Frontend — Vitest unit tests (199)
 cd frontend && npm test -- --watch=false

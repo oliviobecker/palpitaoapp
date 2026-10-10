@@ -38,7 +38,7 @@ A plain `User-Agent` gets a 403 from fixturedownload.com — send one.
 ```
 
 `DateUtc` is parsed with `AdjustToUniversal | AssumeUniversal`, matching
-[`FixtureDownloadFixtureProvider.TryParseDate`](../../../backend/src/Palpitao.Api/Services/Fixtures/FixtureDownloadFixtureProvider.cs).
+[`FixtureDownloadFixtureProvider.TryParseDate`](../../../backend/src/Palpitao.Infrastructure/ExternalData/Fixtures/FixtureDownloadFixtureProvider.cs).
 
 ## Team names
 
