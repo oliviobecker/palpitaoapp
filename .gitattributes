@@ -1,2 +1,18 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Normalise text files to LF in the repository and check them out as LF everywhere, so a
+# Windows checkout matches what Prettier and the Linux CI expect.
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binaries.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.traineddata binary

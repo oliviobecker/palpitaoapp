@@ -1,0 +1,61 @@
+# Editor configuration, see https://editorconfig.org — frontend/ has its own (2-space) file.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{json,yml,yaml,xml,csproj,props,targets,slnx,config}]
+indent_size = 2
+
+[*.md]
+indent_size = 2
+max_line_length = off
+trim_trailing_whitespace = false
+
+[*.{bat,cmd}]
+end_of_line = crlf
+
+# C# conventions already used across the backend. Severities stay at "suggestion" so the build is
+# not affected; they guide editors and `dotnet format`.
+[*.cs]
+csharp_style_namespace_declarations = file_scoped:suggestion
+csharp_using_directive_placement = outside_namespace:suggestion
+dotnet_sort_system_directives_first = true
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_prefer_braces = true:suggestion
+csharp_new_line_before_open_brace = all
+
+# Private fields are _camelCase; constants and statics PascalCase (the more specific rules win).
+dotnet_naming_rule.constants_pascal.symbols = constant_fields
+dotnet_naming_rule.constants_pascal.style = pascal_case
+dotnet_naming_rule.constants_pascal.severity = suggestion
+dotnet_naming_symbols.constant_fields.applicable_kinds = field
+dotnet_naming_symbols.constant_fields.required_modifiers = const
+
+dotnet_naming_rule.private_statics_pascal.symbols = private_static_fields
+dotnet_naming_rule.private_statics_pascal.style = pascal_case
+dotnet_naming_rule.private_statics_pascal.severity = suggestion
+dotnet_naming_symbols.private_static_fields.applicable_kinds = field
+dotnet_naming_symbols.private_static_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_static_fields.required_modifiers = static
+
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = underscore_camel_case
+dotnet_naming_rule.private_fields_underscore.severity = suggestion
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_fields.required_modifiers =
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case
+
+# Migrations are generated code.
+[**/Migrations/*.cs]
+generated_code = true

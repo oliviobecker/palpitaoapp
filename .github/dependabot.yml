@@ -1,0 +1,51 @@
+# Monthly, grouped dependency updates. Majors of the framework packages are left out: Angular
+# needs `ng update` and .NET/EF Core a planned upgrade, not a drive-by bump.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /backend
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      nuget-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: 'Microsoft.*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'Npgsql*'
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: '@angular/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@angular-devkit/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'angular-eslint'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ['*']

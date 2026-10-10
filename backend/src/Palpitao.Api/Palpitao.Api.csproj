@@ -17,6 +17,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <!-- Microsoft.AspNetCore.OpenApi 10.0.9 pulls Microsoft.OpenApi 2.0.0 (GHSA-v5pm-xwqc-g5wc);
+         pin the patched 2.x until the framework package catches up. -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.9">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
