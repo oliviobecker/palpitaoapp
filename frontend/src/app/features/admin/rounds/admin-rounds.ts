@@ -108,62 +108,7 @@ const STATUS_ORDER: RoundStatus[] = [
       </div>
     }
   `,
-  styles: [
-    `
-      .round-tabs {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-      }
-      .round-tab {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        border: 1px solid var(--border);
-        background: var(--surface);
-        color: var(--ink-soft);
-        font-weight: 600;
-        font-size: 0.85rem;
-        padding: 0.4rem 0.9rem;
-        border-radius: 999px;
-        cursor: pointer;
-        transition:
-          background 0.15s ease,
-          border-color 0.15s ease;
-      }
-      .round-tab:hover {
-        background: var(--surface-2);
-      }
-      .round-tab.is-active {
-        background: #161d2c;
-        border-color: #161d2c;
-        color: #fff;
-      }
-      .round-tab__count {
-        font-size: 0.72rem;
-        opacity: 0.7;
-      }
-
-      .round-item {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 0.9rem;
-        padding: 0.85rem 1rem;
-        text-decoration: none;
-        color: var(--ink);
-        border-left: 4px solid var(--c, #64748b);
-        transition:
-          box-shadow 0.15s ease,
-          transform 0.12s ease;
-      }
-      .round-item:hover {
-        box-shadow: var(--shadow);
-        transform: translateY(-1px);
-        color: var(--ink);
-      }
-    `,
-  ],
+  styleUrl: './admin-rounds.scss',
 })
 export class AdminRounds implements OnInit {
   private readonly api = inject(RoundsService);

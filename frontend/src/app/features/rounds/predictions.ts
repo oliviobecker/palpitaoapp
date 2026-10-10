@@ -58,61 +58,7 @@ import { computeMultiplier, isClassic, isLeagueOne, phaseLabel } from '@shared/u
     RoundLabelPipe,
   ],
   templateUrl: './predictions.html',
-  styles: [
-    `
-      .team-name {
-        flex: 1 1 0;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .team-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 2rem;
-        height: 2rem;
-        border-radius: 8px;
-        flex: none;
-        color: #fff;
-        font-size: 0.62rem;
-        font-weight: 800;
-      }
-      .score-box {
-        width: 3.25rem;
-        height: 3.25rem;
-        flex: none;
-        padding: 0;
-        text-align: center;
-        font-size: 1.4rem;
-        font-weight: 700;
-        border-radius: 12px;
-      }
-      .predictions-bar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.75rem;
-        margin-top: 1rem;
-        padding: 0.7rem 0.9rem;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-      }
-      .predictions-bar__status {
-        font-size: 0.88rem;
-        min-width: 0;
-      }
-      @media (min-width: 768px) {
-        .predictions-bar {
-          position: sticky;
-          bottom: 1rem;
-        }
-      }
-    `,
-  ],
+  styleUrl: './predictions.scss',
 })
 export class Predictions implements OnInit, OnDestroy, HasUnsavedChanges {
   private readonly route = inject(ActivatedRoute);

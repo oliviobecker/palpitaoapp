@@ -1,0 +1,106 @@
+.ocr-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: center;
+  width: 100%;
+  padding: 1.5rem 1rem;
+  border: 2px dashed var(--border-strong);
+  border-radius: 14px;
+  background: var(--surface-2);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.ocr-drop:hover,
+.ocr-drop.is-drag {
+  border-color: #2563eb;
+  background: rgba(37, 99, 235, 0.05);
+}
+.ocr-drop__text {
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
+}
+.ocr-drop__cta {
+  color: #2563eb;
+}
+.ocr-drop__hint {
+  margin-top: 0.4rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.file-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.file-chip__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+  background: rgba(22, 163, 74, 0.14);
+  flex: none;
+}
+.file-chip__remove {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  flex: none;
+}
+.file-chip__remove:hover {
+  color: var(--ink);
+}
+.min-w-0 {
+  min-width: 0;
+}
+
+.tip-box {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.22);
+  color: #946100;
+  font-size: 0.82rem;
+}
+
+.ocr-preview-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.ocr-preview {
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  cursor: zoom-in;
+}
+@media (min-width: 992px) {
+  .ocr-sticky {
+    position: sticky;
+    top: 1rem;
+  }
+}
