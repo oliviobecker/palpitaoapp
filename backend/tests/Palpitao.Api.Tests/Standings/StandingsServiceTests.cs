@@ -1,6 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Palpitao.Api.Data;
+using Palpitao.Infrastructure.Persistence;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
 using Palpitao.Application.Standings;

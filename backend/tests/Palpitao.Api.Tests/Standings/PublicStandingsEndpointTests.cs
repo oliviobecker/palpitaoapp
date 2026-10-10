@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Palpitao.Api.Auth;
+using Palpitao.Infrastructure.Identity;
 using Palpitao.Application.Auth;
 using Palpitao.Api.Controllers;
 using Palpitao.Application.Groups;

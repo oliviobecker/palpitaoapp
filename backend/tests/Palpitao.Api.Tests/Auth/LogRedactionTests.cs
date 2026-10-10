@@ -1,4 +1,5 @@
 using Palpitao.Api.Auth;
+using Palpitao.Infrastructure.Identity;
 using Palpitao.Application.Auth;
 using Xunit;
 

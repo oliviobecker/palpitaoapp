@@ -50,7 +50,7 @@ jobs:
       - name: No pending EF Core model changes
         run: |
           dotnet tool restore
-          dotnet ef migrations has-pending-model-changes --project backend/src/Palpitao.Api --no-build --configuration Release
+          dotnet ef migrations has-pending-model-changes --project backend/src/Palpitao.Infrastructure --startup-project backend/src/Palpitao.Api --no-build --configuration Release
 
       - name: Coverage report
         if: ${{ !cancelled() }}
@@ -60,7 +60,7 @@ jobs:
           targetdir: ${{ runner.temp }}/coverage-report
           reporttypes: MarkdownSummaryGithub;HtmlInline
           assemblyfilters: '-*.Tests'
-          classfilters: '-Palpitao.Api.Migrations.*'
+          classfilters: '-Palpitao.Infrastructure.Persistence.Migrations.*'
 
       - name: Publish coverage summary
         if: ${{ !cancelled() }}

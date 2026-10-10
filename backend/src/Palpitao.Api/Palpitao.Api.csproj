@@ -28,6 +28,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Palpitao.Application\Palpitao.Application.csproj" />
     <ProjectReference Include="..\Palpitao.Domain\Palpitao.Domain.csproj" />
+    <ProjectReference Include="..\Palpitao.Infrastructure\Palpitao.Infrastructure.csproj" />
   </ItemGroup>
 
   <!-- Copy the Tesseract language files (por/eng .traineddata) to the output. -->

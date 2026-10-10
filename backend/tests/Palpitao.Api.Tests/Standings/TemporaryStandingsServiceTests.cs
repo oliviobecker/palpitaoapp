@@ -1,7 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore;
-using Palpitao.Api.Data;
+using Palpitao.Infrastructure.Persistence;
 using Palpitao.Application.Absences;
 using Palpitao.Application.Rounds;
 using Palpitao.Application.Predictions;

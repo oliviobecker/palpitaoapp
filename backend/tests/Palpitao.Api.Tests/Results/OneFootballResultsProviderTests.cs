@@ -4,9 +4,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Api.Services.Fixtures;
+using Palpitao.Infrastructure.ExternalData.Fixtures;
 using Palpitao.Application.Fixtures;
-using Palpitao.Api.Services.Results;
+using Palpitao.Infrastructure.BackgroundJobs;
+using Palpitao.Infrastructure.ExternalData.Results;
 using Palpitao.Application.Results;
 using Xunit;
 

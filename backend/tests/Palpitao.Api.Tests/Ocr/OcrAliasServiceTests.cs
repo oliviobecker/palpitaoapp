@@ -1,9 +1,9 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Palpitao.Api.Common;
+using Palpitao.Infrastructure.ExternalData.Http;
 using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
-using Palpitao.Api.Data;
+using Palpitao.Infrastructure.Persistence;
 using Palpitao.Application.AdminPredictions;
 using Palpitao.Application.Audit;
 using Palpitao.Application.Flavio;
@@ -12,7 +12,8 @@ using Palpitao.Application.Registrations;
 using Palpitao.Application.Users;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Api.Services.Ocr;
+using Palpitao.Infrastructure.BackgroundJobs;
+using Palpitao.Infrastructure.Ocr;
 using Palpitao.Api.Tests.TestSupport;
 using Xunit;
 

@@ -1,4 +1,4 @@
-using Palpitao.Api.Data;
+using Palpitao.Infrastructure.Persistence;
 using Palpitao.Domain.Enums;
 using Palpitao.Application.Groups;
 

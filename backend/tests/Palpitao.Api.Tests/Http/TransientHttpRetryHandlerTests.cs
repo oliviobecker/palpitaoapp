@@ -1,6 +1,6 @@
 using System.Net;
 using Microsoft.Extensions.Logging.Abstractions;
-using Palpitao.Api.Common;
+using Palpitao.Infrastructure.ExternalData.Http;
 using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
 using Xunit;

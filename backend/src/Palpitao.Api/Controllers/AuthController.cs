@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Palpitao.Api.Auth;
+using Palpitao.Infrastructure.Identity;
 using Palpitao.Application.Auth;
 using Palpitao.Application.Groups;
 using Palpitao.Domain.Enums;

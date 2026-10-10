@@ -2,7 +2,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
-using Palpitao.Api.Services.Ocr;
+using Palpitao.Infrastructure.BackgroundJobs;
+using Palpitao.Infrastructure.Ocr;
 using Palpitao.Application.Ocr;
 using Xunit;
 

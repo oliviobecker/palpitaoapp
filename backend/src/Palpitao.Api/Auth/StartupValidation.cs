@@ -1,5 +1,6 @@
 using System.Text;
 using Palpitao.Application.Auth;
+using Palpitao.Infrastructure.Identity;
 
 namespace Palpitao.Api.Auth;
 

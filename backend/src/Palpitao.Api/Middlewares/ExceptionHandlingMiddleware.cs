@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Palpitao.Api.Common;
+using Palpitao.Infrastructure.ExternalData.Http;
 using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
 using Palpitao.Api.Localization;

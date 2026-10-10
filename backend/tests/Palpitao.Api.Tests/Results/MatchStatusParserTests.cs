@@ -1,5 +1,6 @@
 using Palpitao.Domain.Enums;
-using Palpitao.Api.Services.Results;
+using Palpitao.Infrastructure.BackgroundJobs;
+using Palpitao.Infrastructure.ExternalData.Results;
 using Palpitao.Application.Results;
 using Xunit;
 

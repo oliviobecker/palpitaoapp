@@ -2,13 +2,13 @@ using System.Net;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Palpitao.Api.Common;
+using Palpitao.Infrastructure.ExternalData.Http;
 using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Enums;
-using Palpitao.Api.Services.Fixtures;
+using Palpitao.Infrastructure.ExternalData.Fixtures;
 using Palpitao.Application.Fixtures;
-using Palpitao.Api.Services.Teams;
+using Palpitao.Infrastructure.ExternalData.Teams;
 using Palpitao.Application.Teams;
 using Xunit;
 
