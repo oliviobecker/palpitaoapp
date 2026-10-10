@@ -89,3 +89,8 @@ const BY_NORMALIZED = new Map(
 export function shortTeamName(fullName: string): string {
   return BY_NORMALIZED.get(normalize(fullName)) ?? fullName;
 }
+
+/** Three-letter badge for a team, from its first word: "Liverpool" → "LIV". */
+export function teamAbbr(name: string): string {
+  return (name.split(/\s+/)[0] ?? '').slice(0, 3).toUpperCase();
+}

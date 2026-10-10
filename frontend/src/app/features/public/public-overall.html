@@ -1,22 +1,4 @@
-@if (podium().length === 3) {
-  <div class="podium mb-3">
-    @for (p of podium(); track p.userId) {
-      <div
-        class="podium__slot podium__slot--{{ p.position }}"
-        [class.podium__slot--me]="p.userId === meId()"
-      >
-        <span class="podium__rank">{{ p.position }}</span>
-        <span class="podium__avatar" [style.background]="avatarColor(p.name)">{{
-          initials(p.name)
-        }}</span>
-        <div class="podium__name text-truncate">{{ p.name }}</div>
-        <div class="podium__pts">
-          {{ p.totalPoints }} <small>{{ 'dashboard.pts' | translate }}</small>
-        </div>
-      </div>
-    }
-  </div>
-}
+<app-podium [entries]="podium()" [meId]="meId()" />
 
 <div class="mb-2">
   <input

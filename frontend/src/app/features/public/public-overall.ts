@@ -7,6 +7,7 @@ import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
 import { avatarColor, initials } from '@shared/utils/avatar.util';
 import { NumberedRound } from '@shared/utils/round-name.util';
 import { RankedRow } from './public-standings.util';
+import { Podium } from '@shared/components/podium/podium';
 
 /**
  * The season standings of the public link: podium, name search and one expandable card per
@@ -15,7 +16,7 @@ import { RankedRow } from './public-standings.util';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-public-overall',
-  imports: [TranslatePipe, EmptyState, Icon, RoundLabelPipe],
+  imports: [Podium, TranslatePipe, EmptyState, Icon, RoundLabelPipe],
   styles: `
     :host {
       display: contents;

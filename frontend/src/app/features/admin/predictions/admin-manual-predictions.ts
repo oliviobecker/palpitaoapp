@@ -29,6 +29,8 @@ import {
   missingScoreCount,
   manualPredictionItems,
 } from './admin-manual-predictions.util';
+import { teamAbbr } from '@shared/utils/team-name.util';
+import { avatarColor } from '@shared/utils/avatar.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -120,19 +122,8 @@ export class AdminManualPredictions implements OnInit {
   protected justification = '';
   protected roundId = '';
 
-  /** Three-letter team abbreviation for the badge, e.g. "Liverpool" → "LIV". */
-  abbr(name: string): string {
-    return (name.split(/\s+/)[0] ?? '').slice(0, 3).toUpperCase();
-  }
-
-  /** Deterministic colour per team name for the badge. */
-  teamColor(name: string): string {
-    let hash = 0;
-    for (const ch of name) {
-      hash = (hash * 31 + ch.charCodeAt(0)) % 360;
-    }
-    return `hsl(${hash}, 52%, 42%)`;
-  }
+  protected readonly abbr = teamAbbr;
+  protected readonly teamColor = avatarColor;
 
   ngOnInit(): void {
     this.roundId = this.route.snapshot.paramMap.get('id') ?? '';

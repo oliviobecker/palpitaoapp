@@ -20,11 +20,12 @@ import { ErrorState } from '@shared/components/error-state/error-state';
 import { PageHeader } from '@shared/components/page-header/page-header';
 import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
 import { avatarColor, initials } from '@shared/utils/avatar.util';
+import { Podium } from '@shared/components/podium/podium';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-standings',
-  imports: [RouterLink, TranslatePipe, EmptyState, ErrorState, PageHeader, SkeletonList],
+  imports: [Podium, RouterLink, TranslatePipe, EmptyState, ErrorState, PageHeader, SkeletonList],
   templateUrl: './standings.html',
 })
 export class Standings implements OnInit {

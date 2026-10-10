@@ -20,6 +20,8 @@ import { MatchesService } from '@core/services/matches.service';
 import { CompetitionBadge } from '../competition-badge/competition-badge';
 import { Icon } from '../icon/icon';
 import { scorePairValidator, completePairs, pairsToSave } from './round-results-editor.util';
+import { teamAbbr } from '@shared/utils/team-name.util';
+import { avatarColor } from '@shared/utils/avatar.util';
 
 /**
  * Reusable match-score entry form. Renders one home×away input pair per match and
@@ -224,19 +226,8 @@ export class RoundResultsEditor {
     }
   }
 
-  /** Three-letter team abbreviation for the badge, e.g. "Liverpool" → "LIV". */
-  abbr(name: string): string {
-    return (name.split(/\s+/)[0] ?? '').slice(0, 3).toUpperCase();
-  }
-
-  /** Deterministic colour per team name for the badge. */
-  teamColor(name: string): string {
-    let hash = 0;
-    for (const ch of name) {
-      hash = (hash * 31 + ch.charCodeAt(0)) % 360;
-    }
-    return `hsl(${hash}, 52%, 42%)`;
-  }
+  protected readonly abbr = teamAbbr;
+  protected readonly teamColor = avatarColor;
 
   save(): void {
     if (this.form.invalid) {
