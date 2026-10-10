@@ -19,6 +19,7 @@ public class AdminPredictionsController : ControllerBase
     }
 
     [HttpPost("manual")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Manual(Guid roundId, ManualPredictionRequest request, CancellationToken ct)
     {
         await _admin.SaveManualAsync(roundId, request, User.GetUserId(), ct);

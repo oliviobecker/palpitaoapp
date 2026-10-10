@@ -123,7 +123,9 @@ unauthenticated auth endpoints are **per-IP rate limited** (`Program.cs`, tunabl
 `RateLimiting:Auth`; configure the real client IP behind a proxy); **scoring runs in a DB
 transaction**; the **background results refresh is single-runner across instances** via a Postgres
 advisory lock (`BackgroundJobs/SingleRunnerJob`). Passwords go through the shared
-`Palpitao.Domain/Common/PasswordPolicy`. Error responses carry a `traceId`.
+`Palpitao.Domain/Common/PasswordPolicy`. Errors are RFC 7807 problem details with the localized
+`detail`, a `message` copy (the SPA reads it — keep it) and a `traceId`; domain exceptions are mapped in
+`ExceptionHandlingMiddleware`, deliberately not an `IExceptionHandler` (Sentry would capture every 4xx).
 
 Dates/times are stored in **UTC**, displayed in pt-BR locale. Backend messages are localized via the
 `Accept-Language` header (`LocalizationService` / `DomainMessages`).

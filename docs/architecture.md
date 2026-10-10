@@ -91,7 +91,7 @@ sequenceDiagram
     F->>S: action runs
     S->>EF: queries and changes
     EF->>DB: SQL with the tenant filter on every IGroupOwned root
-    S-->>SPA: DTO — or a domain exception the middleware turns into<br/>{ status, message (localized), traceId }
+    S-->>SPA: DTO — or a domain exception the middleware turns into<br/>a problem: status, detail + message (localized), traceId
 ```
 
 ### Multi-tenancy, defence in depth
@@ -175,8 +175,17 @@ the candidates — see [ADR 0005](adr/0005-ocr-always-reviewed.md) and
 Services throw a small set of exceptions (`ValidationException`, `NotFoundException`,
 `ForbiddenException`, `BusinessRuleException`) carrying a **stable message key**. One middleware maps
 them to 400/404/403/422 and resolves the key in the caller's language (`Accept-Language`) from
-`DomainMessages`, returning `{ status, message, traceId }`; the rate limiter answers 429 in the same
-shape. See [ADR 0004](adr/0004-localized-errors-via-message-keys.md).
+`DomainMessages`. Every error — those, an unexpected 500, the rate limiter's 429, a failed login — is
+an **RFC 7807 problem** (`application/problem+json`): `type`, `title`, `status`, the localized
+`detail`, plus `message` (the same text, which the SPA reads) and the request's `traceId`. The
+exceptions are caught in a middleware rather than an `IExceptionHandler` so that expected 4xx never
+reach Sentry. See [ADR 0004](adr/0004-localized-errors-via-message-keys.md) and
+[ADR 0007](adr/0007-problem-details-with-message.md).
+
+The OpenAPI document (`/openapi/v1.json`) and the **Scalar** reference UI (`/scalar`) are served when
+`OpenApi:Enabled` is on — in Development by default. The document carries the XML comments, the JWT
+bearer scheme on every operation that needs a signed-in user, the `X-Group-Id` header on every
+group-scoped one, and the problem responses, declared once by an MVC convention.
 
 ### Security
 
@@ -216,7 +225,8 @@ Angular 21 with **standalone components, signals and `OnPush` everywhere**, runn
 
 | Layer | Tooling | What it covers |
 |---|---|---|
-| Backend unit | xUnit + SQLite in-memory (`Palpitao.UnitTests`, 1,061 tests) | Services and rules end to end against a real relational model: scoring, absences, Flávio Rule, tenancy, OCR parsing and matching, providers (stubbed HTTP), background jobs, auth |
+| Backend unit | xUnit + SQLite in-memory (`Palpitao.UnitTests`, 1,066 tests) | Services and rules end to end against a real relational model: scoring, absences, Flávio Rule, tenancy, OCR parsing and matching, providers (stubbed HTTP), background jobs, auth |
+| Backend integration | `WebApplicationFactory` + SQLite in-memory (`Palpitao.IntegrationTests`, 21 tests) | The real HTTP pipeline: login/refresh/logout, the group chokepoint, the public link, the problem-details contract in both languages, rate limiting, health, the OpenAPI document — with no network and no background job |
 | Backend architecture | xUnit + reflection (`Palpitao.ArchitectureTests`, 19 tests) | The dependency rule between the projects, the tenant filter on the EF model, a container that validates |
 | Frontend unit | Vitest (199 tests) | Pure utils (message builders, deadlines, names), guards, interceptors, key components |
 | Frontend e2e | Playwright (93 tests) | Real UI flows in Chromium against an API mocked in `e2e/support.ts` |

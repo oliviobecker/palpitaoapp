@@ -100,7 +100,7 @@ cd backend
 dotnet run --project src/Palpitao.Api
 # API at https://localhost:7099 (and http://localhost:5146)
 # Health: GET /health, GET /health/db and GET /health/ocr
-# OpenAPI (dev): GET /openapi/v1.json
+# API reference (dev): https://localhost:7099/scalar — the document itself at /openapi/v1.json
 ```
 
 ## Run the frontend
@@ -151,7 +151,7 @@ Jwt__Key=<long random secret, >= 32 bytes>
 ## Running the tests
 
 ```bash
-# Backend — unit tests on SQLite in-memory (1,061) and architecture tests (19)
+# Backend — unit (1,066) and HTTP integration (21) tests on SQLite in-memory, architecture tests (19)
 dotnet test backend/Palpitao.slnx
 dotnet test backend/Palpitao.slnx --filter "FullyQualifiedName~ScoringServiceTests"   # one class
 

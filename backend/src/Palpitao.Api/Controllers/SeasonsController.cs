@@ -68,6 +68,7 @@ public class SeasonsController : ControllerBase
 
     [HttpPost("{seasonId:guid}/recalculate")]
     [RequireGroupAdmin]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Recalculate(Guid seasonId, CancellationToken ct)
     {
         await _scoring.RecalculateSeasonAsync(seasonId, User.GetUserId(), ct);

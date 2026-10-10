@@ -16,6 +16,7 @@ public class AdminFlavioOverridesController(FlavioOverrideService service) : Con
         => Ok(await service.GetAsync(roundId, ct));
 
     [HttpPut]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Put(Guid roundId, FlavioOverrideRequest request, CancellationToken ct)
     {
         await service.SaveAsync(roundId, request, User.GetUserId(), ct);

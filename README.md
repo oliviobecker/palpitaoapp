@@ -117,7 +117,7 @@ troubleshooting.
 
 | Suite | Command | Count |
 |---|---|---|
-| Backend unit + architecture (xUnit, SQLite in-memory) | `dotnet test backend/Palpitao.slnx` | 1,061 + 19 |
+| Backend unit, integration and architecture (xUnit, SQLite in-memory, `WebApplicationFactory`) | `dotnet test backend/Palpitao.slnx` | 1,066 + 21 + 19 |
 | Frontend unit (Vitest) | `cd frontend && npm test -- --watch=false` | 199 |
 | Frontend e2e (Playwright, mocked API) | `cd frontend && npm run e2e` | 93 |
 
@@ -133,6 +133,7 @@ backend/
   src/Palpitao.Infrastructure/  EF Core + migrations, OneFootball, JWT/BCrypt, Tesseract, jobs
   src/Palpitao.Api/             controllers, filters, error handling, composition root
   tests/Palpitao.UnitTests/     xUnit tests, one folder per area
+  tests/Palpitao.IntegrationTests/   the API over real HTTP (auth, tenancy, error contract)
   tests/Palpitao.ArchitectureTests/  layering, tenant filter and DI checks
 frontend/
   src/app/                 core/ (auth, interceptors, services) · shared/ · layout/ · features/

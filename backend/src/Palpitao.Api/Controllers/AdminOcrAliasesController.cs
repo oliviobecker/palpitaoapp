@@ -42,6 +42,7 @@ public class AdminOcrAliasesController : ControllerBase
 
     /// <summary>Forgets an alias.</summary>
     [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         await _aliases.DeleteAsync(id, User.GetUserId(), ct);

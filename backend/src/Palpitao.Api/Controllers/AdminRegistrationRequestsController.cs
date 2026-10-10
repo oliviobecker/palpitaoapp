@@ -27,6 +27,7 @@ public class AdminRegistrationRequestsController : ControllerBase
         => Ok(await _service.GetAsync(groupUserId, ct));
 
     [HttpPost("{groupUserId:guid}/approve")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Approve(Guid groupUserId, CancellationToken ct)
     {
         await _service.ApproveAsync(groupUserId, User.GetUserId(), ct);
@@ -34,6 +35,7 @@ public class AdminRegistrationRequestsController : ControllerBase
     }
 
     [HttpPost("{groupUserId:guid}/reject")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Reject(Guid groupUserId, RejectRegistrationRequest? request, CancellationToken ct)
     {
         await _service.RejectAsync(groupUserId, request?.Reason, User.GetUserId(), ct);

@@ -26,6 +26,7 @@ public class MatchesController : ControllerBase
         => Ok(await _rounds.UpdateMatchAsync(id, request, User.GetUserId(), ct));
 
     [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(Guid id, [FromQuery] string? justification, CancellationToken ct)
     {
         await _rounds.DeleteMatchAsync(id, justification, User.GetUserId(), ct);
@@ -33,6 +34,7 @@ public class MatchesController : ControllerBase
     }
 
     [HttpPost("{id:guid}/result")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> SetResult(Guid id, MatchResultRequest request, CancellationToken ct)
     {
         await _scoring.SetMatchResultAsync(id, request, User.GetUserId(), ct);

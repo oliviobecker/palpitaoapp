@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Palpitao.Api.Auth;
 using Palpitao.Api.Localization;
+using Palpitao.Api.OpenApi;
 using Palpitao.Api.Validation;
 using Palpitao.Application.Abstractions;
 using Palpitao.Application.Auth;
@@ -14,8 +15,8 @@ namespace Palpitao.Api.Extensions;
 public static class ApiServiceCollectionExtensions
 {
     /// <summary>
-    /// MVC, validation and OpenAPI, plus the ports that are read from the HTTP request: the signed-in
-    /// user, the request's group and its language.
+    /// MVC, validation, problem details and the OpenAPI document, plus the ports that are read from
+    /// the HTTP request: the signed-in user, the request's group and its language.
     /// </summary>
     public static IServiceCollection AddApiServices(this IServiceCollection services)
     {
@@ -23,6 +24,7 @@ public static class ApiServiceCollectionExtensions
             {
                 // FluentValidation runs the request validators and throws a localized 400.
                 options.Filters.Add<ValidationActionFilter>();
+                options.Conventions.Add(new ErrorResponsesConvention());
             })
             .AddJsonOptions(options =>
             {
@@ -34,7 +36,8 @@ public static class ApiServiceCollectionExtensions
         // (localized via DomainMessages).
         services.Configure<ApiBehaviorOptions>(options => options.SuppressModelStateInvalidFilter = true);
 
-        services.AddOpenApi();
+        services.AddApiProblemDetails();
+        services.AddApiDocumentation();
 
         services.AddHttpContextAccessor();
         // DB-free per-request group accessor consumed by AppDbContext for the multi-tenant query

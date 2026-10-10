@@ -31,6 +31,7 @@ public class AdminUsersController : ControllerBase
         => Ok(await _users.UpdateAsync(id, request, User.GetUserId(), ct));
 
     [HttpPost("{id:guid}/activate")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Activate(Guid id, ActivateParticipantRequest? request, CancellationToken ct)
     {
         await _users.SetActiveAsync(id, true, request?.AbsentRoundIds, User.GetUserId(), ct);
@@ -38,6 +39,7 @@ public class AdminUsersController : ControllerBase
     }
 
     [HttpPost("{id:guid}/deactivate")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
     {
         await _users.SetActiveAsync(id, false, null, User.GetUserId(), ct);
@@ -45,6 +47,7 @@ public class AdminUsersController : ControllerBase
     }
 
     [HttpPost("{id:guid}/eliminate")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Eliminate(Guid id, EliminateRequest request, CancellationToken ct)
     {
         await _users.EliminateAsync(id, request.Justification, User.GetUserId(), ct);

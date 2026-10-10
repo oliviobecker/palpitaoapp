@@ -2,6 +2,7 @@ using Palpitao.Api.Auth;
 using Palpitao.Api.Extensions;
 using Palpitao.Api.Middlewares;
 using Palpitao.Api.Monitoring;
+using Palpitao.Api.OpenApi;
 using Palpitao.Application;
 using Palpitao.Application.Auth;
 using Palpitao.Infrastructure;
@@ -34,9 +35,10 @@ app.ApplyDatabaseMigrations();
 // --- HTTP pipeline ----------------------------------------------------------
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
+app.MapApiDocumentation();
+
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
     app.UseCors(CorsPolicies.Development);
     app.UseHttpsRedirection();
 }

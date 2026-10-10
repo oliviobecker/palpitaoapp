@@ -134,7 +134,8 @@ Beyond secret hygiene, the backend applies defence-in-depth controls:
   lock refreshes results each cycle (no duplicate external calls / write races).
 - **Resilient external calls** — fixture/results HTTP clients retry transient failures (5xx/408/429,
   connection errors) with bounded backoff.
-- **Consistent errors** — all error responses carry a `traceId` for log/Sentry correlation; health
+- **Consistent errors** — every error is an RFC 7807 problem carrying a `traceId` for log/Sentry
+  correlation; health
   endpoints don't leak exception types or migration names.
 
 ### The self-hosted runner and a public repository
@@ -186,8 +187,10 @@ present in the JWT and a role tag (`user.role`). The SDK runs with `SendDefaultP
 
 Data filtered before sending: `Authorization`, cookies, tokens/JWT, passwords, `PasswordHash`,
 password confirmation, DSN, connection strings, uploaded files and the full OCR text. The global
-middleware still returns friendly, localized messages and puts the `traceId` on every error
-response, so a user's report can be matched to the log line and the Sentry event.
+middleware still returns friendly, localized problems and puts the `traceId` on every error
+response, so a user's report can be matched to the log line and the Sentry event. Expected 4xx
+failures (validation, not found, business rules) never become Sentry events — only Error log lines
+do, and those come from unexpected failures.
 
 Local Sentry test:
 

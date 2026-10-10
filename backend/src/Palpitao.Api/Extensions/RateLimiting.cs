@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Text.Json;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Palpitao.Application.Abstractions;
@@ -85,7 +84,7 @@ public static class RateLimitingExtensions
     private static string ByUserOrClientIp(HttpContext httpContext) =>
         httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? ByClientIp(httpContext);
 
-    // Consistent JSON body with the rest of the API ({ status, message }), localized.
+    // The same problem-details body as every other error, localized.
     private static async ValueTask WriteRejectionAsync(OnRejectedContext context, CancellationToken ct)
     {
         var response = context.HttpContext.Response;
@@ -96,16 +95,9 @@ public static class RateLimitingExtensions
 
         if (!response.HasStarted)
         {
-            response.StatusCode = StatusCodes.Status429TooManyRequests;
-            response.ContentType = "application/json; charset=utf-8";
             var localizer = context.HttpContext.RequestServices.GetRequiredService<ILocalizationService>();
-            var payload = JsonSerializer.Serialize(new
-            {
-                status = 429,
-                message = localizer.Get("error.tooManyRequests"),
-                traceId = context.HttpContext.TraceIdentifier,
-            });
-            await response.WriteAsync(payload, ct);
+            await context.HttpContext.WriteProblemAsync(
+                StatusCodes.Status429TooManyRequests, localizer.Get("error.tooManyRequests"));
         }
     }
 }

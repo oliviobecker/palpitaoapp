@@ -65,6 +65,8 @@ public class AuthController : ControllerBase
     /// <summary>Authenticates a user and returns a JWT access token.</summary>
     [HttpPost("login")]
     [EnableRateLimiting(RateLimitPolicies.Auth)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
     public async Task<ActionResult<LoginResponse>> Login(LoginRequest request, CancellationToken ct)
     {
         _logger.LogInformation("Login attempt for {Email}.", LogRedaction.Email(request.Email));
@@ -80,17 +82,18 @@ public class AuthController : ControllerBase
         if (outcome.InvalidCredentials)
         {
             _logger.LogWarning("Login failed for {Email}: invalid credentials.", LogRedaction.Email(request.Email));
-            return Unauthorized(new { message });
+            return Problem(detail: message, statusCode: StatusCodes.Status401Unauthorized);
         }
 
         _logger.LogWarning("Login blocked for {Email}: {Reason}.", LogRedaction.Email(request.Email), outcome.FailureKey);
         SentrySdk.AddBreadcrumb("Login blocked by account status.", "auth", level: BreadcrumbLevel.Warning);
-        return StatusCode(StatusCodes.Status403Forbidden, new { message });
+        return Problem(detail: message, statusCode: StatusCodes.Status403Forbidden);
     }
 
     /// <summary>Exchanges a refresh token for a new access token and a rotated refresh token.</summary>
     [HttpPost("refresh")]
     [EnableRateLimiting(RateLimitPolicies.Auth)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
     public async Task<ActionResult<LoginResponse>> Refresh(RefreshRequest request, CancellationToken ct)
     {
         var outcome = await _auth.RefreshAsync(request.RefreshToken, ct);
@@ -100,11 +103,12 @@ public class AuthController : ControllerBase
         }
 
         SentrySdk.AddBreadcrumb("Refresh token rejected.", "auth", level: BreadcrumbLevel.Warning);
-        return Unauthorized(new { message = _localizer.Get(outcome.FailureKey!) });
+        return Problem(detail: _localizer.Get(outcome.FailureKey!), statusCode: StatusCodes.Status401Unauthorized);
     }
 
     /// <summary>Revokes a refresh token (logout). Idempotent for unknown/expired tokens.</summary>
     [HttpPost("logout")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Logout(LogoutRequest request, CancellationToken ct)
     {
         await _auth.LogoutAsync(request.RefreshToken, ct);

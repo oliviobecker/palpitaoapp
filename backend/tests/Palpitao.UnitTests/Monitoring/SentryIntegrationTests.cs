@@ -9,6 +9,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Palpitao.Api.Controllers;
+using Palpitao.Api.Extensions;
 using Palpitao.Api.Middlewares;
 using Palpitao.Api.Monitoring;
 using Palpitao.Application.Abstractions;
@@ -58,6 +59,8 @@ public class SentryIntegrationTests
     public async Task Exception_middleware_returns_friendly_500_without_stack_trace()
     {
         var services = new ServiceCollection()
+            .AddLogging()
+            .AddApiProblemDetails()
             .AddSingleton<ILocalizationService, TestLocalizationService>()
             .BuildServiceProvider();
 
@@ -79,6 +82,9 @@ public class SentryIntegrationTests
         var json = JsonDocument.Parse(body).RootElement;
 
         Assert.Equal((int)HttpStatusCode.InternalServerError, context.Response.StatusCode);
+        Assert.StartsWith("application/problem+json", context.Response.ContentType);
+        Assert.Equal(500, json.GetProperty("status").GetInt32());
+        Assert.Equal("Ocorreu um erro inesperado. Tente novamente.", json.GetProperty("detail").GetString());
         Assert.Equal("Ocorreu um erro inesperado. Tente novamente.", json.GetProperty("message").GetString());
         Assert.Equal("trace-123", json.GetProperty("traceId").GetString());
         Assert.DoesNotContain("database password leaked", body);
