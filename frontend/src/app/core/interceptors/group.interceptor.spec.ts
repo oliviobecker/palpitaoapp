@@ -1,12 +1,17 @@
 import { HttpContext, HttpHandlerFn, HttpRequest } from '@angular/common/http';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { environment } from '@env/environment';
 import { groupInterceptor } from './group.interceptor';
 import { SKIP_TENANT_HEADERS } from './http-context';
 
 /** Minimal fake request that records clone() calls. */
-function fakeReq(context: HttpContext = new HttpContext()) {
+function fakeReq(
+  context: HttpContext = new HttpContext(),
+  url = `${environment.apiBaseUrl}/rounds`,
+) {
   const cloned = {} as HttpRequest<unknown>;
   const req = {
+    url,
     context,
     clone: vi.fn().mockReturnValue(cloned),
   } as unknown as HttpRequest<unknown>;
@@ -43,6 +48,17 @@ describe('groupInterceptor', () => {
     // tenant this browser happens to be signed into would filter that season away.
     localStorage.setItem('palpitao.groupId', 'g-123');
     const { req } = fakeReq(new HttpContext().set(SKIP_TENANT_HEADERS, true));
+    const next = vi.fn().mockReturnValue('result') as unknown as HttpHandlerFn;
+
+    groupInterceptor(req, next);
+
+    expect(req.clone).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith(req);
+  });
+
+  it('never sends the group to another host', () => {
+    localStorage.setItem('palpitao.groupId', 'g-123');
+    const { req } = fakeReq(new HttpContext(), 'https://elsewhere.example/api/rounds');
     const next = vi.fn().mockReturnValue('result') as unknown as HttpHandlerFn;
 
     groupInterceptor(req, next);

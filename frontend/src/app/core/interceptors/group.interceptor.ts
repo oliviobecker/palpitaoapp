@@ -1,5 +1,6 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { storedGroupId } from '../services/group-context.service';
+import { isApiRequest } from './api-url';
 import { SKIP_TENANT_HEADERS } from './http-context';
 
 /**
@@ -9,7 +10,8 @@ import { SKIP_TENANT_HEADERS } from './http-context';
  * always re-validates that the user really has access to the group.
  */
 export const groupInterceptor: HttpInterceptorFn = (req, next) => {
-  if (req.context.get(SKIP_TENANT_HEADERS)) {
+  // Never to another host, and never on a request that opted out (the public standings link).
+  if (req.context.get(SKIP_TENANT_HEADERS) || !isApiRequest(req.url)) {
     return next(req);
   }
   const groupId = storedGroupId();
