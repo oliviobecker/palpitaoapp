@@ -18,7 +18,7 @@ import { forkJoin } from 'rxjs';
 import { Competition, MatchPhase, RoundStatus, TournamentType } from '@core/models/enums';
 import { competitionsForType, phasesForType } from '@shared/utils/tournament-rules.util';
 import { HasUnsavedChanges } from '@core/guards/unsaved-changes.guard';
-import { FixtureCandidate, Round, RoundMatch, ScoringConfig, Team } from '@core/models';
+import { Round, RoundMatch, ScoringConfig, Team } from '@core/models';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ToastService } from '@core/notifications/toast.service';
 import { MatchesService } from '@core/services/matches.service';
@@ -37,10 +37,12 @@ import { MatchList } from '@shared/components/match-list/match-list';
 import { PageHeader } from '@shared/components/page-header/page-header';
 import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
 import { isoDateFromToday, toImportItem } from '@shared/utils/fixture.util';
+import { FixtureSearchStore, isRangeInvalid } from './fixture-search.store';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-matches',
+  providers: [FixtureSearchStore],
   imports: [
     ReactiveFormsModule,
     RouterLink,
@@ -200,18 +202,14 @@ export class AdminMatches implements OnInit, HasUnsavedChanges {
   }
 
   // --- External fixture import (into this existing round) -----------------
-  protected readonly searching = signal(false);
-  protected readonly searched = signal(false);
-  /** True when the last fixture search failed (source down) — show the manual fallback hint. */
-  protected readonly searchError = signal(false);
+  private readonly fixtureSearch = inject(FixtureSearchStore);
+  protected readonly searching = this.fixtureSearch.searching;
+  protected readonly searched = this.fixtureSearch.searched;
+  protected readonly searchError = this.fixtureSearch.searchError;
   protected readonly importing = signal(false);
-  protected readonly source = signal('');
-  protected readonly fixtures = signal<FixtureCandidate[]>([]);
-  protected readonly selection = signal<FixtureSelectionState>({
-    items: [],
-    leagueOneJustification: null,
-    canSave: true,
-  });
+  protected readonly source = this.fixtureSearch.source;
+  protected readonly fixtures = this.fixtureSearch.fixtures;
+  protected readonly selection = this.fixtureSearch.selection;
 
   protected readonly searchForm = this.fb.nonNullable.group({
     startDate: [''],
@@ -270,33 +268,11 @@ export class AdminMatches implements OnInit, HasUnsavedChanges {
    */
   private preSearch(): void {
     if (!this.canSearch()) return;
-    const { startDate, endDate } = this.searchForm.getRawValue();
-    this.searching.set(true);
-    this.searchError.set(false);
-    this.fixturesApi
-      .searchFixtures(
-        {
-          startDate: `${startDate}T00:00:00`,
-          endDate: `${endDate}T23:59:59`,
-          roundId: this.roundId,
-        },
-        { silent: true },
-      )
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (res) => {
-          if ((res.fixtures?.length ?? 0) > 0) {
-            this.fixtures.set(res.fixtures);
-            this.source.set(res.source);
-            this.searched.set(true);
-          }
-          this.searching.set(false);
-        },
-        error: () => {
-          this.searchError.set(true);
-          this.searching.set(false);
-        },
-      });
+    this.fixtureSearch.search(
+      this.searchForm.getRawValue(),
+      { roundId: this.roundId },
+      { silent: true },
+    );
   }
 
   reload(): void {
@@ -320,7 +296,7 @@ export class AdminMatches implements OnInit, HasUnsavedChanges {
   // --- External fixture import -------------------------------------------
   protected searchRangeInvalid(): boolean {
     const { startDate, endDate } = this.searchForm.getRawValue();
-    return !!startDate && !!endDate && endDate < startDate;
+    return isRangeInvalid(startDate, endDate);
   }
 
   protected canSearch(): boolean {
@@ -330,28 +306,7 @@ export class AdminMatches implements OnInit, HasUnsavedChanges {
 
   protected searchFixtures(): void {
     if (!this.canSearch()) return;
-    const { startDate, endDate } = this.searchForm.getRawValue();
-    this.searching.set(true);
-    this.searchError.set(false);
-    this.fixturesApi
-      .searchFixtures({
-        startDate: `${startDate}T00:00:00`,
-        endDate: `${endDate}T23:59:59`,
-        roundId: this.roundId,
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (res) => {
-          this.fixtures.set(res.fixtures);
-          this.source.set(res.source);
-          this.searched.set(true);
-          this.searching.set(false);
-        },
-        error: () => {
-          this.searchError.set(true);
-          this.searching.set(false);
-        },
-      });
+    this.fixtureSearch.search(this.searchForm.getRawValue(), { roundId: this.roundId });
   }
 
   protected onSelection(state: FixtureSelectionState): void {

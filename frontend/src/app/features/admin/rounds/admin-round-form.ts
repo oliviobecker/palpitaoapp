@@ -14,7 +14,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { HasUnsavedChanges } from '@core/guards/unsaved-changes.guard';
 import { LanguageService } from '@core/i18n/language.service';
-import { FixtureCandidate, RoundSummary, Season } from '@core/models';
+import { RoundSummary, Season } from '@core/models';
 import { ToastService } from '@core/notifications/toast.service';
 import { RoundsService } from '@core/services/rounds.service';
 import { SeasonsService } from '@core/services/seasons.service';
@@ -28,10 +28,12 @@ import { PageHeader } from '@shared/components/page-header/page-header';
 import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
 import { isoDateFromToday, toImportItem } from '@shared/utils/fixture.util';
 import { joinPreview, ordinalRoundName } from '@shared/utils/round-name.util';
+import { FixtureSearchStore, isRangeInvalid } from './fixture-search.store';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-round-form',
+  providers: [FixtureSearchStore],
   imports: [
     ReactiveFormsModule,
     RouterLink,
@@ -60,17 +62,13 @@ export class AdminRoundForm implements OnInit, HasUnsavedChanges {
   /** While true, the title auto-follows the number ("Primeira Rodada", …). */
   private autoTitle = true;
   protected readonly saving = signal(false);
-  protected readonly searching = signal(false);
-  protected readonly searched = signal(false);
-  /** True when the last fixture search failed (source down) — show the manual fallback hint. */
-  protected readonly searchError = signal(false);
-  protected readonly source = signal('');
-  protected readonly fixtures = signal<FixtureCandidate[]>([]);
-  protected readonly selection = signal<FixtureSelectionState>({
-    items: [],
-    leagueOneJustification: null,
-    canSave: true,
-  });
+  private readonly fixtureSearch = inject(FixtureSearchStore);
+  protected readonly searching = this.fixtureSearch.searching;
+  protected readonly searched = this.fixtureSearch.searched;
+  protected readonly searchError = this.fixtureSearch.searchError;
+  protected readonly source = this.fixtureSearch.source;
+  protected readonly fixtures = this.fixtureSearch.fixtures;
+  protected readonly selection = this.fixtureSearch.selection;
 
   protected readonly form = this.fb.nonNullable.group({
     seasonId: ['', Validators.required],
@@ -170,38 +168,17 @@ export class AdminRoundForm implements OnInit, HasUnsavedChanges {
   private preSearch(): void {
     if (!this.canSearch()) return;
     const { startDate, endDate, seasonId } = this.form.getRawValue();
-    this.searching.set(true);
-    this.searchError.set(false);
-    this.fixturesApi
-      .searchFixtures(
-        {
-          startDate: `${startDate}T00:00:00`,
-          endDate: `${endDate}T23:59:59`,
-          seasonId: seasonId || undefined,
-        },
-        { silent: true },
-      )
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (res) => {
-          if ((res.fixtures?.length ?? 0) > 0) {
-            this.fixtures.set(res.fixtures);
-            this.source.set(res.source);
-            this.searched.set(true);
-          }
-          this.searching.set(false);
-        },
-        error: () => {
-          this.searchError.set(true);
-          this.searching.set(false);
-        },
-      });
+    this.fixtureSearch.search(
+      { startDate, endDate },
+      { seasonId: seasonId || undefined },
+      { silent: true },
+    );
   }
 
   // --- Date helpers -------------------------------------------------------
   protected dateRangeInvalid(): boolean {
     const { startDate, endDate } = this.form.getRawValue();
-    return !!startDate && !!endDate && endDate < startDate;
+    return isRangeInvalid(startDate, endDate);
   }
 
   protected canSearch(): boolean {
@@ -213,27 +190,7 @@ export class AdminRoundForm implements OnInit, HasUnsavedChanges {
   protected search(): void {
     if (!this.canSearch()) return;
     const { startDate, endDate, seasonId } = this.form.getRawValue();
-    this.searching.set(true);
-    this.searchError.set(false);
-    this.fixturesApi
-      .searchFixtures({
-        startDate: `${startDate}T00:00:00`,
-        endDate: `${endDate}T23:59:59`,
-        seasonId: seasonId || undefined,
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (res) => {
-          this.fixtures.set(res.fixtures);
-          this.source.set(res.source);
-          this.searched.set(true);
-          this.searching.set(false);
-        },
-        error: () => {
-          this.searchError.set(true);
-          this.searching.set(false);
-        },
-      });
+    this.fixtureSearch.search({ startDate, endDate }, { seasonId: seasonId || undefined });
   }
 
   protected onSelection(state: FixtureSelectionState): void {
