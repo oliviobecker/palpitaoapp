@@ -6,6 +6,7 @@
     <Project Path="src/Palpitao.Api/Palpitao.Api.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Palpitao.ArchitectureTests/Palpitao.ArchitectureTests.csproj" />
     <Project Path="tests/Palpitao.UnitTests/Palpitao.UnitTests.csproj" />
   </Folder>
 </Solution>
