@@ -43,7 +43,8 @@
               @if (isDeadlineUrgent(round)) {
                 <app-icon name="triangle-alert" [size]="13" />
               }
-              {{ 'rounds.deadline' | translate }}: {{ deadlineOf(round) | date: 'dd/MM HH:mm' }} ·
+              {{ 'rounds.deadline' | translate }}:
+              {{ deadlineOf(round) | localDate: 'dd/MM HH:mm' }} ·
               <app-countdown [target]="deadlineOf(round)" />
             </div>
             <a class="btn btn-primary w-100" [routerLink]="['/rounds', round.id, 'predictions']">{{

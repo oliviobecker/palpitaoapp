@@ -1,5 +1,4 @@
 import { AdminRegistrationRequestsService } from '@core/services/admin/admin-registration-requests.service';
-import { DatePipe } from '@angular/common';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -20,13 +19,14 @@ import { ErrorState } from '@shared/components/error-state/error-state';
 import { Icon } from '@shared/components/icon/icon';
 import { PageHeader } from '@shared/components/page-header/page-header';
 import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
+import { LocalDatePipe } from '@shared/pipes/local-date.pipe';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-registration-requests',
   imports: [
     FormsModule,
-    DatePipe,
+    LocalDatePipe,
     RouterLink,
     TranslatePipe,
     EmptyState,
@@ -57,7 +57,7 @@ import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
               <small class="text-muted d-block">{{ r.email }}</small>
               <small class="text-muted">
                 {{ 'adminRegistrations.requestedAt' | translate }}:
-                {{ r.createdAt | date: 'dd/MM/yyyy HH:mm' }}
+                {{ r.createdAt | localDate: 'dd/MM/yyyy HH:mm' }}
                 <span class="badge text-bg-warning ms-1">{{
                   'adminRegistrations.pending' | translate
                 }}</span>

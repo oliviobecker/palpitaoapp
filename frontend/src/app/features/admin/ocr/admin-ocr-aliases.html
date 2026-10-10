@@ -80,7 +80,7 @@
         <div class="oa-row">
           <div class="oa-row__name">
             {{ a.aliasRaw }}
-            <small class="text-body-secondary">{{ a.updatedAt | date: 'short' }}</small>
+            <small class="text-body-secondary">{{ a.updatedAt | localDate: 'short' }}</small>
           </div>
           <select
             class="form-select form-select-sm oa-row__select"

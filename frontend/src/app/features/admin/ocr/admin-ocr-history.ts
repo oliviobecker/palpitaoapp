@@ -8,7 +8,6 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { OcrBatchSummary } from '@core/models';
@@ -19,11 +18,12 @@ import { ErrorState } from '@shared/components/error-state/error-state';
 import { Icon } from '@shared/components/icon/icon';
 import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
 import { isReviewableOcrBatch, ocrBatchStatusClass } from '@shared/utils/ocr-batch.util';
+import { LocalDatePipe } from '@shared/pipes/local-date.pipe';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-ocr-history',
-  imports: [DatePipe, RouterLink, TranslatePipe, Icon, EmptyState, ErrorState, SkeletonList],
+  imports: [LocalDatePipe, RouterLink, TranslatePipe, Icon, EmptyState, ErrorState, SkeletonList],
   templateUrl: './admin-ocr-history.html',
   styles: [
     `

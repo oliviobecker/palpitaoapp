@@ -63,4 +63,47 @@ test.describe('Language switching', () => {
     await expect(page.getByText('Registrar palpites')).toBeVisible();
     await expect(page.locator('button.is-active', { hasText: 'PT' })).toBeVisible();
   });
+
+  test('formats dates in the active language', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('palpitao.token', 'e2e-fake-jwt');
+      localStorage.setItem(
+        'palpitao.user',
+        JSON.stringify({
+          id: 'p1',
+          name: 'João Silva',
+          email: 'joao@x.com',
+          role: 'Participant',
+          isActive: true,
+        }),
+      );
+      localStorage.setItem('palpitao.groupId', 'g1');
+      localStorage.setItem('palpitao.groupRole', 'Participant');
+      localStorage.setItem('palpitao.lang', 'en-US');
+    });
+    await installApi(page, [
+      { method: 'GET', match: path('/rounds/r1'), respond: () => ({ json: round }) },
+      {
+        method: 'GET',
+        match: path('/rounds/r1/predictions/me'),
+        respond: () => ({ json: { roundId: 'r1', status: 'Published', predictions: [] } }),
+      },
+    ]);
+
+    // The first match's day, as the browser's own clock sees it (the page formats local time).
+    const day = await page.evaluate((iso) => {
+      const d = new Date(iso);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return { weekday: d.getDay(), date: `${pad(d.getDate())}/${pad(d.getMonth() + 1)}` };
+    }, round.matches[0].startsAt);
+    const en = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day.weekday];
+    const pt = ['dom.', 'seg.', 'ter.', 'qua.', 'qui.', 'sex.', 'sáb.'][day.weekday];
+
+    await page.goto('/rounds/r1/predictions');
+    await expect(page.getByText(`${en}, ${day.date}`).first()).toBeVisible();
+
+    await page.getByRole('button', { name: 'PT', exact: true }).click();
+    await expect(page.getByText(`${pt}, ${day.date}`).first()).toBeVisible();
+    await expect(page.getByText(`${en}, ${day.date}`)).toHaveCount(0);
+  });
 });

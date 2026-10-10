@@ -20,6 +20,7 @@ export interface ConfirmChoicesResult {
 
 interface ConfirmState {
   open: boolean;
+  /** Empty means the translated default ("Confirm"); so does an empty `confirmText`. */
   title: string;
   message: string;
   confirmText: string;
@@ -38,7 +39,7 @@ const CLOSED: ConfirmState = {
   open: false,
   title: '',
   message: '',
-  confirmText: 'Confirmar',
+  confirmText: '',
   danger: false,
   withInput: false,
   inputLabel: '',
@@ -60,9 +61,9 @@ export class ConfirmService {
       this._state.set({
         ...CLOSED,
         open: true,
-        title: options?.title ?? 'Confirmar',
+        title: options?.title ?? '',
         message,
-        confirmText: options?.confirmText ?? 'Confirmar',
+        confirmText: options?.confirmText ?? '',
         danger: options?.danger ?? false,
         resolve,
       });
@@ -87,9 +88,9 @@ export class ConfirmService {
       this._state.set({
         ...CLOSED,
         open: true,
-        title: options?.title ?? 'Confirmar',
+        title: options?.title ?? '',
         message,
-        confirmText: options?.confirmText ?? 'Confirmar',
+        confirmText: options?.confirmText ?? '',
         danger: options?.danger ?? false,
         withInput: true,
         inputLabel: options?.inputLabel ?? '',
@@ -121,9 +122,9 @@ export class ConfirmService {
       this._state.set({
         ...CLOSED,
         open: true,
-        title: options?.title ?? 'Confirmar',
+        title: options?.title ?? '',
         message,
-        confirmText: options?.confirmText ?? 'Confirmar',
+        confirmText: options?.confirmText ?? '',
         danger: options?.danger ?? false,
         withInput: options?.withInput ?? false,
         inputLabel: options?.inputLabel ?? '',

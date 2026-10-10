@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -40,6 +39,7 @@ import {
 import { computeMultiplier, isClassic, isLeagueOne, phaseLabel } from '@shared/utils/match.util';
 import { teamAbbr } from '@shared/utils/team-name.util';
 import { avatarColor } from '@shared/utils/avatar.util';
+import { LocalDatePipe } from '@shared/pipes/local-date.pipe';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,7 +47,7 @@ import { avatarColor } from '@shared/utils/avatar.util';
   imports: [
     ReactiveFormsModule,
     RouterLink,
-    DatePipe,
+    LocalDatePipe,
     TranslatePipe,
     CompetitionBadge,
     Countdown,

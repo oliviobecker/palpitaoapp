@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -28,13 +27,14 @@ import {
   predictionDeadlineIso,
 } from '@shared/utils/deadline.util';
 import { compareRounds } from '@shared/utils/round-name.util';
+import { LocalDatePipe } from '@shared/pipes/local-date.pipe';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-rounds',
   imports: [
     RouterLink,
-    DatePipe,
+    LocalDatePipe,
     TranslatePipe,
     EmptyState,
     ErrorState,

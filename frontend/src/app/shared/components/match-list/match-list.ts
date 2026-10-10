@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { RoundMatch, ScoringConfig } from '@core/models';
@@ -7,6 +6,7 @@ import { CompetitionBadge } from '../competition-badge/competition-badge';
 import { Icon } from '../icon/icon';
 import { MatchStatusBadge } from '../match-status-badge/match-status-badge';
 import { MultiplierBadge } from '../multiplier-badge/multiplier-badge';
+import { LocalDatePipe } from '@shared/pipes/local-date.pipe';
 
 /**
  * Presentational list of a round's matches: competition/multiplier badges, classic
@@ -17,7 +17,14 @@ import { MultiplierBadge } from '../multiplier-badge/multiplier-badge';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-match-list',
-  imports: [DatePipe, TranslatePipe, CompetitionBadge, Icon, MatchStatusBadge, MultiplierBadge],
+  imports: [
+    LocalDatePipe,
+    TranslatePipe,
+    CompetitionBadge,
+    Icon,
+    MatchStatusBadge,
+    MultiplierBadge,
+  ],
   template: `
     <div class="vstack gap-2">
       @for (m of matches(); track m.id) {
@@ -33,7 +40,7 @@ import { MultiplierBadge } from '../multiplier-badge/multiplier-badge';
               @if (leagueOne(m)) {
                 <span class="badge text-bg-warning">{{ 'predictions.leagueOne' | translate }}</span>
               }
-              <small class="text-muted ms-auto">{{ m.startsAt | date: 'dd/MM HH:mm' }}</small>
+              <small class="text-muted ms-auto">{{ m.startsAt | localDate: 'dd/MM HH:mm' }}</small>
             </div>
             <div class="d-flex justify-content-between align-items-center gap-2">
               <span class="fw-semibold"

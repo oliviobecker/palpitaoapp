@@ -18,7 +18,7 @@
       <p>
         {{ 'flavioOverride.deadline' | translate }}:
         @if (panel.applies && panel.deadlineUtc) {
-          <strong>{{ panel.deadlineUtc | date: 'dd/MM/yyyy HH:mm:ss' : 'UTC' }} UTC</strong>
+          <strong>{{ panel.deadlineUtc | localDate: 'dd/MM/yyyy HH:mm:ss' : 'UTC' }} UTC</strong>
         } @else {
           —
         }
@@ -47,7 +47,7 @@
                 </th>
                 <td [attr.data-label]="'flavioOverride.submitted' | translate">
                   @if (participant.submittedAt) {
-                    {{ participant.submittedAt | date: 'dd/MM/yyyy HH:mm:ss' : 'UTC' }} UTC
+                    {{ participant.submittedAt | localDate: 'dd/MM/yyyy HH:mm:ss' : 'UTC' }} UTC
                   } @else {
                     —
                   }
@@ -68,7 +68,7 @@
                   @if (participant.justification) {
                     <div class="small text-muted text-break">{{ participant.justification }}</div>
                     <div class="small text-muted">
-                      {{ participant.updatedAt | date: 'dd/MM/yyyy HH:mm:ss' : 'UTC' }} UTC
+                      {{ participant.updatedAt | localDate: 'dd/MM/yyyy HH:mm:ss' : 'UTC' }} UTC
                     </div>
                   }
                 </td>

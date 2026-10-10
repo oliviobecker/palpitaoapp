@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -12,6 +11,7 @@ import {
 import { TranslatePipe } from '@ngx-translate/core';
 import { Competition } from '@core/models/enums';
 import { FixtureCandidate } from '@core/models';
+import { LocalDatePipe } from '@shared/pipes/local-date.pipe';
 
 interface FixtureGroup {
   date: string;
@@ -35,7 +35,7 @@ export interface FixtureSelectionState {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-fixture-selection',
-  imports: [TranslatePipe, DatePipe],
+  imports: [TranslatePipe, LocalDatePipe],
   templateUrl: './fixture-selection.html',
 })
 export class FixtureSelection implements OnChanges {
