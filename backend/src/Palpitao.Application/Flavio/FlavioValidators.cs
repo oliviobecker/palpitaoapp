@@ -10,7 +10,8 @@ public class FlavioOverrideRequestValidator : AbstractValidator<FlavioOverrideRe
     public FlavioOverrideRequestValidator()
     {
         RuleFor(x => x.UserId).NotEmpty().WithMessage("validation.participant.required");
-        RuleFor(x => x.Justification).NotEmpty().WithMessage("flavio.justificationRequired")
-            .MaximumLength(500).WithMessage("flavio.justificationRequired");
+        RuleFor(x => x.Justification).Cascade(CascadeMode.Stop)
+            .NotEmpty().WithMessage("flavio.justificationRequired")
+            .MaximumLength(500).WithMessage("validation.justification.tooLong");
     }
 }

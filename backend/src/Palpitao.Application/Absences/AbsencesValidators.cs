@@ -10,8 +10,9 @@ public class AbsenceOverrideRequestValidator : AbstractValidator<AbsenceOverride
     public AbsenceOverrideRequestValidator()
     {
         RuleFor(x => x.UserId).NotEmpty().WithMessage("validation.participant.required");
-        RuleFor(x => x.Justification).NotEmpty().MinimumLength(3)
-            .WithMessage("validation.justification.required")
+        RuleFor(x => x.Justification).Cascade(CascadeMode.Stop)
+            .NotEmpty().WithMessage("validation.justification.required")
+            .MinimumLength(3).WithMessage("validation.justification.required")
             .MaximumLength(500).WithMessage("validation.justification.tooLong");
     }
 }
@@ -19,8 +20,9 @@ public class AbsenceOverrideRequestValidator : AbstractValidator<AbsenceOverride
 public class ReactivateRequestValidator : AbstractValidator<ReactivateRequest>
 {
     public ReactivateRequestValidator()
-        => RuleFor(x => x.Justification).NotEmpty().MinimumLength(3)
-            .WithMessage("validation.justification.required")
+        => RuleFor(x => x.Justification).Cascade(CascadeMode.Stop)
+            .NotEmpty().WithMessage("validation.justification.required")
+            .MinimumLength(3).WithMessage("validation.justification.required")
             .MaximumLength(500).WithMessage("validation.justification.tooLong");
 }
 
@@ -28,10 +30,11 @@ public class AbsenceReviewRequestValidator : AbstractValidator<AbsenceReviewRequ
 {
     public AbsenceReviewRequestValidator()
     {
-        RuleFor(x => x.Justification).NotEmpty().MinimumLength(3)
-            .WithMessage("validation.justification.required")
+        RuleFor(x => x.Justification).Cascade(CascadeMode.Stop)
+            .NotEmpty().WithMessage("validation.justification.required")
+            .MinimumLength(3).WithMessage("validation.justification.required")
             .MaximumLength(500).WithMessage("validation.justification.tooLong");
-        RuleFor(x => x.Rounds).NotNull();
+        RuleFor(x => x.Rounds).NotNull().WithMessage("validation.required");
         RuleForEach(x => x.Rounds).ChildRules(round =>
             round.RuleFor(d => d.RoundId).NotEmpty().WithMessage("notFound.round"));
     }
