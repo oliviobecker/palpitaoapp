@@ -81,7 +81,7 @@
                   <span class="badge text-bg-light">{{ 'fixtures.alreadyAdded' | translate }}</span>
                 }
               </div>
-              <div class="small text-muted">{{ f.startsAt | date: 'dd/MM/yyyy HH:mm' }}</div>
+              <div class="small text-muted">{{ f.startsAt | localDate: 'dd/MM/yyyy HH:mm' }}</div>
               <div class="fw-semibold">{{ f.homeTeamName }}</div>
               <div class="text-muted small">vs</div>
               <div class="fw-semibold">{{ f.awayTeamName }}</div>

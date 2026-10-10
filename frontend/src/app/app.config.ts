@@ -74,6 +74,7 @@ import { errorInterceptor } from '@core/interceptors/error.interceptor';
 import { groupInterceptor } from '@core/interceptors/group.interceptor';
 import { languageInterceptor } from '@core/interceptors/language.interceptor';
 import { loadingInterceptor } from '@core/interceptors/loading.interceptor';
+import { LANG_STORAGE_KEY, pickLanguage } from '@core/i18n/language.service';
 
 registerLocaleData(localePt);
 registerLocaleData(localeEn);
@@ -105,7 +106,12 @@ export const appConfig: ApplicationConfig = {
       }),
       fallbackLang: 'en-US',
     }),
-    { provide: LOCALE_ID, useValue: 'pt-BR' },
+    // The startup language, detected as LanguageService.init() does. Dates do not depend on it:
+    // they go through the localDate pipe, which follows the language as it changes.
+    {
+      provide: LOCALE_ID,
+      useFactory: () => pickLanguage(navigator.language, localStorage.getItem(LANG_STORAGE_KEY)),
+    },
     // Lucide icons used across the UI, registered by lower-kebab-case name and
     // rendered through the <app-icon name="..."> wrapper.
     provideLucideIcons(

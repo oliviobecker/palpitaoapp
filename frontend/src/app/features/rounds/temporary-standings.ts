@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -22,11 +21,12 @@ import { Icon } from '@shared/components/icon/icon';
 import { Loading } from '@shared/components/loading/loading';
 import { copyToClipboard } from '@shared/utils/clipboard.util';
 import { buildTemporaryStandingsMessage } from '@shared/utils/temporary-standings-message.util';
+import { LocalDatePipe } from '@shared/pipes/local-date.pipe';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-temporary-standings',
-  imports: [RouterLink, TranslatePipe, DatePipe, EmptyState, ErrorState, Icon, Loading],
+  imports: [RouterLink, TranslatePipe, LocalDatePipe, EmptyState, ErrorState, Icon, Loading],
   template: `
     <div class="mb-3">
       <div class="page-trail">
@@ -51,7 +51,7 @@ import { buildTemporaryStandingsMessage } from '@shared/utils/temporary-standing
         @if (d.lastUpdatedAt) {
           <span
             >{{ 'temporaryStandings.lastUpdated' | translate }}:
-            {{ d.lastUpdatedAt | date: 'dd/MM HH:mm' }}</span
+            {{ d.lastUpdatedAt | localDate: 'dd/MM HH:mm' }}</span
           >
         }
       </div>

@@ -1,5 +1,4 @@
 import { AdminAuditService } from '@core/services/admin/admin-audit.service';
-import { DatePipe } from '@angular/common';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -19,13 +18,14 @@ import { ErrorState } from '@shared/components/error-state/error-state';
 import { Icon } from '@shared/components/icon/icon';
 import { PageHeader } from '@shared/components/page-header/page-header';
 import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
+import { LocalDatePipe } from '@shared/pipes/local-date.pipe';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-audit',
   imports: [
     FormsModule,
-    DatePipe,
+    LocalDatePipe,
     RouterLink,
     TranslatePipe,
     EmptyState,
@@ -87,7 +87,7 @@ import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
             <div class="card-body py-2 px-3">
               <div class="d-flex justify-content-between">
                 <span class="fw-semibold">{{ log.action }}</span>
-                <small class="text-muted">{{ log.createdAt | date: 'dd/MM HH:mm' }}</small>
+                <small class="text-muted">{{ log.createdAt | localDate: 'dd/MM HH:mm' }}</small>
               </div>
               <div class="small text-muted">
                 {{ log.userName ?? ('adminAudit.system' | translate) }} · {{ log.entityName }}

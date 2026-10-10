@@ -84,7 +84,9 @@
               @if (leagueOne(m)) {
                 <span class="badge text-bg-warning">{{ 'predictions.leagueOne' | translate }}</span>
               }
-              <small class="text-muted ms-auto">{{ m.startsAt | date: 'EEE, dd/MM HH:mm' }}</small>
+              <small class="text-muted ms-auto">{{
+                m.startsAt | localDate: 'EEE, dd/MM HH:mm'
+              }}</small>
             </div>
 
             <!-- Score row -->

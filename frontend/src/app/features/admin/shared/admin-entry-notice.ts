@@ -1,10 +1,10 @@
-import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Round } from '@core/models';
 import { Icon } from '@shared/components/icon/icon';
 import { adminEntryBlockKey, flavioLateNotice } from './admin-entry.util';
+import { LocalDatePipe } from '@shared/pipes/local-date.pipe';
 
 /**
  * Heads the manual-entry and OCR-import screens: why entry is closed (the round was finalized,
@@ -14,7 +14,7 @@ import { adminEntryBlockKey, flavioLateNotice } from './admin-entry.util';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-entry-notice',
-  imports: [DatePipe, RouterLink, TranslatePipe, Icon],
+  imports: [LocalDatePipe, RouterLink, TranslatePipe, Icon],
   template: `
     @if (blockKey(); as key) {
       <div class="alert alert-warning d-flex gap-2 py-2" role="alert">
@@ -32,7 +32,8 @@ import { adminEntryBlockKey, flavioLateNotice } from './admin-entry.util';
         <div>
           {{
             'adminEntry.flavioLate'
-              | translate: { leaders: f.leaders, deadline: (f.deadlineUtc | date: 'dd/MM HH:mm') }
+              | translate
+                : { leaders: f.leaders, deadline: (f.deadlineUtc | localDate: 'dd/MM HH:mm') }
           }}
           <a class="alert-link" [routerLink]="['/admin/rounds', round().id]">{{
             'adminEntry.openRound' | translate

@@ -31,7 +31,7 @@ import { ConfirmService } from '@core/notifications/confirm.service';
           <div class="modal-content">
             <div class="modal-header">
               <h2 id="confirm-dialog-title" class="modal-title h6 mb-0">
-                {{ confirm.state().title }}
+                {{ confirm.state().title || ('common.confirm' | translate) }}
               </h2>
             </div>
             <div class="modal-body">
@@ -93,7 +93,7 @@ import { ConfirmService } from '@core/notifications/confirm.service';
                 [disabled]="!canConfirm()"
                 (click)="confirm.confirm(inputValue(), [...checked()])"
               >
-                {{ confirm.state().confirmText }}
+                {{ confirm.state().confirmText || ('common.confirm' | translate) }}
               </button>
             </div>
           </div>

@@ -100,7 +100,7 @@
           @if (deadline(); as d) {
             <div class="hero-meta">
               <app-icon name="clock" [size]="15" /> {{ 'dashboard.closesAt' | translate }}
-              {{ d | date: 'EEE, dd/MM · HH:mm' }}
+              {{ d | localDate: 'EEE, dd/MM · HH:mm' }}
             </div>
           }
 
@@ -236,7 +236,7 @@
                 <app-competition-badge [competition]="m.competition" />
                 <small class="text-muted"
                   ><app-icon name="clock" [size]="13" />
-                  {{ m.startsAt | date: 'EEE, dd/MM HH:mm' }}</small
+                  {{ m.startsAt | localDate: 'EEE, dd/MM HH:mm' }}</small
                 >
               </div>
               <div class="fw-semibold">

@@ -1,5 +1,4 @@
 import { AdminScoutService } from '@core/services/admin/admin-scout.service';
-import { DatePipe } from '@angular/common';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -20,11 +19,12 @@ import { Icon } from '@shared/components/icon/icon';
 import { Loading } from '@shared/components/loading/loading';
 import { copyToClipboard } from '@shared/utils/clipboard.util';
 import { buildMatchScoutMessage } from '@shared/utils/scout-message.util';
+import { LocalDatePipe } from '@shared/pipes/local-date.pipe';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-round-scout',
-  imports: [RouterLink, FormsModule, DatePipe, TranslatePipe, EmptyState, Icon, Loading],
+  imports: [RouterLink, FormsModule, LocalDatePipe, TranslatePipe, EmptyState, Icon, Loading],
   template: `
     <div class="mb-3">
       <div class="page-trail">
@@ -47,7 +47,7 @@ import { buildMatchScoutMessage } from '@shared/utils/scout-message.util';
             <select id="scout-match" class="form-select" [(ngModel)]="selectedMatchId">
               @for (m of matches(); track m.roundMatchId) {
                 <option [value]="m.roundMatchId">
-                  {{ m.startsAt | date: 'dd/MM HH:mm' }} · {{ m.homeTeamName }} ×
+                  {{ m.startsAt | localDate: 'dd/MM HH:mm' }} · {{ m.homeTeamName }} ×
                   {{ m.awayTeamName }}
                 </option>
               }

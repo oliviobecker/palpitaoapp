@@ -107,4 +107,15 @@ describe('ConfirmService', () => {
     expect(svc.state().inputLabel).toBe('Justification');
     svc.cancel();
   });
+
+  it('leaves the title and button to the dialog, which translates them, unless given', () => {
+    const svc = new ConfirmService();
+
+    svc.ask('Continue?');
+    expect([svc.state().title, svc.state().confirmText]).toEqual(['', '']);
+
+    svc.cancel();
+    svc.ask('Delete the round?', { title: 'Delete', confirmText: 'Delete' });
+    expect([svc.state().title, svc.state().confirmText]).toEqual(['Delete', 'Delete']);
+  });
 });

@@ -1,5 +1,4 @@
 import { AdminFlavioOverridesService } from '@core/services/admin/admin-flavio-overrides.service';
-import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -17,11 +16,12 @@ import { FlavioParticipant, Round, RoundFlavioOverrides } from '@core/models';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ToastService } from '@core/notifications/toast.service';
 import { Skeleton } from '@shared/components/skeleton/skeleton';
+import { LocalDatePipe } from '@shared/pipes/local-date.pipe';
 
 @Component({
   selector: 'app-admin-flavio-overrides',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, TranslatePipe, Skeleton],
+  imports: [LocalDatePipe, TranslatePipe, Skeleton],
   templateUrl: './admin-flavio-overrides.html',
   styles: [
     `

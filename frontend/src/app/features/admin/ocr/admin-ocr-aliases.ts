@@ -9,7 +9,6 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -24,12 +23,13 @@ import { Icon } from '@shared/components/icon/icon';
 import { PageHeader } from '@shared/components/page-header/page-header';
 import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
 import { filterAliases } from './admin-ocr-aliases.util';
+import { LocalDatePipe } from '@shared/pipes/local-date.pipe';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin-ocr-aliases',
   imports: [
-    DatePipe,
+    LocalDatePipe,
     FormsModule,
     RouterLink,
     TranslatePipe,

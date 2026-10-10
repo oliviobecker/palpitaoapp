@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -28,13 +27,14 @@ import { Skeleton } from '@shared/components/skeleton/skeleton';
 import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
 import { deadlinePassed, predictionDeadlineIso } from '@shared/utils/deadline.util';
 import { avatarColor, initials } from '@shared/utils/avatar.util';
+import { LocalDatePipe } from '@shared/pipes/local-date.pipe';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-dashboard',
   imports: [
     RouterLink,
-    DatePipe,
+    LocalDatePipe,
     TranslatePipe,
     CompetitionBadge,
     ErrorState,
