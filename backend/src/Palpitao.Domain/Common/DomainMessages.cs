@@ -103,7 +103,6 @@ public static class DomainMessages
             ["validation.email.required"] = ("O e-mail é obrigatório.", "The e-mail is required."),
             ["validation.email.invalid"] = ("Informe um e-mail válido.", "Enter a valid e-mail."),
             ["validation.password.required"] = ("A senha é obrigatória.", "The password is required."),
-            ["validation.password.min6"] = ("A senha deve ter ao menos 6 caracteres.", "The password must be at least 6 characters long."),
             ["validation.passwordConfirm.required"] = ("Confirme a senha.", "Please confirm the password."),
             ["validation.group.nameRequired"] = ("O nome do grupo é obrigatório.", "The group name is required."),
             ["validation.group.nameLength"] = ("Informe um nome de grupo válido.", "Enter a valid group name."),

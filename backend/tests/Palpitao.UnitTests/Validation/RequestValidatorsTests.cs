@@ -1,6 +1,9 @@
+using Palpitao.Application.Absences;
 using Palpitao.Application.Auth;
+using Palpitao.Application.Flavio;
 using Palpitao.Application.Predictions;
 using Palpitao.Application.Rounds;
+using Palpitao.Application.Users;
 using Palpitao.Domain.Common;
 
 namespace Palpitao.UnitTests.Validation;
@@ -56,6 +59,48 @@ public class RequestValidatorsTests
         Assert.Contains("validation.score.negative", errors);
     }
 
+    /// <summary>Each validator with a justification, and its first error for a given text.</summary>
+    public static TheoryData<string, Func<string, string>> JustificationValidators => new()
+    {
+        { "absence override", j => FirstError(new AbsenceOverrideRequestValidator(), new AbsenceOverrideRequest { UserId = Guid.NewGuid(), Justification = j }) },
+        { "reactivation", j => FirstError(new ReactivateRequestValidator(), new ReactivateRequest { Justification = j }) },
+        { "absence review", j => FirstError(new AbsenceReviewRequestValidator(), new AbsenceReviewRequest { Justification = j }) },
+        { "elimination", j => FirstError(new EliminateRequestValidator(), new EliminateRequest { Justification = j }) },
+        { "Flávio override", j => FirstError(new FlavioOverrideRequestValidator(), new FlavioOverrideRequest { UserId = Guid.NewGuid(), Justification = j }) },
+    };
+
+    [Theory]
+    [MemberData(nameof(JustificationValidators))]
+    public void An_empty_justification_reports_a_catalog_key(string _, Func<string, string> firstError)
+    {
+        // Not FluentValidation's default English text, which the catalog does not know.
+        var error = firstError("");
+        Assert.NotEqual(error, DomainMessages.Resolve(error, "en"));
+    }
+
+    [Theory]
+    [MemberData(nameof(JustificationValidators))]
+    public void A_justification_over_500_characters_is_too_long(string _, Func<string, string> firstError)
+        => Assert.Equal("validation.justification.tooLong", firstError(new string('x', 501)));
+
+    [Fact]
+    public void An_absence_review_needs_its_list_of_rounds()
+        => Assert.Equal("validation.required", FirstError(new AbsenceReviewRequestValidator(),
+            new AbsenceReviewRequest { Justification = "Revisão", Rounds = null! }));
+
+    [Theory]
+    [InlineData("abc123")]   // six characters: the old minimum, short of the policy's eight
+    [InlineData("abcdefgh")] // no digit
+    [InlineData("12345678")] // no letter
+    public void A_participant_password_follows_the_account_policy(string password)
+        => Assert.Equal("auth.weakPassword", FirstError(new CreateParticipantRequestValidator(),
+            new CreateParticipantRequest { Name = "Ana", Email = "ana@example.com", Password = password }));
+
+    [Fact]
+    public void A_participant_with_a_strong_password_is_valid()
+        => Assert.True(new CreateParticipantRequestValidator().Validate(
+            new CreateParticipantRequest { Name = "Ana", Email = "ana@example.com", Password = "Senha123" }).IsValid);
+
     [Theory]
     [InlineData("validation.email.required")]
     [InlineData("validation.email.invalid")]
@@ -66,6 +111,9 @@ public class RequestValidatorsTests
     [InlineData("validation.score.negative")]
     [InlineData("validation.justification.required")]
     [InlineData("tournamentType.required")]
+    [InlineData("validation.justification.tooLong")]
+    [InlineData("validation.required")]
+    [InlineData("auth.weakPassword")]
     public void Every_validation_key_resolves_in_both_languages(string key)
     {
         var pt = DomainMessages.Resolve(key, "pt");
