@@ -1,4 +1,4 @@
-namespace Palpitao.Infrastructure.Persistence;
+namespace Palpitao.Infrastructure.Persistence.Seed;
 
 /// <summary>
 /// Stable identifiers used by the seed data (and referenced by tests).

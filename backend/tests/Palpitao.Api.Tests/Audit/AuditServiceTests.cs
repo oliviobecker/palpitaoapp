@@ -11,6 +11,7 @@ using Palpitao.Application.Common.Exceptions;
 using Palpitao.Application.Groups;
 using Palpitao.Domain.Entities;
 using Palpitao.Infrastructure.Persistence;
+using Palpitao.Infrastructure.Persistence.Seed;
 
 namespace Palpitao.Api.Tests.Audit;
 

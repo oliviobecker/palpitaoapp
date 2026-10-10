@@ -11,6 +11,7 @@ using Palpitao.Application.Teams;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Enums;
 using Palpitao.Infrastructure.Persistence;
+using Palpitao.Infrastructure.Persistence.Seed;
 
 namespace Palpitao.Api.Tests.Teams;
 

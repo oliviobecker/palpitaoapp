@@ -1,6 +1,7 @@
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
 using Palpitao.Infrastructure.Persistence;
+using Palpitao.Infrastructure.Persistence.Seed;
 
 namespace Palpitao.Api.Tests.TestSupport;
 

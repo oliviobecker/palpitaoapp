@@ -4,6 +4,7 @@ using Palpitao.Api.Tests.TestSupport;
 using Palpitao.Application.Audit;
 using Palpitao.Application.Seasons;
 using Palpitao.Infrastructure.Persistence;
+using Palpitao.Infrastructure.Persistence.Seed;
 
 namespace Palpitao.Api.Tests.Admin;
 

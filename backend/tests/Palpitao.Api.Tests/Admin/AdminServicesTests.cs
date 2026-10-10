@@ -6,6 +6,7 @@ using Palpitao.Application.Seasons;
 using Palpitao.Application.Users;
 using Palpitao.Domain.Common;
 using Palpitao.Infrastructure.Persistence;
+using Palpitao.Infrastructure.Persistence.Seed;
 
 namespace Palpitao.Api.Tests.Admin;
 
