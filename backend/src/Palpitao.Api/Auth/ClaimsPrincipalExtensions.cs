@@ -10,6 +10,6 @@ public static class ClaimsPrincipalExtensions
         var value = principal.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(value, out var id)
             ? id
-            : throw new InvalidOperationException("Usuário autenticado inválido.");
+            : throw new InvalidOperationException("The authenticated user carries no valid user id.");
     }
 }

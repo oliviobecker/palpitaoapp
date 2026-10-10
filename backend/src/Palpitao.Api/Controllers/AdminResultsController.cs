@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Palpitao.Api.Auth;
-using Palpitao.Api.DTOs.Results;
-using Palpitao.Api.Services.Localization;
-using Palpitao.Api.Services.Results;
+using Palpitao.Application.Abstractions;
+using Palpitao.Application.Results;
 
 namespace Palpitao.Api.Controllers;
 

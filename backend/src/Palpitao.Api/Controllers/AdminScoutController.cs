@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Palpitao.Api.Auth;
-using Palpitao.Api.DTOs.Scouts;
-using Palpitao.Api.Services.Scouts;
+using Palpitao.Application.Scouts;
 
 namespace Palpitao.Api.Controllers;
 

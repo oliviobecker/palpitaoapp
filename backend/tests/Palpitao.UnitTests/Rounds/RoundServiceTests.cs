@@ -1,0 +1,441 @@
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Palpitao.Application.Audit;
+using Palpitao.Application.Rounds;
+using Palpitao.Domain.Common;
+using Palpitao.Domain.Entities;
+using Palpitao.Domain.Enums;
+using Palpitao.Infrastructure.Persistence;
+using Palpitao.Infrastructure.Persistence.Seed;
+using Palpitao.UnitTests.TestSupport;
+
+namespace Palpitao.UnitTests.Rounds;
+
+public class RoundServiceTests
+{
+    private static readonly Guid SeasonId = Guid.Parse("33333333-3333-3333-3333-333333333301");
+    private static readonly Guid ActingUser = SeedIds.AdminUser;
+    private static readonly CancellationToken Ct = CancellationToken.None;
+
+    private static AppDbContext CreateContext()
+    {
+        // SQLite in-memory behaves like a real relational DB (proper insert/update
+        // semantics, FK enforcement) — higher fidelity than the InMemory provider.
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        var db = new AppDbContext(options);
+        db.Database.EnsureCreated(); // applies HasData seed (Big Seven + admin)
+
+        // The active season is not part of the seed — add it for the tests.
+        db.Seasons.Add(new Season
+        {
+            Id = SeasonId,
+            Name = "England 2025/2026",
+            StartDate = new DateOnly(2025, 8, 1),
+            EndDate = new DateOnly(2026, 5, 31),
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+        });
+        db.SaveChanges();
+
+        return db;
+    }
+
+    private static RoundService CreateService(AppDbContext db) => new(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db));
+
+    private static CreateMatchRequest Match(
+        Guid home,
+        Guid away,
+        DateTime startsAt,
+        Competition competition = Competition.PremierLeague,
+        MatchPhase phase = MatchPhase.Regular,
+        int? overrideMultiplier = null,
+        string? justification = null)
+        => new()
+        {
+            Competition = competition,
+            Phase = phase,
+            HomeTeamId = home,
+            AwayTeamId = away,
+            StartsAt = startsAt,
+            ManualMultiplierOverride = overrideMultiplier,
+            ManualMultiplierJustification = justification,
+        };
+
+    private static async Task<RoundDto> CreateDraftRound(RoundService service, int number = 1)
+        => await service.CreateAsync(new CreateRoundRequest { SeasonId = SeasonId, Number = number, Title = "Rodada" }, ActingUser, Ct);
+
+    /// <summary>Backdates the publication so the Flávio window is deterministic.</summary>
+    private static async Task PublishedAt(AppDbContext db, Guid roundId, DateTime instant)
+    {
+        var round = await db.Rounds.FirstAsync(r => r.Id == roundId, Ct);
+        round.PublishedAt = instant;
+        await db.SaveChangesAsync(Ct);
+    }
+
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task Create_starts_as_draft()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+
+        var round = await CreateDraftRound(service);
+
+        Assert.Equal(RoundStatus.Draft, round.Status);
+        Assert.Null(round.PublishedAt);
+        Assert.Null(round.FirstMatchStartsAt);
+    }
+
+    [Fact]
+    public async Task Round_dtos_carry_the_seasons_fa_cup_toggle()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+
+        Assert.True((await service.GetByIdAsync(round.Id, Ct)).FaCupEnabled);
+
+        db.Seasons.Single(s => s.Id == SeasonId).FaCupEnabled = false;
+        await db.SaveChangesAsync(Ct);
+
+        // Both shapes carry it: the matches screen reads the flag off the round.
+        Assert.False((await service.GetByIdAsync(round.Id, Ct)).FaCupEnabled);
+        Assert.False((await service.GetAllAsync(Ct)).Single(r => r.Id == round.Id).FaCupEnabled);
+    }
+
+    [Fact]
+    public async Task Flavio_block_carries_the_rule_window_and_flags_the_lock_cap()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        // The season's default FlavioFromRound is 16.
+        var round = await CreateDraftRound(service, number: 16);
+        var kickoff = new DateTime(2026, 1, 10, 16, 0, 0, DateTimeKind.Utc);
+        await service.AddMatchAsync(round.Id, Match(SeedIds.Arsenal, SeedIds.Chelsea, kickoff), ActingUser, Ct);
+        await service.PublishAsync(round.Id, ActingUser, Ct);
+
+        // Published three days out: the full 24h window, untouched by the general lock.
+        await PublishedAt(db, round.Id, kickoff.AddDays(-3));
+        var full = (await service.GetByIdAsync(round.Id, Ct)).Flavio;
+        Assert.NotNull(full);
+        Assert.Equal(24, full!.WindowHours);
+        Assert.False(full.DeadlineCappedByLock);
+        Assert.Equal(kickoff.AddDays(-3).AddHours(24), full.DeadlineUtc);
+
+        // Published 20h out: short notice, so the window drops to 12h.
+        await PublishedAt(db, round.Id, kickoff.AddHours(-20));
+        var shortNotice = (await service.GetByIdAsync(round.Id, Ct)).Flavio;
+        Assert.Equal(12, shortNotice!.WindowHours);
+        Assert.False(shortNotice.DeadlineCappedByLock);
+
+        // Published 6h out: the 12h window would run past the kickoff, so the general
+        // lock prevails — the group message must then announce the exact instant.
+        await PublishedAt(db, round.Id, kickoff.AddHours(-6));
+        var capped = (await service.GetByIdAsync(round.Id, Ct)).Flavio;
+        Assert.Equal(12, capped!.WindowHours);
+        Assert.True(capped.DeadlineCappedByLock);
+        Assert.Equal(kickoff, capped.DeadlineUtc);
+    }
+
+    [Fact]
+    public async Task Publish_round_with_matches_succeeds()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+
+        await service.AddMatchAsync(round.Id, Match(SeedIds.Arsenal, SeedIds.Chelsea, new DateTime(2025, 8, 10, 14, 0, 0, DateTimeKind.Utc)), ActingUser, Ct);
+
+        var published = await service.PublishAsync(round.Id, ActingUser, Ct);
+
+        Assert.Equal(RoundStatus.Published, published.Status);
+        Assert.NotNull(published.PublishedAt);
+    }
+
+    [Fact]
+    public async Task Publish_without_matches_is_rejected()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.PublishAsync(round.Id, ActingUser, Ct));
+
+        Assert.Contains("pelo menos um jogo", ex.Message);
+    }
+
+    [Fact]
+    public async Task Publish_computes_first_match_starts_at_from_earliest_match()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+
+        var earliest = new DateTime(2025, 8, 9, 12, 30, 0, DateTimeKind.Utc);
+        await service.AddMatchAsync(round.Id, Match(SeedIds.Arsenal, SeedIds.Chelsea, new DateTime(2025, 8, 10, 16, 0, 0, DateTimeKind.Utc)), ActingUser, Ct);
+        await service.AddMatchAsync(round.Id, Match(SeedIds.Liverpool, SeedIds.Newcastle, earliest), ActingUser, Ct);
+        await service.AddMatchAsync(round.Id, Match(SeedIds.Tottenham, SeedIds.ManchesterCity, new DateTime(2025, 8, 11, 18, 0, 0, DateTimeKind.Utc)), ActingUser, Ct);
+
+        var published = await service.PublishAsync(round.Id, ActingUser, Ct);
+
+        Assert.Equal(earliest, published.FirstMatchStartsAt);
+    }
+
+    [Fact]
+    public async Task Lock_published_round_succeeds()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+        await service.AddMatchAsync(round.Id, Match(SeedIds.Arsenal, SeedIds.Chelsea, new DateTime(2025, 8, 10, 14, 0, 0, DateTimeKind.Utc)), ActingUser, Ct);
+        await service.PublishAsync(round.Id, ActingUser, Ct);
+
+        var locked = await service.LockAsync(round.Id, ActingUser, Ct);
+
+        Assert.Equal(RoundStatus.Locked, locked.Status);
+        Assert.NotNull(locked.LockedAt);
+    }
+
+    [Fact]
+    public async Task Cancel_round_succeeds()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+
+        var cancelled = await service.CancelAsync(round.Id, ActingUser, Ct);
+
+        Assert.Equal(RoundStatus.Cancelled, cancelled.Status);
+    }
+
+    [Fact]
+    public async Task Reopen_scored_round_returns_to_locked()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+        await service.AddMatchAsync(round.Id, Match(SeedIds.Arsenal, SeedIds.Chelsea, new DateTime(2025, 8, 10, 14, 0, 0, DateTimeKind.Utc)), ActingUser, Ct);
+        await service.PublishAsync(round.Id, ActingUser, Ct);
+        await service.LockAsync(round.Id, ActingUser, Ct);
+
+        // Scoring itself lives in RoundScoringService; move the round to Scored directly.
+        var entity = db.Rounds.Single(r => r.Id == round.Id);
+        entity.Status = RoundStatus.Scored;
+        await db.SaveChangesAsync(Ct);
+
+        var reopened = await service.ReopenAsync(round.Id, ActingUser, Ct);
+
+        Assert.Equal(RoundStatus.Locked, reopened.Status);
+    }
+
+    [Fact]
+    public async Task Reopen_non_scored_round_is_rejected()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.ReopenAsync(round.Id, ActingUser, Ct));
+
+        Assert.Contains("reabertas", ex.Message);
+    }
+
+    [Fact]
+    public async Task Unlock_locked_round_returns_to_published()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+        await service.AddMatchAsync(round.Id, Match(SeedIds.Arsenal, SeedIds.Chelsea, new DateTime(2025, 8, 10, 14, 0, 0, DateTimeKind.Utc)), ActingUser, Ct);
+        await service.PublishAsync(round.Id, ActingUser, Ct);
+        var locked = await service.LockAsync(round.Id, ActingUser, Ct);
+        Assert.NotNull(locked.LockedAt);
+
+        var unlocked = await service.UnlockAsync(round.Id, ActingUser, Ct);
+
+        Assert.Equal(RoundStatus.Published, unlocked.Status);
+        Assert.Null(unlocked.LockedAt);
+        // Publication data stays frozen so the deadline and the Flavio target do not move.
+        Assert.Equal(locked.FirstMatchStartsAt, unlocked.FirstMatchStartsAt);
+        Assert.Equal(locked.PublishedAt, unlocked.PublishedAt);
+    }
+
+    [Fact]
+    public async Task Unlock_non_locked_round_is_rejected()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.UnlockAsync(round.Id, ActingUser, Ct));
+
+        Assert.Contains("desbloqueadas", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("draft", RoundStatus.Draft)]
+    [InlineData("published", RoundStatus.Published)]
+    [InlineData("locked", RoundStatus.Locked)]
+    [InlineData("unlocked", RoundStatus.Published)]
+    public async Task Restore_puts_a_cancelled_round_back_where_it_was(string before, RoundStatus expected)
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+        if (before != "draft")
+        {
+            await service.AddMatchAsync(round.Id, Match(SeedIds.Arsenal, SeedIds.Chelsea, new DateTime(2025, 8, 10, 14, 0, 0, DateTimeKind.Utc)), ActingUser, Ct);
+            await service.PublishAsync(round.Id, ActingUser, Ct);
+        }
+
+        if (before is "locked" or "unlocked")
+        {
+            await service.LockAsync(round.Id, ActingUser, Ct);
+        }
+
+        if (before == "unlocked")
+        {
+            await service.UnlockAsync(round.Id, ActingUser, Ct);
+        }
+
+        var cancelled = await service.CancelAsync(round.Id, ActingUser, Ct);
+        Assert.Equal(expected, cancelled.RestoreStatus);
+
+        var restored = await service.RestoreAsync(round.Id, ActingUser, Ct);
+
+        Assert.Equal(expected, restored.Status);
+        Assert.Null(restored.RestoreStatus);
+        Assert.Equal(before == "draft" ? 0 : 1, restored.Matches.Count);
+        var audit = Assert.Single(db.AuditLogs, a => a.Action == "RoundRestored");
+        Assert.Contains($"\"{expected}\"", audit.Details!);
+    }
+
+    [Fact]
+    public async Task Restore_non_cancelled_round_is_rejected()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.RestoreAsync(round.Id, ActingUser, Ct));
+
+        Assert.Equal("round.onlyCancelledRestored", ex.Key);
+    }
+
+    [Fact]
+    public async Task A_cancelled_round_keeps_its_number_so_the_restore_never_collides()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service, number: 3);
+        await service.CancelAsync(round.Id, ActingUser, Ct);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => CreateDraftRound(service, number: 3));
+        Assert.Equal("round.duplicateNumber", ex.Key);
+
+        Assert.Equal(RoundStatus.Draft, (await service.RestoreAsync(round.Id, ActingUser, Ct)).Status);
+    }
+
+    [Fact]
+    public async Task Only_draft_and_cancelled_rounds_offer_the_delete()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var draft = await CreateDraftRound(service, number: 1);
+        var published = await CreateDraftRound(service, number: 2);
+        await service.AddMatchAsync(published.Id, Match(SeedIds.Arsenal, SeedIds.Chelsea, new DateTime(2025, 8, 10, 14, 0, 0, DateTimeKind.Utc)), ActingUser, Ct);
+        await service.PublishAsync(published.Id, ActingUser, Ct);
+
+        var draftDelete = (await service.GetByIdAsync(draft.Id, Ct)).Week.Delete;
+        Assert.True(draftDelete.Allowed);
+        Assert.Null(draftDelete.TargetNumber);
+        // Round 2 moves down to close the gap; nothing scored, nothing to replay.
+        Assert.Equal((1, false), (draftDelete.RenumberedRounds, draftDelete.RequiresRecalculation));
+
+        Assert.False((await service.GetByIdAsync(published.Id, Ct)).Week.Delete.Allowed);
+        await service.CancelAsync(published.Id, ActingUser, Ct);
+        Assert.True((await service.GetByIdAsync(published.Id, Ct)).Week.Delete.Allowed);
+    }
+
+    [Fact]
+    public async Task Cannot_add_match_to_locked_round_without_override()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+        await service.AddMatchAsync(round.Id, Match(SeedIds.Arsenal, SeedIds.Chelsea, new DateTime(2025, 8, 10, 14, 0, 0, DateTimeKind.Utc)), ActingUser, Ct);
+        await service.PublishAsync(round.Id, ActingUser, Ct);
+        await service.LockAsync(round.Id, ActingUser, Ct);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.AddMatchAsync(round.Id, Match(SeedIds.Liverpool, SeedIds.Newcastle, new DateTime(2025, 8, 12, 14, 0, 0, DateTimeKind.Utc)), ActingUser, Ct));
+
+        Assert.Contains("bloqueada", ex.Message);
+    }
+
+    [Fact]
+    public async Task Cannot_add_match_with_same_home_and_away()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.AddMatchAsync(round.Id, Match(SeedIds.Arsenal, SeedIds.Arsenal, new DateTime(2025, 8, 10, 14, 0, 0, DateTimeKind.Utc)), ActingUser, Ct));
+
+        Assert.Contains("mesmo time", ex.Message);
+    }
+
+    [Fact]
+    public async Task Cannot_add_second_league_one_match_without_justified_override()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+
+        await service.AddMatchAsync(round.Id,
+            Match(SeedIds.Arsenal, SeedIds.Chelsea, new DateTime(2025, 8, 10, 14, 0, 0, DateTimeKind.Utc), Competition.LeagueOne),
+            ActingUser, Ct);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.AddMatchAsync(round.Id,
+                Match(SeedIds.Liverpool, SeedIds.Newcastle, new DateTime(2025, 8, 11, 14, 0, 0, DateTimeKind.Utc), Competition.LeagueOne),
+                ActingUser, Ct));
+
+        Assert.Contains("League One", ex.Message);
+    }
+
+    [Fact]
+    public async Task Can_add_second_league_one_match_with_justified_override()
+    {
+        using var db = CreateContext();
+        var service = CreateService(db);
+        var round = await CreateDraftRound(service);
+
+        await service.AddMatchAsync(round.Id,
+            Match(SeedIds.Arsenal, SeedIds.Chelsea, new DateTime(2025, 8, 10, 14, 0, 0, DateTimeKind.Utc), Competition.LeagueOne),
+            ActingUser, Ct);
+
+        var second = await service.AddMatchAsync(round.Id,
+            Match(SeedIds.Liverpool, SeedIds.Newcastle, new DateTime(2025, 8, 11, 14, 0, 0, DateTimeKind.Utc), Competition.LeagueOne,
+                overrideMultiplier: 2, justification: "Rodada especial com dois jogos da League One."),
+            ActingUser, Ct);
+
+        Assert.Equal(Competition.LeagueOne, second.Competition);
+        Assert.Equal(2, second.ManualMultiplierOverride);
+
+        var roundDto = await service.GetByIdAsync(round.Id, Ct);
+        Assert.Equal(2, roundDto.Matches.Count(m => m.Competition == Competition.LeagueOne));
+    }
+}

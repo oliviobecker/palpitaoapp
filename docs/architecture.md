@@ -33,22 +33,41 @@ schema; the [multi-tenancy](#multi-tenancy-defence-in-depth) section explains ho
 
 ## Backend
 
-A single ASP.NET Core project, `backend/src/Palpitao.Api`, organised by responsibility:
+Clean Architecture in four projects under `backend/src/`, every dependency pointing inwards:
 
-| Folder | Role |
-|---|---|
-| `Controllers/` | Thin HTTP endpoints: bind, authorise, delegate to a service, return DTOs |
-| `Services/<Area>/` | Use cases per area (rounds, scoring, predictions, absences, Flávio Rule, standings, groups, OCR, fixtures, results…), each behind an interface |
-| `Entities/`, `Enums/` | The EF Core model — plain classes with no framework dependency |
-| `Data/` | `AppDbContext` (model, seed, tenant filter, insert stamping) and migrations |
-| `DTOs/<Area>/` | Request/response contracts |
-| `Validation/` | FluentValidation validators, run by one global action filter |
-| `Auth/` | JWT issuing, the group-access filters, fail-fast startup validation |
-| `Common/` | Message catalogue, domain exceptions, small pure rules (deadline, password policy, …) |
-| `Middlewares/`, `Monitoring/` | Error translation and Sentry wiring |
+```mermaid
+flowchart LR
+    api["<b>Palpitao.Api</b><br/>controllers · group filters<br/>error handling · composition root"]
+    infra["<b>Palpitao.Infrastructure</b><br/>EF Core + PostgreSQL · providers<br/>JWT · BCrypt · Tesseract · jobs"]
+    app["<b>Palpitao.Application</b><br/>use cases · DTOs · validators<br/>ports (Abstractions/)"]
+    domain["<b>Palpitao.Domain</b><br/>entities · enums · pure rules"]
+    api --> infra --> app --> domain
+    api --> app
+```
 
-Pure rules are kept free of the database so they are trivially testable: `ScoringService`,
-`ScoringRuleSet`, `TournamentRules`, `RoundWeekPlanner`, `PredictionDeadline`, `OcrTextParser`.
+| Project | Holds | References |
+|---|---|---|
+| `Palpitao.Domain` | Entities and enums, and the rules that need no I/O: `ScoringService` and `ScoringRuleSet`, `TournamentRules`, `RoundWeekPlanner`, `PredictionDeadline`, `PasswordPolicy`, the `DomainMessages` catalogue | nothing |
+| `Palpitao.Application` | One folder per area — `Rounds/`, `Scoring/`, `Predictions/`, `Absences/`, `Flavio/`, `Standings/`, `Groups/`, `Ocr/`, `Fixtures/`, `Results/`… — with the use case, its interface, its DTOs and its validators; the ports it needs in `Abstractions/` (`IAppDbContext`, `ICurrentUser`, `IRequestGroupContext`, `ITransactionRunner`, `IPasswordHasher`, `ILocalizationService`…) | Domain, the EF Core base package, FluentValidation |
+| `Palpitao.Infrastructure` | `Persistence/` (`AppDbContext`, one configuration per entity, seed data, migrations), `ExternalData/` (OneFootball and the alternative providers, the retry handler), `Identity/` (JWT, BCrypt), `Ocr/` (Tesseract), `BackgroundJobs/` | Application, Npgsql, BCrypt, Tesseract |
+| `Palpitao.Api` | Thin controllers, the group-access filters, error middleware, Sentry, the ports read from the request (`HttpCurrentUser`, `RequestGroupContext`, `LocalizationService`) and the composition root | Application, Infrastructure |
+
+Each layer registers itself — `AddApplication()`, `AddInfrastructure(configuration)` — and the web
+host adds its own pieces from `Extensions/` (authentication, rate-limit policies, CORS, startup
+migration), so `Program.cs` reads as startup validation, registrations and the pipeline.
+
+**EF Core is the data-access abstraction.** The use cases query through `IAppDbContext`, whose
+`DbSet`s already are repositories with LINQ; wrapping them in generic repositories would hide the
+queries the services rely on without isolating anything. The port exposes the sets, `Entry` and
+`SaveChangesAsync` — not `Database` — so connections, raw SQL and transactions stay in the
+Infrastructure, behind `ITransactionRunner`. See [ADR 0006](adr/0006-clean-architecture-ef-core.md).
+
+**Enforced, not just drawn.** `Palpitao.ArchitectureTests` reads the compiled assemblies: the Domain
+references only the base library, the Application references no infrastructure package (ASP.NET
+Core, EF Relational, Npgsql, BCrypt, JWT, Tesseract, Sentry), the Infrastructure does not reference
+the web host, and no controller takes a `DbContext`. The same project checks the
+[tenant filter](#multi-tenancy-defence-in-depth) on the EF model and builds the web host's container
+with `ValidateOnBuild` and `ValidateScopes`. The build treats warnings as errors.
 
 ### A request, end to end
 
@@ -82,7 +101,8 @@ sequenceDiagram
   group, and the `[RequireGroupParticipant]` / `[RequireGroupAdmin]` action filters guard the
   controllers with it. A missing, foreign or inactive membership is a 403.
 - **The safety net.** Tenant roots implement `IGroupOwned`. `AppDbContext` puts an EF Core **global
-  query filter** on each of them, scoped to the request's group, and `SaveChanges` **stamps** that group
+  query filter** on every entity that does — implementing the interface is the whole opt-in —
+  scoped to the request's group, and `SaveChanges` **stamps** that group
   on new rows that left `GroupId` unset — so a query that forgets its `WHERE GroupId = …` still cannot
   read another group, and a forgotten assignment cannot write into the wrong one. Both come from a
   DB-free `IRequestGroupContext` and are **inert outside an HTTP request** (background jobs, seeding,
@@ -99,14 +119,15 @@ sequenceDiagram
   derives the tenant from the season and scopes each query itself with `IgnoreQueryFilters()`.
   See [ADR 0002](adr/0002-anonymous-public-link.md).
 
-Isolation is pinned by `GroupIsolationTests`, `TenantQueryFilterTests`, `CurrentGroupServiceTests`
-and the public-link tests. Background: [ADR 0001](adr/0001-multi-tenancy-shared-schema.md).
+Isolation is pinned by `GroupIsolationTests`, `TenantQueryFilterTests`, `CurrentGroupServiceTests`,
+the public-link tests and the architecture tests (every tenant root filtered; any other entity with
+a `GroupId` must be on an explicit list). Background: [ADR 0001](adr/0001-multi-tenancy-shared-schema.md).
 
 ### Tournament types as a strategy
 
 A season is either **Palpitão England** (four English competitions) or **FIFA World Cup**, fixed at
 creation. The type selects the allowed competitions and phases, the multiplier table and which
-Flávio Rule variant applies (`Services/Tournaments/TournamentRules`, `Services/Scoring`). New
+Flávio Rule variant applies (`Domain/Tournaments/TournamentRules`, `Domain/Scoring`). New
 tournament behaviour branches on `Season.TournamentType` rather than on competition names.
 See [ADR 0003](adr/0003-tournament-type-strategy.md).
 
@@ -121,19 +142,21 @@ every path ends in the same state.
 
 ### Background jobs
 
-- **Results refresh** (`ResultsRefreshBackgroundService`) pulls live scores on a timer. When the API
-  is scaled out only one instance works per cycle: it takes a PostgreSQL **session advisory lock**
-  and the others skip.
-- **OCR image retention** sweeps uploaded screenshots by age and caps their footprint per round, with
-  the same single-runner lock.
+Both jobs derive from `SingleRunnerJob`: a timer, a DI scope per cycle, and — when the API is scaled
+out — a PostgreSQL **session advisory lock**, so only one instance works per cycle and the others
+skip. A failed cycle is logged and never takes the host down.
+
+- **Results refresh** (`ResultsRefreshBackgroundService`) pulls live scores on a timer.
+- **OCR image retention** deletes uploaded screenshots past their retention age.
 
 ### External data behind ports
 
 Fixtures (`IFixtureProvider`), results (`IResultsProvider`) and squad lists
 (`ITeamCatalogProvider`) are interfaces with no database or domain access. The default
 implementations read OneFootball; alternatives are one config line away (`Fixtures:Provider`,
-`ResultsProvider:Provider`). Each is a typed `HttpClient` wrapped in a transient-fault retry handler,
-and every provider test stubs the `HttpMessageHandler` — no test touches the network. Club names
+`ResultsProvider:Provider`). Each is a typed `HttpClient` wrapped in a transient-fault retry handler;
+the three OneFootball adapters share one client setup, fetch and card walk (`OneFootballApi`). Every
+provider test stubs the `HttpMessageHandler` — no test touches the network. Club names
 from any source pass through `FootballReference.Canonical`, so a provider's spelling cannot create a
 duplicate club.
 
@@ -193,7 +216,8 @@ Angular 21 with **standalone components, signals and `OnPush` everywhere**, runn
 
 | Layer | Tooling | What it covers |
 |---|---|---|
-| Backend | xUnit + SQLite in-memory (1,048 tests) | Services and rules end to end against a real relational model: scoring, absences, Flávio Rule, tenancy, OCR parsing and matching, providers (stubbed HTTP), auth |
+| Backend unit | xUnit + SQLite in-memory (`Palpitao.UnitTests`, 1,061 tests) | Services and rules end to end against a real relational model: scoring, absences, Flávio Rule, tenancy, OCR parsing and matching, providers (stubbed HTTP), background jobs, auth |
+| Backend architecture | xUnit + reflection (`Palpitao.ArchitectureTests`, 19 tests) | The dependency rule between the projects, the tenant filter on the EF model, a container that validates |
 | Frontend unit | Vitest (199 tests) | Pure utils (message builders, deadlines, names), guards, interceptors, key components |
 | Frontend e2e | Playwright (93 tests) | Real UI flows in Chromium against an API mocked in `e2e/support.ts` |
 | CI gates | GitHub Actions | All of the above, Prettier, ESLint, the EF model-drift check, actionlint, CodeQL |

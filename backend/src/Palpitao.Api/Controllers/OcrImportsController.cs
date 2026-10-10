@@ -3,10 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Net.Http.Headers;
 using Palpitao.Api.Auth;
-using Palpitao.Api.Common;
-using Palpitao.Api.DTOs.Admin;
-using Palpitao.Api.Services.Ocr;
-using Sentry;
+using Palpitao.Api.Extensions;
+using Palpitao.Application.Ocr;
+using Palpitao.Domain.Common;
 
 namespace Palpitao.Api.Controllers;
 
@@ -29,7 +28,7 @@ public class OcrImportsController : ControllerBase
     // 2 MB of headroom over the 10 MB image limit for the multipart envelope, so an
     // exactly-10MB file still reaches ValidateFile (which returns the localized error).
     [RequestSizeLimit(OcrService.MaxImageBytes + 2 * 1024 * 1024)]
-    [EnableRateLimiting("ocr")]
+    [EnableRateLimiting(RateLimitPolicies.Ocr)]
     public async Task<ActionResult<OcrBatchDto>> Import(
         Guid roundId, [FromForm] IFormFile? file, [FromForm] string? language, CancellationToken ct)
     {
@@ -61,7 +60,7 @@ public class OcrImportsController : ControllerBase
     /// <summary>Streams the stored upload. Separate rate-limit policy from the import itself:
     /// a gallery legitimately issues many reads, while uploads stay tightly capped.</summary>
     [HttpGet("ocr-imports/{batchId:guid}/image")]
-    [EnableRateLimiting("ocrImage")]
+    [EnableRateLimiting(RateLimitPolicies.OcrImage)]
     public async Task<IActionResult> GetImage(Guid batchId, CancellationToken ct)
     {
         var image = await _ocr.GetImageAsync(batchId, ct);

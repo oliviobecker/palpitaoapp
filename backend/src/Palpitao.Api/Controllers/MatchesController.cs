@@ -1,10 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Palpitao.Api.Auth;
-using Palpitao.Api.DTOs.Matches;
-using Palpitao.Api.DTOs.Scoring;
-using Palpitao.Api.Services.Rounds;
-using Palpitao.Api.Services.Scoring;
+using Palpitao.Application.Rounds;
+using Palpitao.Application.Scoring;
 
 namespace Palpitao.Api.Controllers;
 

@@ -216,7 +216,7 @@ appears on both, so the cards are merged and the **best-informed** one wins.
 
 A card's state lives in `period` (`PRE_MATCH`, `FIRST_HALF`, `HALF_TIME`, `SECOND_HALF`,
 `FULL_TIME`, `FULL_TIME_PENALTIES`, `ABANDONED`, …) with the running clock in `timePeriod` (`"66'"`
-while live, `"Full time"` once played). `Services/Results/MatchStatusParser` maps that onto
+while live, `"Full time"` once played). `ExternalData/Results/MatchStatusParser` maps that onto
 `MatchStatus` for every provider: labels are normalised to letters and digits, and a label it does
 not know falls back to the clock, then to the presence of a full scoreline.
 

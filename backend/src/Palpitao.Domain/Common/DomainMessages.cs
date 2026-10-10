@@ -1,0 +1,397 @@
+using System.Globalization;
+using Palpitao.Domain.Entities;
+
+namespace Palpitao.Domain.Common;
+
+/// <summary>
+/// Single source of truth for user-facing messages (domain errors, auth, generic
+/// errors). Keys are stable identifiers; the Portuguese text is also the fallback
+/// used for logs and <see cref="Exception.Message"/>. The middleware resolves the
+/// key to the request language (Accept-Language) for the HTTP response.
+/// </summary>
+public static class DomainMessages
+{
+    public static readonly IReadOnlyDictionary<string, (string Pt, string En)> Catalog =
+        new Dictionary<string, (string Pt, string En)>
+        {
+            // Generic / auth (previously in LocalizationService).
+            ["error.unexpected"] = ("Ocorreu um erro inesperado. Tente novamente.", "An unexpected error occurred. Please try again."),
+            ["error.notFound"] = ("Recurso não encontrado.", "Resource not found."),
+            ["error.unauthorized"] = ("Não autorizado.", "Unauthorized."),
+            ["error.tooManyRequests"] = (
+                "Muitas tentativas em pouco tempo. Aguarde um momento e tente novamente.",
+                "Too many attempts in a short time. Please wait a moment and try again."),
+            ["auth.invalidCredentials"] = ("E-mail ou senha inválidos.", "Invalid e-mail or password."),
+            ["auth.inactiveUser"] = ("Usuário inativo. Procure o administrador.", "Inactive user. Contact the administrator."),
+            ["auth.registrationSubmitted"] = (
+                "Cadastro enviado com sucesso. Aguarde a aprovação do administrador para acessar o sistema.",
+                "Registration submitted successfully. Please wait for admin approval before accessing the system."),
+            ["auth.pendingApproval"] = (
+                "Seu cadastro ainda está pendente de aprovação.",
+                "Your registration is still pending approval."),
+            ["auth.rejected"] = (
+                "Seu cadastro foi rejeitado. Entre em contato com o administrador.",
+                "Your registration was rejected. Please contact the administrator."),
+            ["auth.accountInactive"] = (
+                "Sua conta está inativa. Entre em contato com o administrador.",
+                "Your account is inactive. Please contact the administrator."),
+            ["auth.passwordMismatch"] = (
+                "A confirmação de senha não confere.",
+                "The password confirmation does not match."),
+            ["auth.weakPassword"] = (
+                "A senha deve ter no mínimo 8 caracteres, com ao menos uma letra e um número.",
+                "The password must be at least 8 characters long and include at least one letter and one number."),
+            ["registration.notPending"] = (
+                "A solicitação não está pendente de aprovação.",
+                "The request is not pending approval."),
+
+            // Groups (multi-tenant).
+            ["group.accessDenied"] = (
+                "Você não tem acesso a este grupo.",
+                "You do not have access to this group."),
+            ["group.headerMissing"] = (
+                "Selecione um grupo para continuar.",
+                "Select a group to continue."),
+            ["group.adminOnly"] = (
+                "Apenas administradores do grupo podem realizar esta ação.",
+                "Only group administrators can perform this action."),
+            ["group.membershipInactive"] = (
+                "Seu acesso a este grupo foi desativado. Fale com o administrador.",
+                "Your access to this group has been deactivated. Contact the administrator."),
+            ["group.nameRequired"] = (
+                "O nome do grupo é obrigatório.",
+                "The group name is required."),
+            ["group.slugExists"] = (
+                "Já existe um grupo com esse nome.",
+                "A group with this name already exists."),
+            ["group.required"] = (
+                "Selecione o grupo desejado.",
+                "Select the desired group."),
+            ["group.notFound"] = (
+                "Grupo não encontrado.",
+                "Group not found."),
+            ["group.alreadyMember"] = (
+                "Você já solicitou acesso ou já participa deste grupo.",
+                "You have already requested access to or are a member of this group."),
+            ["group.requestSubmitted"] = (
+                "Solicitação enviada com sucesso. Aguarde a aprovação do administrador do grupo.",
+                "Request submitted successfully. Please wait for the group administrator approval."),
+            ["group.created"] = (
+                "Grupo criado com sucesso. Você já pode acessar como administrador.",
+                "Group created successfully. You can now sign in as administrator."),
+
+            // Not found.
+            ["notFound.participant"] = ("Participante não encontrado.", "Participant not found."),
+            ["notFound.round"] = ("Rodada não encontrada.", "Round not found."),
+            ["notFound.user"] = ("Usuário não encontrado.", "User not found."),
+            ["notFound.match"] = ("Jogo não encontrado.", "Match not found."),
+            ["notFound.season"] = ("Temporada não encontrada.", "Season not found."),
+            ["notFound.group"] = ("Grupo não encontrado.", "Group not found."),
+            ["notFound.team"] = ("Time informado não existe.", "The given team does not exist."),
+            ["notFound.ocrBatch"] = ("Importação não encontrada.", "Import not found."),
+            ["notFound.ocrCandidate"] = ("Candidato não encontrado.", "Candidate not found."),
+            ["notFound.ocrImage"] = ("Nenhuma imagem armazenada para esta importação.", "No image stored for this import."),
+            ["notFound.ocrAlias"] = ("Apelido não encontrado.", "Alias not found."),
+
+            // Common.
+            ["common.justificationRequired"] = ("A justificativa é obrigatória.", "A justification is required."),
+            ["validation.required"] = ("Preencha os campos obrigatórios.", "Please fill in the required fields."),
+
+            // Input validation (FluentValidation message keys).
+            ["validation.name.required"] = ("O nome é obrigatório.", "The name is required."),
+            ["validation.name.length"] = ("Informe um nome válido.", "Enter a valid name."),
+            ["validation.email.required"] = ("O e-mail é obrigatório.", "The e-mail is required."),
+            ["validation.email.invalid"] = ("Informe um e-mail válido.", "Enter a valid e-mail."),
+            ["validation.password.required"] = ("A senha é obrigatória.", "The password is required."),
+            ["validation.password.min6"] = ("A senha deve ter ao menos 6 caracteres.", "The password must be at least 6 characters long."),
+            ["validation.passwordConfirm.required"] = ("Confirme a senha.", "Please confirm the password."),
+            ["validation.group.nameRequired"] = ("O nome do grupo é obrigatório.", "The group name is required."),
+            ["validation.group.nameLength"] = ("Informe um nome de grupo válido.", "Enter a valid group name."),
+            ["validation.adminName.required"] = ("O nome do administrador é obrigatório.", "The administrator name is required."),
+            ["tournamentType.required"] = ("Escolha o tipo do certame.", "Choose the tournament type."),
+            ["validation.group.required"] = ("Selecione o grupo desejado.", "Select the desired group."),
+            ["validation.season.required"] = ("A temporada é obrigatória.", "The season is required."),
+            ["validation.seasonName.required"] = ("O nome da temporada é obrigatório.", "The season name is required."),
+            ["validation.startDate.required"] = ("A data inicial é obrigatória.", "The start date is required."),
+            ["validation.endDate.required"] = ("A data final é obrigatória.", "The end date is required."),
+            ["validation.roundNumber.min"] = ("O número da rodada deve ser maior que zero.", "The round number must be greater than zero."),
+            ["validation.competition.required"] = ("A competição é obrigatória.", "The competition is required."),
+            ["validation.phase.required"] = ("A fase é obrigatória.", "The phase is required."),
+            ["validation.homeTeam.required"] = ("O mandante é obrigatório.", "The home team is required."),
+            ["validation.awayTeam.required"] = ("O visitante é obrigatório.", "The away team is required."),
+            ["validation.startsAt.required"] = ("A data/hora do jogo é obrigatória.", "The match date/time is required."),
+            ["validation.externalId.required"] = ("O identificador externo é obrigatório.", "The external id is required."),
+            ["validation.participant.required"] = ("O participante é obrigatório.", "The participant is required."),
+            ["validation.predictions.required"] = ("Envie os palpites da rodada.", "Submit the round predictions."),
+            ["validation.match.required"] = ("O jogo é obrigatório.", "The match is required."),
+            ["validation.score.negative"] = ("O placar não pode ser negativo.", "The score cannot be negative."),
+            ["validation.justification.required"] = ("A justificativa é obrigatória.", "A justification is required."),
+            ["validation.justification.tooLong"] = ("A justificativa deve ter no máximo 500 caracteres.", "The justification must be at most 500 characters."),
+
+            // Users.
+            ["user.emailExists"] = ("Já existe um usuário com esse e-mail.", "A user with this e-mail already exists."),
+
+            // Participant state.
+            ["participant.inactive"] = ("Participante inativo.", "Inactive participant."),
+
+            // Absences recorded when a participant is (re)activated after a round closed.
+            ["absence.autoOnActivate"] = (
+                "Ausência registrada automaticamente na ativação do participante.",
+                "Absence recorded automatically when the participant was activated."),
+            ["absence.roundNotEligible"] = (
+                "Uma das rodadas selecionadas não pode receber ausência para este participante. Recarregue a tela.",
+                "One of the selected rounds cannot record an absence for this participant. Reload the screen."),
+
+            // Rounds.
+            ["round.duplicateNumber"] = ("Já existe uma rodada com esse número nesta temporada.", "A round with this number already exists in this season."),
+            ["round.cannotEditClosed"] = ("Não é possível editar uma rodada bloqueada, pontuada ou cancelada.", "Cannot edit a locked, scored or cancelled round."),
+            ["round.onlyDraftPublished"] = ("Apenas rodadas em rascunho podem ser publicadas.", "Only draft rounds can be published."),
+            ["round.needsMatchToPublish"] = ("A rodada precisa de pelo menos um jogo para ser publicada.", "The round needs at least one match to be published."),
+            ["round.onlyPublishedLocked"] = ("Apenas rodadas publicadas podem ser bloqueadas.", "Only published rounds can be locked."),
+            ["round.cannotCancelScored"] = ("Não é possível cancelar uma rodada já pontuada.", "Cannot cancel a round that has already been scored."),
+            ["round.alreadyCancelled"] = ("A rodada já está cancelada.", "The round is already cancelled."),
+            ["round.onlyScoredReopened"] = ("Apenas rodadas pontuadas podem ser reabertas.", "Only scored rounds can be reopened."),
+            ["round.onlyLockedUnlocked"] = ("Apenas rodadas bloqueadas podem ser desbloqueadas.", "Only locked rounds can be unlocked."),
+            ["round.onlyCancelledRestored"] = ("Apenas rodadas canceladas podem ser restauradas.", "Only cancelled rounds can be restored."),
+            ["round.deleteOnlyDraftOrCancelled"] = (
+                "Só é possível excluir uma rodada em rascunho ou cancelada. Cancele-a antes (uma rodada pontuada precisa ser reaberta e cancelada).",
+                "Only a draft or cancelled round can be deleted. Cancel it first (a scored round has to be reopened and cancelled)."),
+            ["round.mustBeLockedToScore"] = ("A rodada precisa estar bloqueada para ser calculada.", "The round must be locked to be scored."),
+            ["round.noMatches"] = ("A rodada não possui jogos.", "The round has no matches."),
+            ["round.allResultsRequired"] = ("Cadastre o resultado de todos os jogos antes de calcular a rodada.", "Enter the result of every match before scoring the round."),
+            ["round.allMatchesFinishedRequired"] = (
+                "Todos os jogos precisam estar encerrados para finalizar a rodada. Atualize os resultados ou lance o placar final do jogo que ainda está em andamento.",
+                "Every match must be finished before the round can be finalized. Refresh the results or enter the final score of any match still in play."),
+            ["round.cannotEditMatchClosedNoJustification"] = (
+                "Não é possível alterar jogos de uma rodada bloqueada, pontuada ou cancelada sem justificativa administrativa.",
+                "Cannot change matches of a locked, scored or cancelled round without an administrative justification."),
+
+            // Rounds played in parts ("10.1", "10.2").
+            ["round.weekPartsOpen"] = (
+                "Bloqueie ou cancele as outras partes desta rodada antes de finalizar a última: é ela que decide as ausências, e uma parte aberta ainda recebe palpites.",
+                "Lock or cancel this round's other parts before finalizing its last part: it decides the absences, and an open part still takes predictions."),
+            ["round.noPreviousWeek"] = ("Não há rodada anterior para agrupar.", "There is no previous round to group with."),
+            ["round.joinOnlyStandalone"] = (
+                "Só uma rodada avulsa pode ser agrupada com a anterior.",
+                "Only a standalone round can be grouped with the previous one."),
+            ["round.leaveOnlyLastPart"] = (
+                "Só a última parte de uma rodada agrupada pode ser desagrupada.",
+                "Only the last part of a grouped round can be ungrouped."),
+            ["round.regroupCancelled"] = (
+                "Uma rodada cancelada não pode ser agrupada nem desagrupada.",
+                "A cancelled round cannot be grouped or ungrouped."),
+            ["round.partNumberLocked"] = (
+                "O número de uma parte acompanha a rodada agrupada. Desagrupe a parte para mudar o número.",
+                "A part's number follows its grouped round. Ungroup the part to change its number."),
+
+            // Matches.
+            ["match.competitionRequired"] = ("A competição é obrigatória.", "The competition is required."),
+            ["match.phaseRequired"] = ("A fase é obrigatória.", "The phase is required."),
+            ["match.dateRequired"] = ("A data/hora do jogo é obrigatória.", "The match date/time is required."),
+            ["match.sameTeam"] = ("Mandante e visitante não podem ser o mesmo time.", "Home and away cannot be the same team."),
+            ["match.multiplierJustificationRequired"] = ("É necessário justificar o multiplicador manual.", "A justification is required for the manual multiplier."),
+            ["match.leagueOneSingle"] = (
+                "A rodada não pode ter mais de um jogo da League One sem override manual justificado.",
+                "The round cannot have more than one League One match without a justified manual override."),
+
+            // Rounds (period / fixtures).
+            ["round.startEndRequired"] = (
+                "Informe a data de início e a data de fim da rodada.",
+                "Provide both the round start date and end date."),
+
+            // Fixtures (external import).
+            ["fixtures.fetchFailed"] = (
+                "Não foi possível buscar os jogos da fonte externa no momento.",
+                "Could not fetch fixtures from the external source at this time."),
+            ["fixtures.noneFound"] = (
+                "Nenhum jogo encontrado para o período selecionado.",
+                "No fixtures found for the selected period."),
+            ["fixtures.selectNone"] = (
+                "Selecione pelo menos um jogo para adicionar à rodada.",
+                "Select at least one match to add to the round."),
+            ["fixtures.endBeforeStart"] = (
+                "A data final deve ser maior ou igual à data inicial.",
+                "End date must be greater than or equal to start date."),
+            ["fixtures.leagueOneSingle"] = (
+                "Esta rodada já possui um jogo da League One. Para adicionar outro, informe uma justificativa.",
+                "This round already has one League One match. To add another, provide a justification."),
+            ["fixtures.importDisabled"] = (
+                "A importação externa de jogos está desabilitada.",
+                "External fixture import is disabled."),
+
+            // Teams (catalogue admin).
+            ["teams.syncDisabled"] = (
+                "A sincronização externa do catálogo de times está desabilitada.",
+                "External team catalogue sync is disabled."),
+            ["teams.syncFailed"] = (
+                "Não foi possível buscar os elencos da fonte externa no momento.",
+                "Could not fetch squad lists from the external source at this time."),
+            ["teams.invalidDivision"] = (
+                "Divisão inválida. Use Premier League, Championship ou League One.",
+                "Invalid division. Use Premier League, Championship or League One."),
+            ["teams.nationalTeamNoDivision"] = (
+                "Seleções nacionais não pertencem a divisões.",
+                "National teams do not belong to divisions."),
+
+            // Results / scoring.
+            ["result.cannotRegister"] = ("Não é possível cadastrar resultado nesta rodada.", "Cannot register a result for this round."),
+            ["results.refreshed"] = ("Resultados atualizados com sucesso.", "Results refreshed successfully."),
+            ["results.providerDisabled"] = (
+                "Nenhum provedor de resultados externo está ativo. A classificação temporária foi recalculada com os resultados atuais.",
+                "No external results provider is active. The temporary standings were recalculated from the current results."),
+            ["results.fetchFailed"] = (
+                "Não foi possível buscar os resultados da fonte externa no momento.",
+                "Could not fetch results from the external source at this time."),
+            ["results.roundCancelled"] = ("Não é possível atualizar resultados de uma rodada cancelada.", "Cannot refresh results of a cancelled round."),
+            ["results.roundScored"] = ("A rodada já foi pontuada oficialmente.", "The round has already been officially scored."),
+            ["results.roundNotPublished"] = ("Publique a rodada antes de atualizar os resultados.", "Publish the round before refreshing results."),
+
+            // Predictions.
+            ["prediction.negativeScore"] = ("O placar não pode ser negativo.", "The score cannot be negative."),
+            ["prediction.allMatchesRequired"] = ("Envie os palpites de todos os jogos da rodada.", "Send predictions for every match in the round."),
+            ["prediction.noDuplicates"] = ("Não envie palpites duplicados para o mesmo jogo.", "Do not send duplicate predictions for the same match."),
+            ["prediction.matchNotInRound"] = ("Um dos jogos informados não pertence à rodada.", "One of the given matches does not belong to the round."),
+            ["prediction.inactiveCannotPredict"] = ("Participante inativo não pode palpitar.", "An inactive participant cannot predict."),
+            ["prediction.eliminatedCannotPredict"] = ("Participante eliminado não pode palpitar.", "An eliminated participant cannot predict."),
+            ["prediction.roundNotOpenYet"] = ("A rodada ainda não está aberta para palpites.", "The round is not open for predictions yet."),
+            ["prediction.roundLocked"] = ("A rodada está bloqueada. Não é mais possível palpitar.", "The round is locked. Predictions are no longer allowed."),
+            ["prediction.roundScored"] = ("A rodada já foi pontuada.", "The round has already been scored."),
+            ["prediction.roundCancelled"] = ("A rodada foi cancelada.", "The round was cancelled."),
+            ["prediction.deadlinePassed"] = ("O prazo para palpitar nesta rodada já encerrou.", "The deadline to predict for this round has passed."),
+            ["prediction.appSubmitDisabled"] = ("Participantes não podem enviar palpites pelo app nesta temporada. Os palpites serão inseridos pelo administrador.", "Participants cannot submit predictions in the app for this season. Predictions will be entered by the administrator."),
+
+            // Mirror.
+            ["mirror.afterLockOnly"] = ("O espelho fica disponível somente após o encerramento dos palpites.", "The mirror is only available after predictions close."),
+            ["mirror.notAllowed"] = ("Você não tem permissão para visualizar os palpites dos demais participantes.", "You do not have permission to view other participants' predictions."),
+
+            // Admin manual predictions.
+            ["adminPrediction.eliminatedNeedsOverride"] = (
+                "Participante eliminado. Use override com justificativa para registrar.",
+                "Eliminated participant. Use an override with justification to register."),
+            ["adminPrediction.alreadyHasPredictions"] = ("O participante já possui palpites. Confirme a substituição.", "The participant already has predictions. Confirm the replacement."),
+            ["adminPrediction.roundScored"] = (
+                "A rodada já foi finalizada. Reabra a rodada para importar ou ajustar palpites.",
+                "The round has already been finalized. Reopen it to import or adjust predictions."),
+            ["adminPrediction.roundNotPublished"] = (
+                "Publique a rodada antes de registrar palpites.",
+                "Publish the round before registering predictions."),
+            ["adminPrediction.roundCancelled"] = (
+                "A rodada foi cancelada. Não é possível registrar palpites.",
+                "The round was cancelled. Predictions can no longer be registered."),
+
+            // OCR.
+            ["ocr.sendImage"] = ("Envie uma imagem.", "Send an image."),
+            ["ocr.invalidFormat"] = ("Envie uma imagem nos formatos PNG, JPG, JPEG ou WEBP.", "Send an image in PNG, JPG, JPEG or WEBP format."),
+            ["ocr.emptyFile"] = ("Arquivo de imagem vazio.", "Empty image file."),
+            ["ocr.contentMismatch"] = (
+                "O conteúdo do arquivo não corresponde a uma imagem PNG, JPG ou WEBP.",
+                "The file content is not a PNG, JPG or WEBP image."),
+            ["ocr.tooLarge"] = ("A imagem deve ter no máximo 10 MB.", "The image must be at most 10 MB."),
+            ["ocr.incompleteCandidates"] = ("Há candidatos incompletos. Revise antes de confirmar a importação.", "There are incomplete candidates. Review before confirming the import."),
+            ["ocr.duplicateCandidates"] = (
+                "Há candidatos duplicados (mesmo participante e jogo). Ajuste ou descarte antes de confirmar.",
+                "There are duplicate candidates (same participant and match). Adjust or discard them before confirming."),
+            ["ocr.batchAlreadyConfirmed"] = ("Esta importação já foi confirmada.", "This import has already been confirmed."),
+            ["ocr.batchNotReviewable"] = ("Esta importação não está disponível para confirmação.", "This import is not available for confirmation."),
+            // Generic on purpose: this one is raised by a blanket catch, so it must not name a
+            // cause it cannot know. A missing model reports itself through ocr.tessdataMissing.
+            ["ocr.processFailed"] = (
+                "Não foi possível processar a imagem. Tente outra foto ou lance os palpites manualmente.",
+                "Could not process the image. Try another photo or enter the predictions manually."),
+            ["ocr.tessdataMissing"] = (
+                "O servidor está sem o modelo de idioma do OCR. Avise o administrador do sistema.",
+                "The OCR language model is missing on the server. Contact the system administrator."),
+            ["ocr.aliasEmpty"] = ("Informe o apelido.", "Enter the alias."),
+            ["ocr.aliasTooLong"] = (
+                $"O apelido deve ter no máximo {OcrParticipantAlias.MaxAliasLength} caracteres.",
+                $"The alias must be at most {OcrParticipantAlias.MaxAliasLength} characters."),
+            ["ocr.aliasAlreadyExists"] = (
+                "Este apelido já está cadastrado. Edite o apelido existente na lista.",
+                "This alias already exists. Edit the existing one in the list."),
+            // Review notes written on an OCR candidate; {0} is filled in by DomainMessages.Format.
+            ["ocr.review.scoreDisagreement"] = (
+                "O OCR leu este placar de formas diferentes ({0}). Confira no print.",
+                "The OCR read this score in different ways ({0}). Check the screenshot."),
+            ["ocr.review.scoreFromLetter"] = (
+                "O placar foi lido a partir de uma letra. Confira no print.",
+                "The score was read from a letter. Check the screenshot."),
+            ["ocr.review.approximateMatch"] = (
+                "Jogo reconhecido por aproximação (\"{0}\"). Confira no print.",
+                "Match recognised approximately (\"{0}\"). Check the screenshot."),
+            ["ocr.review.nameConflict"] = (
+                "O print diz \"{0}\", mas o nome do arquivo aponta outro participante.",
+                "The screenshot says \"{0}\", but the file name points at another participant."),
+
+            // Tournament type (certame) validation.
+            ["tournament.competitionNotAllowed"] = (
+                "Esta competição não é permitida para o tipo de certame desta temporada.",
+                "This competition is not allowed for this season's tournament type."),
+            ["tournament.phaseNotAllowed"] = (
+                "Esta fase não é permitida para o tipo de certame desta temporada.",
+                "This phase is not allowed for this season's tournament type."),
+
+            // Flávio rule.
+            ["flavio.justificationRequired"] = ("Informe uma justificativa de 1 a 500 caracteres.", "Enter a justification of 1 to 500 characters."),
+            ["flavio.overrideRoundStatus"] = ("A dispensa só pode ser alterada em rodadas publicadas, bloqueadas ou pontuadas.", "Exemptions can only be changed on published, locked or scored rounds."),
+            ["scoring.reopenedRoundPending"] = ("Finalize as rodadas reabertas antes de recalcular a temporada. A pontuação histórica foi preservada.", "Finalize reopened rounds before recalculating the season. Historical scores have been preserved."),
+            ["flavio.insufficientData"] = ("Rodada sem dados suficientes para a Regra Flávio.", "Round without enough data for the Flávio rule."),
+
+            // Seasons.
+            ["season.endBeforeStart"] = ("A data final não pode ser anterior à data inicial.", "The end date cannot be earlier than the start date."),
+            ["season.faCupDisabled"] = (
+                "A FA Cup está desativada nesta temporada.",
+                "The FA Cup is disabled for this season."),
+
+            // Scoring configuration (admin-editable ruleset).
+            ["scoring.basePointsNegative"] = (
+                "A pontuação base não pode ser negativa.",
+                "Base points cannot be negative."),
+            ["scoring.multiplierMin"] = (
+                "O multiplicador deve ser no mínimo 1.",
+                "The multiplier must be at least 1."),
+            ["scoring.scoreOutOfRange"] = (
+                "Os placares da regra devem estar entre 0 e 20.",
+                "Rule scores must be between 0 and 20."),
+            ["scoring.duplicateScore"] = (
+                "Há placares repetidos na configuração de categorias.",
+                "There are duplicate scores in the category configuration."),
+            ["scoring.invalidCategory"] = (
+                "Categoria inválida para um placar exato.",
+                "Invalid category for an exact score."),
+            ["scoring.unknownTeam"] = (
+                "Um dos times selecionados como clássico não existe.",
+                "One of the teams selected as a classic does not exist."),
+            ["scoring.invalidClassicCompetition"] = (
+                "Esta competição não aceita times de clássico neste certame.",
+                "This competition does not accept classic teams in this tournament."),
+            ["scoring.duplicateClassicTeam"] = (
+                "Um time só pode pertencer a um grupo de clássico.",
+                "A team can only belong to one classic group."),
+            ["scoring.flavioFromRoundMin"] = (
+                "A rodada inicial da Regra Flávio deve ser no mínimo 1.",
+                "The first round of the Flávio Rule must be at least 1."),
+            ["scoring.absenceFromRoundMin"] = (
+                "A rodada inicial das punições de ausência deve ser no mínimo 1.",
+                "The first round for absence punishments must be at least 1."),
+            ["scoring.absencePenaltyNegative"] = (
+                "O desconto por ausência não pode ser negativo.",
+                "The absence penalty cannot be negative."),
+            ["scoring.absenceEliminationMin"] = (
+                "O número de ausências para eliminação deve ser no mínimo 1.",
+                "The number of absences for elimination must be at least 1."),
+        };
+
+    /// <summary>Resolves a key to the given language ("pt"/"en"); falls back to the key itself.</summary>
+    public static string Resolve(string key, string lang)
+        => Catalog.TryGetValue(key, out var value) ? (lang == "pt" ? value.Pt : value.En) : key;
+
+    /// <summary>
+    /// <see cref="Resolve"/> for a message that carries values ("{0}"). Invariant culture: the
+    /// values are OCR text and scores, not numbers to be localised.
+    /// </summary>
+    public static string Format(string key, string lang, params object?[] args)
+        => string.Format(CultureInfo.InvariantCulture, Resolve(key, lang), args);
+
+    /// <summary>Portuguese text for a key (used for logs and <see cref="Exception.Message"/>).</summary>
+    public static string Pt(string key) => Resolve(key, "pt");
+}

@@ -1,8 +1,12 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Palpitao.Domain/Palpitao.Domain.csproj" />
+    <Project Path="src/Palpitao.Application/Palpitao.Application.csproj" />
+    <Project Path="src/Palpitao.Infrastructure/Palpitao.Infrastructure.csproj" />
     <Project Path="src/Palpitao.Api/Palpitao.Api.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/Palpitao.Api.Tests/Palpitao.Api.Tests.csproj" />
+    <Project Path="tests/Palpitao.ArchitectureTests/Palpitao.ArchitectureTests.csproj" />
+    <Project Path="tests/Palpitao.UnitTests/Palpitao.UnitTests.csproj" />
   </Folder>
 </Solution>

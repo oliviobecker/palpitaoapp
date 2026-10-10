@@ -127,7 +127,7 @@ Beyond secret hygiene, the backend applies defence-in-depth controls:
   unset — so a forgotten filter or assignment can't leak/misplace another group's data. Inert outside an
   HTTP request (background refresh, seeding, tests).
 - **Unified password policy** — 8+ chars with at least one letter and one digit, enforced on public
-  registration, public create-group **and** admin-created participants (`Common/PasswordPolicy`).
+  registration, public create-group **and** admin-created participants (`Palpitao.Domain/Common/PasswordPolicy`).
 - **Atomic scoring** — round scoring / season recalculation run inside a DB transaction.
 - **Single-runner background refresh** — when scaled out, only the instance holding a Postgres advisory
   lock refreshes results each cycle (no duplicate external calls / write races).

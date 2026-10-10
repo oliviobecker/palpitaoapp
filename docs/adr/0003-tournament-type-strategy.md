@@ -18,7 +18,7 @@ Each season carries a `TournamentType` (`PalpitaoEngland` or `FifaWorldCup`), ch
 **immutable afterwards**. The type is the single switch for:
 
 - the competitions and phases a round may contain (`TournamentRules`);
-- the multiplier table and the classic definition (`Services/Scoring`);
+- the multiplier table and the classic definition (`Palpitao.Domain/Scoring`);
 - which Flávio Rule variant applies — prior-round leaders from a configurable round (England), or the
   leader captured at publication once a quarter-final is in the round (World Cup).
 

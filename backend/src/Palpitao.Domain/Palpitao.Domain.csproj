@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The domain model (entities, enums) and its pure rules: no framework, no I/O, no references. -->
+
+</Project>

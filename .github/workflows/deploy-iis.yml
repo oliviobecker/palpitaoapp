@@ -151,7 +151,7 @@ jobs:
             throw 'Missing required GitHub secret: BACKEND_CONNECTION_STRING'
           }
           dotnet tool restore
-          dotnet ef database update --project backend/src/Palpitao.Api --connection "$env:DB_CONNECTION"
+          dotnet ef database update --project backend/src/Palpitao.Infrastructure --startup-project backend/src/Palpitao.Api --connection "$env:DB_CONNECTION"
 
       - name: Deploy backend to IIS
         shell: powershell -NoProfile -ExecutionPolicy Bypass -File {0}

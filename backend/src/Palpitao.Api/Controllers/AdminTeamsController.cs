@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Palpitao.Api.Auth;
-using Palpitao.Api.DTOs.Teams;
-using Palpitao.Api.Services.Teams;
-using Sentry;
+using Palpitao.Application.Teams;
 
 namespace Palpitao.Api.Controllers;
 

@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Palpitao.Api.Auth;
-using Palpitao.Api.DTOs.Admin;
-using Palpitao.Api.Services.AdminPredictions;
+using Palpitao.Application.AdminPredictions;
 
 namespace Palpitao.Api.Controllers;
 

@@ -31,6 +31,9 @@ csharp_style_var_when_type_is_apparent = true:suggestion
 csharp_prefer_braces = true:suggestion
 csharp_new_line_before_open_brace = all
 
+# Unused usings are reported by the build (it generates XML docs, which the analyzer needs).
+dotnet_diagnostic.IDE0005.severity = warning
+
 # Private fields are _camelCase; constants and statics PascalCase (the more specific rules win).
 dotnet_naming_rule.constants_pascal.symbols = constant_fields
 dotnet_naming_rule.constants_pascal.style = pascal_case

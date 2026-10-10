@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Palpitao.Api.Auth;
-using Palpitao.Api.DTOs.Admin;
-using Palpitao.Api.Services.Flavio;
+using Palpitao.Application.Flavio;
 
 namespace Palpitao.Api.Controllers;
 

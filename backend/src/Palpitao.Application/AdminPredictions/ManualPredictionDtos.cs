@@ -1,0 +1,90 @@
+using Palpitao.Application.Predictions;
+using Palpitao.Domain.Enums;
+
+namespace Palpitao.Application.AdminPredictions;
+
+public class ManualPredictionRequest
+{
+    public Guid UserId { get; set; }
+
+    public List<PredictionItemRequest> Predictions { get; set; } = new();
+
+    /// <summary>When true, replaces existing predictions of the participant.</summary>
+    public bool OverwriteExisting { get; set; }
+
+    /// <summary>Required, with <see cref="AllowAfterDeadline"/>, to register for an eliminated participant.</summary>
+    public string? Justification { get; set; }
+
+    /// <summary>
+    /// Admin override to register for an eliminated participant. The name predates the rule
+    /// that lets the admin enter predictions regardless of the deadline until the round is
+    /// finalized (see <c>AdminPredictionWindow</c>); kept so the API contract does not move.
+    /// </summary>
+    public bool AllowAfterDeadline { get; set; }
+}
+
+/// <summary>A participant's current predictions for a round, to preload the manual screen.</summary>
+public class AdminParticipantPredictionsDto
+{
+    public Guid RoundId { get; set; }
+    public Guid UserId { get; set; }
+
+    /// <summary>True when the participant already has predictions (overwrite required to save).</summary>
+    public bool HasPredictions { get; set; }
+
+    public List<AdminPredictionItemDto> Predictions { get; set; } = new();
+}
+
+public class AdminPredictionItemDto
+{
+    public Guid RoundMatchId { get; set; }
+    public int PredictedHomeScore { get; set; }
+    public int PredictedAwayScore { get; set; }
+    public PredictionSource Source { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+}
+
+/// <summary>Who has already predicted the whole round — helps the admin decide when to
+/// chase stragglers (OCR/manual entry) before locking, and who is heading for an absence.</summary>
+public class PredictionCoverageDto
+{
+    public Guid RoundId { get; set; }
+    public int MatchCount { get; set; }
+    public int TotalParticipants { get; set; }
+
+    /// <summary>Participants with a prediction for every match of the round.</summary>
+    public int CompleteParticipants { get; set; }
+
+    /// <summary>
+    /// Active participants still missing at least one prediction, plus anyone the admin
+    /// decided by hand — a participant who predicted everything but was forced absent has to
+    /// stay visible, otherwise there is no way to undo it.
+    /// </summary>
+    public List<PredictionCoverageParticipantDto> Missing { get; set; } = new();
+}
+
+public class PredictionCoverageParticipantDto
+{
+    public Guid UserId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int PredictedCount { get; set; }
+
+    /// <summary>
+    /// Whether scoring this round now would mark them absent. Comes from
+    /// <c>IAbsenceService</c> (so admin overrides win) rather than being recomputed here:
+    /// the label must never drift from what the scoring actually does. For a round played in
+    /// parts it is the whole round's verdict: only the last part decides, and only for someone
+    /// who also sent nothing in every other part.
+    /// </summary>
+    public bool WillBeAbsent { get; set; }
+
+    /// <summary>
+    /// Absent in this round alone (sent nothing, or forced absent). Equal to
+    /// <see cref="WillBeAbsent"/> on a standalone round; on a part it is what the present/absent
+    /// override toggles, since that override is per part.
+    /// </summary>
+    public bool AbsentInPart { get; set; }
+
+    /// <summary>An <c>AbsenceOverride</c> exists, so the flags above were decided by an admin.</summary>
+    public bool HasOverride { get; set; }
+}

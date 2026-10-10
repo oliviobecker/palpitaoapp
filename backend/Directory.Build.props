@@ -1,0 +1,23 @@
+<Project>
+  <!-- Shared by every backend project. Lives in backend/ (not the repo root) so the file-based
+       apps in scripts/ keep their own inline package versions. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- The XML files feed the compiler's cref checks (and later the OpenAPI document, at build
+         time); the server has no use for them. -->
+    <PublishDocumentationFile>false</PublishDocumentationFile>
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
+    <!-- XML docs are written where they add something: undocumented members (CS1591) and
+         partly documented parameter lists (CS1573) are fine; broken crefs are not. -->
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- NuGet audit advisories come from an external feed: report them, but a new advisory must
+         not break an unchanged build (Dependabot and CodeQL track them). -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+  </PropertyGroup>
+</Project>

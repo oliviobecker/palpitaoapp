@@ -2,9 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Palpitao.Api.Auth;
-using Palpitao.Api.DTOs.Public;
-using Palpitao.Api.DTOs.Scoring;
-using Palpitao.Api.Services.Standings;
+using Palpitao.Api.Extensions;
+using Palpitao.Application.Standings;
 
 namespace Palpitao.Api.Controllers;
 
@@ -21,7 +20,7 @@ namespace Palpitao.Api.Controllers;
 [Route("public/seasons")]
 [AllowAnonymous]
 [IgnoreRequestGroup]
-[EnableRateLimiting("public")]
+[EnableRateLimiting(RateLimitPolicies.Public)]
 public class PublicStandingsController : ControllerBase
 {
     private readonly IPublicStandingsService _public;
