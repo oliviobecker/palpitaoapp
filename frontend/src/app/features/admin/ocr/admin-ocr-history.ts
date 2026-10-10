@@ -1,3 +1,4 @@
+import { OcrImportsService } from '@core/services/admin/ocr-imports.service';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -13,7 +14,6 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { OcrBatchSummary } from '@core/models';
 import { ImageViewerService } from '@core/notifications/image-viewer.service';
 import { OcrImageService } from '@core/services/ocr-image.service';
-import { AdminService } from '@core/services/admin.service';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { ErrorState } from '@shared/components/error-state/error-state';
 import { Icon } from '@shared/components/icon/icon';
@@ -55,7 +55,7 @@ import { isReviewableOcrBatch, ocrBatchStatusClass } from '@shared/utils/ocr-bat
 })
 export class AdminOcrHistory implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly adminApi = inject(AdminService);
+  private readonly ocrImportsApi = inject(OcrImportsService);
   private readonly ocrImages = inject(OcrImageService);
   private readonly imageViewer = inject(ImageViewerService);
   private readonly translate = inject(TranslateService);
@@ -78,7 +78,7 @@ export class AdminOcrHistory implements OnInit {
   load(): void {
     this.loading.set(true);
     this.error.set(false);
-    this.adminApi
+    this.ocrImportsApi
       .listOcrBatches(this.roundId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

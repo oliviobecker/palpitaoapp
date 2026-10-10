@@ -1,3 +1,5 @@
+import { AdminOcrAliasesService } from '@core/services/admin/admin-ocr-aliases.service';
+import { AdminUsersService } from '@core/services/admin/admin-users.service';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -16,7 +18,6 @@ import { forkJoin } from 'rxjs';
 import { OcrParticipantAlias, Participant } from '@core/models';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ToastService } from '@core/notifications/toast.service';
-import { AdminService } from '@core/services/admin.service';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { ErrorState } from '@shared/components/error-state/error-state';
 import { Icon } from '@shared/components/icon/icon';
@@ -59,7 +60,8 @@ export function filterAliases(
   styleUrl: './admin-ocr-aliases.scss',
 })
 export class AdminOcrAliases implements OnInit {
-  private readonly api = inject(AdminService);
+  private readonly ocrAliasesApi = inject(AdminOcrAliasesService);
+  private readonly usersApi = inject(AdminUsersService);
   private readonly toast = inject(ToastService);
   private readonly confirmDialog = inject(ConfirmService);
   private readonly translate = inject(TranslateService);
@@ -87,8 +89,8 @@ export class AdminOcrAliases implements OnInit {
     this.loading.set(true);
     this.error.set(false);
     forkJoin({
-      aliases: this.api.listOcrAliases(),
-      participants: this.api.listParticipants(),
+      aliases: this.ocrAliasesApi.listOcrAliases(),
+      participants: this.usersApi.listParticipants(),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -110,7 +112,7 @@ export class AdminOcrAliases implements OnInit {
       return;
     }
     this.creating.set(true);
-    this.api
+    this.ocrAliasesApi
       .createOcrAlias(raw, this.newUserId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -139,7 +141,7 @@ export class AdminOcrAliases implements OnInit {
       return;
     }
     this.busyId.set(alias.id);
-    this.api
+    this.ocrAliasesApi
       .updateOcrAlias(alias.id, userId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -173,7 +175,7 @@ export class AdminOcrAliases implements OnInit {
       return;
     }
     this.busyId.set(alias.id);
-    this.api
+    this.ocrAliasesApi
       .deleteOcrAlias(alias.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

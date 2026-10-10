@@ -1,3 +1,4 @@
+import { AdminScoutService } from '@core/services/admin/admin-scout.service';
 import { DatePipe } from '@angular/common';
 import {
   Component,
@@ -14,7 +15,6 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { RoundScout } from '@core/models';
 import { ToastService } from '@core/notifications/toast.service';
-import { AdminService } from '@core/services/admin.service';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { Icon } from '@shared/components/icon/icon';
 import { Loading } from '@shared/components/loading/loading';
@@ -78,7 +78,7 @@ import { buildMatchScoutMessage } from '@shared/utils/scout-message.util';
 })
 export class AdminRoundScout implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly adminApi = inject(AdminService);
+  private readonly scoutApi = inject(AdminScoutService);
   private readonly toast = inject(ToastService);
   private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
@@ -99,7 +99,7 @@ export class AdminRoundScout implements OnInit {
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
-    this.adminApi
+    this.scoutApi
       .getRoundScout(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

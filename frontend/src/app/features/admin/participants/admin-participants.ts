@@ -1,3 +1,5 @@
+import { AdminAbsencesService } from '@core/services/admin/admin-absences.service';
+import { AdminUsersService } from '@core/services/admin/admin-users.service';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -23,7 +25,6 @@ import {
 } from '@core/models';
 import { ConfirmChoice, ConfirmService } from '@core/notifications/confirm.service';
 import { ToastService } from '@core/notifications/toast.service';
-import { AdminService } from '@core/services/admin.service';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { ErrorState } from '@shared/components/error-state/error-state';
 import { FormField } from '@shared/components/form-field/form-field';
@@ -289,7 +290,8 @@ export function absenceReviewToastKey(result: AbsenceReviewResult): string {
   `,
 })
 export class AdminParticipants implements OnInit, HasUnsavedChanges {
-  private readonly api = inject(AdminService);
+  private readonly absencesApi = inject(AdminAbsencesService);
+  private readonly usersApi = inject(AdminUsersService);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly translate = inject(TranslateService);
@@ -332,7 +334,7 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
   load(): void {
     this.loading.set(true);
     this.error.set(false);
-    this.api
+    this.usersApi
       .listParticipants()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -372,8 +374,8 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
     const { name, email, password } = this.form.getRawValue();
     const id = this.editingId();
     const request$ = id
-      ? this.api.updateParticipant(id, { name, email })
-      : this.api.createParticipant({ name, email, password });
+      ? this.usersApi.updateParticipant(id, { name, email })
+      : this.usersApi.createParticipant({ name, email, password });
     request$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.success(this.translate.instant('adminParticipants.saved'));
@@ -388,7 +390,7 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
   setActive(p: Participant, active: boolean): void {
     if (!active) {
       // Deactivating never records absences, so it stays a one-click action.
-      this.api
+      this.usersApi
         .deactivateParticipant(p.id)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({ next: () => this.afterAction('adminParticipants.deactivatedMsg') });
@@ -416,7 +418,7 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
       if (answer === null) return;
       absentRoundIds = answer.choiceIds;
     }
-    this.api
+    this.usersApi
       .activateParticipant(p.id, absentRoundIds)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ next: () => this.afterAction('adminParticipants.activatedMsg') });
@@ -433,7 +435,7 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
       },
     );
     if (justification === null) return;
-    this.api
+    this.usersApi
       .eliminateParticipant(p.id, justification)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ next: () => this.afterAction('adminParticipants.eliminatedMsg') });
@@ -457,7 +459,7 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
       },
     );
     if (answer === null) return;
-    this.api
+    this.absencesApi
       .reactivate(p.id, answer.text, answer.choiceIds)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ next: () => this.afterAction('adminParticipants.reactivatedMsg') });
@@ -465,7 +467,7 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
 
   /** catchError before takeUntilDestroyed, so the empty fallback still reaches the subscriber. */
   private candidates(userId: string): Observable<AbsenceCandidateRound[]> {
-    return this.api.getAbsenceCandidateRounds(userId).pipe(
+    return this.absencesApi.getAbsenceCandidateRounds(userId).pipe(
       catchError(() => of<AbsenceCandidateRound[]>([])),
       takeUntilDestroyed(this.destroyRef),
     );
@@ -499,7 +501,7 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
    * actually joined. An excused round stays at 0 points but leaves the absence ladder.
    */
   reviewAbsences(p: Participant): void {
-    this.api
+    this.absencesApi
       .getAbsenceReviewRounds(p.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ next: (rounds) => void this.confirmReview(p, rounds) });
@@ -537,7 +539,7 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
       },
     );
     if (answer === null) return;
-    this.api
+    this.absencesApi
       .reviewAbsences(p.id, answer.text, toAbsenceReviewDecisions(rounds, answer.choiceIds))
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -579,7 +581,7 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
   }
 
   private loadAbsences(p: Participant): void {
-    this.api
+    this.absencesApi
       .getUserAbsences(p.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

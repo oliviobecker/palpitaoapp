@@ -1,3 +1,4 @@
+import { AdminRegistrationRequestsService } from '@core/services/admin/admin-registration-requests.service';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -9,7 +10,6 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { AdminService } from '@core/services/admin.service';
 import { Icon } from '@shared/components/icon/icon';
 
 interface AdminTab {
@@ -105,7 +105,7 @@ interface AdminTab {
   ],
 })
 export class AdminLayout implements OnInit {
-  private readonly api = inject(AdminService);
+  private readonly registrationsApi = inject(AdminRegistrationRequestsService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly pendingCount = signal(0);
@@ -130,7 +130,7 @@ export class AdminLayout implements OnInit {
 
   ngOnInit(): void {
     // Best-effort: a failure just leaves the badge hidden.
-    this.api
+    this.registrationsApi
       .listRegistrationRequests()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ next: (list) => this.pendingCount.set(list.length), error: () => {} });

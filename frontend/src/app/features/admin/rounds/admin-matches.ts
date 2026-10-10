@@ -1,3 +1,4 @@
+import { AdminFixturesService } from '@core/services/admin/admin-fixtures.service';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -20,7 +21,6 @@ import { HasUnsavedChanges } from '@core/guards/unsaved-changes.guard';
 import { FixtureCandidate, Round, RoundMatch, ScoringConfig, Team } from '@core/models';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ToastService } from '@core/notifications/toast.service';
-import { AdminService } from '@core/services/admin.service';
 import { MatchesService } from '@core/services/matches.service';
 import { RoundsService } from '@core/services/rounds.service';
 import { ScoringConfigService } from '@core/services/scoring-config.service';
@@ -81,7 +81,7 @@ export class AdminMatches implements OnInit, HasUnsavedChanges {
   private readonly matchesApi = inject(MatchesService);
   private readonly teamsApi = inject(TeamsService);
   private readonly scoringApi = inject(ScoringConfigService);
-  private readonly adminApi = inject(AdminService);
+  private readonly fixturesApi = inject(AdminFixturesService);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly translate = inject(TranslateService);
@@ -273,7 +273,7 @@ export class AdminMatches implements OnInit, HasUnsavedChanges {
     const { startDate, endDate } = this.searchForm.getRawValue();
     this.searching.set(true);
     this.searchError.set(false);
-    this.adminApi
+    this.fixturesApi
       .searchFixtures(
         {
           startDate: `${startDate}T00:00:00`,
@@ -333,7 +333,7 @@ export class AdminMatches implements OnInit, HasUnsavedChanges {
     const { startDate, endDate } = this.searchForm.getRawValue();
     this.searching.set(true);
     this.searchError.set(false);
-    this.adminApi
+    this.fixturesApi
       .searchFixtures({
         startDate: `${startDate}T00:00:00`,
         endDate: `${endDate}T23:59:59`,
@@ -362,7 +362,7 @@ export class AdminMatches implements OnInit, HasUnsavedChanges {
     const state = this.selection();
     if (state.items.length === 0 || !state.canSave) return;
     this.importing.set(true);
-    this.adminApi
+    this.fixturesApi
       .importFixtures(this.roundId, {
         fixtures: state.items.map(toImportItem),
         leagueOneJustification: state.leagueOneJustification,

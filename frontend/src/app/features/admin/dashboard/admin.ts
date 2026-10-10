@@ -1,3 +1,5 @@
+import { AdminRegistrationRequestsService } from '@core/services/admin/admin-registration-requests.service';
+import { AdminUsersService } from '@core/services/admin/admin-users.service';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -13,7 +15,6 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { RoundStatus } from '@core/models/enums';
 import { Participant, RoundSummary, Season } from '@core/models';
-import { AdminService } from '@core/services/admin.service';
 import { RoundsService } from '@core/services/rounds.service';
 import { SeasonsService } from '@core/services/seasons.service';
 import { ErrorState } from '@shared/components/error-state/error-state';
@@ -141,7 +142,8 @@ import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
 export class Admin implements OnInit {
   private readonly seasonsApi = inject(SeasonsService);
   private readonly roundsApi = inject(RoundsService);
-  private readonly adminApi = inject(AdminService);
+  private readonly registrationsApi = inject(AdminRegistrationRequestsService);
+  private readonly usersApi = inject(AdminUsersService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
@@ -271,8 +273,8 @@ export class Admin implements OnInit {
     forkJoin({
       season: this.seasonsApi.getActive(),
       rounds: this.roundsApi.getAll(),
-      participants: this.adminApi.listParticipants(),
-      requests: this.adminApi.listRegistrationRequests(),
+      participants: this.usersApi.listParticipants(),
+      requests: this.registrationsApi.listRegistrationRequests(),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

@@ -1,17 +1,30 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Observable } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { environment } from '@env/environment';
 import { SKIP_ERROR_TOAST } from '../interceptors/http-context';
 import { Competition, MatchPhase } from '../models/enums';
-import { AdminService } from './admin.service';
+import { AdminAbsencesService } from './admin/admin-absences.service';
+import { AdminAuditService } from './admin/admin-audit.service';
+import { AdminFixturesService } from './admin/admin-fixtures.service';
+import { AdminFlavioOverridesService } from './admin/admin-flavio-overrides.service';
+import { AdminOcrAliasesService } from './admin/admin-ocr-aliases.service';
+import { AdminPredictionsService } from './admin/admin-predictions.service';
+import { AdminRegistrationRequestsService } from './admin/admin-registration-requests.service';
+import { AdminResultsService } from './admin/admin-results.service';
+import { AdminScoutService } from './admin/admin-scout.service';
+import { AdminUsersService } from './admin/admin-users.service';
+import { OcrImportsService } from './admin/ocr-imports.service';
+import { TeamsService } from './teams.service';
 
 /**
- * The admin HTTP contract, call by call: verb, URL (with query), body, whether the error toast is
- * skipped, and the response type. The e2e mock answers any unmatched call with an empty 200, so a
- * wrong URL would pass e2e — this table is what proves a refactor kept every request identical.
+ * The admin HTTP contract, call by call across the admin API services: verb, URL (with query),
+ * body, whether the error toast is skipped, and the response type. The e2e mock answers any
+ * unmatched call with an empty 200, so a wrong URL would pass e2e — this table is what proves a
+ * refactor kept every request identical.
  */
 interface ContractCase {
   name: string;
@@ -24,20 +37,24 @@ interface ContractCase {
 }
 
 const A = `${environment.apiBaseUrl}/admin`;
-const admin = () => TestBed.inject(AdminService);
+const api = <T>(service: Type<T>) => TestBed.inject(service);
 
 const cases: ContractCase[] = [
   // Flávio Rule overrides
   {
     name: 'getFlavioOverrides',
-    call: () => admin().getFlavioOverrides('r1'),
+    call: () => api(AdminFlavioOverridesService).getFlavioOverrides('r1'),
     method: 'GET',
     url: `${A}/rounds/r1/flavio-overrides`,
   },
   {
     name: 'setFlavioOverride',
     call: () =>
-      admin().setFlavioOverride('r1', { userId: 'u1', isExempt: true, justification: 'j' }),
+      api(AdminFlavioOverridesService).setFlavioOverride('r1', {
+        userId: 'u1',
+        isExempt: true,
+        justification: 'j',
+      }),
     method: 'PUT',
     url: `${A}/rounds/r1/flavio-overrides`,
     body: { userId: 'u1', isExempt: true, justification: 'j' },
@@ -45,81 +62,83 @@ const cases: ContractCase[] = [
   // Participants
   {
     name: 'listParticipants',
-    call: () => admin().listParticipants(),
+    call: () => api(AdminUsersService).listParticipants(),
     method: 'GET',
     url: `${A}/users`,
   },
   {
     name: 'createParticipant',
-    call: () => admin().createParticipant({ name: 'N', email: 'e@x.com', password: 'p' }),
+    call: () =>
+      api(AdminUsersService).createParticipant({ name: 'N', email: 'e@x.com', password: 'p' }),
     method: 'POST',
     url: `${A}/users`,
     body: { name: 'N', email: 'e@x.com', password: 'p' },
   },
   {
     name: 'updateParticipant',
-    call: () => admin().updateParticipant('u1', { name: 'N', email: 'e@x.com' }),
+    call: () => api(AdminUsersService).updateParticipant('u1', { name: 'N', email: 'e@x.com' }),
     method: 'PUT',
     url: `${A}/users/u1`,
     body: { name: 'N', email: 'e@x.com' },
   },
   {
     name: 'activateParticipant',
-    call: () => admin().activateParticipant('u1', ['r1']),
+    call: () => api(AdminUsersService).activateParticipant('u1', ['r1']),
     method: 'POST',
     url: `${A}/users/u1/activate`,
     body: { absentRoundIds: ['r1'] },
   },
   {
     name: 'activateParticipant (no rounds)',
-    call: () => admin().activateParticipant('u1'),
+    call: () => api(AdminUsersService).activateParticipant('u1'),
     method: 'POST',
     url: `${A}/users/u1/activate`,
     body: { absentRoundIds: [] },
   },
   {
     name: 'deactivateParticipant',
-    call: () => admin().deactivateParticipant('u1'),
+    call: () => api(AdminUsersService).deactivateParticipant('u1'),
     method: 'POST',
     url: `${A}/users/u1/deactivate`,
     body: {},
   },
   {
     name: 'eliminateParticipant',
-    call: () => admin().eliminateParticipant('u1', 'j'),
+    call: () => api(AdminUsersService).eliminateParticipant('u1', 'j'),
     method: 'POST',
     url: `${A}/users/u1/eliminate`,
     body: { justification: 'j' },
   },
   {
     name: 'reactivate',
-    call: () => admin().reactivate('u1', 'j', ['r1']),
+    call: () => api(AdminAbsencesService).reactivate('u1', 'j', ['r1']),
     method: 'POST',
     url: `${A}/users/u1/reactivate`,
     body: { justification: 'j', absentRoundIds: ['r1'] },
   },
   {
     name: 'getAbsenceCandidateRounds',
-    call: () => admin().getAbsenceCandidateRounds('u1'),
+    call: () => api(AdminAbsencesService).getAbsenceCandidateRounds('u1'),
     method: 'GET',
     url: `${A}/users/u1/absence-candidates`,
     skipToast: true,
   },
   {
     name: 'getUserAbsences',
-    call: () => admin().getUserAbsences('u1'),
+    call: () => api(AdminAbsencesService).getUserAbsences('u1'),
     method: 'GET',
     url: `${A}/users/u1/absences`,
   },
   {
     name: 'getAbsenceReviewRounds',
-    call: () => admin().getAbsenceReviewRounds('u1'),
+    call: () => api(AdminAbsencesService).getAbsenceReviewRounds('u1'),
     method: 'GET',
     url: `${A}/users/u1/absence-review`,
   },
   {
     name: 'reviewAbsences',
-    call: () => admin().reviewAbsences('u1', 'j', [{ roundId: 'r1', isAbsent: false }]),
+    call: () =>
+      api(AdminAbsencesService).reviewAbsences('u1', 'j', [{ roundId: 'r1', isAbsent: false }]),
     method: 'POST',
     url: `${A}/users/u1/absence-review`,
     body: { justification: 'j', rounds: [{ roundId: 'r1', isAbsent: false }] },
@@ -127,7 +146,12 @@ const cases: ContractCase[] = [
   // Round absences
   {
     name: 'overrideAbsence',
-    call: () => admin().overrideAbsence('r1', { userId: 'u1', isAbsent: true, justification: 'j' }),
+    call: () =>
+      api(AdminAbsencesService).overrideAbsence('r1', {
+        userId: 'u1',
+        isAbsent: true,
+        justification: 'j',
+      }),
     method: 'POST',
     url: `${A}/rounds/r1/absences/override`,
     body: { userId: 'u1', isAbsent: true, justification: 'j' },
@@ -136,7 +160,7 @@ const cases: ContractCase[] = [
   {
     name: 'saveManualPredictions',
     call: () =>
-      admin().saveManualPredictions('r1', {
+      api(AdminPredictionsService).saveManualPredictions('r1', {
         userId: 'u1',
         predictions: [{ roundMatchId: 'm1', predictedHomeScore: 2, predictedAwayScore: 1 }],
         overwriteExisting: true,
@@ -151,13 +175,13 @@ const cases: ContractCase[] = [
   },
   {
     name: 'getParticipantPredictions',
-    call: () => admin().getParticipantPredictions('r1', 'u1'),
+    call: () => api(AdminPredictionsService).getParticipantPredictions('r1', 'u1'),
     method: 'GET',
     url: `${A}/rounds/r1/predictions/participant/u1`,
   },
   {
     name: 'getPredictionCoverage',
-    call: () => admin().getPredictionCoverage('r1'),
+    call: () => api(AdminPredictionsService).getPredictionCoverage('r1'),
     method: 'GET',
     url: `${A}/rounds/r1/predictions/coverage`,
     skipToast: true,
@@ -165,19 +189,19 @@ const cases: ContractCase[] = [
   // OCR imports
   {
     name: 'getOcrBatch',
-    call: () => admin().getOcrBatch('b1'),
+    call: () => api(OcrImportsService).getOcrBatch('b1'),
     method: 'GET',
     url: `${A}/ocr-imports/b1`,
   },
   {
     name: 'listOcrBatches',
-    call: () => admin().listOcrBatches('r1'),
+    call: () => api(OcrImportsService).listOcrBatches('r1'),
     method: 'GET',
     url: `${A}/rounds/r1/ocr-imports`,
   },
   {
     name: 'getOcrImage',
-    call: () => admin().getOcrImage('b1'),
+    call: () => api(OcrImportsService).getOcrImage('b1'),
     method: 'GET',
     url: `${A}/ocr-imports/b1/image`,
     skipToast: true,
@@ -185,27 +209,31 @@ const cases: ContractCase[] = [
   },
   {
     name: 'updateOcrCandidate',
-    call: () => admin().updateOcrCandidate('b1', 'c1', { userId: 'u1', predictedHomeScore: 1 }),
+    call: () =>
+      api(OcrImportsService).updateOcrCandidate('b1', 'c1', {
+        userId: 'u1',
+        predictedHomeScore: 1,
+      }),
     method: 'PUT',
     url: `${A}/ocr-imports/b1/candidates/c1`,
     body: { userId: 'u1', predictedHomeScore: 1 },
   },
   {
     name: 'deleteOcrCandidate',
-    call: () => admin().deleteOcrCandidate('b1', 'c1'),
+    call: () => api(OcrImportsService).deleteOcrCandidate('b1', 'c1'),
     method: 'DELETE',
     url: `${A}/ocr-imports/b1/candidates/c1`,
   },
   {
     name: 'confirmOcr',
-    call: () => admin().confirmOcr('b1'),
+    call: () => api(OcrImportsService).confirmOcr('b1'),
     method: 'POST',
     url: `${A}/ocr-imports/b1/confirm`,
     body: {},
   },
   {
     name: 'cancelOcr',
-    call: () => admin().cancelOcr('b1'),
+    call: () => api(OcrImportsService).cancelOcr('b1'),
     method: 'POST',
     url: `${A}/ocr-imports/b1/cancel`,
     body: {},
@@ -213,27 +241,27 @@ const cases: ContractCase[] = [
   // OCR participant aliases
   {
     name: 'listOcrAliases',
-    call: () => admin().listOcrAliases(),
+    call: () => api(AdminOcrAliasesService).listOcrAliases(),
     method: 'GET',
     url: `${A}/ocr-aliases`,
   },
   {
     name: 'createOcrAlias',
-    call: () => admin().createOcrAlias('Tico', 'u1'),
+    call: () => api(AdminOcrAliasesService).createOcrAlias('Tico', 'u1'),
     method: 'POST',
     url: `${A}/ocr-aliases`,
     body: { aliasRaw: 'Tico', userId: 'u1' },
   },
   {
     name: 'updateOcrAlias',
-    call: () => admin().updateOcrAlias('a1', 'u1'),
+    call: () => api(AdminOcrAliasesService).updateOcrAlias('a1', 'u1'),
     method: 'PUT',
     url: `${A}/ocr-aliases/a1`,
     body: { userId: 'u1' },
   },
   {
     name: 'deleteOcrAlias',
-    call: () => admin().deleteOcrAlias('a1'),
+    call: () => api(AdminOcrAliasesService).deleteOcrAlias('a1'),
     method: 'DELETE',
     url: `${A}/ocr-aliases/a1`,
   },
@@ -241,7 +269,11 @@ const cases: ContractCase[] = [
   {
     name: 'searchFixtures',
     call: () =>
-      admin().searchFixtures({ startDate: '2026-08-01', endDate: '2026-08-07', roundId: 'r1' }),
+      api(AdminFixturesService).searchFixtures({
+        startDate: '2026-08-01',
+        endDate: '2026-08-07',
+        roundId: 'r1',
+      }),
     method: 'POST',
     url: `${A}/fixtures/search`,
     body: { startDate: '2026-08-01', endDate: '2026-08-07', roundId: 'r1' },
@@ -249,7 +281,10 @@ const cases: ContractCase[] = [
   {
     name: 'searchFixtures (silent)',
     call: () =>
-      admin().searchFixtures({ startDate: '2026-08-01', endDate: '2026-08-07' }, { silent: true }),
+      api(AdminFixturesService).searchFixtures(
+        { startDate: '2026-08-01', endDate: '2026-08-07' },
+        { silent: true },
+      ),
     method: 'POST',
     url: `${A}/fixtures/search`,
     body: { startDate: '2026-08-01', endDate: '2026-08-07' },
@@ -258,7 +293,7 @@ const cases: ContractCase[] = [
   {
     name: 'importFixtures',
     call: () =>
-      admin().importFixtures('r1', {
+      api(AdminFixturesService).importFixtures('r1', {
         fixtures: [
           {
             externalId: 'x1',
@@ -288,55 +323,55 @@ const cases: ContractCase[] = [
   // Results, teams, scout
   {
     name: 'refreshResults',
-    call: () => admin().refreshResults('r1'),
+    call: () => api(AdminResultsService).refreshResults('r1'),
     method: 'POST',
     url: `${A}/rounds/r1/refresh-results`,
     body: {},
   },
   {
     name: 'updateTeamDivision',
-    call: () => admin().updateTeamDivision('t1', Competition.Championship),
+    call: () => api(TeamsService).updateTeamDivision('t1', Competition.Championship),
     method: 'PATCH',
     url: `${A}/teams/t1`,
     body: { division: Competition.Championship },
   },
   {
     name: 'syncTeamsPreview',
-    call: () => admin().syncTeamsPreview(),
+    call: () => api(TeamsService).syncTeamsPreview(),
     method: 'POST',
     url: `${A}/teams/sync-preview`,
     body: {},
   },
   {
     name: 'syncTeamsApply',
-    call: () => admin().syncTeamsApply(),
+    call: () => api(TeamsService).syncTeamsApply(),
     method: 'POST',
     url: `${A}/teams/sync-apply`,
     body: {},
   },
   {
     name: 'getRoundScout',
-    call: () => admin().getRoundScout('r1'),
+    call: () => api(AdminScoutService).getRoundScout('r1'),
     method: 'GET',
     url: `${A}/rounds/r1/scout`,
   },
   // Registration requests
   {
     name: 'listRegistrationRequests',
-    call: () => admin().listRegistrationRequests(),
+    call: () => api(AdminRegistrationRequestsService).listRegistrationRequests(),
     method: 'GET',
     url: `${A}/registration-requests`,
   },
   {
     name: 'approveRegistration',
-    call: () => admin().approveRegistration('u1'),
+    call: () => api(AdminRegistrationRequestsService).approveRegistration('u1'),
     method: 'POST',
     url: `${A}/registration-requests/u1/approve`,
     body: {},
   },
   {
     name: 'rejectRegistration',
-    call: () => admin().rejectRegistration('u1', 'why'),
+    call: () => api(AdminRegistrationRequestsService).rejectRegistration('u1', 'why'),
     method: 'POST',
     url: `${A}/registration-requests/u1/reject`,
     body: { reason: 'why' },
@@ -345,7 +380,7 @@ const cases: ContractCase[] = [
   {
     name: 'getAuditLogs',
     call: () =>
-      admin().getAuditLogs({
+      api(AdminAuditService).getAuditLogs({
         userId: 'u1',
         entityName: 'Round',
         from: '2026-01-01',
@@ -356,7 +391,7 @@ const cases: ContractCase[] = [
   },
   {
     name: 'getAuditLogs (no filter)',
-    call: () => admin().getAuditLogs(),
+    call: () => api(AdminAuditService).getAuditLogs(),
     method: 'GET',
     url: `${A}/audit`,
   },
@@ -394,7 +429,7 @@ describe('admin HTTP contract', () => {
     'importImage sends the file and language as a form (silent: $silent)',
     ({ silent, skipToast }) => {
       const file = new File(['x'], 'shot.png', { type: 'image/png' });
-      admin().importImage('r1', file, 'por', { silent }).subscribe();
+      api(OcrImportsService).importImage('r1', file, 'por', { silent }).subscribe();
 
       const req = http.expectOne(`${A}/rounds/r1/predictions/import-image`);
       expect(req.request.method).toBe('POST');

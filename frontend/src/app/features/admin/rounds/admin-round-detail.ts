@@ -1,3 +1,6 @@
+import { AdminAbsencesService } from '@core/services/admin/admin-absences.service';
+import { AdminPredictionsService } from '@core/services/admin/admin-predictions.service';
+import { AdminResultsService } from '@core/services/admin/admin-results.service';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -23,7 +26,6 @@ import {
 } from '@core/models';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ToastService } from '@core/notifications/toast.service';
-import { AdminService } from '@core/services/admin.service';
 import { GroupContextService } from '@core/services/group-context.service';
 import { RoundsService } from '@core/services/rounds.service';
 import { ScoringConfigService } from '@core/services/scoring-config.service';
@@ -94,7 +96,9 @@ export class AdminRoundDetail implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(RoundsService);
-  private readonly adminApi = inject(AdminService);
+  private readonly absencesApi = inject(AdminAbsencesService);
+  private readonly adminPredictionsApi = inject(AdminPredictionsService);
+  private readonly resultsApi = inject(AdminResultsService);
   private readonly standingsApi = inject(StandingsService);
   private readonly seasonsApi = inject(SeasonsService);
   private readonly scoringApi = inject(ScoringConfigService);
@@ -200,7 +204,7 @@ export class AdminRoundDetail implements OnInit {
       this.coverage.set(null);
       return;
     }
-    this.adminApi
+    this.adminPredictionsApi
       .getPredictionCoverage(round.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -455,7 +459,7 @@ export class AdminRoundDetail implements OnInit {
     if (!justification) {
       return;
     }
-    this.adminApi
+    this.absencesApi
       .overrideAbsence(round.id, { userId: p.userId, isAbsent: markAbsent, justification })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({ next: () => this.after('roundDetail.absenceOverrideSaved') });
@@ -463,7 +467,7 @@ export class AdminRoundDetail implements OnInit {
 
   refreshResults(round: Round): void {
     this.refreshing.set(true);
-    this.adminApi
+    this.resultsApi
       .refreshResults(round.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

@@ -1,3 +1,5 @@
+import { AdminUsersService } from '@core/services/admin/admin-users.service';
+import { OcrImportsService } from '@core/services/admin/ocr-imports.service';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -16,7 +18,6 @@ import { OcrBatch, OcrCandidate, Participant, Round } from '@core/models';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ImageViewerService } from '@core/notifications/image-viewer.service';
 import { ToastService } from '@core/notifications/toast.service';
-import { AdminService } from '@core/services/admin.service';
 import { OcrImageService } from '@core/services/ocr-image.service';
 import { RoundsService } from '@core/services/rounds.service';
 import { Icon } from '@shared/components/icon/icon';
@@ -190,7 +191,8 @@ export class AdminOcrImport implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly roundsApi = inject(RoundsService);
-  private readonly adminApi = inject(AdminService);
+  private readonly usersApi = inject(AdminUsersService);
+  private readonly ocrImportsApi = inject(OcrImportsService);
   private readonly toast = inject(ToastService);
   private readonly confirmDialog = inject(ConfirmService);
   private readonly imageViewer = inject(ImageViewerService);
@@ -259,7 +261,7 @@ export class AdminOcrImport implements OnInit {
     });
     forkJoin({
       round: this.roundsApi.getById(this.roundId),
-      participants: this.adminApi.listParticipants(),
+      participants: this.usersApi.listParticipants(),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -274,7 +276,7 @@ export class AdminOcrImport implements OnInit {
     // A reload (or a link from the import history) lands here with only a batch id: restore
     // the review state from the server, image included.
     if (batchId) {
-      this.adminApi
+      this.ocrImportsApi
         .getOcrBatch(batchId)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({ next: (b) => this.applyBatch(b) });
@@ -391,7 +393,7 @@ export class AdminOcrImport implements OnInit {
       return;
     }
     this.processing.set(true);
-    this.adminApi
+    this.ocrImportsApi
       .importImage(this.roundId, files[0], this.language)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -409,7 +411,7 @@ export class AdminOcrImport implements OnInit {
 
   /** Opens one of the pending imports listed under the upload form. */
   openBatch(batchId: string): void {
-    this.adminApi
+    this.ocrImportsApi
       .getOcrBatch(batchId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -539,7 +541,7 @@ export class AdminOcrImport implements OnInit {
     }
     this.saveTimers.delete(c.id);
     this.setSaveState(c.id, 'saving');
-    this.adminApi
+    this.ocrImportsApi
       .updateOcrCandidate(b.id, c.id, {
         userId: c.userId ?? null,
         roundMatchId: c.roundMatchId ?? null,
@@ -605,7 +607,7 @@ export class AdminOcrImport implements OnInit {
       clearTimeout(timer);
       this.saveTimers.delete(c.id);
     }
-    this.adminApi
+    this.ocrImportsApi
       .deleteOcrCandidate(b.id, c.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -653,7 +655,7 @@ export class AdminOcrImport implements OnInit {
       }
     }
     this.confirming.set(true);
-    this.adminApi
+    this.ocrImportsApi
       .confirmOcr(b.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -671,7 +673,7 @@ export class AdminOcrImport implements OnInit {
    * through a whole round's screenshots — and on to the round once it has none.
    */
   private afterConfirm(confirmedId: string): void {
-    this.adminApi
+    this.ocrImportsApi
       .listOcrBatches(this.roundId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -702,7 +704,7 @@ export class AdminOcrImport implements OnInit {
     if (!ok) {
       return;
     }
-    this.adminApi
+    this.ocrImportsApi
       .cancelOcr(b.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

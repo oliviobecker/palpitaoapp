@@ -1,8 +1,8 @@
+import { OcrImportsService } from '@core/services/admin/ocr-imports.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, OnDestroy, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { OcrBatch } from '@core/models';
-import { AdminService } from '@core/services/admin.service';
 import { ocrRetryDelayMs } from '@shared/utils/ocr-batch.util';
 
 export type OcrQueueStatus = 'queued' | 'processing' | 'waiting' | 'done' | 'error';
@@ -37,7 +37,7 @@ const MAX_ATTEMPTS = 5;
  */
 @Injectable()
 export class OcrUploadQueue implements OnDestroy {
-  private readonly adminApi = inject(AdminService);
+  private readonly ocrImportsApi = inject(OcrImportsService);
   private nextKey = 0;
   private running = false;
   private destroyed = false;
@@ -94,7 +94,7 @@ export class OcrUploadQueue implements OnDestroy {
       this.patch(item.key, { status: 'processing' });
       try {
         const batch = await firstValueFrom(
-          this.adminApi.importImage(roundId, item.file, item.language, { silent: true }),
+          this.ocrImportsApi.importImage(roundId, item.file, item.language, { silent: true }),
         );
         this.patch(item.key, { status: 'done', ...summarize(batch) });
         this.finished.update((n) => n + 1);

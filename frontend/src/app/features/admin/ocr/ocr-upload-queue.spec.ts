@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OcrBatch } from '@core/models';
-import { AdminService } from '@core/services/admin.service';
+import { OcrImportsService } from '@core/services/admin/ocr-imports.service';
 import { OcrUploadQueue } from './ocr-upload-queue';
 
 const file = (name: string) => new File(['x'], name, { type: 'image/png' });
@@ -32,7 +32,7 @@ describe('OcrUploadQueue', () => {
   beforeEach(() => {
     importImage = vi.fn();
     TestBed.configureTestingModule({
-      providers: [OcrUploadQueue, { provide: AdminService, useValue: { importImage } }],
+      providers: [OcrUploadQueue, { provide: OcrImportsService, useValue: { importImage } }],
     });
     queue = TestBed.inject(OcrUploadQueue);
   });

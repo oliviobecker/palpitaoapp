@@ -1,3 +1,4 @@
+import { AdminFixturesService } from '@core/services/admin/admin-fixtures.service';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -15,7 +16,6 @@ import { HasUnsavedChanges } from '@core/guards/unsaved-changes.guard';
 import { LanguageService } from '@core/i18n/language.service';
 import { FixtureCandidate, RoundSummary, Season } from '@core/models';
 import { ToastService } from '@core/notifications/toast.service';
-import { AdminService } from '@core/services/admin.service';
 import { RoundsService } from '@core/services/rounds.service';
 import { SeasonsService } from '@core/services/seasons.service';
 import {
@@ -234,7 +234,7 @@ import { joinPreview, ordinalRoundName } from '@shared/utils/round-name.util';
 export class AdminRoundForm implements OnInit, HasUnsavedChanges {
   private readonly seasonsApi = inject(SeasonsService);
   private readonly roundsApi = inject(RoundsService);
-  private readonly adminApi = inject(AdminService);
+  private readonly fixturesApi = inject(AdminFixturesService);
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
   private readonly translate = inject(TranslateService);
@@ -359,7 +359,7 @@ export class AdminRoundForm implements OnInit, HasUnsavedChanges {
     const { startDate, endDate, seasonId } = this.form.getRawValue();
     this.searching.set(true);
     this.searchError.set(false);
-    this.adminApi
+    this.fixturesApi
       .searchFixtures(
         {
           startDate: `${startDate}T00:00:00`,
@@ -402,7 +402,7 @@ export class AdminRoundForm implements OnInit, HasUnsavedChanges {
     const { startDate, endDate, seasonId } = this.form.getRawValue();
     this.searching.set(true);
     this.searchError.set(false);
-    this.adminApi
+    this.fixturesApi
       .searchFixtures({
         startDate: `${startDate}T00:00:00`,
         endDate: `${endDate}T23:59:59`,
@@ -456,7 +456,7 @@ export class AdminRoundForm implements OnInit, HasUnsavedChanges {
             this.router.navigate(['/admin/rounds', round.id, 'matches']);
             return;
           }
-          this.adminApi
+          this.fixturesApi
             .importFixtures(round.id, {
               fixtures: state.items.map(toImportItem),
               leagueOneJustification: state.leagueOneJustification,

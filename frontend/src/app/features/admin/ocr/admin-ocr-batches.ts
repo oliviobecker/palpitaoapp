@@ -1,3 +1,4 @@
+import { OcrImportsService } from '@core/services/admin/ocr-imports.service';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -16,7 +17,6 @@ import { firstValueFrom } from 'rxjs';
 import { OcrBatchSummary, Participant } from '@core/models';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ToastService } from '@core/notifications/toast.service';
-import { AdminService } from '@core/services/admin.service';
 import { ErrorState } from '@shared/components/error-state/error-state';
 import { Icon } from '@shared/components/icon/icon';
 import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
@@ -42,7 +42,7 @@ import { OcrUploadQueue } from './ocr-upload-queue';
   ],
 })
 export class AdminOcrBatches {
-  private readonly adminApi = inject(AdminService);
+  private readonly ocrImportsApi = inject(OcrImportsService);
   private readonly confirmDialog = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   private readonly translate = inject(TranslateService);
@@ -76,7 +76,7 @@ export class AdminOcrBatches {
 
   load(): void {
     this.error.set(false);
-    this.adminApi
+    this.ocrImportsApi
       .listOcrBatches(this.roundId())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -103,7 +103,7 @@ export class AdminOcrBatches {
 
   protected async confirmOne(batch: OcrBatchSummary): Promise<void> {
     await this.run(async () => {
-      await firstValueFrom(this.adminApi.confirmOcr(batch.id));
+      await firstValueFrom(this.ocrImportsApi.confirmOcr(batch.id));
       this.toast.success(this.translate.instant('ocr.confirmed'));
     });
   }
@@ -124,7 +124,7 @@ export class AdminOcrBatches {
       let confirmed = 0;
       for (const batch of ready) {
         try {
-          await firstValueFrom(this.adminApi.confirmOcr(batch.id));
+          await firstValueFrom(this.ocrImportsApi.confirmOcr(batch.id));
           confirmed++;
         } catch {
           // The interceptor already said why; the rest still go through.
@@ -144,7 +144,7 @@ export class AdminOcrBatches {
       return;
     }
     await this.run(async () => {
-      await firstValueFrom(this.adminApi.cancelOcr(batch.id));
+      await firstValueFrom(this.ocrImportsApi.cancelOcr(batch.id));
       this.toast.success(this.translate.instant('ocr.cancelled'));
     });
   }

@@ -1,3 +1,5 @@
+import { AdminPredictionsService } from '@core/services/admin/admin-predictions.service';
+import { AdminUsersService } from '@core/services/admin/admin-users.service';
 import {
   Component,
   ChangeDetectionStrategy,
@@ -21,7 +23,6 @@ import {
   RoundMatch,
 } from '@core/models';
 import { ToastService } from '@core/notifications/toast.service';
-import { AdminService } from '@core/services/admin.service';
 import { RoundsService } from '@core/services/rounds.service';
 import { CompetitionBadge } from '@shared/components/competition-badge/competition-badge';
 import { Icon } from '@shared/components/icon/icon';
@@ -254,7 +255,8 @@ export class AdminManualPredictions implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly roundsApi = inject(RoundsService);
-  private readonly adminApi = inject(AdminService);
+  private readonly adminPredictionsApi = inject(AdminPredictionsService);
+  private readonly usersApi = inject(AdminUsersService);
   private readonly toast = inject(ToastService);
   private readonly translate = inject(TranslateService);
   private readonly fb = inject(FormBuilder);
@@ -307,7 +309,7 @@ export class AdminManualPredictions implements OnInit {
     this.roundId = this.route.snapshot.paramMap.get('id') ?? '';
     forkJoin({
       round: this.roundsApi.getById(this.roundId),
-      participants: this.adminApi.listParticipants(),
+      participants: this.usersApi.listParticipants(),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -362,7 +364,7 @@ export class AdminManualPredictions implements OnInit {
     }
 
     this.loadingExisting.set(true);
-    this.adminApi
+    this.adminPredictionsApi
       .getParticipantPredictions(this.roundId, userId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -407,7 +409,7 @@ export class AdminManualPredictions implements OnInit {
     }
     this.saving.set(true);
 
-    this.adminApi
+    this.adminPredictionsApi
       .saveManualPredictions(this.roundId, {
         userId: this.userId,
         predictions,

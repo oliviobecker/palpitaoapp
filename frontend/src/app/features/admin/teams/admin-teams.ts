@@ -13,7 +13,6 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Competition, TeamType } from '@core/models/enums';
 import { Team, TeamSyncResponse } from '@core/models';
 import { ToastService } from '@core/notifications/toast.service';
-import { AdminService } from '@core/services/admin.service';
 import { TeamsService } from '@core/services/teams.service';
 import { CompetitionBadge } from '@shared/components/competition-badge/competition-badge';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
@@ -126,7 +125,6 @@ export function diffTotals(sync: TeamSyncResponse): DiffTotals {
 })
 export class AdminTeams implements OnInit {
   private readonly teamsApi = inject(TeamsService);
-  private readonly api = inject(AdminService);
   private readonly toast = inject(ToastService);
   private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
@@ -184,7 +182,7 @@ export class AdminTeams implements OnInit {
     }
 
     this.busyId.set(team.id);
-    this.api
+    this.teamsApi
       .updateTeamDivision(team.id, division)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -212,7 +210,7 @@ export class AdminTeams implements OnInit {
 
   protected syncPreview(): void {
     this.previewing.set(true);
-    this.api
+    this.teamsApi
       .syncTeamsPreview()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -226,7 +224,7 @@ export class AdminTeams implements OnInit {
 
   protected applySync(): void {
     this.applying.set(true);
-    this.api
+    this.teamsApi
       .syncTeamsApply()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

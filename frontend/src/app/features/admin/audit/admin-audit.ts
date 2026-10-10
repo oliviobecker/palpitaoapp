@@ -1,3 +1,4 @@
+import { AdminAuditService } from '@core/services/admin/admin-audit.service';
 import { DatePipe } from '@angular/common';
 import {
   Component,
@@ -13,7 +14,6 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuditFilter, AuditLog } from '@core/models';
-import { AdminService } from '@core/services/admin.service';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { ErrorState } from '@shared/components/error-state/error-state';
 import { Icon } from '@shared/components/icon/icon';
@@ -114,7 +114,7 @@ import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
   `,
 })
 export class AdminAudit implements OnInit {
-  private readonly api = inject(AdminService);
+  private readonly auditApi = inject(AdminAuditService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** How many rows to reveal per "load more" click. */
@@ -148,7 +148,7 @@ export class AdminAudit implements OnInit {
     if (this.to) filter.to = `${this.to}T23:59:59`;
 
     this.error.set(false);
-    this.api
+    this.auditApi
       .getAuditLogs(filter)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

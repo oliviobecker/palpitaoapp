@@ -1,3 +1,4 @@
+import { AdminRegistrationRequestsService } from '@core/services/admin/admin-registration-requests.service';
 import { DatePipe } from '@angular/common';
 import {
   Component,
@@ -14,7 +15,6 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { RegistrationRequest } from '@core/models';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ToastService } from '@core/notifications/toast.service';
-import { AdminService } from '@core/services/admin.service';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { ErrorState } from '@shared/components/error-state/error-state';
 import { Icon } from '@shared/components/icon/icon';
@@ -110,7 +110,7 @@ import { SkeletonList } from '@shared/components/skeleton/skeleton-list';
   `,
 })
 export class AdminRegistrationRequests implements OnInit {
-  private readonly api = inject(AdminService);
+  private readonly registrationsApi = inject(AdminRegistrationRequestsService);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly translate = inject(TranslateService);
@@ -130,7 +130,7 @@ export class AdminRegistrationRequests implements OnInit {
   load(): void {
     this.loading.set(true);
     this.error.set(false);
-    this.api
+    this.registrationsApi
       .listRegistrationRequests()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -153,7 +153,7 @@ export class AdminRegistrationRequests implements OnInit {
     if (!ok) return;
 
     this.busyId.set(r.id);
-    this.api
+    this.registrationsApi
       .approveRegistration(r.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -178,7 +178,7 @@ export class AdminRegistrationRequests implements OnInit {
 
   confirmReject(r: RegistrationRequest): void {
     this.busyId.set(r.id);
-    this.api
+    this.registrationsApi
       .rejectRegistration(r.id, this.reason.trim() || undefined)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({

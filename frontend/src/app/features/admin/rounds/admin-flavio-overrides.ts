@@ -1,3 +1,4 @@
+import { AdminFlavioOverridesService } from '@core/services/admin/admin-flavio-overrides.service';
 import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -15,7 +16,6 @@ import { RoundStatus } from '@core/models/enums';
 import { FlavioParticipant, Round, RoundFlavioOverrides } from '@core/models';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ToastService } from '@core/notifications/toast.service';
-import { AdminService } from '@core/services/admin.service';
 import { Skeleton } from '@shared/components/skeleton/skeleton';
 
 @Component({
@@ -69,7 +69,7 @@ export class AdminFlavioOverrides implements OnInit {
   protected readonly data = signal<RoundFlavioOverrides | null>(null);
   protected readonly loading = signal(true);
   protected readonly failed = signal(false);
-  private readonly api = inject(AdminService);
+  private readonly flavioOverridesApi = inject(AdminFlavioOverridesService);
   private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   private readonly translate = inject(TranslateService);
@@ -82,7 +82,7 @@ export class AdminFlavioOverrides implements OnInit {
   load(): void {
     this.loading.set(true);
     this.failed.set(false);
-    this.api
+    this.flavioOverridesApi
       .getFlavioOverrides(this.round().id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -123,7 +123,7 @@ export class AdminFlavioOverrides implements OnInit {
       return;
     }
     this.busyChange.emit(true);
-    this.api
+    this.flavioOverridesApi
       .setFlavioOverride(this.round().id, {
         userId: participant.userId,
         isExempt: !participant.isExempt,
