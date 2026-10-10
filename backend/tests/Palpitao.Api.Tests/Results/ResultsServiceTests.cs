@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
@@ -90,11 +91,11 @@ public class ResultsServiceTests
         var standings = new StandingsService(db, current);
         var provider = new FakeResultsProvider { IsEnabled = providerEnabled };
         return new Kit(
-            new ResultsUpdateService(db, provider, audit, current),
+            new ResultsUpdateService(db, provider, audit, current, NullLogger<ResultsUpdateService>.Instance),
             TestServices.TemporaryStandings(db, current),
-            new RoundScoringService(db, scoring, scoringConfig, new AbsenceService(db, audit, current, TestServices.ScoringConfig(db, current)), new FlavioRuleService(db), standings, audit, current, new EfTransactionRunner(db)),
+            new RoundScoringService(db, scoring, scoringConfig, new AbsenceService(db, audit, current, TestServices.ScoringConfig(db, current), NullLogger<AbsenceService>.Instance), new FlavioRuleService(db), standings, audit, current, new EfTransactionRunner(db), NullLogger<RoundScoringService>.Instance),
             new RoundService(db, audit, current, TestServices.ScoringConfig(db, current)),
-            new PredictionsService(db, audit, current),
+            new PredictionsService(db, audit, current, NullLogger<PredictionsService>.Instance),
             provider);
     }
 

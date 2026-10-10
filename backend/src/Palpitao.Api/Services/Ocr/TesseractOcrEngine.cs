@@ -48,7 +48,7 @@ public class TesseractOcrEngine : IOcrEngine
             // both callers (the import preflight and /health/ocr) need it in the log without
             // putting a server path in an HTTP response.
             _logger.LogWarning(
-                "Modelos de OCR ausentes ({Missing}) em {TessdataPath}. Veja Ocr:TessdataPath.",
+                "OCR language models missing ({Missing}) in {TessdataPath}. See Ocr:TessdataPath.",
                 string.Join(", ", missing),
                 _tessdataPath);
         }
@@ -103,7 +103,7 @@ public class TesseractOcrEngine : IOcrEngine
             // how each variant read, and this answers it in one line. Which one is kept is decided
             // by the import, which knows the round (see PredictionImportService).
             _logger.LogInformation(
-                "OCR: leituras {Readings}; {Width}x{Height}px preparados.",
+                "OCR: readings {Readings}; {Width}x{Height}px prepared.",
                 string.Join(", ", readings.Select(r => $"{r.Variant} {r.Confidence:P0}")),
                 prepared.Width,
                 prepared.Height);

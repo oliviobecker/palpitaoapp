@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
@@ -48,7 +49,7 @@ public class MirrorVisibilityTests
     }
 
     private static PredictionsService Service(AppDbContext db, GroupRole role)
-        => new(db, new AuditService(db), new FakeCurrentGroupService(role: role));
+        => new(db, new AuditService(db), new FakeCurrentGroupService(role: role), NullLogger<PredictionsService>.Instance);
 
     private static RoundService Rounds(AppDbContext db)
         => new(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db));
@@ -284,7 +285,7 @@ public class MirrorVisibilityTests
 
         // A user whose current group is a different group cannot reach this round.
         var otherGroup = new FakeCurrentGroupService(groupId: Guid.NewGuid(), role: GroupRole.Participant);
-        var service = new PredictionsService(db, new AuditService(db), otherGroup);
+        var service = new PredictionsService(db, new AuditService(db), otherGroup, NullLogger<PredictionsService>.Instance);
 
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetMirrorAsync(roundId, user, Ct));
     }

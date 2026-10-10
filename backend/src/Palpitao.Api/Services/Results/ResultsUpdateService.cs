@@ -6,7 +6,6 @@ using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
-using Sentry;
 using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Results;
@@ -17,13 +16,17 @@ public class ResultsUpdateService : IResultsUpdateService
     private readonly IResultsProvider _provider;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
+    private readonly ILogger<ResultsUpdateService> _logger;
 
-    public ResultsUpdateService(IAppDbContext db, IResultsProvider provider, IAuditService audit, ICurrentGroupService current)
+    public ResultsUpdateService(
+        IAppDbContext db, IResultsProvider provider, IAuditService audit, ICurrentGroupService current,
+        ILogger<ResultsUpdateService> logger)
     {
         _db = db;
         _provider = provider;
         _audit = audit;
         _current = current;
+        _logger = logger;
     }
 
     public async Task<RefreshResultsResponse> RefreshAsync(Guid roundId, Guid actingUserId, CancellationToken ct)
@@ -103,12 +106,9 @@ public class ResultsUpdateService : IResultsUpdateService
     private async Task<RefreshOutcome> RefreshLoadedRoundAsync(
         Round round, Guid actingUserId, DateTime now, CancellationToken ct)
     {
-        SentrySdk.AddBreadcrumb("Results refresh started.", "results", data: new Dictionary<string, string>
-        {
-            ["roundId"] = round.Id.ToString(),
-            ["provider"] = _provider.Name,
-            ["enabled"] = _provider.IsEnabled.ToString(),
-        });
+        _logger.LogInformation(
+            "Results refresh started for round {RoundId} with provider {Provider} (enabled: {Enabled}).",
+            round.Id, _provider.Name, _provider.IsEnabled);
 
         var updated = 0;
         var missing = new List<string>();
@@ -124,7 +124,7 @@ public class ResultsUpdateService : IResultsUpdateService
                 _audit.Add(actingUserId, "ResultsRefreshFailed", nameof(Round), round.Id.ToString(),
                     new { provider = _provider.Name });
                 await _db.SaveChangesAsync(ct);
-                SentrySdk.AddBreadcrumb("Results refresh failed.", "results", level: BreadcrumbLevel.Warning);
+                _logger.LogWarning("Results refresh failed for round {RoundId}.", round.Id);
                 throw;
             }
 
@@ -157,13 +157,9 @@ public class ResultsUpdateService : IResultsUpdateService
             });
         await _db.SaveChangesAsync(ct);
 
-        SentrySdk.AddBreadcrumb("Results refresh completed.", "results", data: new Dictionary<string, string>
-        {
-            ["roundId"] = round.Id.ToString(),
-            ["updated"] = updated.ToString(),
-            ["finished"] = finished.ToString(),
-            ["unmatched"] = missing.Count.ToString(),
-        });
+        _logger.LogInformation(
+            "Results refresh of round {RoundId} completed: {Updated} updated, {Finished} finished, {Unmatched} unmatched.",
+            round.Id, updated, finished, missing.Count);
 
         return new RefreshOutcome(updated, missing.Count);
     }

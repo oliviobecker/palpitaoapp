@@ -35,7 +35,8 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<MessageResponse>> Register(RegisterRequest request, CancellationToken ct)
     {
         await _auth.RegisterAsync(request, ct);
-        _logger.LogInformation("Nova solicitação de cadastro: {Email} (grupo {GroupId})", request.Email, request.GroupId);
+        _logger.LogInformation(
+            "Registration requested by {Email} for group {GroupId}.", LogRedaction.Email(request.Email), request.GroupId);
         SentrySdk.AddBreadcrumb("Registration submitted.", "auth", level: BreadcrumbLevel.Info);
         return Ok(new MessageResponse { Message = _localizer.Get("group.requestSubmitted") });
     }
@@ -46,7 +47,7 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<MessageResponse>> CreateGroup(CreateGroupRequest request, CancellationToken ct)
     {
         await _auth.CreateGroupAsync(request, ct);
-        _logger.LogInformation("Novo grupo criado por {Email}.", request.Email);
+        _logger.LogInformation("Group created by {Email}.", LogRedaction.Email(request.Email));
         SentrySdk.AddBreadcrumb("Group created.", "groups", level: BreadcrumbLevel.Info);
         return Ok(new MessageResponse { Message = _localizer.Get("group.created") });
     }
@@ -68,23 +69,23 @@ public class AuthController : ControllerBase
     [EnableRateLimiting("auth")]
     public async Task<ActionResult<LoginResponse>> Login(LoginRequest request, CancellationToken ct)
     {
-        _logger.LogInformation("Tentativa de login para {Email}", request.Email);
+        _logger.LogInformation("Login attempt for {Email}.", LogRedaction.Email(request.Email));
 
         var outcome = await _auth.LoginAsync(request, ct);
         if (outcome.Success)
         {
-            _logger.LogInformation("Login bem-sucedido para {Email}.", request.Email);
+            _logger.LogInformation("Login succeeded for {Email}.", LogRedaction.Email(request.Email));
             return Ok(outcome.Response);
         }
 
         var message = _localizer.Get(outcome.FailureKey!);
         if (outcome.InvalidCredentials)
         {
-            _logger.LogWarning("Login falhou para {Email}: credenciais inválidas.", request.Email);
+            _logger.LogWarning("Login failed for {Email}: invalid credentials.", LogRedaction.Email(request.Email));
             return Unauthorized(new { message });
         }
 
-        _logger.LogWarning("Login bloqueado para {Email}: {Reason}.", request.Email, outcome.FailureKey);
+        _logger.LogWarning("Login blocked for {Email}: {Reason}.", LogRedaction.Email(request.Email), outcome.FailureKey);
         SentrySdk.AddBreadcrumb("Login blocked by account status.", "auth", level: BreadcrumbLevel.Warning);
         return StatusCode(StatusCodes.Status403Forbidden, new { message });
     }

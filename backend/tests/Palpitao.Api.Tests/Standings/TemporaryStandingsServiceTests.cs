@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Data;
 using Palpitao.Api.DTOs.Absences;
@@ -102,7 +103,7 @@ public class TemporaryStandingsServiceTests
 
     private static async Task Predict(AppDbContext db, RoundDto round, Guid user, int home, int away)
     {
-        var predictions = new PredictionsService(db, new AuditService(db), new FakeCurrentGroupService());
+        var predictions = new PredictionsService(db, new AuditService(db), new FakeCurrentGroupService(), NullLogger<PredictionsService>.Instance);
         await predictions.SavePredictionsAsync(round.Id, user, new SavePredictionsRequest
         {
             Predictions = round.Matches.Select(m => new PredictionItemRequest

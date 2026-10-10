@@ -6,8 +6,8 @@ using Palpitao.Api.Services.Localization;
 namespace Palpitao.Api.Middlewares;
 
 /// <summary>
-/// Converts unhandled/domain exceptions into a consistent JSON response with a
-/// friendly Portuguese message.
+/// Converts unhandled/domain exceptions into a consistent JSON response whose message is
+/// localized to the request's language.
 /// </summary>
 public class ExceptionHandlingMiddleware
 {
@@ -28,27 +28,27 @@ public class ExceptionHandlingMiddleware
         }
         catch (ValidationException ex)
         {
-            _logger.LogInformation("Validação falhou: {Message} ({Path})", ex.Message, context.Request.Path);
+            _logger.LogInformation("Validation failed: {Key} ({Path})", ex.Key, context.Request.Path);
             await WriteProblem(context, StatusCodes.Status400BadRequest, Localize(context, ex.Key));
         }
         catch (NotFoundException ex)
         {
-            _logger.LogInformation("Recurso não encontrado: {Message} ({Path})", ex.Message, context.Request.Path);
+            _logger.LogInformation("Not found: {Key} ({Path})", ex.Key, context.Request.Path);
             await WriteProblem(context, StatusCodes.Status404NotFound, Localize(context, ex.Key));
         }
         catch (ForbiddenException ex)
         {
-            _logger.LogWarning("Acesso negado: {Message} ({Path})", ex.Message, context.Request.Path);
+            _logger.LogWarning("Access denied: {Key} ({Path})", ex.Key, context.Request.Path);
             await WriteProblem(context, StatusCodes.Status403Forbidden, Localize(context, ex.Key));
         }
         catch (BusinessRuleException ex)
         {
-            _logger.LogWarning("Regra de negócio violada: {Message} ({Path})", ex.Message, context.Request.Path);
+            _logger.LogWarning("Business rule violated: {Key} ({Path})", ex.Key, context.Request.Path);
             await WriteProblem(context, StatusCodes.Status422UnprocessableEntity, Localize(context, ex.Key));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro não tratado em {Path}", context.Request.Path);
+            _logger.LogError(ex, "Unhandled error at {Path}", context.Request.Path);
             var localizer = context.RequestServices.GetRequiredService<ILocalizationService>();
             await WriteProblem(
                 context,

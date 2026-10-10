@@ -323,15 +323,15 @@ using (var scope = app.Services.CreateScope())
     {
         // Log the target database (password redacted) so a misconfigured
         // production connection string is obvious in the logs.
-        logger.LogInformation("Conectando ao banco: {ConnectionString}", MaskConnectionString(connectionString));
+        logger.LogInformation("Connecting to database: {ConnectionString}", MaskConnectionString(connectionString));
 
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Database.Migrate();
-        logger.LogInformation("Migrations aplicadas com sucesso.");
+        logger.LogInformation("Database migrations applied.");
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "Falha ao aplicar migrations no startup.");
+        logger.LogError(ex, "Applying database migrations at startup failed.");
 
         // In Development we keep the API up (so /health is reachable while you fix the
         // DB locally). Outside Development a migration/schema failure must not be masked:
@@ -373,7 +373,7 @@ static string MaskConnectionString(string? connectionString)
 {
     if (string.IsNullOrWhiteSpace(connectionString))
     {
-        return "(não configurada)";
+        return "(not configured)";
     }
 
     try
@@ -388,6 +388,6 @@ static string MaskConnectionString(string? connectionString)
     }
     catch
     {
-        return "(string de conexão inválida)";
+        return "(invalid connection string)";
     }
 }

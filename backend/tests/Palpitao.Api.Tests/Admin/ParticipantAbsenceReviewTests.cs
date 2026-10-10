@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
@@ -91,7 +92,7 @@ public class ParticipantAbsenceReviewTests
     /// <summary>Exact 2x1 for every match: a Traditional hit worth 3 points at multiplier 1.</summary>
     private static async Task Predict(AppDbContext db, RoundDto round, Guid user)
     {
-        var predictions = new PredictionsService(db, new AuditService(db), new FakeCurrentGroupService());
+        var predictions = new PredictionsService(db, new AuditService(db), new FakeCurrentGroupService(), NullLogger<PredictionsService>.Instance);
         await predictions.SavePredictionsAsync(round.Id, user, new SavePredictionsRequest
         {
             Predictions = round.Matches.Select(m => new PredictionItemRequest

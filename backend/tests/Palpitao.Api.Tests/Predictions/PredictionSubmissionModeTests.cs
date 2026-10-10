@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
@@ -51,7 +52,7 @@ public class PredictionSubmissionModeTests
     }
 
     private static PredictionsService Predictions(AppDbContext db)
-        => new(db, new AuditService(db), new FakeCurrentGroupService());
+        => new(db, new AuditService(db), new FakeCurrentGroupService(), NullLogger<PredictionsService>.Instance);
 
     private static void SetSubmitMode(AppDbContext db, bool allow)
     {

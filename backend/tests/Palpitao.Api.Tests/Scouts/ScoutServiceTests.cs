@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
@@ -57,7 +58,7 @@ public class ScoutServiceTests
     {
         var audit = new AuditService(db);
         var current = new FakeCurrentGroupService();
-        return new Kit(new ScoutService(db, current), new RoundService(db, audit, current, TestServices.ScoringConfig(db, current)), new PredictionsService(db, audit, current));
+        return new Kit(new ScoutService(db, current), new RoundService(db, audit, current, TestServices.ScoringConfig(db, current)), new PredictionsService(db, audit, current, NullLogger<PredictionsService>.Instance));
     }
 
     private static Guid CreateParticipant(AppDbContext db, string name)

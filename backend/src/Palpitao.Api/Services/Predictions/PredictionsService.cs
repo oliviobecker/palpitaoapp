@@ -6,7 +6,6 @@ using Palpitao.Api.Entities;
 using Palpitao.Api.Enums;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
-using Sentry;
 using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Predictions;
@@ -16,12 +15,15 @@ public class PredictionsService : IPredictionsService
     private readonly IAppDbContext _db;
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
+    private readonly ILogger<PredictionsService> _logger;
 
-    public PredictionsService(IAppDbContext db, IAuditService audit, ICurrentGroupService current)
+    public PredictionsService(
+        IAppDbContext db, IAuditService audit, ICurrentGroupService current, ILogger<PredictionsService> logger)
     {
         _db = db;
         _audit = audit;
         _current = current;
+        _logger = logger;
     }
 
     public async Task<MyPredictionsDto> GetMyPredictionsAsync(Guid roundId, Guid userId, CancellationToken ct)
@@ -74,8 +76,7 @@ public class PredictionsService : IPredictionsService
             .FirstOrDefaultAsync(ct);
         if (!allowSubmit)
         {
-            SentrySdk.AddBreadcrumb("Prediction submission blocked by season settings.", "predictions",
-                level: BreadcrumbLevel.Warning);
+            _logger.LogWarning("Prediction submission for round {RoundId} blocked by season settings.", roundId);
             throw new ForbiddenException("prediction.appSubmitDisabled");
         }
 
@@ -118,12 +119,9 @@ public class PredictionsService : IPredictionsService
         _audit.Add(userId, isEdit ? "PredictionsUpdated" : "PredictionsCreated", nameof(Prediction),
             roundId.ToString(), new { count = request.Predictions.Count });
         await _db.SaveChangesAsync(ct);
-        SentrySdk.AddBreadcrumb("Predictions saved.", "predictions", data: new Dictionary<string, string>
-        {
-            ["roundId"] = roundId.ToString(),
-            ["count"] = request.Predictions.Count.ToString(),
-            ["isEdit"] = isEdit.ToString(),
-        });
+        _logger.LogInformation(
+            "Saved {Count} predictions for round {RoundId} (edit: {IsEdit}).",
+            request.Predictions.Count, roundId, isEdit);
 
         return await GetMyPredictionsAsync(roundId, userId, ct);
     }

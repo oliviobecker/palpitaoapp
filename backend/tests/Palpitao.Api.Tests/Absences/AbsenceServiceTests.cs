@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
@@ -49,7 +50,7 @@ public class AbsenceServiceTests
         return db;
     }
 
-    private static AbsenceService Service(AppDbContext db) => new(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db));
+    private static AbsenceService Service(AppDbContext db) => new(db, new AuditService(db), new FakeCurrentGroupService(), TestServices.ScoringConfig(db), NullLogger<AbsenceService>.Instance);
 
     private static Guid CreateParticipant(AppDbContext db)
     {
@@ -319,7 +320,7 @@ public class AbsenceServiceTests
         var user = CreateParticipant(db);
         var round = await PublishedRound(db, 1, matchCount: 2);
 
-        var predictions = new PredictionsService(db, new AuditService(db), new FakeCurrentGroupService());
+        var predictions = new PredictionsService(db, new AuditService(db), new FakeCurrentGroupService(), NullLogger<PredictionsService>.Instance);
         await predictions.SavePredictionsAsync(round.Id, user, new SavePredictionsRequest
         {
             Predictions = round.Matches.Select(m => new PredictionItemRequest
@@ -347,7 +348,7 @@ public class AbsenceServiceTests
         }
 
         var future = await PublishedRound(db, 6);
-        var predictions = new PredictionsService(db, new AuditService(db), new FakeCurrentGroupService());
+        var predictions = new PredictionsService(db, new AuditService(db), new FakeCurrentGroupService(), NullLogger<PredictionsService>.Instance);
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
             predictions.SavePredictionsAsync(future.Id, user, new SavePredictionsRequest
@@ -451,7 +452,7 @@ public class AbsenceServiceTests
         var user = CreateParticipant(db);
 
         var complete = await PublishedRound(db, 1, matchCount: 2);
-        var predictions = new PredictionsService(db, new AuditService(db), new FakeCurrentGroupService());
+        var predictions = new PredictionsService(db, new AuditService(db), new FakeCurrentGroupService(), NullLogger<PredictionsService>.Instance);
         await predictions.SavePredictionsAsync(complete.Id, user, new SavePredictionsRequest
         {
             Predictions = complete.Matches.Select(m => new PredictionItemRequest
@@ -515,7 +516,7 @@ public class AbsenceServiceTests
         var otherGroup = Guid.NewGuid();
         var foreignCurrent = new FakeCurrentGroupService(otherGroup);
         var foreign = new AbsenceService(
-            db, new AuditService(db), foreignCurrent, TestServices.ScoringConfig(db, foreignCurrent));
+            db, new AuditService(db), foreignCurrent, TestServices.ScoringConfig(db, foreignCurrent), NullLogger<AbsenceService>.Instance);
 
         // The participant is not an approved member of the other group at all.
         await Assert.ThrowsAsync<NotFoundException>(() => foreign.GetAbsenceCandidateRoundsAsync(user, Ct));
@@ -577,7 +578,7 @@ public class AbsenceServiceTests
 
     private static async Task Predict(AppDbContext db, RoundDto round, Guid user)
     {
-        var predictions = new PredictionsService(db, new AuditService(db), new FakeCurrentGroupService());
+        var predictions = new PredictionsService(db, new AuditService(db), new FakeCurrentGroupService(), NullLogger<PredictionsService>.Instance);
         await predictions.SavePredictionsAsync(round.Id, user, new SavePredictionsRequest
         {
             Predictions = round.Matches.Select(m => new PredictionItemRequest
@@ -830,7 +831,7 @@ public class AbsenceServiceTests
         var otherGroup = Guid.NewGuid();
         var foreignCurrent = new FakeCurrentGroupService(otherGroup);
         var foreign = new AbsenceService(
-            db, new AuditService(db), foreignCurrent, TestServices.ScoringConfig(db, foreignCurrent));
+            db, new AuditService(db), foreignCurrent, TestServices.ScoringConfig(db, foreignCurrent), NullLogger<AbsenceService>.Instance);
 
         // The participant is not an approved member of the other group at all.
         await Assert.ThrowsAsync<NotFoundException>(() => foreign.GetAbsenceReviewRoundsAsync(user, Ct));

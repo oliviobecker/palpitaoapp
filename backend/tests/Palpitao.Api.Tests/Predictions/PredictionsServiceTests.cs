@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
@@ -53,7 +54,7 @@ public class PredictionsServiceTests
         return db;
     }
 
-    private static PredictionsService CreateService(AppDbContext db) => new(db, new AuditService(db), new FakeCurrentGroupService());
+    private static PredictionsService CreateService(AppDbContext db) => new(db, new AuditService(db), new FakeCurrentGroupService(), NullLogger<PredictionsService>.Instance);
 
     private static Guid CreateParticipant(AppDbContext db, bool active = true, bool eliminated = false)
     {

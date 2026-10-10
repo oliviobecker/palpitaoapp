@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Palpitao.Api.Data;
-using Sentry;
 
 namespace Palpitao.Api.Services.Ocr;
 
@@ -65,7 +64,6 @@ public class OcrImageRetentionBackgroundService : BackgroundService
             {
                 // Never let a bad cycle crash the host.
                 _logger.LogError(ex, "OCR image retention sweep failed.");
-                SentrySdk.CaptureException(ex);
             }
         }
         while (await SafeWaitAsync(timer, stoppingToken));

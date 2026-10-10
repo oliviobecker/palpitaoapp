@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Common;
 using Palpitao.Api.Data;
@@ -62,8 +63,8 @@ public partial class RoundScoringServiceTests
         var standings = new StandingsService(db, current);
         var scoringConfig = new SeasonScoringConfigService(db, audit, current);
         var scoring = new RoundScoringService(
-            db, new ScoringService(), scoringConfig, new AbsenceService(db, audit, current, TestServices.ScoringConfig(db, current)), new FlavioRuleService(db), standings, audit, current, new EfTransactionRunner(db));
-        return new Kit(scoring, new RoundService(db, audit, current, TestServices.ScoringConfig(db, current)), new PredictionsService(db, audit, current), standings);
+            db, new ScoringService(), scoringConfig, new AbsenceService(db, audit, current, TestServices.ScoringConfig(db, current), NullLogger<AbsenceService>.Instance), new FlavioRuleService(db), standings, audit, current, new EfTransactionRunner(db), NullLogger<RoundScoringService>.Instance);
+        return new Kit(scoring, new RoundService(db, audit, current, TestServices.ScoringConfig(db, current)), new PredictionsService(db, audit, current, NullLogger<PredictionsService>.Instance), standings);
     }
 
     private static Guid CreateParticipant(AppDbContext db, string name = "Participante")

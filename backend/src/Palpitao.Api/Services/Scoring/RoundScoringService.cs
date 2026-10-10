@@ -11,7 +11,6 @@ using Palpitao.Api.Services.Flavio;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Rounds;
 using Palpitao.Api.Services.Standings;
-using Sentry;
 using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Scoring;
@@ -27,6 +26,7 @@ public class RoundScoringService : IRoundScoringService
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
     private readonly ITransactionRunner _transactions;
+    private readonly ILogger<RoundScoringService> _logger;
 
     public RoundScoringService(
         IAppDbContext db,
@@ -37,7 +37,8 @@ public class RoundScoringService : IRoundScoringService
         IStandingsService standings,
         IAuditService audit,
         ICurrentGroupService current,
-        ITransactionRunner transactions)
+        ITransactionRunner transactions,
+        ILogger<RoundScoringService> logger)
     {
         _db = db;
         _scoring = scoring;
@@ -48,6 +49,7 @@ public class RoundScoringService : IRoundScoringService
         _audit = audit;
         _current = current;
         _transactions = transactions;
+        _logger = logger;
     }
 
     public async Task SetMatchResultAsync(Guid matchId, MatchResultRequest request, Guid actingUserId, CancellationToken ct)
@@ -332,11 +334,7 @@ public class RoundScoringService : IRoundScoringService
             {
                 roundFinal = _flavio.ApplyHalfPenalty(gross);
                 flavioApplied = true;
-                SentrySdk.AddBreadcrumb("Flavio rule applied.", "scoring", data: new Dictionary<string, string>
-                {
-                    ["roundId"] = roundId.ToString(),
-                    ["userId"] = participant.Id.ToString(),
-                });
+                _logger.LogInformation("Flavio Rule applied to {UserId} in round {RoundId}.", participant.Id, roundId);
             }
 
             _db.RoundParticipantResults.Add(new RoundParticipantResult
@@ -365,11 +363,7 @@ public class RoundScoringService : IRoundScoringService
         _audit.Add(actingUserId, "RoundScored", nameof(Round), roundId.ToString(),
             new { absent = absentees.Count });
         await _db.SaveChangesAsync(ct);
-        SentrySdk.AddBreadcrumb("Round scoring persisted.", "scoring", data: new Dictionary<string, string>
-        {
-            ["roundId"] = roundId.ToString(),
-            ["absent"] = absentees.Count.ToString(),
-        });
+        _logger.LogInformation("Scoring of round {RoundId} persisted with {Absent} absentees.", roundId, absentees.Count);
 
         if (updateStandings)
         {

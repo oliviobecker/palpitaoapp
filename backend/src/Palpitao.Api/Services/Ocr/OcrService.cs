@@ -211,7 +211,7 @@ public class OcrService : IOcrService
             _db.OcrPredictionCandidates.AddRange(result.Candidates);
 
             _logger.LogInformation(
-                "OCR: leitura {Variant} escolhida para {File}: {Candidates} linhas, {Ignored} de outra rodada ignoradas.",
+                "OCR: kept reading {Variant} for {File}: {Candidates} rows, {Ignored} from another round left out.",
                 result.Reading.Variant,
                 fileName,
                 result.Candidates.Count,
@@ -231,7 +231,7 @@ public class OcrService : IOcrService
         }
         catch (Exception ex) when (ex is not BusinessRuleException and not NotFoundException)
         {
-            _logger.LogError(ex, "Falha ao processar OCR para a rodada {RoundId} (idioma {Language})", roundId, lang);
+            _logger.LogError(ex, "OCR failed for round {RoundId} (language {Language})", roundId, lang);
             batch.Status = OcrBatchStatus.Failed;
             await _db.SaveChangesAsync(ct);
             throw new BusinessRuleException("ocr.processFailed");
@@ -289,11 +289,11 @@ public class OcrService : IOcrService
                 .Where(i => staleIds.Contains(i.OcrImportBatchId))
                 .ExecuteDeleteAsync(ct);
             _logger.LogInformation(
-                "Removidas {Count} imagens antigas de OCR da rodada {RoundId}.", removed, roundId);
+                "Removed {Count} old OCR images from round {RoundId}.", removed, roundId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Falha ao podar imagens de OCR da rodada {RoundId}", roundId);
+            _logger.LogError(ex, "Pruning OCR images of round {RoundId} failed", roundId);
         }
     }
 

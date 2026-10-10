@@ -8,7 +8,6 @@ using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Groups;
 using Palpitao.Api.Services.Rounds;
 using Palpitao.Api.Services.Scoring;
-using Sentry;
 using Palpitao.Api.Abstractions;
 
 namespace Palpitao.Api.Services.Absences;
@@ -26,14 +25,17 @@ public class AbsenceService : IAbsenceService
     private readonly IAuditService _audit;
     private readonly ICurrentGroupService _current;
     private readonly ISeasonScoringConfigService _config;
+    private readonly ILogger<AbsenceService> _logger;
 
     public AbsenceService(
-        IAppDbContext db, IAuditService audit, ICurrentGroupService current, ISeasonScoringConfigService config)
+        IAppDbContext db, IAuditService audit, ICurrentGroupService current, ISeasonScoringConfigService config,
+        ILogger<AbsenceService> logger)
     {
         _db = db;
         _audit = audit;
         _current = current;
         _config = config;
+        _logger = logger;
     }
 
     public async Task<bool> IsAbsentAsync(Guid roundId, Guid userId, CancellationToken ct)
@@ -216,12 +218,9 @@ public class AbsenceService : IAbsenceService
                 var membership = await _db.GroupUsers
                     .FirstAsync(gu => gu.GroupId == round.GroupId && gu.UserId == userId, ct);
                 membership.IsEliminated = true;
-                SentrySdk.AddBreadcrumb("User eliminated by absence.", "absences", data: new Dictionary<string, string>
-                {
-                    ["roundId"] = roundId.ToString(),
-                    ["userId"] = userId.ToString(),
-                    ["absenceNumber"] = absenceNumber.ToString(),
-                });
+                _logger.LogInformation(
+                    "Participant {UserId} eliminated by absence {AbsenceNumber} in round {RoundId}.",
+                    userId, absenceNumber, roundId);
             }
 
             await UpsertZeroedResultAsync(round, userId, wasAbsent: true, penalty, eliminated, now, ct);

@@ -1,4 +1,5 @@
 using Palpitao.Api.Data;
+using Microsoft.Extensions.Logging.Abstractions;
 using Palpitao.Api.Services.Absences;
 using Palpitao.Api.Services.Audit;
 using Palpitao.Api.Services.Flavio;
@@ -26,7 +27,7 @@ public static class TestServices
     public static AbsenceService Absences(AppDbContext db, ICurrentGroupService? current = null)
     {
         var group = current ?? new FakeCurrentGroupService();
-        return new AbsenceService(db, new AuditService(db), group, ScoringConfig(db, group));
+        return new AbsenceService(db, new AuditService(db), group, ScoringConfig(db, group), NullLogger<AbsenceService>.Instance);
     }
 
     /// <summary>
@@ -65,6 +66,6 @@ public static class TestServices
         return new RoundScoringService(
             db, new ScoringService(), ScoringConfig(db, group), Absences(db, group),
             new FlavioRuleService(db), new StandingsService(db, group), audit, group,
-            new EfTransactionRunner(db));
+            new EfTransactionRunner(db), NullLogger<RoundScoringService>.Instance);
     }
 }
