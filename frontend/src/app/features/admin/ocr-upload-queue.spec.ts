@@ -44,7 +44,7 @@ describe('OcrUploadQueue', () => {
     const responses: Observable<OcrBatch>[] = [first, of(batch('b2', 'p2', 1, 11))];
     importImage.mockImplementation(() => responses.shift());
 
-    queue.enqueue('r1', [file('Valter.png'), file('Ezau.png')], 'por');
+    queue.enqueue('r1', [file('Renato.png'), file('Luis.png')], 'por');
     await Promise.resolve();
 
     // The second waits for the first: OCR is CPU-bound, and the server throttles per admin.
@@ -56,9 +56,9 @@ describe('OcrUploadQueue', () => {
     await vi.waitFor(() => expect(queue.busy()).toBe(false));
 
     expect(importImage).toHaveBeenCalledTimes(2);
-    const [valter, ezau] = queue.items();
-    expect(valter).toMatchObject({ status: 'done', rows: 3, needsReview: 0, participantId: 'p1' });
-    expect(ezau).toMatchObject({ status: 'done', rows: 3, needsReview: 1, ignored: 11 });
+    const [renato, luis] = queue.items();
+    expect(renato).toMatchObject({ status: 'done', rows: 3, needsReview: 0, participantId: 'p1' });
+    expect(luis).toMatchObject({ status: 'done', rows: 3, needsReview: 1, ignored: 11 });
     expect(queue.finished()).toBe(2);
   });
 
@@ -72,7 +72,7 @@ describe('OcrUploadQueue', () => {
       .mockReturnValueOnce(throwError(() => throttled))
       .mockReturnValueOnce(of(batch('b1', 'p1')));
 
-    queue.enqueue('r1', [file('Valter.png')], 'por');
+    queue.enqueue('r1', [file('Renato.png')], 'por');
     await vi.advanceTimersByTimeAsync(0);
     expect(queue.items()[0].status).toBe('waiting');
 
@@ -91,7 +91,7 @@ describe('OcrUploadQueue', () => {
       .mockReturnValueOnce(throwError(() => rejected))
       .mockReturnValueOnce(of(batch('b2', 'p2')));
 
-    queue.enqueue('r1', [file('borrado.png'), file('Valter.png')], 'por');
+    queue.enqueue('r1', [file('borrado.png'), file('Renato.png')], 'por');
     await vi.waitFor(() => expect(queue.busy()).toBe(false));
 
     expect(queue.items().map((i) => i.status)).toEqual(['error', 'done']);

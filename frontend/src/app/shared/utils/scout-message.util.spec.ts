@@ -13,8 +13,8 @@ const scout: RoundScout = {
       homeTeamName: 'Man United',
       awayTeamName: 'Man City',
       groups: [
-        { homeScore: 1, awayScore: 1, names: ['Felipe'] },
-        { homeScore: 2, awayScore: 0, names: ['Bruno', 'Dourado'] },
+        { homeScore: 1, awayScore: 1, names: ['Thiago'] },
+        { homeScore: 2, awayScore: 0, names: ['Diego', 'Pacheco'] },
       ],
     },
   ],
@@ -24,8 +24,8 @@ describe('buildScoutMessage', () => {
   it('renders a header and one bullet per scoreline with @mentions', () => {
     const text = buildScoutMessage(scout);
     expect(text).toContain('Scout Man United x Man City');
-    expect(text).toContain('- 1x1 @Felipe');
-    expect(text).toContain('- 2x0 @Bruno @Dourado');
+    expect(text).toContain('- 1x1 @Thiago');
+    expect(text).toContain('- 2x0 @Diego @Pacheco');
   });
 
   it('separates multiple matches with a blank line', () => {

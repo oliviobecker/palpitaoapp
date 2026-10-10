@@ -64,10 +64,10 @@ const results: RoundResults = {
     }),
   ],
   participants: [
-    participant('Edson', 18),
-    participant('Becker', 13),
-    participant('DeFarias', 3),
-    participant('Vilaça', 3),
+    participant('Vitor', 18),
+    participant('Coelho', 13),
+    participant('DeCastro', 3),
+    participant('Cabaça', 3),
     participant('Faltoso', 0, true),
   ],
 };
@@ -75,8 +75,8 @@ const results: RoundResults = {
 const standings: Standing[] = [
   {
     position: 1,
-    userId: 'PL',
-    name: 'PL',
+    userId: 'TB',
+    name: 'TB',
     totalPoints: 478,
     playedRounds: 41,
     absenceCount: 0,
@@ -85,8 +85,8 @@ const standings: Standing[] = [
   },
   {
     position: 2,
-    userId: 'Edson',
-    name: 'Edson',
+    userId: 'Vitor',
+    name: 'Vitor',
     totalPoints: 440,
     playedRounds: 40,
     absenceCount: 1,
@@ -131,16 +131,16 @@ describe('buildClosingMessage', () => {
 
   it('lists round points and groups tied participants with "e", skipping absentees', () => {
     expect(text).toContain('*Pontuação 41*');
-    expect(text).toContain('Edson: 18');
-    expect(text).toContain('DeFarias e Vilaça: 3');
+    expect(text).toContain('Vitor: 18');
+    expect(text).toContain('Cabaça e DeCastro: 3');
     expect(text).not.toContain('Faltoso');
   });
 
   it('renders the ranking with absence markers and eliminations', () => {
     expect(text).toContain('*Rank 41*');
-    expect(text).toContain('1. PL: 478');
+    expect(text).toContain('1. TB: 478');
     // The marker is ✱, not "*": a stray asterisk would pair with the bold delimiters.
-    expect(text).toContain('2. Edson✱: 440');
+    expect(text).toContain('2. Vitor✱: 440');
     expect(text).toContain('3. Flávio: Eliminado');
     expect(text).toContain('✱ Uma ausência');
   });

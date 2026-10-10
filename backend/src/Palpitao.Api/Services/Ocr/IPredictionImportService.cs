@@ -26,7 +26,7 @@ public record ParsedPrediction(
 /// </summary>
 /// <param name="ParticipantAliases">Names already confirmed for this group (see <see cref="OcrAliasService"/>).</param>
 /// <param name="FileName">
-/// The uploaded file's name. Admins name each screenshot after its participant ("Valter.png"), which
+/// The uploaded file's name. Admins name each screenshot after its participant ("Renato.png"), which
 /// is a far better signal than anything OCR reads off the image.
 /// </param>
 /// <param name="CatalogueTeams">

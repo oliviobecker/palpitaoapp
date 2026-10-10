@@ -13,7 +13,7 @@ const summary = (over: Partial<OcrBatchSummary>): OcrBatchSummary => ({
   id: 'b1',
   roundId: 'r1',
   status: 'Processed',
-  originalFileName: 'Valter.png',
+  originalFileName: 'Renato.png',
   languageUsed: 'por',
   hasImage: true,
   candidateCount: 12,

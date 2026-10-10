@@ -186,7 +186,7 @@ public class PredictionImportService : IPredictionImportService
 
     /// <summary>
     /// The round a line belongs to when it is not this round's: it is one of the season's other
-    /// fixtures, read cleanly. People send two rounds in one screenshot ("Ezaú, Rodada 6 e 7"),
+    /// fixtures, read cleanly. People send two rounds in one screenshot ("Luís, Rodada 6 e 7"),
     /// and those lines used to land as a dozen rows the admin deleted one by one. Only an exact
     /// fixture of another round counts — a line that fits nothing anywhere stays for review, so
     /// a prediction is never dropped just because it could not be read.

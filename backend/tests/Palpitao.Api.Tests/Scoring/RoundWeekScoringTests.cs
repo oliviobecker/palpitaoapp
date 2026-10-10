@@ -224,19 +224,19 @@ public partial class RoundScoringServiceTests
         using var db = CreateContext();
         var kit = Build(db);
         var ana = CreateParticipant(db, "Ana");
-        var bruno = CreateParticipant(db, "Bruno");
+        var diego = CreateParticipant(db, "Diego");
 
         var r15 = InsertLockedRound(db, 15, Published, 2, 1);
         InsertPrediction(db, r15, ana, 2, 1, Published.AddHours(1)); // exact -> 3
-        InsertPrediction(db, r15, bruno, 0, 1, Published.AddHours(1)); // wrong -> 0
+        InsertPrediction(db, r15, diego, 0, 1, Published.AddHours(1)); // wrong -> 0
         await kit.Scoring.ScoreRoundAsync(r15.Id, Admin, Ct);
 
         var r161 = InsertLockedRound(db, 16, Published.AddDays(7), 0, 0, part: 1);
         InsertPrediction(db, r161, ana, 1, 0, Published.AddDays(7).AddHours(1)); // wrong -> 0
-        InsertPrediction(db, r161, bruno, 0, 0, Published.AddDays(7).AddHours(1)); // exact 0x0 -> 5
+        InsertPrediction(db, r161, diego, 0, 0, Published.AddDays(7).AddHours(1)); // exact 0x0 -> 5
         await kit.Scoring.ScoreRoundAsync(r161.Id, Admin, Ct);
 
-        // Bruno leads after 16.1, but 16.2 is still round 16: its target is the leader before it.
+        // Diego leads after 16.1, but 16.2 is still round 16: its target is the leader before it.
         var r162 = InsertLockedRound(db, 16, Published.AddDays(10), 2, 1, part: 2);
         Assert.Equal([ana], await FlavioLeaders.GetBeforeRoundAsync(db, r162.Id, Ct));
         Assert.Equal([ana], await FlavioLeaders.GetBeforeRoundAsync(db, r161.Id, Ct));

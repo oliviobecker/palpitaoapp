@@ -273,10 +273,10 @@ public static class OcrTeamMatcher
     /// Resolves the participant a screenshot's file name points at (see
     /// <see cref="OcrTextParser.NameFromFileName"/>). Stricter than <see cref="ResolveParticipant"/>
     /// on purpose — the file name is trusted over what OCR reads, so it must not guess: a learned
-    /// alias, the same name, whole words of it ("Valter" for "Valter Silva", "De Farias" for "Felipe
-    /// de Farias"), or one wrong letter in a longer word ("Vilacao"). Never a bare substring, which
-    /// would let a two-letter participant such as "PL" claim "Complete.png". The first word is tried
-    /// alone only when the whole name found nobody at all ("Ezau Unica"), never when it found two.
+    /// alias, the same name, whole words of it ("Renato" for "Renato Paiva", "De Castro" for "Thiago
+    /// de Castro"), or one wrong letter in a longer word ("Cabacao"). Never a bare substring, which
+    /// would let a two-letter participant such as "TB" claim "Football.png". The first word is tried
+    /// alone only when the whole name found nobody at all ("Luis Unica"), never when it found two.
     /// </summary>
     public static Guid? ResolveParticipantFromFileName(
         string? stem,
@@ -457,7 +457,7 @@ public static class OcrTeamMatcher
 
     /// <summary>
     /// Lookup key for a learned participant alias: lowercased, accent-folded and with runs of
-    /// whitespace collapsed, so "Paraguaio", "paraguaio" and "PARAGUAIO " are one entry. Used on
+    /// whitespace collapsed, so "Careca", "careca" and "CARECA " are one entry. Used on
     /// both sides — writing the alias and reading it back — so the two can never drift.
     /// </summary>
     public static string NormalizeAlias(string value) => Fold(value);

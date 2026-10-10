@@ -15,14 +15,14 @@ function alias(aliasRaw: string, userName: string): OcrParticipantAlias {
 }
 
 describe('filterAliases', () => {
-  const list = [alias('Paraguaio', 'PL'), alias('nAc', 'Flavio'), alias('Dourado', 'Felippe')];
+  const list = [alias('Careca', 'TB'), alias('nAc', 'Flavio'), alias('Pacheco', 'Thiaggo')];
 
   it('returns everything for an empty query', () => {
     expect(filterAliases(list, '   ')).toHaveLength(3);
   });
 
   it('matches the alias as it was read', () => {
-    expect(filterAliases(list, 'paragu').map((a) => a.aliasRaw)).toEqual(['Paraguaio']);
+    expect(filterAliases(list, 'carec').map((a) => a.aliasRaw)).toEqual(['Careca']);
   });
 
   it('matches the participant it points at', () => {

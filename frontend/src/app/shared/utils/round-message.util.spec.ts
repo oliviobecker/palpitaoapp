@@ -172,13 +172,13 @@ describe('buildRoundMessage', () => {
       round([match({ homeTeamName: 'Arsenal', awayTeamName: 'Chelsea' })], {
         flavio: {
           applies: true,
-          leaderNames: ['Manoel Neto'],
+          leaderNames: ['Murilo Nery'],
           deadlineUtc: '2026-05-22T23:59:00Z',
           windowHours: 24,
         },
       }),
     );
-    expect(msg).toContain('*REGRA FLÁVIO:* @Manoel Neto tem até 24 horas para palpitar');
+    expect(msg).toContain('*REGRA FLÁVIO:* @Murilo Nery tem até 24 horas para palpitar');
   });
 
   it('prefers the exact deadline when the general lock cut the window short', () => {
@@ -186,7 +186,7 @@ describe('buildRoundMessage', () => {
       round([match({})], {
         flavio: {
           applies: true,
-          leaderNames: ['Manoel Neto'],
+          leaderNames: ['Murilo Nery'],
           deadlineUtc: '2026-05-22T23:59:00Z',
           windowHours: 12,
           deadlineCappedByLock: true,
@@ -195,7 +195,7 @@ describe('buildRoundMessage', () => {
     );
     // Announcing "12 horas" would promise time the leader does not have.
     expect(msg).not.toContain('12 horas');
-    expect(msg).toMatch(/\*REGRA FLÁVIO:\* @Manoel Neto tem até \d{1,2}h\d{2} de .+ para palpitar/);
+    expect(msg).toMatch(/\*REGRA FLÁVIO:\* @Murilo Nery tem até \d{1,2}h\d{2} de .+ para palpitar/);
   });
 
   it('agrees the verb with tied leaders', () => {
@@ -203,13 +203,13 @@ describe('buildRoundMessage', () => {
       round([match({})], {
         flavio: {
           applies: true,
-          leaderNames: ['Manoel Neto', 'Edson'],
+          leaderNames: ['Murilo Nery', 'Vitor'],
           deadlineUtc: '2026-05-22T23:59:00Z',
           windowHours: 24,
         },
       }),
     );
-    expect(msg).toContain('*REGRA FLÁVIO:* @Manoel Neto, @Edson têm até 24 horas para palpitar');
+    expect(msg).toContain('*REGRA FLÁVIO:* @Murilo Nery, @Vitor têm até 24 horas para palpitar');
   });
 
   it('omits the Flávio line when there is no leader or no deadline', () => {

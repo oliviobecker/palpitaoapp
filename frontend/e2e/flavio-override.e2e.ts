@@ -14,7 +14,7 @@ const panelData = () => ({
   participants: [
     {
       userId: 'p1',
-      name: 'Vilaça',
+      name: 'Cabaça',
       isTarget: true,
       submittedAt: '2026-09-02T10:00:00Z',
       grossPoints: 17,
@@ -74,7 +74,7 @@ for (const language of ['pt-BR', 'en-US'] as const) {
     ]);
     await page.goto('/admin/rounds/r1');
     const panel = page.locator('app-admin-flavio-overrides');
-    await expect(panel).toContainText('Vilaça');
+    await expect(panel).toContainText('Cabaça');
     await expect(panel).toContainText('01/09/2026 12:00:00 UTC');
     await expect(panel).toContainText('17 / 8');
     await panel

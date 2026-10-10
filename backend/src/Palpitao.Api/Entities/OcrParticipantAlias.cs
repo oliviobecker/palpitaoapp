@@ -2,7 +2,7 @@ namespace Palpitao.Api.Entities;
 
 /// <summary>
 /// A name OCR reads off a screenshot that the admin has confirmed belongs to a participant —
-/// a nickname the group uses ("Paraguaio"), a spelling the roster does not carry, or a stable
+/// a nickname the group uses ("Careca"), a spelling the roster does not carry, or a stable
 /// piece of junk a particular phone's rendering produces. Learned on confirmation and consulted
 /// on the next import, so the same correction is not made twice.
 ///

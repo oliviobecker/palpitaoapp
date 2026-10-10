@@ -52,23 +52,23 @@ public class OcrScreenshotRegressionTests
         Fixture("Luton Town", "Bradford City"),
     ];
 
-    private static readonly User Becker = new() { Id = Guid.NewGuid(), Name = "Olivio Becker" };
-    private static readonly User Valter = new() { Id = Guid.NewGuid(), Name = "Valter Silva" };
-    private static readonly User Gilberto = new() { Id = Guid.NewGuid(), Name = "Gilberto Sales" };
-    private static readonly User Felipe = new() { Id = Guid.NewGuid(), Name = "Felipe de Farias" };
-    private static readonly User Ezau = new() { Id = Guid.NewGuid(), Name = "Ezaú Moura" };
-    private static readonly User Vilaca = new() { Id = Guid.NewGuid(), Name = "Bruno Vilaça" };
-    private static readonly User Pl = new() { Id = Guid.NewGuid(), Name = "PL" };
+    private static readonly User Coelho = new() { Id = Guid.NewGuid(), Name = "Rafael Coelho" };
+    private static readonly User Renato = new() { Id = Guid.NewGuid(), Name = "Renato Paiva" };
+    private static readonly User Leonardo = new() { Id = Guid.NewGuid(), Name = "Leonardo Borba" };
+    private static readonly User Thiago = new() { Id = Guid.NewGuid(), Name = "Thiago de Castro" };
+    private static readonly User Luis = new() { Id = Guid.NewGuid(), Name = "Luís Matos" };
+    private static readonly User Cabaca = new() { Id = Guid.NewGuid(), Name = "Diego Cabaça" };
+    private static readonly User Tb = new() { Id = Guid.NewGuid(), Name = "TB" };
 
-    private static List<User> Roster() => [Becker, Valter, Gilberto, Felipe, Ezau, Vilaca, Pl];
+    private static List<User> Roster() => [Coelho, Renato, Leonardo, Thiago, Luis, Cabaca, Tb];
 
     // WhatsApp Desktop, 454x376: the Flávio rule sits on one line, and three clubs come back garbled.
-    private const string BeckerRound9 =
+    private const string CoelhoRound9 =
         "Palpitao England 2026/2027\n" +
-        "Becker, Rodada 9\n" +
+        "Coelho, Rodada 9\n" +
         "\n" +
         "Palpites até 14h59 de sexta-feira (18/09/2026):\n" +
-        "REGRA FLÁVIO: GBruno Vilaça tem sté 24 horas para palpitar\n" +
+        "REGRA FLÁVIO: GDiego Cabaça tem sté 24 horas para palpitar\n" +
         "\n" +
         "Premier League\n" +
         "Brentford 1 x 2 Chelsea\n" +
@@ -101,18 +101,18 @@ public class OcrScreenshotRegressionTests
     [Fact]
     public void The_flavio_rule_line_does_not_take_the_participant_from_the_header()
     {
-        var parsed = OcrTextParser.Parse(BeckerRound9);
+        var parsed = OcrTextParser.Parse(CoelhoRound9);
 
         Assert.Equal(11, parsed.Count);
-        Assert.All(parsed, p => Assert.Equal("Becker", p.ParticipantName));
+        Assert.All(parsed, p => Assert.Equal("Coelho", p.ParticipantName));
         Assert.All(parsed, p => Assert.True(p.ParticipantAnnounced));
     }
 
     [Theory]
-    [InlineData("JP Rodada 9", "JP")]
-    [InlineData("PL Rodada 8", "PL")]
-    [InlineData("Nome, Defarias, Rodada 9.", "Defarias")]
-    [InlineData("Nome, Felipe Rodada 8", "Felipe")]
+    [InlineData("CN Rodada 9", "CN")]
+    [InlineData("TB Rodada 8", "TB")]
+    [InlineData("Nome, Decastro, Rodada 9.", "Decastro")]
+    [InlineData("Nome, Thiago Rodada 8", "Thiago")]
     [InlineData("*Nome*, Rodada 5", null)]
     [InlineData("PALPITAO ENGLAND — RODADA 9", null)]
     public void The_round_header_names_the_participant(string header, string? expected)
@@ -136,21 +136,21 @@ public class OcrScreenshotRegressionTests
     [Fact]
     public void A_name_labelling_its_fixtures_still_names_them()
     {
-        var parsed = OcrTextParser.Parse("Pedro: Arsenal 2x1 Chelsea, Liverpool 1x1 Manchester City");
+        var parsed = OcrTextParser.Parse("Bento: Arsenal 2x1 Chelsea, Liverpool 1x1 Manchester City");
 
         Assert.Equal(2, parsed.Count);
-        Assert.All(parsed, p => Assert.Equal("Pedro", p.ParticipantName));
+        Assert.All(parsed, p => Assert.Equal("Bento", p.ParticipantName));
     }
 
     [Theory]
-    [InlineData("Valter.png", "Valter")]
-    [InlineData("Valter1.jpeg", "Valter")]
-    [InlineData("Valter (1).jpeg", "Valter")]
-    [InlineData("ezau4e5.jpeg", "ezau")]
-    [InlineData("DeFarias.jpeg", "De Farias")]
-    [InlineData("EzauUnica.jpeg", "Ezau Unica")]
-    [InlineData("Vilaç a.jpeg", "Vilaç a")]
-    [InlineData("Vilaça.jpeg", "Vilaça")] // decomposed ç, as iOS sends it
+    [InlineData("Renato.png", "Renato")]
+    [InlineData("Renato1.jpeg", "Renato")]
+    [InlineData("Renato (1).jpeg", "Renato")]
+    [InlineData("luis4e5.jpeg", "luis")]
+    [InlineData("DeCastro.jpeg", "De Castro")]
+    [InlineData("LuisUnica.jpeg", "Luis Unica")]
+    [InlineData("Cabaç a.jpeg", "Cabaç a")]
+    [InlineData("Cabaça.jpeg", "Cabaça")] // decomposed ç, as iOS sends it
     [InlineData("9.png", null)]
     [InlineData("IMG_2041.jpg", null)]
     [InlineData("WhatsApp.jpg", null)]
@@ -165,14 +165,14 @@ public class OcrScreenshotRegressionTests
     }
 
     [Theory]
-    [InlineData("Becker", "Olivio Becker")]
-    [InlineData("De Farias", "Felipe de Farias")]
-    [InlineData("defarias", "Felipe de Farias")]
-    [InlineData("Vilacao", "Bruno Vilaça")]
-    [InlineData("Vilaç a", "Bruno Vilaça")]
-    [InlineData("Ezau Unica", "Ezaú Moura")]
-    [InlineData("PL", "PL")]
-    [InlineData("Complete", null)] // contains "pl", but is nobody
+    [InlineData("Coelho", "Rafael Coelho")]
+    [InlineData("De Castro", "Thiago de Castro")]
+    [InlineData("decastro", "Thiago de Castro")]
+    [InlineData("Cabacao", "Diego Cabaça")]
+    [InlineData("Cabaç a", "Diego Cabaça")]
+    [InlineData("Luis Unica", "Luís Matos")]
+    [InlineData("TB", "TB")]
+    [InlineData("Football", null)] // contains "tb", but is nobody
     public void The_file_name_resolves_to_the_participant_it_names(string stem, string? expected)
     {
         var id = OcrTeamMatcher.ResolveParticipantFromFileName(stem, Roster());
@@ -182,41 +182,41 @@ public class OcrScreenshotRegressionTests
     [Fact]
     public void A_file_name_that_fits_two_people_resolves_to_nobody()
     {
-        // Two members, "Bruno" and "Vilaça": the whole name fits both, and the first word alone
+        // Two members, "Diego" and "Cabaça": the whole name fits both, and the first word alone
         // must not then pick one of them.
-        List<User> roster = [new() { Id = Guid.NewGuid(), Name = "Bruno" }, new() { Id = Guid.NewGuid(), Name = "Vilaça" }];
+        List<User> roster = [new() { Id = Guid.NewGuid(), Name = "Diego" }, new() { Id = Guid.NewGuid(), Name = "Cabaça" }];
 
-        Assert.Null(OcrTeamMatcher.ResolveParticipantFromFileName("Bruno Vilaça", roster));
+        Assert.Null(OcrTeamMatcher.ResolveParticipantFromFileName("Diego Cabaça", roster));
     }
 
     [Fact]
     public void The_file_name_files_every_row_under_its_participant()
     {
-        var result = Build(BeckerRound9, fileName: "Becker.jpeg");
+        var result = Build(CoelhoRound9, fileName: "Coelho.jpeg");
 
         Assert.Equal(11, result.Candidates.Count);
-        Assert.All(result.Candidates, c => Assert.Equal(Becker.Id, c.UserId));
+        Assert.All(result.Candidates, c => Assert.Equal(Coelho.Id, c.UserId));
         // What OCR read stays what OCR read: the file name is not passed off as it.
-        Assert.All(result.Candidates, c => Assert.Equal("Becker", c.ParticipantNameRaw));
+        Assert.All(result.Candidates, c => Assert.Equal("Coelho", c.ParticipantNameRaw));
     }
 
     [Fact]
     public void A_header_naming_someone_else_keeps_the_file_participant_but_goes_to_review()
     {
-        var result = Build("Gilberto, Rodada 9\nBrentford 2x1 Chelsea", fileName: "Valter.png");
+        var result = Build("Leonardo, Rodada 9\nBrentford 2x1 Chelsea", fileName: "Renato.png");
 
         var c = Assert.Single(result.Candidates);
-        Assert.Equal(Valter.Id, c.UserId);
+        Assert.Equal(Renato.Id, c.UserId);
         Assert.True(c.NeedsReview);
-        Assert.Contains("Gilberto", c.ReviewNotes);
+        Assert.Contains("Leonardo", c.ReviewNotes);
     }
 
     [Fact]
     public void A_file_name_that_names_nobody_leaves_the_header_to_decide()
     {
-        var result = Build("Nome, Defarias, Rodada 9\nBrentford 1 x O Chelsea", fileName: "9.png");
+        var result = Build("Nome, Decastro, Rodada 9\nBrentford 1 x O Chelsea", fileName: "9.png");
 
-        Assert.Equal(Felipe.Id, Assert.Single(result.Candidates).UserId);
+        Assert.Equal(Thiago.Id, Assert.Single(result.Candidates).UserId);
     }
 
     // --- Fixtures -----------------------------------------------------------
@@ -225,7 +225,7 @@ public class OcrScreenshotRegressionTests
     public void Garbled_clubs_on_a_small_screenshot_resolve_through_the_clean_side_and_go_to_review()
     {
         var round = Round9();
-        var result = Build(BeckerRound9, fileName: "Becker.jpeg", matches: round);
+        var result = Build(CoelhoRound9, fileName: "Coelho.jpeg", matches: round);
 
         Assert.All(result.Candidates, c => Assert.NotNull(c.RoundMatchId));
         Assert.Equal(11, result.Candidates.Select(c => c.RoundMatchId).Distinct().Count());
@@ -292,8 +292,8 @@ public class OcrScreenshotRegressionTests
     }
 
     [Theory]
-    [InlineData("— Gilberto Sales +55 85 98934-0476\nBotei o número 8 errado 14:46")]
-    [InlineData("~Valter Silva +55 61 98167-1289\nEstou na série C, e você?")]
+    [InlineData("— Leonardo Borba +55 00 91234-0476\nBotei o número 8 errado 14:46")]
+    [InlineData("~Renato Paiva +55 00 95678-1289\nEstou na série C, e você?")]
     [InlineData("mata). 22:897 - ee .)")]
     [InlineData("UTITIITTTATOY 22:238/ Palpitao England 2026/2027")]
     public void Chat_numbers_are_not_scores(string text)
@@ -317,8 +317,8 @@ public class OcrScreenshotRegressionTests
     public void The_reading_that_resolves_more_fixtures_wins_over_the_more_confident_one()
     {
         var result = BuildReadings(
-            new OcrReading("original", "PL Rodada 4\nLincoln 1x1 Southampton", 0.9f),
-            new OcrReading("prepared", "PL Rodada 4\nLincoln 1x1 Southampton\nPreston 0x2 Blackburn", 0.6f));
+            new OcrReading("original", "TB Rodada 4\nLincoln 1x1 Southampton", 0.9f),
+            new OcrReading("prepared", "TB Rodada 4\nLincoln 1x1 Southampton\nPreston 0x2 Blackburn", 0.6f));
 
         Assert.Equal("prepared", result.Reading.Variant);
         Assert.Equal(2, result.Candidates.Count);
@@ -327,12 +327,12 @@ public class OcrScreenshotRegressionTests
     [Fact]
     public void A_score_the_readings_disagree_on_goes_to_review_even_when_most_of_them_agree()
     {
-        // 4/neto: the image says 1x1; two of the three readings said 0x1. A vote would have kept the
+        // 4/nery: the image says 1x1; two of the three readings said 0x1. A vote would have kept the
         // wrong one — the disagreement itself is the signal.
         var result = BuildReadings(
-            new OcrReading("original", "PL Rodada 4\nLincoln 1x1 Southampton", 0.8f),
-            new OcrReading("prepared", "PL Rodada 4\nLincoln 0x1 Southampton", 0.9f),
-            new OcrReading("prepared+inverted", "PL Rodada 4\nLincoln 0x1 Southampton", 0.7f));
+            new OcrReading("original", "TB Rodada 4\nLincoln 1x1 Southampton", 0.8f),
+            new OcrReading("prepared", "TB Rodada 4\nLincoln 0x1 Southampton", 0.9f),
+            new OcrReading("prepared+inverted", "TB Rodada 4\nLincoln 0x1 Southampton", 0.7f));
 
         var c = Assert.Single(result.Candidates);
         Assert.True(c.NeedsReview);
@@ -342,10 +342,10 @@ public class OcrScreenshotRegressionTests
     [Fact]
     public void A_score_read_off_a_letter_goes_to_review_unless_another_reading_saw_digits()
     {
-        var alone = BuildReadings(new OcrReading("original", "PL Rodada 4\nLincoln Sx1 Southampton", 0.9f));
+        var alone = BuildReadings(new OcrReading("original", "TB Rodada 4\nLincoln Sx1 Southampton", 0.9f));
         var confirmed = BuildReadings(
-            new OcrReading("original", "PL Rodada 4\nLincoln Sx1 Southampton", 0.9f),
-            new OcrReading("prepared", "PL Rodada 4\nLincoln 5x1 Southampton", 0.8f));
+            new OcrReading("original", "TB Rodada 4\nLincoln Sx1 Southampton", 0.9f),
+            new OcrReading("prepared", "TB Rodada 4\nLincoln 5x1 Southampton", 0.8f));
 
         Assert.True(Assert.Single(alone.Candidates).NeedsReview);
         Assert.False(Assert.Single(confirmed.Candidates).NeedsReview);
@@ -356,21 +356,21 @@ public class OcrScreenshotRegressionTests
     [Fact]
     public void Another_rounds_fixtures_in_the_same_screenshot_are_left_out_and_counted()
     {
-        // "Ezaú, Rodada 6 e 7": one header, both rounds' lists under it.
+        // "Luís, Rodada 6 e 7": one header, both rounds' lists under it.
         var result = Build(
-            "Ezaú, Rodada 6 e 7\n" +
+            "Luís, Rodada 6 e 7\n" +
             "Championship\n" +
             "West Ham 2 x 0 Wrexham\n" +
             "Derby 1 x 1 Birmingham\n" +
             "Premier League\n" +
             "Bournemouth 1 x 1 Brentford\n" +
             "Man Utd 1 x 2 Man City (x2)",
-            fileName: "Ezau.jpeg",
+            fileName: "Luis.jpeg",
             matches: [Fixture("West Ham United", "Wrexham", 6), Fixture("Derby County", "Birmingham City", 6)],
             otherRounds: [Fixture("Bournemouth", "Brentford", 7), Fixture("Manchester United", "Manchester City", 7)]);
 
         Assert.Equal(2, result.Candidates.Count);
-        Assert.All(result.Candidates, c => Assert.Equal(Ezau.Id, c.UserId));
+        Assert.All(result.Candidates, c => Assert.Equal(Luis.Id, c.UserId));
         Assert.Equal(2, result.IgnoredLineCount);
         Assert.Equal(["7"], result.IgnoredRoundLabels);
     }
@@ -381,7 +381,7 @@ public class OcrScreenshotRegressionTests
         // Real clubs, but no fixture of any round: an outdated message, a typo. Dropping it would
         // lose a prediction without anyone seeing it.
         var result = Build(
-            "Ezaú, Rodada 6\nWest Ham 2 x 0 Wrexham\nFulham 1 x 0 Everton",
+            "Luís, Rodada 6\nWest Ham 2 x 0 Wrexham\nFulham 1 x 0 Everton",
             matches: [Fixture("West Ham United", "Wrexham", 6)],
             otherRounds: [Fixture("Bournemouth", "Brentford", 7)]);
 

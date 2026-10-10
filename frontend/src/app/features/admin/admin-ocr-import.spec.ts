@@ -8,7 +8,7 @@ function candidate(userId: string | null): OcrCandidate {
   return {
     id: crypto.randomUUID(),
     userId,
-    participantNameRaw: 'PL',
+    participantNameRaw: 'TB',
     roundMatchId: null,
     matchTextRaw: 'Wolves 2x0 Blackburn',
     predictedHomeScore: 2,

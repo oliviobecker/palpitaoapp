@@ -74,7 +74,7 @@ de diferença) nunca sai da vista.
 │   🥇 Flávio    🥈 Ana    🥉 Zé             │  pódio (aba Geral, ≥3)
 │    187          181       174              │
 ├────────────────────────────────────────────┤
-│  1  Flávio Barros              187      ⌄  │  ← linha inteira é o botão
+│  1  Flávio Costa              187      ⌄  │  ← linha inteira é o botão
 │  2  Ana Prado                  181      ⌄  │
 │  3  Zé Carlos          eliminado 174    ⌄  │
 └────────────────────────────────────────────┘
@@ -83,7 +83,7 @@ de diferença) nunca sai da vista.
 ### Linha expandida — o miolo da auditoria
 
 ```
-│  1  Flávio Barros              187      ⌃  │
+│  1  Flávio Costa              187      ⌃  │
 │  ────────────────────────────────────────  │
 │  Arsenal 2 × 1 Chelsea                     │
 │  [PL] [×2] [Clássico]                      │

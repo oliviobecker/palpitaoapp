@@ -124,25 +124,25 @@ var roster = new List<Participant>
 {
     // Who ends up champion is emergent, not assigned: the per-match spread is wide
     // enough that the top parameters are well under 1 sigma apart over a season.
-    new("Bruno Vilaça",    0.150, 0.335, 0.05, 0.15),
-    new("Ezaú Moura",      0.128, 0.330, 0.05, 0.18),
-    new("Felipe Farias",   0.122, 0.322, 0.06, 0.20),
-    new("Olivio Becker",   0.118, 0.318, 0.05, 0.20),
-    new("Pedro Rodrigues", 0.112, 0.312, 0.06, 0.22),
-    new("Gilberto Sales",  0.106, 0.305, 0.06, 0.24),
-    new("João Paulo",      0.100, 0.300, 0.07, 0.25),
-    new("Lucas Antunes",   0.095, 0.292, 0.07, 0.26),
-    new("Edson",           0.090, 0.285, 0.07, 0.28),
-    new("Manoel Neto",     0.085, 0.278, 0.08, 0.30),
-    new("Valter",          0.080, 0.268, 0.08, 0.32),
-    new("Dourado",         0.074, 0.258, 0.09, 0.35),
+    new("Diego Cabaça",    0.150, 0.335, 0.05, 0.15),
+    new("Luís Matos",      0.128, 0.330, 0.05, 0.18),
+    new("Thiago Castro",   0.122, 0.322, 0.06, 0.20),
+    new("Rafael Coelho",   0.118, 0.318, 0.05, 0.20),
+    new("Bento Fernandes", 0.112, 0.312, 0.06, 0.22),
+    new("Leonardo Borba",  0.106, 0.305, 0.06, 0.24),
+    new("Caio Nunes",      0.100, 0.300, 0.07, 0.25),
+    new("Daniel Teixeira", 0.095, 0.292, 0.07, 0.26),
+    new("Vitor",           0.090, 0.285, 0.07, 0.28),
+    new("Murilo Nery",     0.085, 0.278, 0.08, 0.30),
+    new("Renato",          0.080, 0.268, 0.08, 0.32),
+    new("Pacheco",         0.074, 0.258, 0.09, 0.35),
 };
 foreach (var p in roster) p.Email = $"{EmailSlug(p.Name)}@{emailDomain}";
 
 // Exercises every rung of AbsenceService.PenaltyFor: 1st/2nd free, 3rd/4th -20,
-// 5th eliminates. Lucas' partial round proves the "predictions < matches" branch.
+// 5th eliminates. Daniel's partial round proves the "predictions < matches" branch.
 var absencePlanRaw = Str("SEED_ABSENCE_PLAN",
-    "Dourado:5,11,17,23,28;Valter:7,14,20,33;Edson:9,19,30;Manoel Neto:12,25;João Paulo:21;Lucas Antunes:26:partial");
+    "Pacheco:5,11,17,23,28;Renato:7,14,20,33;Vitor:9,19,30;Murilo Nery:12,25;Caio Nunes:21;Daniel Teixeira:26:partial");
 
 foreach (var entry in absencePlanRaw.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
 {

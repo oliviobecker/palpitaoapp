@@ -171,7 +171,7 @@ overall standings update.
 - **Batch participant selector** on the review screen: files every candidate against one person
   through the existing per-candidate autosave — one screenshot is one person's predictions.
 - **Learned aliases** (`OcrParticipantAliases`, group-scoped): a correction the admin makes on
-  confirm is remembered and used on the next import (`Paraguaio` → `PL`). Only names the matcher
+  confirm is remembered and used on the next import (`Careca` → `TB`). Only names the matcher
   could not resolve itself, only when every row bearing that name agreed, and a later confirmation
   re-points a mapping learned from junk.
 - **Truncation**: `MatchTextRaw`/`ParticipantNameRaw` are clamped to their column widths in
@@ -187,11 +187,11 @@ overall standings update.
   **574/575** (the last one is an unreadable `1xP`), participant right on every print named after
   its person, both wrong scores flagged, other-round lines left out.
 - **Participant from the file name** (`OcrTextParser.NameFromFileName`,
-  `OcrTeamMatcher.ResolveParticipantFromFileName`): `Valter1.jpeg` → Valter Silva, ahead of whatever
+  `OcrTeamMatcher.ResolveParticipantFromFileName`): `Renato1.jpeg` → Renato Paiva, ahead of whatever
   OCR reads; generic names (`9.png`, `WhatsApp Image …`) fall back to the header. A header naming
   someone else keeps the file's participant but flags the rows.
 - **Parser**: `Name: content` only when the content holds a fixture (the `REGRA FLÁVIO: … 24 horas`
-  line named the participant of every row below it); initials in the round header (`JP Rodada 9`);
+  line named the participant of every row below it); initials in the round header (`CN Rodada 9`);
   the `Nome` placeholder dropped; headings recognised with up to two wrong characters; the round
   message's words never a name; phone numbers and glued digits across `:`/`-` never a score; a
   doubled zero against the separator (`OxO0`) read as one; `ScoreFromLetter` for any non-O letter.

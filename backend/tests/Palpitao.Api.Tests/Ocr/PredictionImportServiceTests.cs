@@ -142,13 +142,13 @@ public class PredictionImportServiceTests
     }
 
     [Theory]
-    // The round keyword gets one wrong character too. "Feunppe, Kodada 1" is a real header: a
+    // The round keyword gets one wrong character too. "Tniaqgo, Kodada 1" is a real header: a
     // capital R read as a K used to throw the participant away entirely, leaving the admin with
     // no name to correct and nothing for the group to learn.
     // One character *substituted*, which is what OCR does — first, middle or last. An inserted or
     // dropped letter is not covered on purpose: "Rodadas" is a different word, not a misread one.
-    [InlineData("Feunppe, Kodada 1", "Feunppe")]
-    [InlineData("Gilberto, Rodadn 2", "Gilberto")]
+    [InlineData("Tniaqgo, Kodada 1", "Tniaqgo")]
+    [InlineData("Leonardo, Rodadn 2", "Leonardo")]
     [InlineData("Ana - Roduda 3", "Ana")]
     public void Parser_reads_a_round_header_whose_keyword_ocr_mangled(string header, string expected)
     {
@@ -167,14 +167,14 @@ public class PredictionImportServiceTests
         // The message prints the participant header first and a competition heading above each
         // block. Both are bare letters-and-spaces lines, so the heading used to overwrite the
         // participant and every fixture below it was filed against nobody.
-        var text = $"Becker, Rodada 2\n{heading}\nArsenal 2x1 Chelsea";
-        List<User> participants = [new() { Id = Guid.NewGuid(), Name = "Becker", Role = UserRole.Participant }];
+        var text = $"Coelho, Rodada 2\n{heading}\nArsenal 2x1 Chelsea";
+        List<User> participants = [new() { Id = Guid.NewGuid(), Name = "Coelho", Role = UserRole.Participant }];
 
         var candidates = PureService().BuildCandidates(
             Guid.NewGuid(), Guid.NewGuid(), text, Matches(), participants);
 
         var c = Assert.Single(candidates);
-        Assert.Equal("Becker", c.ParticipantNameRaw);
+        Assert.Equal("Coelho", c.ParticipantNameRaw);
         Assert.Equal(participants[0].Id, c.UserId);
         Assert.False(c.NeedsReview);
     }
@@ -354,8 +354,8 @@ public class PredictionImportServiceTests
     }
 
     [Theory]
-    [InlineData("Gilberto, Rodada 10.2", "Gilberto")]
-    [InlineData("PALPITES PL, Rodada 10.2", "PL")]
+    [InlineData("Leonardo, Rodada 10.2", "Leonardo")]
+    [InlineData("PALPITES TB, Rodada 10.2", "TB")]
     public void A_part_label_in_the_header_is_read_as_the_header_not_a_score(string header, string participant)
     {
         // The app prints a round played in parts as "10.2" — with a dot precisely because the
@@ -374,7 +374,7 @@ public class PredictionImportServiceTests
         // team and score, multi-word team names, trailing timestamp.
         var text =
             "Palpitão Copa do Mundo 2026\n" +
-            "Gilberto, Rodada 2 (1a fase de grupos)\n" +
+            "Leonardo, Rodada 2 (1a fase de grupos)\n" +
             "\n" +
             "Bélgica 🇧🇪 2 x 1 🇪🇬 Egito\n" +
             "Irã 🇮🇷 1 x 0 🇳🇿 Nova Zelândia\n" +
@@ -393,8 +393,8 @@ public class PredictionImportServiceTests
         var parsed = PureService().Parse(text);
 
         Assert.Equal(12, parsed.Count);
-        // Participant comes from the "Gilberto, Rodada 2" header, not the title.
-        Assert.All(parsed, p => Assert.Equal("Gilberto", p.ParticipantName));
+        // Participant comes from the "Leonardo, Rodada 2" header, not the title.
+        Assert.All(parsed, p => Assert.Equal("Leonardo", p.ParticipantName));
         // Team names are clean (no emoji/flag surrogate noise left over).
         Assert.All(parsed, p => Assert.False((p.HomeTeamRaw + p.AwayTeamRaw).Any(char.IsSurrogate)));
 
@@ -419,12 +419,12 @@ public class PredictionImportServiceTests
         // Verbatim Tesseract output for a real WhatsApp screenshot: flag emoji are
         // read as stray glyphs ("R", "==", "=u", "mm"), some scores come out as
         // letters ("O" for 0), and three lines are too corrupted to read at all
-        // (Uruguai/Argentina/Gana). The participant must stay "Gilberto" throughout.
+        // (Uruguai/Argentina/Gana). The participant must stay "Leonardo" throughout.
         var text =
             "uetucdbdaino: Aucbod :\n" +
             "\n" +
             "Palpitão Copa do Mundo 2026 ;\n" +
-            "Gilberto, Rodada 2 (1a fase de grupos) -\n" +
+            "Leonardo, Rodada 2 (1a fase de grupos) -\n" +
             "\n" +
             "Bélgica R 2x 1 == Egito\n" +
             "\n" +
@@ -446,7 +446,7 @@ public class PredictionImportServiceTests
 
         // 9 of 12 recovered; the 3 OCR-garbled lines are unrecoverable.
         Assert.Equal(9, parsed.Count);
-        Assert.All(parsed, p => Assert.Equal("Gilberto", p.ParticipantName));
+        Assert.All(parsed, p => Assert.Equal("Leonardo", p.ParticipantName));
 
         Assert.Equal((2, 1), (parsed[0].HomeScore, parsed[0].AwayScore)); // Bélgica x Egito
         Assert.Equal("Bélgica", parsed[0].HomeTeamRaw);
@@ -544,21 +544,21 @@ public class PredictionImportServiceTests
     public void Parser_reads_the_screenshot_whose_name_only_follows_a_palpites_prefix()
     {
         // Batch 78a9fcb6: the chat header above the scores is pure OCR noise, and the only
-        // usable name is the ALL-CAPS "PALPITES PL" the group writes. "nAc" (junk) and
-        // "Paraguaio" (a nickname) both look like names and both used to win.
+        // usable name is the ALL-CAPS "PALPITES TB" the group writes. "nAc" (junk) and
+        // "Careca" (a nickname) both look like names and both used to win.
         var text =
             "12:32 B * SE\n" +
             "ÃL )\n" +
             "ALAFCA\n" +
             "nAc\n" +
             "Palpitão England 26/27 v\n" +
-            "Bruno, De Farias, Dr. Flavio Cr...\n" +
+            "Diego, De Castro, Dr. Flavio Co...\n" +
             "X4 REGRAS:\n" +
             "U-ULZ\n" +
-            "\"Paraguaio\"\n" +
+            "\"Careca\"\n" +
             "Palpitão England 2026/2027\n" +
             "— Rodada 1\n" +
-            "PALPITES PL\n" +
+            "PALPITES TB\n" +
             "Wolves 2x0 Blackburn\n" +
             "Bolton 2x1 Preston\n" +
             "Charlton 1x0 Derby\n" +
@@ -572,12 +572,12 @@ public class PredictionImportServiceTests
             "Burnley 2x1 West Ham\n" +
             "Cardiff 1x2 Wrexham 17:35 ,\n";
 
-        List<User> participants = [new() { Id = Guid.NewGuid(), Name = "PL", Role = UserRole.Participant }];
+        List<User> participants = [new() { Id = Guid.NewGuid(), Name = "TB", Role = UserRole.Participant }];
         var candidates = PureService()
             .BuildCandidates(Guid.NewGuid(), Guid.NewGuid(), text, ChampionshipRound(), participants);
 
         Assert.Equal(12, candidates.Count);
-        Assert.All(candidates, c => Assert.Equal("PL", c.ParticipantNameRaw));
+        Assert.All(candidates, c => Assert.Equal("TB", c.ParticipantNameRaw));
         Assert.All(candidates, c => Assert.False(c.NeedsReview));
     }
 
@@ -587,14 +587,14 @@ public class PredictionImportServiceTests
         // Verbatim engine output for the round the group actually posted, once the untouched
         // image was allowed to compete with the binarized ones. Two things used to go wrong at
         // once: the only usable name is behind "PALPITES" with the round glued to it, so the
-        // parser fell back on the sender's contact name at the top of the bubble ("Pedro
+        // parser fell back on the sender's contact name at the top of the bubble ("Bento
         // Rodrigues", nobody on the roster); and the bubble broke two fixtures onto a second line
         // ("Birmingham 2 x 0" / "Bristol City", "QPR2x0" / "Bolton"), which cost the fixture and
         // handed the participant to a club for every row below it.
         var text =
-            "Pedro Rodrigues\n" +
+            "Bento Fernandes\n" +
             "Palpitao England 2026/2027\n" +
-            "PALPITES PL, Rodada 1\n" +
+            "PALPITES TB, Rodada 1\n" +
             "\n" +
             "Palpites até 14h59 de sexta-feira (21/08/2026):\n" +
             "\n" +
@@ -637,12 +637,12 @@ public class PredictionImportServiceTests
             "\n" +
             "Como vou tirar print dessa merda? ; -. ,,,";
 
-        List<User> participants = [new() { Id = Guid.NewGuid(), Name = "PL", Role = UserRole.Participant }];
+        List<User> participants = [new() { Id = Guid.NewGuid(), Name = "TB", Role = UserRole.Participant }];
         var candidates = PureService()
             .BuildCandidates(Guid.NewGuid(), Guid.NewGuid(), text, PalpitaoEnglandRound(), participants);
 
         Assert.Equal(23, candidates.Count);
-        Assert.All(candidates, c => Assert.Equal("PL", c.ParticipantNameRaw));
+        Assert.All(candidates, c => Assert.Equal("TB", c.ParticipantNameRaw));
 
         // The two the bubble broke in half, back in one piece and resolved.
         var birmingham = Assert.Single(
@@ -688,7 +688,7 @@ public class PredictionImportServiceTests
     // The line under a dangling score is glued to it only when it is really the other half of the
     // fixture. A name header or a competition heading announces the next block instead, and
     // swallowing one would cost the participant every row below it.
-    [InlineData("PALPITES PL")]
+    [InlineData("PALPITES TB")]
     [InlineData("Championship")]
     public void Parser_does_not_glue_a_header_onto_a_dangling_score(string header)
     {
@@ -705,11 +705,11 @@ public class PredictionImportServiceTests
         // dropped ~20 of the 23 fixtures outright -- that is an engine problem, not a parsing one,
         // and this fixture exists to pin what the parser does with the little that survives.
         // The headings came back misspelled ("Championshio", "Leaque One"), which is exactly the
-        // shape of a person's name, and they used to take the participant away from PL.
+        // shape of a person's name, and they used to take the participant away from TB.
         var text =
-            "Ó PesoRotigues\n" +
+            "Ó BentoFernades\n" +
             "Palpitao England 2026/2027\n" +
-            "PALPITES PL, Rodada 1\n" +
+            "PALPITES TB, Rodada 1\n" +
             "\n" +
             "Palpites até 14h59 de serta feira (21/08/2026):\n" +
             "\n" +
@@ -725,13 +725,13 @@ public class PredictionImportServiceTests
             "\n" +
             "-n";
 
-        var pl = new User { Id = Guid.NewGuid(), Name = "PL", Role = UserRole.Participant };
+        var tb = new User { Id = Guid.NewGuid(), Name = "TB", Role = UserRole.Participant };
         var candidates = PureService()
-            .BuildCandidates(Guid.NewGuid(), Guid.NewGuid(), text, PalpitaoEnglandRound(), [pl]);
+            .BuildCandidates(Guid.NewGuid(), Guid.NewGuid(), text, PalpitaoEnglandRound(), [tb]);
 
         Assert.Equal(3, candidates.Count);
-        Assert.All(candidates, c => Assert.Equal("PL", c.ParticipantNameRaw));
-        Assert.All(candidates, c => Assert.Equal(pl.Id, c.UserId));
+        Assert.All(candidates, c => Assert.Equal("TB", c.ParticipantNameRaw));
+        Assert.All(candidates, c => Assert.Equal(tb.Id, c.UserId));
 
         // Brentford and Leicester resolve ("Burion" is one edit from Burton Albion); "Portemouih"
         // is two edits from Portsmouth, past the budget, so that one stays for the admin.
@@ -743,18 +743,18 @@ public class PredictionImportServiceTests
     public void A_misread_heading_does_not_take_the_participant_from_an_announced_name()
     {
         var parsed = Assert.Single(
-            PureService().Parse("PALPITES PL\nChampionshio\nArsenal 2x1 Chelsea"));
+            PureService().Parse("PALPITES TB\nChampionshio\nArsenal 2x1 Chelsea"));
 
-        Assert.Equal("PL", parsed.ParticipantName);
+        Assert.Equal("TB", parsed.ParticipantName);
     }
 
     [Fact]
     public void An_announced_name_still_wins_over_a_bare_one_read_before_it()
     {
         var parsed = Assert.Single(
-            PureService().Parse("Ó PesoRotigues\nPALPITES PL\nArsenal 2x1 Chelsea"));
+            PureService().Parse("Ó BentoFernades\nPALPITES TB\nArsenal 2x1 Chelsea"));
 
-        Assert.Equal("PL", parsed.ParticipantName);
+        Assert.Equal("TB", parsed.ParticipantName);
     }
 
     [Fact]
@@ -808,13 +808,13 @@ public class PredictionImportServiceTests
 
     [Theory]
     // The group writes the name behind this prefix, in whatever casing it feels like.
-    [InlineData("PALPITES Felippe", "Felippe")]
-    [InlineData("Palpites do Edson", "Edson")]
+    [InlineData("PALPITES Thiaggo", "Thiaggo")]
+    [InlineData("Palpites do Vitor", "Vitor")]
     [InlineData("palpite da Ana", "Ana")]
     // ...and often with the round riding on the same line, which is not part of the name.
-    [InlineData("PALPITES PL, Rodada 1", "PL")]
-    [InlineData("PALPITES Felippe, Rodada 3", "Felippe")]
-    [InlineData("Palpites do Edson - Rodada 2", "Edson")]
+    [InlineData("PALPITES TB, Rodada 1", "TB")]
+    [InlineData("PALPITES Thiaggo, Rodada 3", "Thiaggo")]
+    [InlineData("Palpites do Vitor - Rodada 2", "Vitor")]
     public void Parser_reads_the_name_behind_a_palpites_prefix(string header, string expected)
     {
         var parsed = Assert.Single(PureService().Parse($"{header}\nArsenal 2x1 Chelsea"));
@@ -836,7 +836,7 @@ public class PredictionImportServiceTests
     [Theory]
     // The comma is optional and the emphasis markers are stripped...
     [InlineData("*Flavio Rodada 1 (RODADA TESTE", "Flavio")]
-    [InlineData("Gilberto, Rodada 2 (1a fase de grupos)", "Gilberto")]
+    [InlineData("Leonardo, Rodada 2 (1a fase de grupos)", "Leonardo")]
     [InlineData("_Ana_ - Rodada 3", "Ana")]
     // ...but the season title the app itself prints above the fixtures is not a person.
     [InlineData("Palpitão England 2026/2027 — Rodada 1", null)]
@@ -947,16 +947,16 @@ public class PredictionImportServiceTests
     [Fact]
     public void A_learned_alias_resolves_the_participant_on_the_next_import()
     {
-        // "Paraguaio" is the nickname the group writes; the roster says "PL". Nothing about the
+        // "Careca" is the nickname the group writes; the roster says "TB". Nothing about the
         // two strings matches, so only a confirmed alias can bridge them.
-        var pl = new User { Id = Guid.NewGuid(), Name = "PL", Role = UserRole.Participant };
-        var aliases = new Dictionary<string, Guid> { [OcrTeamMatcher.NormalizeAlias("Paraguaio")] = pl.Id };
+        var tb = new User { Id = Guid.NewGuid(), Name = "TB", Role = UserRole.Participant };
+        var aliases = new Dictionary<string, Guid> { [OcrTeamMatcher.NormalizeAlias("Careca")] = tb.Id };
 
         var candidates = PureService().BuildCandidates(
-            Guid.NewGuid(), Guid.NewGuid(), "Paraguaio\nArsenal 2x1 Chelsea", Matches(), [pl], aliases);
+            Guid.NewGuid(), Guid.NewGuid(), "Careca\nArsenal 2x1 Chelsea", Matches(), [tb], aliases);
 
         var c = Assert.Single(candidates);
-        Assert.Equal(pl.Id, c.UserId);
+        Assert.Equal(tb.Id, c.UserId);
         Assert.False(c.NeedsReview);
         Assert.Equal(1.0, c.Confidence);
     }
@@ -965,29 +965,29 @@ public class PredictionImportServiceTests
     // The stored key is normalized, so casing, accents and stray spacing all still hit it. An
     // ALL-CAPS line is not among them: the parser refuses to read one as a name at all (that is
     // what keeps OCR noise from stealing the participant), unless it follows "PALPITES".
-    [InlineData("paraguaio")]
-    [InlineData("Paraguaio")]
-    [InlineData("Paraguáio")]
-    [InlineData("PALPITES PARAGUAIO")]
+    [InlineData("careca")]
+    [InlineData("Careca")]
+    [InlineData("Caréca")]
+    [InlineData("PALPITES CARECA")]
     public void A_learned_alias_ignores_casing_and_spacing(string written)
     {
-        var pl = new User { Id = Guid.NewGuid(), Name = "PL", Role = UserRole.Participant };
-        var aliases = new Dictionary<string, Guid> { [OcrTeamMatcher.NormalizeAlias("  Paraguaio ")] = pl.Id };
+        var tb = new User { Id = Guid.NewGuid(), Name = "TB", Role = UserRole.Participant };
+        var aliases = new Dictionary<string, Guid> { [OcrTeamMatcher.NormalizeAlias("  Careca ")] = tb.Id };
 
         var candidates = PureService().BuildCandidates(
-            Guid.NewGuid(), Guid.NewGuid(), $"{written}\nArsenal 2x1 Chelsea", Matches(), [pl], aliases);
+            Guid.NewGuid(), Guid.NewGuid(), $"{written}\nArsenal 2x1 Chelsea", Matches(), [tb], aliases);
 
-        Assert.Equal(pl.Id, Assert.Single(candidates).UserId);
+        Assert.Equal(tb.Id, Assert.Single(candidates).UserId);
     }
 
     [Fact]
     public void A_learned_alias_is_ignored_once_the_participant_leaves_the_roster()
     {
         var gone = Guid.NewGuid();
-        var aliases = new Dictionary<string, Guid> { [OcrTeamMatcher.NormalizeAlias("Paraguaio")] = gone };
+        var aliases = new Dictionary<string, Guid> { [OcrTeamMatcher.NormalizeAlias("Careca")] = gone };
 
         var candidates = PureService().BuildCandidates(
-            Guid.NewGuid(), Guid.NewGuid(), "Paraguaio\nArsenal 2x1 Chelsea", Matches(), Participants(), aliases);
+            Guid.NewGuid(), Guid.NewGuid(), "Careca\nArsenal 2x1 Chelsea", Matches(), Participants(), aliases);
 
         var c = Assert.Single(candidates);
         Assert.Null(c.UserId);
@@ -999,16 +999,16 @@ public class PredictionImportServiceTests
     {
         using var db = CreateContext();
         var (roundId, matchId, _) = SeedRound(db);
-        var pl = SeedParticipant(db, "PL");
-        var batchId = SeedBatchWithCandidates(db, roundId, (matchId, pl, "Paraguaio"));
+        var tb = SeedParticipant(db, "TB");
+        var batchId = SeedBatchWithCandidates(db, roundId, (matchId, tb, "Careca"));
         var service = ImportService(db);
 
         await service.ConfirmAsync(batchId, Admin, Ct);
 
         var alias = await db.OcrParticipantAliases.SingleAsync();
-        Assert.Equal(OcrTeamMatcher.NormalizeAlias("Paraguaio"), alias.Alias);
-        Assert.Equal("Paraguaio", alias.AliasRaw);
-        Assert.Equal(pl, alias.UserId);
+        Assert.Equal(OcrTeamMatcher.NormalizeAlias("Careca"), alias.Alias);
+        Assert.Equal("Careca", alias.AliasRaw);
+        Assert.Equal(tb, alias.UserId);
         Assert.Equal(SeedIds.DefaultGroup, alias.GroupId);
         Assert.Contains(await db.AuditLogs.ToListAsync(), a => a.Action == "OcrParticipantAliasesLearned");
     }
@@ -1020,8 +1020,8 @@ public class PredictionImportServiceTests
         // pin a roster name that is free to change.
         using var db = CreateContext();
         var (roundId, matchId, _) = SeedRound(db);
-        var pl = SeedParticipant(db, "PL");
-        var batchId = SeedBatchWithCandidates(db, roundId, (matchId, pl, "PL"));
+        var tb = SeedParticipant(db, "TB");
+        var batchId = SeedBatchWithCandidates(db, roundId, (matchId, tb, "TB"));
         var service = ImportService(db);
 
         await service.ConfirmAsync(batchId, Admin, Ct);
@@ -1036,10 +1036,10 @@ public class PredictionImportServiceTests
         // so it is better forgotten than guessed.
         using var db = CreateContext();
         var (roundId, matchId, _) = SeedRound(db);
-        var first = SeedParticipant(db, "PL");
+        var first = SeedParticipant(db, "TB");
         var second = SeedParticipant(db, "Flavio");
         var batchId = SeedBatchWithCandidates(
-            db, roundId, (matchId, first, "Paraguaio"), (matchId, second, "Paraguaio"));
+            db, roundId, (matchId, first, "Careca"), (matchId, second, "Careca"));
         var service = ImportService(db);
 
         await service.ConfirmAsync(batchId, Admin, Ct);
@@ -1054,7 +1054,7 @@ public class PredictionImportServiceTests
         // rather than leaving the group with a permanently wrong mapping.
         using var db = CreateContext();
         var (roundId, matchId, _) = SeedRound(db);
-        var wrong = SeedParticipant(db, "PL");
+        var wrong = SeedParticipant(db, "TB");
         var right = SeedParticipant(db, "Flavio");
         var service = ImportService(db);
 
@@ -1068,19 +1068,19 @@ public class PredictionImportServiceTests
     [Fact]
     public async Task Confirm_learns_the_file_name_when_it_named_nobody_yet()
     {
-        // "JP.jpeg" for a member registered as "João Paulo": the admin picks him once, and the
+        // "CN.jpeg" for a member registered as "Caio Nunes": the admin picks him once, and the
         // file name — not the junk OCR read off the image — is what the next import resolves.
         using var db = CreateContext();
         var (roundId, matchId, _) = SeedRound(db);
-        var joao = SeedParticipant(db, "João Paulo");
+        var caio = SeedParticipant(db, "Caio Nunes");
         var service = ImportService(db);
 
         await service.ConfirmAsync(
-            SeedNamedBatchWithCandidates(db, roundId, "JP.jpeg", (matchId, joao, "Premier Leaque")), Admin, Ct);
+            SeedNamedBatchWithCandidates(db, roundId, "CN.jpeg", (matchId, caio, "Premier Leaque")), Admin, Ct);
 
         var alias = await db.OcrParticipantAliases.SingleAsync();
-        Assert.Equal("JP", alias.AliasRaw);
-        Assert.Equal(joao, alias.UserId);
+        Assert.Equal("CN", alias.AliasRaw);
+        Assert.Equal(caio, alias.UserId);
     }
 
     [Fact]
@@ -1088,11 +1088,11 @@ public class PredictionImportServiceTests
     {
         using var db = CreateContext();
         var (roundId, matchId, _) = SeedRound(db);
-        var valter = SeedParticipant(db, "Valter Silva");
+        var renato = SeedParticipant(db, "Renato Paiva");
         var service = ImportService(db);
 
         await service.ConfirmAsync(
-            SeedNamedBatchWithCandidates(db, roundId, "Valter1.jpeg", (matchId, valter, "REGRA FLÁVIO")), Admin, Ct);
+            SeedNamedBatchWithCandidates(db, roundId, "Renato1.jpeg", (matchId, renato, "REGRA FLÁVIO")), Admin, Ct);
 
         Assert.Empty(await db.OcrParticipantAliases.ToListAsync());
     }
@@ -1107,28 +1107,28 @@ public class PredictionImportServiceTests
     {
         using var db = CreateContext();
         var (roundId, matchId, _) = SeedRound(db);
-        var pl = SeedParticipant(db, "PL");
+        var tb = SeedParticipant(db, "TB");
         var service = ImportService(db);
 
-        await service.ConfirmAsync(SeedBatchWithCandidates(db, roundId, (matchId, pl, raw)), Admin, Ct);
+        await service.ConfirmAsync(SeedBatchWithCandidates(db, roundId, (matchId, tb, raw)), Admin, Ct);
 
         Assert.Empty(await db.OcrParticipantAliases.ToListAsync());
     }
 
     [Theory]
-    [InlineData("x.png", "Ezau")] // the name OCR read belongs to another member
-    [InlineData("Ezau.jpg", "Premier Leaque")] // the file was labelled with another member's name
+    [InlineData("x.png", "Luis")] // the name OCR read belongs to another member
+    [InlineData("Luis.jpg", "Premier Leaque")] // the file was labelled with another member's name
     public async Task Confirm_does_not_learn_a_name_that_already_points_at_someone_else(string file, string raw)
     {
-        // Learning "ezau" -> Bruno here would take Ezaú's own name away from him on every later
+        // Learning "luis" -> Diego here would take Luís's own name away from him on every later
         // import: aliases are checked before names.
         using var db = CreateContext();
         var (roundId, matchId, _) = SeedRound(db);
-        SeedParticipant(db, "Ezaú Moura");
-        var bruno = SeedParticipant(db, "Bruno Vilaça");
+        SeedParticipant(db, "Luís Matos");
+        var diego = SeedParticipant(db, "Diego Cabaça");
         var service = ImportService(db);
 
-        await service.ConfirmAsync(SeedNamedBatchWithCandidates(db, roundId, file, (matchId, bruno, raw)), Admin, Ct);
+        await service.ConfirmAsync(SeedNamedBatchWithCandidates(db, roundId, file, (matchId, diego, raw)), Admin, Ct);
 
         Assert.Empty(await db.OcrParticipantAliases.ToListAsync());
     }

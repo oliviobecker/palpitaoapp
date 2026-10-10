@@ -139,14 +139,14 @@ public class ParticipantAbsenceReviewTests
     public async Task Reviewing_absences_excuses_the_rounds_and_reshuffles_the_ladder_for_everyone()
     {
         using var db = CreateContext();
-        var joao = CreateParticipant(db, "João Paulo");
-        var bruno = CreateParticipant(db, "Bruno");
+        var joao = CreateParticipant(db, "Caio Nunes");
+        var diego = CreateParticipant(db, "Diego");
 
         // Five scored rounds João never predicted: 5th absence -> eliminated, 3rd/4th -> -20 each.
         var rounds = new List<RoundDto>();
         for (var number = 1; number <= 5; number++)
         {
-            rounds.Add(await ScoredRound(db, number, bruno));
+            rounds.Add(await ScoredRound(db, number, diego));
         }
 
         Assert.True(TestSeed.IsEliminatedInDefaultGroup(db, joao));
@@ -183,8 +183,8 @@ public class ParticipantAbsenceReviewTests
         Assert.Equal(3, joaoStanding.PlayedRounds);
         Assert.Equal(0, joaoStanding.TotalPoints);
 
-        // Bruno's five exact hits are untouched by the replay.
-        Assert.Equal(15, StoredStanding(db, bruno).TotalPoints);
+        // Diego's five exact hits are untouched by the replay.
+        Assert.Equal(15, StoredStanding(db, diego).TotalPoints);
 
         var overrides = db.AbsenceOverrides.Where(o => o.UserId == joao).ToList();
         Assert.Equal(3, overrides.Count);
@@ -198,9 +198,9 @@ public class ParticipantAbsenceReviewTests
     public async Task Reviewing_a_locked_round_only_stores_the_override_without_recalculating()
     {
         using var db = CreateContext();
-        var joao = CreateParticipant(db, "João Paulo");
-        var bruno = CreateParticipant(db, "Bruno");
-        var scored = await ScoredRound(db, 1, bruno);
+        var joao = CreateParticipant(db, "Caio Nunes");
+        var diego = CreateParticipant(db, "Diego");
+        var scored = await ScoredRound(db, 1, diego);
         var locked = await PublishedRound(db, 2);
         await Rounds(db).LockAsync(locked.Id, Admin, Ct);
 
@@ -224,9 +224,9 @@ public class ParticipantAbsenceReviewTests
     public async Task Reviewing_with_no_changes_is_a_no_op()
     {
         using var db = CreateContext();
-        var joao = CreateParticipant(db, "João Paulo");
-        var bruno = CreateParticipant(db, "Bruno");
-        var scored = await ScoredRound(db, 1, bruno);
+        var joao = CreateParticipant(db, "Caio Nunes");
+        var diego = CreateParticipant(db, "Diego");
+        var scored = await ScoredRound(db, 1, diego);
 
         // Confirming the dialog with every round still ticked as absent.
         var result = await TestServices.RoundScoring(db).ReviewParticipantAbsencesAsync(
@@ -244,10 +244,10 @@ public class ParticipantAbsenceReviewTests
     public async Task Reviewing_rolls_back_the_overrides_when_the_recalculation_fails()
     {
         using var db = CreateContext();
-        var joao = CreateParticipant(db, "João Paulo");
-        var bruno = CreateParticipant(db, "Bruno");
-        var first = await ScoredRound(db, 1, bruno);
-        var second = await ScoredRound(db, 2, bruno);
+        var joao = CreateParticipant(db, "Caio Nunes");
+        var diego = CreateParticipant(db, "Diego");
+        var first = await ScoredRound(db, 1, diego);
+        var second = await ScoredRound(db, 2, diego);
 
         // A result wiped after scoring makes the replay of round 2 fail half-way, after round 1
         // was already re-scored inside the transaction.
@@ -269,7 +269,7 @@ public class ParticipantAbsenceReviewTests
     public async Task Reviewing_an_ineligible_round_persists_nothing()
     {
         using var db = CreateContext();
-        var joao = CreateParticipant(db, "João Paulo");
+        var joao = CreateParticipant(db, "Caio Nunes");
         var stillOpen = await PublishedRound(db, 1);
 
         await Assert.ThrowsAsync<BusinessRuleException>(() => TestServices.RoundScoring(db)

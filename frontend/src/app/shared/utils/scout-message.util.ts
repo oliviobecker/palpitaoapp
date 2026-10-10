@@ -8,8 +8,8 @@ import { shortTeamName } from './team-name.util';
  *
  *   Scout Man Utd x Man City
  *
- *   - 1x1 @Felipe
- *   - 2x0 @Bruno @Dourado
+ *   - 1x1 @Thiago
+ *   - 2x0 @Diego @Pacheco
  */
 export function buildMatchScoutMessage(match: ScoutMatch): string {
   const lines: string[] = [
