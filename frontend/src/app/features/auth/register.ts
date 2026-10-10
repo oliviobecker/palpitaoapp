@@ -8,51 +8,28 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AbstractControl, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormBuilder } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Lang, LanguageService } from '@core/i18n/language.service';
 import { PublicGroup } from '@core/models';
 import { httpErrorMessage } from '@core/notifications/http-error';
 import { AuthService } from '@core/auth/auth.service';
 import { GroupsService } from '@core/services/groups.service';
 import { FormField } from '@shared/components/form-field/form-field';
-
-/** Form-level validator: confirmPassword must equal password. */
-export function passwordsMatch(group: AbstractControl): ValidationErrors | null {
-  const password = group.get('password')?.value;
-  const confirm = group.get('confirmPassword')?.value;
-  return password && confirm && password !== confirm ? { passwordMismatch: true } : null;
-}
+import { passwordsMatch, strongPassword } from '@shared/validators/password.validators';
+import { LanguageSwitcher } from '@shared/components/language-switcher/language-switcher';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-register',
-  imports: [ReactiveFormsModule, RouterLink, TranslatePipe, FormField],
+  imports: [LanguageSwitcher, ReactiveFormsModule, RouterLink, TranslatePipe, FormField],
   template: `
     <div class="auth-wrapper">
       <div class="auth-card">
         <div>
           <div class="d-flex justify-content-end">
-            <div class="btn-group btn-group-sm" role="group" aria-label="Language">
-              <button
-                type="button"
-                class="btn btn-outline-secondary"
-                [class.active]="language.current() === 'pt-BR'"
-                (click)="setLanguage('pt-BR')"
-              >
-                PT
-              </button>
-              <button
-                type="button"
-                class="btn btn-outline-secondary"
-                [class.active]="language.current() === 'en-US'"
-                (click)="setLanguage('en-US')"
-              >
-                EN
-              </button>
-            </div>
+            <app-language-switcher />
           </div>
 
           <div class="text-center mb-4">
@@ -177,7 +154,6 @@ export class Register implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly groupsApi = inject(GroupsService);
-  protected readonly language = inject(LanguageService);
   private readonly translate = inject(TranslateService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -191,7 +167,7 @@ export class Register implements OnInit {
       groupId: ['', [Validators.required]],
       name: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d).{8,}$/)]],
+      password: ['', strongPassword],
       confirmPassword: ['', [Validators.required]],
     },
     { validators: passwordsMatch },
@@ -202,10 +178,6 @@ export class Register implements OnInit {
       .listActive()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((groups) => this.groups.set(groups));
-  }
-
-  setLanguage(lang: Lang): void {
-    this.language.use(lang);
   }
 
   submit(): void {

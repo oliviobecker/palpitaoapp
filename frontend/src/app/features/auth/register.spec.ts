@@ -1,6 +1,6 @@
 import { FormBuilder, Validators } from '@angular/forms';
 import { describe, expect, it } from 'vitest';
-import { passwordsMatch } from './register';
+import { passwordsMatch, strongPassword } from '@shared/validators/password.validators';
 
 const fb = new FormBuilder();
 
@@ -9,7 +9,7 @@ function buildForm() {
     {
       name: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d).{8,}$/)]],
+      password: ['', strongPassword],
       confirmPassword: ['', [Validators.required]],
     },
     { validators: passwordsMatch },

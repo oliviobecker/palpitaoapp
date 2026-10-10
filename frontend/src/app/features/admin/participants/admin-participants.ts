@@ -32,6 +32,7 @@ import {
   absenceReviewHintKey,
   absenceReviewToastKey,
 } from './admin-participants.util';
+import { strongPassword } from '@shared/validators/password.validators';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -269,7 +270,7 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
     name: ['', Validators.required],
     email: ['', [Validators.required, Validators.email]],
     // Same strength rule as self-registration and the backend: 8+ chars, letter + digit.
-    password: ['', [Validators.required, Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d).{8,}$/)]],
+    password: ['', strongPassword],
   });
 
   ngOnInit(): void {
@@ -308,10 +309,7 @@ export class AdminParticipants implements OnInit, HasUnsavedChanges {
 
   resetForm(): void {
     this.editingId.set(null);
-    this.form.controls.password.setValidators([
-      Validators.required,
-      Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d).{8,}$/),
-    ]);
+    this.form.controls.password.setValidators(strongPassword);
     this.form.reset({ name: '', email: '', password: '' });
   }
 

@@ -11,7 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Meta } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { Lang, LanguageService } from '@core/i18n/language.service';
+import { LanguageService } from '@core/i18n/language.service';
 import { ScoreCategory } from '@core/models/enums';
 import {
   PublicMatchScore,
@@ -41,6 +41,7 @@ import {
   sameRound,
 } from '@shared/utils/round-name.util';
 import { shortTeamName } from '@shared/utils/team-name.util';
+import { LanguageSwitcher } from '@shared/components/language-switcher/language-switcher';
 
 type Tab = 'overall' | 'round';
 type Cut = 'participant' | 'match';
@@ -56,6 +57,7 @@ type Cut = 'participant' | 'match';
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-public-standings',
   imports: [
+    LanguageSwitcher,
     TranslatePipe,
     CompetitionBadge,
     EmptyState,
@@ -111,28 +113,7 @@ type Cut = 'participant' | 'match';
           }
         </div>
         <div class="d-flex gap-1">
-          <div
-            class="btn-group btn-group-sm"
-            role="group"
-            [attr.aria-label]="'language.label' | translate"
-          >
-            <button
-              type="button"
-              class="btn btn-outline-secondary"
-              [class.active]="language.current() === 'pt-BR'"
-              (click)="setLanguage('pt-BR')"
-            >
-              PT
-            </button>
-            <button
-              type="button"
-              class="btn btn-outline-secondary"
-              [class.active]="language.current() === 'en-US'"
-              (click)="setLanguage('en-US')"
-            >
-              EN
-            </button>
-          </div>
+          <app-language-switcher />
           <button
             type="button"
             class="btn btn-sm btn-outline-secondary"
@@ -1129,10 +1110,6 @@ export class PublicStandings implements OnInit {
     return category && category !== ScoreCategory.None
       ? 'category.' + category
       : 'publicStandings.missed';
-  }
-
-  setLanguage(lang: Lang): void {
-    this.language.use(lang);
   }
 
   /**
