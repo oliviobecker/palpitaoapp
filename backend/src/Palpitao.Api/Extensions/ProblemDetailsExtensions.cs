@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.WebUtilities;
+
 namespace Palpitao.Api.Extensions;
 
 public static class ProblemDetailsExtensions
@@ -12,10 +14,18 @@ public static class ProblemDetailsExtensions
     public static IServiceCollection AddApiProblemDetails(this IServiceCollection services) =>
         services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
         {
-            context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
-            if (context.ProblemDetails.Detail is { } detail)
+            var problem = context.ProblemDetails;
+            // The framework has no default title/type for a few statuses (429 among them).
+            var status = problem.Status ?? context.HttpContext.Response.StatusCode;
+            problem.Title ??= ReasonPhrases.GetReasonPhrase(status);
+            problem.Type ??= status == StatusCodes.Status429TooManyRequests
+                ? "https://www.rfc-editor.org/rfc/rfc6585#section-4"
+                : "about:blank";
+
+            problem.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
+            if (problem.Detail is { } detail)
             {
-                context.ProblemDetails.Extensions["message"] = detail;
+                problem.Extensions["message"] = detail;
             }
         });
 
