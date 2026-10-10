@@ -1,4 +1,3 @@
-using Palpitao.UnitTests.TestSupport;
 using Palpitao.Application.Audit;
 using Palpitao.Application.Flavio;
 using Palpitao.Application.Rounds;
@@ -6,6 +5,7 @@ using Palpitao.Domain.Common;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
 using Palpitao.Infrastructure.Persistence;
+using Palpitao.UnitTests.TestSupport;
 
 namespace Palpitao.UnitTests.Scoring;
 

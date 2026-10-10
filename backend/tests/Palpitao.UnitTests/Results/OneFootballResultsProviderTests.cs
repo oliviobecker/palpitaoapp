@@ -1,11 +1,11 @@
 using System.Net;
-using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Palpitao.Application.Fixtures;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
 using Palpitao.Infrastructure.ExternalData.Results;
+using Palpitao.UnitTests.TestSupport;
 
 namespace Palpitao.UnitTests.Results;
 
@@ -13,23 +13,7 @@ public class OneFootballResultsProviderTests
 {
     private static readonly CancellationToken Ct = CancellationToken.None;
 
-    private sealed class StubHandler : HttpMessageHandler
-    {
-        public Func<string, (HttpStatusCode, string)> Respond { get; set; } = _ => (HttpStatusCode.OK, "{}");
-        public List<string> Requests { get; } = new();
-
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
-        {
-            Requests.Add(request.RequestUri!.ToString());
-            var (status, body) = Respond(request.RequestUri!.ToString());
-            return Task.FromResult(new HttpResponseMessage(status)
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json"),
-            });
-        }
-    }
-
-    private static OneFootballResultsProvider CreateProvider(StubHandler handler, bool enabled = true)
+    private static OneFootballResultsProvider CreateProvider(StubHttpMessageHandler handler, bool enabled = true)
         => new(
             new HttpClient(handler),
             Options.Create(new ResultsProviderOptions { Provider = "OneFootball", Enabled = enabled }),
@@ -103,14 +87,14 @@ public class OneFootballResultsProviderTests
     [Fact]
     public void Is_disabled_when_not_enabled()
     {
-        Assert.False(CreateProvider(new StubHandler(), enabled: false).IsEnabled);
-        Assert.True(CreateProvider(new StubHandler(), enabled: true).IsEnabled);
+        Assert.False(CreateProvider(new StubHttpMessageHandler(), enabled: false).IsEnabled);
+        Assert.True(CreateProvider(new StubHttpMessageHandler(), enabled: true).IsEnabled);
     }
 
     [Fact]
     public async Task Reads_world_cup_scores_and_status_keyed_by_external_id()
     {
-        var handler = new StubHandler
+        var handler = new StubHttpMessageHandler()
         {
             Respond = url => url.Contains("fifa-world-cup-12")
                 ? (HttpStatusCode.OK, Payload(FinishedCard))
@@ -133,7 +117,7 @@ public class OneFootballResultsProviderTests
     [Fact]
     public async Task Reads_a_live_second_half_card_as_in_progress()
     {
-        var handler = new StubHandler { Respond = _ => (HttpStatusCode.OK, Payload(LiveCard)) };
+        var handler = new StubHttpMessageHandler() { Respond = _ => (HttpStatusCode.OK, Payload(LiveCard)) };
 
         var results = await CreateProvider(handler).GetResultsForRoundAsync(PremierLeagueRound(), Ct);
 
@@ -151,7 +135,7 @@ public class OneFootballResultsProviderTests
     [Fact]
     public async Task Reads_a_pre_match_card_as_not_started()
     {
-        var handler = new StubHandler { Respond = _ => (HttpStatusCode.OK, Payload(PreMatchCard)) };
+        var handler = new StubHttpMessageHandler() { Respond = _ => (HttpStatusCode.OK, Payload(PreMatchCard)) };
 
         var results = await CreateProvider(handler).GetResultsForRoundAsync(PremierLeagueRound(), Ct);
 
@@ -164,7 +148,7 @@ public class OneFootballResultsProviderTests
     [Fact]
     public async Task Reads_an_abandoned_card_as_cancelled()
     {
-        var handler = new StubHandler { Respond = _ => (HttpStatusCode.OK, Payload(AbandonedCard)) };
+        var handler = new StubHttpMessageHandler() { Respond = _ => (HttpStatusCode.OK, Payload(AbandonedCard)) };
 
         var results = await CreateProvider(handler).GetResultsForRoundAsync(PremierLeagueRound(), Ct);
 
@@ -190,7 +174,7 @@ public class OneFootballResultsProviderTests
           "awayTeam": { "name": "Chelsea", "score": "1" } }
         """;
 
-        var handler = new StubHandler
+        var handler = new StubHttpMessageHandler()
         {
             Respond = url => (HttpStatusCode.OK, Payload(
                 url.Contains("/results") == playedOnResultsTab ? sameMatchPlayed : sameMatchNotStarted)),

@@ -1,7 +1,4 @@
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
-using Palpitao.UnitTests.TestSupport;
 using Palpitao.Application.AdminPredictions;
 using Palpitao.Application.Audit;
 using Palpitao.Application.Common.Exceptions;
@@ -13,6 +10,7 @@ using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
 using Palpitao.Infrastructure.Persistence;
 using Palpitao.Infrastructure.Persistence.Seed;
+using Palpitao.UnitTests.TestSupport;
 
 namespace Palpitao.UnitTests.Predictions;
 
@@ -29,10 +27,7 @@ public class PredictionSubmissionModeTests
 
     private static AppDbContext CreateContext()
     {
-        var connection = new SqliteConnection("DataSource=:memory:");
-        connection.Open();
-        var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
-        db.Database.EnsureCreated();
+        var db = TestDatabase.Create();
         db.Seasons.Add(new Season
         {
             Id = SeasonId,

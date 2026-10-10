@@ -1,11 +1,10 @@
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 using Palpitao.Application.Flavio;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
 using Palpitao.Domain.Scoring;
 using Palpitao.Infrastructure.Persistence;
 using Palpitao.Infrastructure.Persistence.Seed;
+using Palpitao.UnitTests.TestSupport;
 
 namespace Palpitao.UnitTests.Flavio;
 
@@ -16,11 +15,7 @@ public class FlavioRuleServiceTests
 
     private static AppDbContext CreateContext()
     {
-        var connection = new SqliteConnection("DataSource=:memory:");
-        connection.Open();
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
-        var db = new AppDbContext(options);
-        db.Database.EnsureCreated();
+        var db = TestDatabase.Create();
         db.Seasons.Add(new Season
         {
             Id = SeasonId,

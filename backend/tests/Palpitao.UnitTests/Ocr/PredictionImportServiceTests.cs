@@ -1,6 +1,4 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Palpitao.UnitTests.TestSupport;
 using Palpitao.Application.Audit;
 using Palpitao.Application.Ocr;
 using Palpitao.Domain.Common;
@@ -8,6 +6,7 @@ using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
 using Palpitao.Infrastructure.Persistence;
 using Palpitao.Infrastructure.Persistence.Seed;
+using Palpitao.UnitTests.TestSupport;
 
 namespace Palpitao.UnitTests.Ocr;
 
@@ -1150,11 +1149,7 @@ public class PredictionImportServiceTests
     // --- Confirm (DB-backed) ------------------------------------------------
     private static AppDbContext CreateContext()
     {
-        var connection = new SqliteConnection("DataSource=:memory:");
-        connection.Open();
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
-        var db = new AppDbContext(options);
-        db.Database.EnsureCreated();
+        var db = TestDatabase.Create();
         db.Seasons.Add(new Season
         {
             Id = SeasonId,

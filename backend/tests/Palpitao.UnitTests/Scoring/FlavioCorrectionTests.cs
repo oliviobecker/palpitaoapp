@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Palpitao.UnitTests.TestSupport;
 using Palpitao.Application.AdminPredictions;
 using Palpitao.Application.Audit;
 using Palpitao.Application.Common.Exceptions;
@@ -13,6 +12,7 @@ using Palpitao.Domain.Enums;
 using Palpitao.Domain.Scoring;
 using Palpitao.Infrastructure.Persistence;
 using Palpitao.Infrastructure.Persistence.Seed;
+using Palpitao.UnitTests.TestSupport;
 
 namespace Palpitao.UnitTests.Scoring;
 

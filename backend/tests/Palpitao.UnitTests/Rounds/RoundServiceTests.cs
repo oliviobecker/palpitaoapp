@@ -1,6 +1,5 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Palpitao.UnitTests.TestSupport;
 using Palpitao.Application.Audit;
 using Palpitao.Application.Rounds;
 using Palpitao.Domain.Common;
@@ -8,6 +7,7 @@ using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
 using Palpitao.Infrastructure.Persistence;
 using Palpitao.Infrastructure.Persistence.Seed;
+using Palpitao.UnitTests.TestSupport;
 
 namespace Palpitao.UnitTests.Rounds;
 

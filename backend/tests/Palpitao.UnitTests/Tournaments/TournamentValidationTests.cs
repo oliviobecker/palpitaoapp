@@ -1,6 +1,3 @@
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using Palpitao.UnitTests.TestSupport;
 using Palpitao.Application.Audit;
 using Palpitao.Application.Rounds;
 using Palpitao.Domain.Common;
@@ -9,6 +6,7 @@ using Palpitao.Domain.Enums;
 using Palpitao.Domain.Tournaments;
 using Palpitao.Infrastructure.Persistence;
 using Palpitao.Infrastructure.Persistence.Seed;
+using Palpitao.UnitTests.TestSupport;
 
 namespace Palpitao.UnitTests.Tournaments;
 
@@ -61,11 +59,7 @@ public class TournamentValidationTests
 
     private static AppDbContext CreateContext()
     {
-        var connection = new SqliteConnection("DataSource=:memory:");
-        connection.Open();
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
-        var db = new AppDbContext(options);
-        db.Database.EnsureCreated();
+        var db = TestDatabase.Create();
 
         // A World Cup group + season (England default group/season come from the seed).
         db.Groups.Add(new Group

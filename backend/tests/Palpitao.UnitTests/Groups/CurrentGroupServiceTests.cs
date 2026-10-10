@@ -1,7 +1,5 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 using Palpitao.Api.Auth;
 using Palpitao.Application.Common.Exceptions;
 using Palpitao.Application.Groups;
@@ -9,6 +7,7 @@ using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
 using Palpitao.Infrastructure.Persistence;
 using Palpitao.Infrastructure.Persistence.Seed;
+using Palpitao.UnitTests.TestSupport;
 
 namespace Palpitao.UnitTests.Groups;
 
@@ -18,11 +17,7 @@ public class CurrentGroupServiceTests
 
     private static AppDbContext CreateContext()
     {
-        var connection = new SqliteConnection("DataSource=:memory:");
-        connection.Open();
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
-        var db = new AppDbContext(options);
-        db.Database.EnsureCreated();
+        var db = TestDatabase.Create();
         return db;
     }
 

@@ -1,37 +1,17 @@
 using System.Net;
-using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Palpitao.Application.Fixtures;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Enums;
 using Palpitao.Infrastructure.ExternalData.Fixtures;
+using Palpitao.UnitTests.TestSupport;
 
 namespace Palpitao.UnitTests.Fixtures;
 
 public class FixtureDownloadFixtureProviderTests
 {
     private static readonly CancellationToken Ct = CancellationToken.None;
-
-    private sealed class StubHandler : HttpMessageHandler
-    {
-        public Func<string, (HttpStatusCode Status, string Body)> Respond { get; set; } =
-            _ => (HttpStatusCode.OK, "[]");
-
-        public List<string> Requests { get; } = new();
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            var url = request.RequestUri!.ToString();
-            Requests.Add(url);
-            var (status, body) = Respond(url);
-            return Task.FromResult(new HttpResponseMessage(status)
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json"),
-            });
-        }
-    }
 
     private static string EplFeed => """
     [
@@ -41,7 +21,7 @@ public class FixtureDownloadFixtureProviderTests
     ]
     """;
 
-    private static FixtureDownloadFixtureProvider CreateProvider(StubHandler handler)
+    private static FixtureDownloadFixtureProvider CreateProvider(StubHttpMessageHandler handler)
     {
         var http = new HttpClient(handler);
         var options = Options.Create(new FixtureOptions
@@ -56,7 +36,7 @@ public class FixtureDownloadFixtureProviderTests
     [Fact]
     public async Task Search_maps_premier_league_fixtures_in_period()
     {
-        var handler = new StubHandler
+        var handler = new StubHttpMessageHandler("[]")
         {
             Respond = url => url.Contains("epl-2025")
                 ? (HttpStatusCode.OK, EplFeed)
@@ -82,7 +62,7 @@ public class FixtureDownloadFixtureProviderTests
     [Fact]
     public async Task Search_uses_season_start_year_slug()
     {
-        var handler = new StubHandler();
+        var handler = new StubHttpMessageHandler("[]");
         var provider = CreateProvider(handler);
 
         await provider.SearchFixturesAsync(
@@ -97,7 +77,7 @@ public class FixtureDownloadFixtureProviderTests
     [Fact]
     public async Task Search_ignores_unsupported_competitions()
     {
-        var handler = new StubHandler();
+        var handler = new StubHttpMessageHandler("[]");
         var provider = CreateProvider(handler);
 
         var result = await provider.SearchFixturesAsync(
@@ -114,7 +94,7 @@ public class FixtureDownloadFixtureProviderTests
     [Fact]
     public async Task Search_treats_404_as_empty()
     {
-        var handler = new StubHandler { Respond = _ => (HttpStatusCode.NotFound, "<html/>") };
+        var handler = new StubHttpMessageHandler("[]") { Respond = _ => (HttpStatusCode.NotFound, "<html/>") };
         var provider = CreateProvider(handler);
 
         var result = await provider.SearchFixturesAsync(
@@ -129,7 +109,7 @@ public class FixtureDownloadFixtureProviderTests
     [Fact]
     public async Task Search_throws_on_http_error_status()
     {
-        var handler = new StubHandler { Respond = _ => (HttpStatusCode.InternalServerError, "{}") };
+        var handler = new StubHttpMessageHandler("[]") { Respond = _ => (HttpStatusCode.InternalServerError, "{}") };
         var provider = CreateProvider(handler);
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => provider.SearchFixturesAsync(

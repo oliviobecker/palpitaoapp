@@ -1,37 +1,17 @@
 using System.Net;
-using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Palpitao.Application.Fixtures;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Enums;
 using Palpitao.Infrastructure.ExternalData.Fixtures;
+using Palpitao.UnitTests.TestSupport;
 
 namespace Palpitao.UnitTests.Fixtures;
 
 public class TheSportsDbFixtureProviderTests
 {
     private static readonly CancellationToken Ct = CancellationToken.None;
-
-    private sealed class StubHandler : HttpMessageHandler
-    {
-        public Func<string, (HttpStatusCode Status, string Body)> Respond { get; set; } =
-            _ => (HttpStatusCode.OK, EmptyResponse);
-
-        public List<string> Requests { get; } = new();
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            var url = request.RequestUri!.ToString();
-            Requests.Add(url);
-            var (status, body) = Respond(url);
-            return Task.FromResult(new HttpResponseMessage(status)
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json"),
-            });
-        }
-    }
 
     private const string EmptyResponse = """{"events":null}""";
 
@@ -62,7 +42,7 @@ public class TheSportsDbFixtureProviderTests
     }
     """;
 
-    private static TheSportsDbFixtureProvider CreateProvider(StubHandler handler)
+    private static TheSportsDbFixtureProvider CreateProvider(StubHttpMessageHandler handler)
     {
         var http = new HttpClient(handler);
         var options = Options.Create(new FixtureOptions
@@ -77,7 +57,7 @@ public class TheSportsDbFixtureProviderTests
     [Fact]
     public async Task Search_maps_current_season_fixture_in_period()
     {
-        var handler = new StubHandler
+        var handler = new StubHttpMessageHandler(EmptyResponse)
         {
             Respond = url => url.Contains("id=4328")
                 ? (HttpStatusCode.OK, PremierLeagueResponse)
@@ -103,7 +83,7 @@ public class TheSportsDbFixtureProviderTests
     [Fact]
     public async Task Search_excludes_fixtures_outside_the_period()
     {
-        var handler = new StubHandler
+        var handler = new StubHttpMessageHandler(EmptyResponse)
         {
             Respond = url => url.Contains("id=4328")
                 ? (HttpStatusCode.OK, PremierLeagueResponse)
@@ -124,7 +104,7 @@ public class TheSportsDbFixtureProviderTests
     [Fact]
     public async Task Search_uses_the_configured_key_and_league_id()
     {
-        var handler = new StubHandler();
+        var handler = new StubHttpMessageHandler(EmptyResponse);
         var provider = CreateProvider(handler);
 
         await provider.SearchFixturesAsync(
@@ -141,7 +121,7 @@ public class TheSportsDbFixtureProviderTests
     [Fact]
     public async Task Search_queries_every_tracked_competition()
     {
-        var handler = new StubHandler();
+        var handler = new StubHttpMessageHandler(EmptyResponse);
         var provider = CreateProvider(handler);
 
         await provider.SearchFixturesAsync(
@@ -159,7 +139,7 @@ public class TheSportsDbFixtureProviderTests
     [Fact]
     public async Task Search_returns_empty_when_no_events()
     {
-        var provider = CreateProvider(new StubHandler()); // every league -> {"events":null}
+        var provider = CreateProvider(new StubHttpMessageHandler(EmptyResponse)); // every league -> {"events":null}
 
         var result = await provider.SearchFixturesAsync(
             new DateTime(2025, 8, 15, 0, 0, 0, DateTimeKind.Utc),
@@ -173,7 +153,7 @@ public class TheSportsDbFixtureProviderTests
     [Fact]
     public async Task Search_throws_on_http_error_status()
     {
-        var handler = new StubHandler { Respond = _ => (HttpStatusCode.InternalServerError, "{}") };
+        var handler = new StubHttpMessageHandler(EmptyResponse) { Respond = _ => (HttpStatusCode.InternalServerError, "{}") };
         var provider = CreateProvider(handler);
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => provider.SearchFixturesAsync(

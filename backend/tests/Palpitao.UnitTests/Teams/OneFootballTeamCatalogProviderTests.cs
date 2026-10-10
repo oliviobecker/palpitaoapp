@@ -1,37 +1,17 @@
 using System.Net;
-using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Palpitao.Application.Fixtures;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Enums;
 using Palpitao.Infrastructure.ExternalData.Teams;
+using Palpitao.UnitTests.TestSupport;
 
 namespace Palpitao.UnitTests.Teams;
 
 public class OneFootballTeamCatalogProviderTests
 {
     private static readonly CancellationToken Ct = CancellationToken.None;
-
-    private sealed class StubHandler : HttpMessageHandler
-    {
-        public Func<string, (HttpStatusCode Status, string Body)> Respond { get; set; } =
-            _ => (HttpStatusCode.OK, EmptyContainers);
-
-        public List<string> Requests { get; } = new();
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            var url = request.RequestUri!.ToString();
-            Requests.Add(url);
-            var (status, body) = Respond(url);
-            return Task.FromResult(new HttpResponseMessage(status)
-            {
-                Content = new StringContent(body, Encoding.UTF8, "application/json"),
-            });
-        }
-    }
 
     private const string EmptyContainers = """{"containers":[]}""";
 
@@ -84,7 +64,7 @@ public class OneFootballTeamCatalogProviderTests
     }
     """;
 
-    private static OneFootballTeamCatalogProvider CreateProvider(StubHandler handler)
+    private static OneFootballTeamCatalogProvider CreateProvider(StubHttpMessageHandler handler)
     {
         var http = new HttpClient(handler);
         var options = Options.Create(new FixtureOptions
@@ -98,7 +78,7 @@ public class OneFootballTeamCatalogProviderTests
     [Fact]
     public async Task Unions_the_names_of_both_tabs_without_duplicates()
     {
-        var handler = new StubHandler
+        var handler = new StubHttpMessageHandler(EmptyContainers)
         {
             Respond = url => url.EndsWith("/results")
                 ? (HttpStatusCode.OK, ResultsPayload)
@@ -115,7 +95,7 @@ public class OneFootballTeamCatalogProviderTests
     [Fact]
     public async Task Requests_both_tabs_of_the_competition_slug()
     {
-        var handler = new StubHandler();
+        var handler = new StubHttpMessageHandler(EmptyContainers);
         var provider = CreateProvider(handler);
 
         await provider.GetTeamNamesAsync(Competition.Championship, Ct);
@@ -127,7 +107,7 @@ public class OneFootballTeamCatalogProviderTests
     [Fact]
     public async Task Returns_nothing_when_both_tabs_are_missing()
     {
-        var handler = new StubHandler { Respond = _ => (HttpStatusCode.NotFound, "") };
+        var handler = new StubHttpMessageHandler(EmptyContainers) { Respond = _ => (HttpStatusCode.NotFound, "") };
         var provider = CreateProvider(handler);
 
         var names = await provider.GetTeamNamesAsync(Competition.LeagueOne, Ct);
@@ -140,7 +120,7 @@ public class OneFootballTeamCatalogProviderTests
     [Fact]
     public async Task Keeps_the_names_of_the_tab_that_answered()
     {
-        var handler = new StubHandler
+        var handler = new StubHttpMessageHandler(EmptyContainers)
         {
             Respond = url => url.EndsWith("/fixtures")
                 ? (HttpStatusCode.NotFound, "")
@@ -156,7 +136,7 @@ public class OneFootballTeamCatalogProviderTests
     [Fact]
     public async Task Fails_the_whole_sync_when_a_tab_errors()
     {
-        var handler = new StubHandler
+        var handler = new StubHttpMessageHandler(EmptyContainers)
         {
             Respond = url => url.EndsWith("/results")
                 ? (HttpStatusCode.InternalServerError, "boom")
@@ -173,7 +153,7 @@ public class OneFootballTeamCatalogProviderTests
     [Fact]
     public async Task Fails_when_the_payload_is_not_json()
     {
-        var handler = new StubHandler { Respond = _ => (HttpStatusCode.OK, "<html>nope</html>") };
+        var handler = new StubHttpMessageHandler(EmptyContainers) { Respond = _ => (HttpStatusCode.OK, "<html>nope</html>") };
         var provider = CreateProvider(handler);
 
         var ex = await Assert.ThrowsAsync<BusinessRuleException>(
@@ -186,7 +166,7 @@ public class OneFootballTeamCatalogProviderTests
     [InlineData(Competition.FifaWorldCup)]
     public async Task Skips_competitions_that_are_not_divisions(Competition competition)
     {
-        var handler = new StubHandler();
+        var handler = new StubHttpMessageHandler(EmptyContainers);
         var provider = CreateProvider(handler);
 
         var names = await provider.GetTeamNamesAsync(competition, Ct);

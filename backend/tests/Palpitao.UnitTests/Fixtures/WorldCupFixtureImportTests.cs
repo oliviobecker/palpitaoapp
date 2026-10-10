@@ -1,7 +1,4 @@
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Palpitao.UnitTests.TestSupport;
 using Palpitao.Application.Audit;
 using Palpitao.Application.Fixtures;
 using Palpitao.Application.Scoring;
@@ -11,6 +8,7 @@ using Palpitao.Domain.Enums;
 using Palpitao.Domain.Scoring;
 using Palpitao.Infrastructure.Persistence;
 using Palpitao.Infrastructure.Persistence.Seed;
+using Palpitao.UnitTests.TestSupport;
 
 namespace Palpitao.UnitTests.Fixtures;
 
@@ -31,11 +29,7 @@ public class WorldCupFixtureImportTests
 
     private static AppDbContext CreateContext()
     {
-        var connection = new SqliteConnection("DataSource=:memory:");
-        connection.Open();
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
-        var db = new AppDbContext(options);
-        db.Database.EnsureCreated();
+        var db = TestDatabase.Create();
         db.Groups.Add(new Group
         {
             Id = WcGroup,

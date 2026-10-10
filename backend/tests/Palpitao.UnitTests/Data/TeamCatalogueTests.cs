@@ -1,7 +1,6 @@
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 using Palpitao.Domain.Enums;
 using Palpitao.Infrastructure.Persistence;
+using Palpitao.UnitTests.TestSupport;
 
 namespace Palpitao.UnitTests.Data;
 
@@ -15,11 +14,7 @@ public class TeamCatalogueTests
 {
     private static AppDbContext CreateContext()
     {
-        var connection = new SqliteConnection("DataSource=:memory:");
-        connection.Open();
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
-        var db = new AppDbContext(options);
-        db.Database.EnsureCreated();
+        var db = TestDatabase.Create();
         return db;
     }
 

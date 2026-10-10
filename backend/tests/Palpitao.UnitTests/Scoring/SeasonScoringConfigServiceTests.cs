@@ -1,6 +1,4 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Palpitao.UnitTests.TestSupport;
 using Palpitao.Application.Audit;
 using Palpitao.Application.Common.Exceptions;
 using Palpitao.Application.Scoring;
@@ -10,6 +8,7 @@ using Palpitao.Domain.Enums;
 using Palpitao.Domain.Scoring;
 using Palpitao.Infrastructure.Persistence;
 using Palpitao.Infrastructure.Persistence.Seed;
+using Palpitao.UnitTests.TestSupport;
 
 namespace Palpitao.UnitTests.Scoring;
 
@@ -21,11 +20,7 @@ public class SeasonScoringConfigServiceTests
 
     private static AppDbContext CreateContext(TournamentType type = TournamentType.PalpitaoEngland)
     {
-        var connection = new SqliteConnection("DataSource=:memory:");
-        connection.Open();
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
-        var db = new AppDbContext(options);
-        db.Database.EnsureCreated();
+        var db = TestDatabase.Create();
         db.Seasons.Add(new Season
         {
             Id = SeasonId,
