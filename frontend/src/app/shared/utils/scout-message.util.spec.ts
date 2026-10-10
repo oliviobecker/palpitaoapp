@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RoundScout } from '@core/models/models';
+import { RoundScout } from '@core/models';
 import { buildScoutMessage } from './scout-message.util';
 
 const scout: RoundScout = {

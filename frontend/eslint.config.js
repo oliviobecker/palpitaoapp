@@ -14,7 +14,18 @@ const noFeatureOrLayout = {
   regex: /(^|\/)(features|layout)\//.source,
   message: 'core/ and shared/ are below the features and the layout: they must not import them.',
 };
-const restrictImports = (...patterns) => ({ 'no-restricted-imports': ['error', { patterns }] });
+const throughModelsBarrel = {
+  regex: /^@core\/models\/(?!enums$)/.source,
+  message:
+    "Import the API's shapes from the '@core/models' barrel (enums from '@core/models/enums').",
+};
+// Every block also gets the patterns that apply everywhere.
+const restrictImports = (...patterns) => ({
+  'no-restricted-imports': [
+    'error',
+    { patterns: [noDeepRelative, throughModelsBarrel, ...patterns] },
+  ],
+});
 
 module.exports = defineConfig([
   {
@@ -58,24 +69,24 @@ module.exports = defineConfig([
   },
   {
     files: ['src/**/*.ts'],
-    rules: restrictImports(noDeepRelative),
+    rules: restrictImports(),
   },
   {
     files: ['src/app/core/**/*.ts'],
-    rules: restrictImports(noDeepRelative, noFeatureOrLayout, {
+    rules: restrictImports(noFeatureOrLayout, {
       regex: /^@shared\//.source,
       message: 'core/ is the bottom layer: shared/ builds on it, not the other way round.',
     }),
   },
   {
     files: ['src/app/shared/**/*.ts'],
-    rules: restrictImports(noDeepRelative, noFeatureOrLayout),
+    rules: restrictImports(noFeatureOrLayout),
   },
   {
     // A feature's own files never reach into a sibling feature; anything two features need
     // belongs in @shared or @core.
     files: ['src/app/features/*/*.ts'],
-    rules: restrictImports(noDeepRelative, {
+    rules: restrictImports({
       regex: /^\.\.\//.source,
       message: 'Features do not import each other: share it through @shared or @core.',
     }),

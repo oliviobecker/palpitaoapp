@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { User } from '../models/models';
+import { User } from '@core/models';
 
 const TOKEN_KEY = 'palpitao.token';
 const REFRESH_TOKEN_KEY = 'palpitao.refreshToken';

@@ -13,7 +13,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { HasUnsavedChanges } from '@core/guards/unsaved-changes.guard';
 import { LanguageService } from '@core/i18n/language.service';
-import { FixtureCandidate, RoundSummary, Season } from '@core/models/models';
+import { FixtureCandidate, RoundSummary, Season } from '@core/models';
 import { ToastService } from '@core/notifications/toast.service';
 import { AdminService } from '@core/services/admin.service';
 import { RoundsService } from '@core/services/rounds.service';

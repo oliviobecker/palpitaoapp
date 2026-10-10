@@ -13,7 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
-import { OcrBatchSummary, Participant } from '@core/models/models';
+import { OcrBatchSummary, Participant } from '@core/models';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ToastService } from '@core/notifications/toast.service';
 import { AdminService } from '@core/services/admin.service';

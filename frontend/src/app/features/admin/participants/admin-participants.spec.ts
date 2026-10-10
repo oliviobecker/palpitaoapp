@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RoundStatus } from '@core/models/enums';
-import { AbsenceCandidateRound, AbsenceReviewRound } from '@core/models/models';
+import { AbsenceCandidateRound, AbsenceReviewRound } from '@core/models';
 import {
   absenceReviewHintKey,
   absenceReviewToastKey,

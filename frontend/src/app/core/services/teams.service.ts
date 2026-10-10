@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '@env/environment';
-import { Team } from '../models/models';
+import { Team } from '@core/models';
 
 /** Teams catalogue (read endpoint implemented in a later phase). */
 @Injectable({ providedIn: 'root' })

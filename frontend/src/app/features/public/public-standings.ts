@@ -21,7 +21,7 @@ import {
   PublicSeason,
   PublicStandingRow,
   RoundResultMatch,
-} from '@core/models/models';
+} from '@core/models';
 import { PublicStandingsService } from '@core/services/public-standings.service';
 import { ThemeService } from '@core/theme/theme.service';
 import { CompetitionBadge } from '@shared/components/competition-badge/competition-badge';

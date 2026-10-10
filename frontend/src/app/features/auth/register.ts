@@ -13,7 +13,7 @@ import { FormBuilder } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Lang, LanguageService } from '@core/i18n/language.service';
-import { PublicGroup } from '@core/models/models';
+import { PublicGroup } from '@core/models';
 import { httpErrorMessage } from '@core/notifications/http-error';
 import { AuthService } from '@core/auth/auth.service';
 import { GroupsService } from '@core/services/groups.service';

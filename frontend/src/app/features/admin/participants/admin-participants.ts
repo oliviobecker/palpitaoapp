@@ -20,7 +20,7 @@ import {
   AbsenceReviewResult,
   AbsenceReviewRound,
   Participant,
-} from '@core/models/models';
+} from '@core/models';
 import { ConfirmChoice, ConfirmService } from '@core/notifications/confirm.service';
 import { ToastService } from '@core/notifications/toast.service';
 import { AdminService } from '@core/services/admin.service';

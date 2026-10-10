@@ -14,16 +14,10 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
-import {
-  Competition,
-  MatchPhase,
-  RoundStatus,
-  TournamentType,
-  competitionsForType,
-  phasesForType,
-} from '@core/models/enums';
+import { Competition, MatchPhase, RoundStatus, TournamentType } from '@core/models/enums';
+import { competitionsForType, phasesForType } from '@shared/utils/tournament-rules.util';
 import { HasUnsavedChanges } from '@core/guards/unsaved-changes.guard';
-import { FixtureCandidate, Round, RoundMatch, ScoringConfig, Team } from '@core/models/models';
+import { FixtureCandidate, Round, RoundMatch, ScoringConfig, Team } from '@core/models';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ToastService } from '@core/notifications/toast.service';
 import { AdminService } from '@core/services/admin.service';

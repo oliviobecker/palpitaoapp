@@ -1,6 +1,6 @@
 import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { describe, expect, it } from 'vitest';
-import { OcrBatchSummary } from '@core/models/models';
+import { OcrBatchSummary } from '@core/models';
 import {
   OCR_RATE_LIMIT_WAIT_MS,
   isPendingOcrBatch,

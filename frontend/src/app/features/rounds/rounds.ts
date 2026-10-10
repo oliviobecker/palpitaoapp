@@ -12,7 +12,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { RoundStatus } from '@core/models/enums';
-import { RoundSummary } from '@core/models/models';
+import { RoundSummary } from '@core/models';
 import { RoundsService } from '@core/services/rounds.service';
 import { GroupContextService } from '@core/services/group-context.service';
 import { EmptyState } from '@shared/components/empty-state/empty-state';

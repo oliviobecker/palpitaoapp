@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '@env/environment';
-import { RoundMatch } from '../models/models';
+import { RoundMatch } from '@core/models';
 
 @Injectable({ providedIn: 'root' })
 export class MatchesService {

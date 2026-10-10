@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Competition } from '@core/models/enums';
-import { FixtureCandidate } from '@core/models/models';
+import { FixtureCandidate } from '@core/models';
 
 interface FixtureGroup {
   date: string;

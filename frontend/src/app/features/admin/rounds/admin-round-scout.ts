@@ -12,7 +12,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { RoundScout } from '@core/models/models';
+import { RoundScout } from '@core/models';
 import { ToastService } from '@core/notifications/toast.service';
 import { AdminService } from '@core/services/admin.service';
 import { EmptyState } from '@shared/components/empty-state/empty-state';

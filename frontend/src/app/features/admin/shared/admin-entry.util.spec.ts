@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RoundStatus } from '@core/models/enums';
-import { RoundFlavio } from '@core/models/models';
+import { RoundFlavio } from '@core/models';
 import { adminEntryBlockKey, flavioLateNotice } from './admin-entry.util';
 
 describe('adminEntryBlockKey', () => {

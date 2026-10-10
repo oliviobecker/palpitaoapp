@@ -13,7 +13,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import { ScoreCategory } from '@core/models/enums';
-import { MatchScore, MyPredictions, RoundResultMatch, RoundResults } from '@core/models/models';
+import { MatchScore, MyPredictions, RoundResultMatch, RoundResults } from '@core/models';
 import { RoundsService } from '@core/services/rounds.service';
 import { PredictionsService } from '@core/services/predictions.service';
 import { phaseLabel } from '@shared/utils/match.util';

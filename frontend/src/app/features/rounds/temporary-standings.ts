@@ -12,7 +12,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '@core/auth/auth.service';
-import { TemporaryStandings } from '@core/models/models';
+import { TemporaryStandings } from '@core/models';
 import { ToastService } from '@core/notifications/toast.service';
 import { GroupContextService } from '@core/services/group-context.service';
 import { RoundsService } from '@core/services/rounds.service';

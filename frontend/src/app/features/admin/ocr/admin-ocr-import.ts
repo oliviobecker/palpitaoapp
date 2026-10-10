@@ -12,7 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
-import { OcrBatch, OcrCandidate, Participant, Round } from '@core/models/models';
+import { OcrBatch, OcrCandidate, Participant, Round } from '@core/models';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ImageViewerService } from '@core/notifications/image-viewer.service';
 import { ToastService } from '@core/notifications/toast.service';

@@ -1,5 +1,5 @@
 import { Competition, MatchPhase } from '@core/models/enums';
-import { RoundResultMatch, RoundResults, Standing } from '@core/models/models';
+import { RoundResultMatch, RoundResults, Standing } from '@core/models';
 import { shortTeamName } from './team-name.util';
 
 const COMP_LABEL: Record<Competition, string> = {

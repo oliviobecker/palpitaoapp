@@ -2,7 +2,7 @@ import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { OcrBatch } from '@core/models/models';
+import { OcrBatch } from '@core/models';
 import { AdminService } from '@core/services/admin.service';
 import { OcrUploadQueue } from './ocr-upload-queue';
 

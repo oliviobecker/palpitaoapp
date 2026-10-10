@@ -12,14 +12,10 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { RoundStatus } from '@core/models/enums';
-import { Round } from '@core/models/models';
+import { FlavioParticipant, Round, RoundFlavioOverrides } from '@core/models';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ToastService } from '@core/notifications/toast.service';
-import {
-  AdminService,
-  FlavioParticipant,
-  RoundFlavioOverrides,
-} from '@core/services/admin.service';
+import { AdminService } from '@core/services/admin.service';
 import { Skeleton } from '@shared/components/skeleton/skeleton';
 
 @Component({

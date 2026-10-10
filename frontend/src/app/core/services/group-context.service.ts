@@ -1,6 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { GroupRole } from '../models/enums';
-import { MyGroup } from '../models/models';
+import { MyGroup } from '@core/models';
 
 const GROUP_ID_KEY = 'palpitao.groupId';
 const GROUP_NAME_KEY = 'palpitao.groupName';

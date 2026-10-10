@@ -11,7 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Competition, TeamType } from '@core/models/enums';
-import { Team, TeamSyncResponse } from '@core/models/models';
+import { Team, TeamSyncResponse } from '@core/models';
 import { ToastService } from '@core/notifications/toast.service';
 import { AdminService } from '@core/services/admin.service';
 import { TeamsService } from '@core/services/teams.service';

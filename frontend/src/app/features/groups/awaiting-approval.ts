@@ -12,7 +12,7 @@ import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '@core/auth/auth.service';
 import { GroupUserStatus } from '@core/models/enums';
-import { MyGroup } from '@core/models/models';
+import { MyGroup } from '@core/models';
 import { ToastService } from '@core/notifications/toast.service';
 import { GroupContextService } from '@core/services/group-context.service';
 import { GroupsService } from '@core/services/groups.service';

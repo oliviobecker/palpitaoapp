@@ -21,7 +21,7 @@ import {
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
 import { MatchStatus } from '@core/models/enums';
-import { RoundMatch } from '@core/models/models';
+import { RoundMatch } from '@core/models';
 import { ToastService } from '@core/notifications/toast.service';
 import { MatchesService } from '@core/services/matches.service';
 import { CompetitionBadge } from '../competition-badge/competition-badge';

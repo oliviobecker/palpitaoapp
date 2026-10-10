@@ -1,5 +1,5 @@
 import { RoundStatus } from '@core/models/enums';
-import { Round } from '@core/models/models';
+import { Round } from '@core/models';
 
 /**
  * Why the admin cannot enter predictions (manual entry or OCR import) for a round in this

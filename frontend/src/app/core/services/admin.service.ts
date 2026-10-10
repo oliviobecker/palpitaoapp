@@ -9,108 +9,28 @@ import {
   AbsenceReviewDecision,
   AbsenceReviewResult,
   AbsenceReviewRound,
+  AdminParticipantPredictions,
+  AuditFilter,
   AuditLog,
+  ImportFixturesRequest,
   ImportFixturesResponse,
+  ManualPredictionRequest,
   OcrBatch,
   OcrBatchSummary,
   OcrParticipantAlias,
   Participant,
+  ParticipantRequest,
   PredictionCoverage,
   RefreshResultsResponse,
   RegistrationRequest,
+  RoundFlavioOverrides,
   RoundScout,
+  SearchFixturesRequest,
   SearchFixturesResponse,
   Team,
   TeamSyncResponse,
-} from '../models/models';
-import { Competition, MatchPhase } from '../models/enums';
-
-export interface FlavioParticipant {
-  userId: string;
-  name: string;
-  isTarget: boolean;
-  submittedAt: string | null;
-  grossPoints: number | null;
-  finalPoints: number | null;
-  flavioRuleApplied: boolean;
-  isExempt: boolean;
-  justification: string | null;
-  updatedByUserId: string | null;
-  updatedAt: string | null;
-}
-
-export interface RoundFlavioOverrides {
-  roundId: string;
-  applies: boolean;
-  deadlineUtc: string | null;
-  participants: FlavioParticipant[];
-}
-
-export interface SearchFixturesRequest {
-  startDate: string;
-  endDate: string;
-  competitions?: Competition[];
-  /** Scopes the search to the round's season (and flags fixtures already added to it). */
-  roundId?: string | null;
-  /** Scopes the search while creating a round, where no round exists yet. */
-  seasonId?: string | null;
-}
-
-export interface ImportFixtureItem {
-  externalId: string;
-  competition: Competition;
-  phase: MatchPhase;
-  homeTeamName: string;
-  awayTeamName: string;
-  startsAt: string;
-  source?: string;
-}
-
-export interface ImportFixturesRequest {
-  fixtures: ImportFixtureItem[];
-  leagueOneJustification?: string | null;
-}
-
-export interface ManualPredictionItem {
-  roundMatchId: string;
-  predictedHomeScore: number;
-  predictedAwayScore: number;
-}
-
-export interface ManualPredictionRequest {
-  userId: string;
-  predictions: ManualPredictionItem[];
-  overwriteExisting: boolean;
-  justification?: string;
-  allowAfterDeadline?: boolean;
-}
-
-export interface AdminPredictionItem {
-  roundMatchId: string;
-  predictedHomeScore: number;
-  predictedAwayScore: number;
-  source: 'Participant' | 'AdminManual' | 'AdminOcr';
-  updatedAt?: string;
-}
-
-export interface AdminParticipantPredictions {
-  roundId: string;
-  userId: string;
-  hasPredictions: boolean;
-  predictions: AdminPredictionItem[];
-}
-
-export interface ParticipantRequest {
-  name: string;
-  email: string;
-}
-
-export interface AuditFilter {
-  userId?: string;
-  entityName?: string;
-  from?: string;
-  to?: string;
-}
+} from '@core/models';
+import { Competition } from '../models/enums';
 
 @Injectable({ providedIn: 'root' })
 export class AdminService {

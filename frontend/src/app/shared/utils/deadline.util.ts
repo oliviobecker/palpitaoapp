@@ -1,4 +1,4 @@
-import { MyPredictions, Round, RoundMatch, RoundSummary } from '@core/models/models';
+import { MyPredictions, Round, RoundMatch, RoundSummary } from '@core/models';
 
 /** Minutes before the first kickoff at which predictions close (mirrors the backend). */
 export const DEADLINE_LEAD_MINUTES = 1;

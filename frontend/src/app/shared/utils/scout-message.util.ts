@@ -1,4 +1,4 @@
-import { RoundScout, ScoutMatch } from '@core/models/models';
+import { RoundScout, ScoutMatch } from '@core/models';
 import { shortTeamName } from './team-name.util';
 
 /**

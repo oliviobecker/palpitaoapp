@@ -18,7 +18,7 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { HasUnsavedChanges } from '@core/guards/unsaved-changes.guard';
 import { TournamentType } from '@core/models/enums';
-import { Season } from '@core/models/models';
+import { Season } from '@core/models';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ToastService } from '@core/notifications/toast.service';
 import { SeasonsService } from '@core/services/seasons.service';

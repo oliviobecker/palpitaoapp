@@ -20,7 +20,7 @@ import {
   RoundMatch,
   ScoringConfig,
   Season,
-} from '@core/models/models';
+} from '@core/models';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ToastService } from '@core/notifications/toast.service';
 import { AdminService } from '@core/services/admin.service';
@@ -29,7 +29,7 @@ import { RoundsService } from '@core/services/rounds.service';
 import { ScoringConfigService } from '@core/services/scoring-config.service';
 import { SeasonsService } from '@core/services/seasons.service';
 import { StandingsService } from '@core/services/standings.service';
-import { RefreshResultsResponse } from '@core/models/models';
+import { RefreshResultsResponse } from '@core/models';
 import { Icon } from '@shared/components/icon/icon';
 import { MatchList } from '@shared/components/match-list/match-list';
 import { PageHeader } from '@shared/components/page-header/page-header';

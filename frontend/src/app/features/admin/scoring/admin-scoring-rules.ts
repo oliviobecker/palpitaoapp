@@ -9,14 +9,8 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import {
-  Competition,
-  ENGLAND_PHASES,
-  MatchPhase,
-  ScoreCategory,
-  TournamentType,
-  WORLD_CUP_PHASES,
-} from '@core/models/enums';
+import { Competition, MatchPhase, ScoreCategory, TournamentType } from '@core/models/enums';
+import { ENGLAND_PHASES, WORLD_CUP_PHASES } from '@shared/utils/tournament-rules.util';
 import {
   ScoringConfig,
   ScoringConfigRequest,
@@ -24,7 +18,7 @@ import {
   ScoringMultiplierRule,
   ScoringRules,
   Season,
-} from '@core/models/models';
+} from '@core/models';
 import { ConfirmService } from '@core/notifications/confirm.service';
 import { ToastService } from '@core/notifications/toast.service';
 import { ScoringConfigService } from '@core/services/scoring-config.service';

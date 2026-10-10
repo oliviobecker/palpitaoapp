@@ -12,7 +12,7 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { of, switchMap } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
-import { Standing } from '@core/models/models';
+import { Standing } from '@core/models';
 import { SeasonsService } from '@core/services/seasons.service';
 import { StandingsService } from '@core/services/standings.service';
 import { EmptyState } from '@shared/components/empty-state/empty-state';

@@ -10,7 +10,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { OcrBatchSummary } from '@core/models/models';
+import { OcrBatchSummary } from '@core/models';
 import { ImageViewerService } from '@core/notifications/image-viewer.service';
 import { OcrImageService } from '@core/services/ocr-image.service';
 import { AdminService } from '@core/services/admin.service';

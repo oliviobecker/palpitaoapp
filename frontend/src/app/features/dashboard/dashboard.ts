@@ -15,14 +15,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { forkJoin, of, switchMap } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import { RoundStatus } from '@core/models/enums';
-import {
-  MyPredictions,
-  Prediction,
-  Round,
-  RoundMatch,
-  RoundSummary,
-  Standing,
-} from '@core/models/models';
+import { MyPredictions, Prediction, Round, RoundMatch, RoundSummary, Standing } from '@core/models';
 import { GroupContextService } from '@core/services/group-context.service';
 import { PredictionsService } from '@core/services/predictions.service';
 import { RoundsService } from '@core/services/rounds.service';

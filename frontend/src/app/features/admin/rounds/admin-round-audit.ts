@@ -11,7 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ScoreCategory } from '@core/models/enums';
-import { MatchScore, RoundResultMatch, RoundResults } from '@core/models/models';
+import { MatchScore, RoundResultMatch, RoundResults } from '@core/models';
 import { RoundsService } from '@core/services/rounds.service';
 import { CompetitionBadge } from '@shared/components/competition-badge/competition-badge';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
