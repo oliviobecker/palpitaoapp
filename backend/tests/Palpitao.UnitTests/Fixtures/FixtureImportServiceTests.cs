@@ -55,6 +55,7 @@ public class FixtureImportServiceTests
         var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
         var db = new AppDbContext(options);
         db.Database.EnsureCreated();
+        DevelopmentAdmin.SeedIfNoUsers(db);
         db.Seasons.Add(new Season
         {
             Id = SeasonId,

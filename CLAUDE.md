@@ -44,7 +44,8 @@ npm run e2e                # Playwright (starts ng serve, mocks the API)
 npm run format:check       # Prettier (CI enforces this — run npm run format before committing)
 ```
 
-Database: `docker compose up -d` (Postgres 16). Seed dev admin: `admin@palpitao.local` / `Admin@123`.
+Database: `docker compose up -d` (Postgres 16). Dev admin (Development only, seeded at startup into an
+empty database): see [docs/development.md](docs/development.md#the-development-admin).
 
 **i18n parity is mandatory** — `en-US.json` and `pt-BR.json` must have identical key sets. Every new
 string goes in both. Verify:

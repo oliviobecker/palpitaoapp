@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Palpitao.Domain.Entities;
-using Palpitao.Infrastructure.Persistence.Seed;
 
 namespace Palpitao.Infrastructure.Persistence.Configurations;
 
@@ -29,6 +28,5 @@ internal sealed class GroupUserConfiguration : IEntityTypeConfiguration<GroupUse
             .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasData(DefaultGroupSeed.AdminMembership());
     }
 }

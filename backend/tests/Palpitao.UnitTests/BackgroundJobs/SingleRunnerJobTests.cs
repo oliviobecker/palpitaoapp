@@ -30,7 +30,9 @@ public sealed class SingleRunnerJobTests : IDisposable
             .AddDbContext<AppDbContext>(options => options.UseSqlite(_connection))
             .BuildServiceProvider();
         using var scope = _services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureCreated();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.EnsureCreated();
+        DevelopmentAdmin.SeedIfNoUsers(db);
     }
 
     public void Dispose()

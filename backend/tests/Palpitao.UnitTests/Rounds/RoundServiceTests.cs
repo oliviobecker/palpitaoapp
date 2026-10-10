@@ -29,7 +29,8 @@ public class RoundServiceTests
             .Options;
 
         var db = new AppDbContext(options);
-        db.Database.EnsureCreated(); // applies HasData seed (Big Seven + admin)
+        db.Database.EnsureCreated();
+        DevelopmentAdmin.SeedIfNoUsers(db);
 
         // The active season is not part of the seed — add it for the tests.
         db.Seasons.Add(new Season

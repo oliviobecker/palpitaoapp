@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Infrastructure.Persistence.Seed;
 
 namespace Palpitao.Infrastructure.Persistence.Configurations;
 
@@ -22,6 +21,6 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasIndex(x => x.Status);
         builder.HasIndex(x => x.Email).IsUnique();
 
-        builder.HasData(DevelopmentAdminSeed.User());
+        // The development admin is seeded at runtime, not here: see DevelopmentAdmin.
     }
 }
