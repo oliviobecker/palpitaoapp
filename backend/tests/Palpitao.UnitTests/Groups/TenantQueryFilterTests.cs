@@ -30,6 +30,7 @@ public class TenantQueryFilterTests
         // Seed across both groups via an unscoped (background-style) context.
         using var db = new AppDbContext(options);
         db.Database.EnsureCreated();
+        DevelopmentAdmin.SeedIfNoUsers(db);
         db.Groups.Add(new Group
         {
             Id = GroupB,

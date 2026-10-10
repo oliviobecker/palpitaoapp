@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Application.Ocr;
 using Palpitao.Domain.Entities;
+using Palpitao.Infrastructure.Persistence.Seed;
 using Palpitao.Infrastructure.Persistence;
 
 namespace Palpitao.UnitTests.Ocr;
@@ -24,6 +25,7 @@ public class OcrScreenshotRegressionTests
         var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
         using var db = new AppDbContext(options);
         db.Database.EnsureCreated();
+        DevelopmentAdmin.SeedIfNoUsers(db);
         return db.Teams.AsNoTracking().Select(t => t.Name).ToList();
     });
 

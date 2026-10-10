@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Palpitao.Application.Ocr;
 using Palpitao.Domain.Entities;
 using Palpitao.Infrastructure.Ocr;
+using Palpitao.Infrastructure.Persistence.Seed;
 using Palpitao.Infrastructure.Persistence;
 using Xunit.Abstractions;
 
@@ -187,6 +188,7 @@ public class OcrSamplesTests(ITestOutputHelper output)
         var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
         using var db = new AppDbContext(options);
         db.Database.EnsureCreated();
+        DevelopmentAdmin.SeedIfNoUsers(db);
         return db.Teams.AsNoTracking().Select(t => t.Name).ToList();
     });
 }

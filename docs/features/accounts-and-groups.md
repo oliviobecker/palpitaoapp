@@ -5,13 +5,12 @@ every other one.
 
 ## Accounts, sign-up and approval
 
-### Initial admin (seed)
+### Initial admin
 
-| Email | Password | Role |
-|---|---|---|
-| `admin@palpitao.local` | `Admin@123` | Admin |
-
-Development only — change it in production.
+The development admin (`admin@palpitao.local`, platform admin and GroupAdmin of the default group)
+is created in Development only, at startup, in a database with no users — credentials and details
+in the [development guide](../development.md#the-development-admin). Any other environment that
+still has it with the published password logs an error at every startup until it is changed.
 
 ### Public sign-up with per-group approval
 

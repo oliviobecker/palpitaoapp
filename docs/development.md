@@ -80,8 +80,16 @@ dotnet ef database update --project src/Palpitao.Infrastructure --startup-projec
 
 This creates all tables and the **initial seed**: the club catalogue (Premier League, Championship
 and League One — currently the **2026/2027** rosters), the seven national-team **world champions**
-(for World Cup certames), the **default group** + its admin membership, and the development admin
-(`admin@palpitao.local` / `Admin@123` — local development only).
+(for World Cup certames) and the **default group**.
+
+### The development admin
+
+Sign in as **`admin@palpitao.local` / `Admin@123`** — a platform admin and the default group's
+GroupAdmin. **Development only.** The account is not part of the EF model's seed: in Development the
+API inserts it (with its membership) at startup into a database that has **no users at all**, so it
+can never reappear on a populated database. A database built by the migrations already has it — the
+early migrations created it — and outside Development the API logs an **error** at startup (which
+reaches Sentry) for as long as that account still has this password.
 For new migrations: `dotnet ef migrations add <Name> --project src/Palpitao.Infrastructure --startup-project src/Palpitao.Api`. The migrations live in the Infrastructure project; the Api is
 the startup project that supplies the configuration.
 

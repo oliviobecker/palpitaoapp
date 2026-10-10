@@ -90,6 +90,7 @@ public class OcrServiceTests
         var options = builder.Options;
         var db = new AppDbContext(options);
         db.Database.EnsureCreated();
+        DevelopmentAdmin.SeedIfNoUsers(db);
         db.Seasons.Add(new Season
         {
             Id = SeasonId,

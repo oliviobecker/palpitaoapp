@@ -107,7 +107,8 @@ dotnet run --project backend/src/Palpitao.Api                    # API on https:
 cd frontend && npm ci && npm start                               # SPA on http://localhost:4200
 ```
 
-Sign in as the development admin `admin@palpitao.local` / `Admin@123` (local development only).
+Sign in as the development admin — the credentials are in the
+[development guide](docs/development.md#the-development-admin) (local development only).
 OCR additionally needs the Tesseract language files — see the
 [development guide](docs/development.md), which covers configuration, environment variables and
 troubleshooting.

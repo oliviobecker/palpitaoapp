@@ -17,7 +17,8 @@ group's data), authentication, or the anonymous public standings link are the mo
 ## Scope notes
 
 - The development admin (`admin@palpitao.local`) and its password are for local development only;
-  real environments must not use them.
+  the account is not in the model's seed, and any other environment that still has it with the
+  published password logs an error at startup.
 - Secrets never live in the repository: configuration files carry placeholders, and real values come
   from environment variables, user-secrets or GitHub environment secrets
   (see [docs/operations.md](docs/operations.md#secrets-and-security-hardening)).

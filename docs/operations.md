@@ -111,8 +111,9 @@ This repository is public: **never** commit real secrets. The versioned files
   secrets.
 - Don't commit `*.traineddata` (Tesseract models), uploads, local databases (`*.db`) or
   screenshots/images with real data.
-- The seed (`admin@palpitao.local` / `Admin@123`) is **development only** — change it in any real
-  environment.
+- The development admin (`admin@palpitao.local`) is **development only**. A database built by the
+  migrations starts with it and its published password; outside Development the API logs an error at
+  startup (so Sentry raises it) until that password is changed.
 
 ### Hardening in the code
 
