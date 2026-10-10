@@ -1,24 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
-import { TournamentType } from '../models/enums';
-import { Season } from '../models/models';
-
-export interface SeasonRequest {
-  name: string;
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
-  /** Set on creation and editable afterwards. */
-  tournamentType: TournamentType;
-  allowParticipantsToViewOthersPredictions: boolean;
-  allowParticipantsToSubmitPredictions: boolean;
-  /** Offer FA Cup fixtures for this season (England certames only). */
-  faCupEnabled: boolean;
-  /** Publish the public standings link (default false). The key itself is server-side only. */
-  publicStandingsEnabled: boolean;
-}
+import { environment } from '@env/environment';
+import { Season, SeasonRequest } from '@core/models';
 
 @Injectable({ providedIn: 'root' })
 export class SeasonsService {

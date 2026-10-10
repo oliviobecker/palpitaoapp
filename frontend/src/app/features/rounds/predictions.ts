@@ -15,33 +15,31 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
-import { HasUnsavedChanges } from '../../core/guards/unsaved-changes.guard';
-import { RoundStatus, TournamentType, WORLD_CUP_FLAVIO_PHASES } from '../../core/models/enums';
-import { Round, RoundMatch, ScoringConfig } from '../../core/models/models';
-import { ToastService } from '../../core/notifications/toast.service';
-import { PredictionsService } from '../../core/services/predictions.service';
-import { RoundsService } from '../../core/services/rounds.service';
-import { ScoringConfigService } from '../../core/services/scoring-config.service';
-import { CompetitionBadge } from '../../shared/components/competition-badge/competition-badge';
-import { Countdown } from '../../shared/components/countdown/countdown';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { Icon } from '../../shared/components/icon/icon';
-import { Loading } from '../../shared/components/loading/loading';
-import { MatchStatusBadge } from '../../shared/components/match-status-badge/match-status-badge';
-import { MultiplierBadge } from '../../shared/components/multiplier-badge/multiplier-badge';
-import { PageHeader } from '../../shared/components/page-header/page-header';
-import { RoundLabelPipe } from '../../shared/pipes/round-label.pipe';
+import { HasUnsavedChanges } from '@core/guards/unsaved-changes.guard';
+import { RoundStatus, TournamentType } from '@core/models/enums';
+import { WORLD_CUP_FLAVIO_PHASES } from '@shared/utils/tournament-rules.util';
+import { Round, RoundMatch, ScoringConfig } from '@core/models';
+import { ToastService } from '@core/notifications/toast.service';
+import { PredictionsService } from '@core/services/predictions.service';
+import { RoundsService } from '@core/services/rounds.service';
+import { ScoringConfigService } from '@core/services/scoring-config.service';
+import { CompetitionBadge } from '@shared/components/competition-badge/competition-badge';
+import { Countdown } from '@shared/components/countdown/countdown';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { Icon } from '@shared/components/icon/icon';
+import { Loading } from '@shared/components/loading/loading';
+import { MatchStatusBadge } from '@shared/components/match-status-badge/match-status-badge';
+import { MultiplierBadge } from '@shared/components/multiplier-badge/multiplier-badge';
+import { PageHeader } from '@shared/components/page-header/page-header';
+import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
 import {
   deadlinePassed,
   predictionDeadline,
   predictionDeadlineIso,
-} from '../../shared/utils/deadline.util';
-import {
-  computeMultiplier,
-  isClassic,
-  isLeagueOne,
-  phaseLabel,
-} from '../../shared/utils/match.util';
+} from '@shared/utils/deadline.util';
+import { computeMultiplier, isClassic, isLeagueOne, phaseLabel } from '@shared/utils/match.util';
+import { teamAbbr } from '@shared/utils/team-name.util';
+import { avatarColor } from '@shared/utils/avatar.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -62,61 +60,7 @@ import {
     RoundLabelPipe,
   ],
   templateUrl: './predictions.html',
-  styles: [
-    `
-      .team-name {
-        flex: 1 1 0;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .team-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 2rem;
-        height: 2rem;
-        border-radius: 8px;
-        flex: none;
-        color: #fff;
-        font-size: 0.62rem;
-        font-weight: 800;
-      }
-      .score-box {
-        width: 3.25rem;
-        height: 3.25rem;
-        flex: none;
-        padding: 0;
-        text-align: center;
-        font-size: 1.4rem;
-        font-weight: 700;
-        border-radius: 12px;
-      }
-      .predictions-bar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.75rem;
-        margin-top: 1rem;
-        padding: 0.7rem 0.9rem;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-      }
-      .predictions-bar__status {
-        font-size: 0.88rem;
-        min-width: 0;
-      }
-      @media (min-width: 768px) {
-        .predictions-bar {
-          position: sticky;
-          bottom: 1rem;
-        }
-      }
-    `,
-  ],
+  styleUrl: './predictions.scss',
 })
 export class Predictions implements OnInit, OnDestroy, HasUnsavedChanges {
   private readonly route = inject(ActivatedRoute);
@@ -204,19 +148,8 @@ export class Predictions implements OnInit, OnDestroy, HasUnsavedChanges {
   private isEdit = false;
   protected roundId = '';
 
-  /** Three-letter team abbreviation for the badge, e.g. "Liverpool" → "LIV". */
-  abbr(name: string): string {
-    return (name.split(/\s+/)[0] ?? '').slice(0, 3).toUpperCase();
-  }
-
-  /** Deterministic colour per team name for the badge. */
-  teamColor(name: string): string {
-    let hash = 0;
-    for (const ch of name) {
-      hash = (hash * 31 + ch.charCodeAt(0)) % 360;
-    }
-    return `hsl(${hash}, 52%, 42%)`;
-  }
+  protected readonly abbr = teamAbbr;
+  protected readonly teamColor = avatarColor;
 
   protected readonly form = this.fb.array<FormGroup>([]);
 

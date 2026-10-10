@@ -1,0 +1,188 @@
+<app-page-header [title]="'adminParticipants.title' | translate">
+  <div trail class="page-trail">
+    <a routerLink="/admin">Admin</a> · {{ 'adminParticipants.title' | translate }}
+  </div>
+</app-page-header>
+
+<div class="card mb-3">
+  <div class="card-body p-4">
+    <div class="d-flex align-items-center gap-2 mb-3">
+      <span class="icon-tile icon-tile--teal"><app-icon name="users" [size]="20" /></span>
+      <h2 class="h6 fw-bold mb-0">
+        {{ (editingId() ? 'adminParticipants.edit' : 'adminParticipants.new') | translate }}
+      </h2>
+    </div>
+    <form [formGroup]="form" (ngSubmit)="save()" class="vstack gap-3">
+      <app-form-field
+        [label]="'adminParticipants.name' | translate"
+        forId="p-name"
+        [control]="form.controls.name"
+        [errors]="{ default: 'validation.nameRequired' | translate }"
+      >
+        <div class="input-group input-group-lg">
+          <span class="input-group-text"><app-icon name="user" [size]="16" /></span>
+          <input
+            id="p-name"
+            class="form-control"
+            [placeholder]="'adminParticipants.name' | translate"
+            formControlName="name"
+          />
+        </div>
+      </app-form-field>
+      <app-form-field
+        [label]="'adminParticipants.email' | translate"
+        forId="p-email"
+        [control]="form.controls.email"
+        [errors]="{ default: 'validation.emailInvalid' | translate }"
+      >
+        <div class="input-group input-group-lg">
+          <span class="input-group-text"><app-icon name="mail" [size]="16" /></span>
+          <input
+            id="p-email"
+            class="form-control"
+            [placeholder]="'adminParticipants.email' | translate"
+            formControlName="email"
+          />
+        </div>
+      </app-form-field>
+      @if (!editingId()) {
+        <app-form-field
+          [label]="'adminParticipants.password' | translate"
+          forId="p-password"
+          [control]="form.controls.password"
+          [errors]="{ default: 'validation.passwordWeak' | translate }"
+          [hint]="'register.passwordHint' | translate"
+        >
+          <div class="input-group input-group-lg">
+            <span class="input-group-text"><app-icon name="lock" [size]="16" /></span>
+            <input
+              id="p-password"
+              type="password"
+              class="form-control"
+              [placeholder]="'adminParticipants.password' | translate"
+              formControlName="password"
+            />
+          </div>
+        </app-form-field>
+      }
+      <div class="d-flex gap-2">
+        <button
+          type="submit"
+          class="btn btn-primary btn-lg flex-fill"
+          [disabled]="form.invalid || saving()"
+        >
+          {{ (editingId() ? 'common.save' : 'adminParticipants.create') | translate }}
+        </button>
+        @if (editingId()) {
+          <button type="button" class="btn btn-outline-secondary btn-lg" (click)="resetForm()">
+            {{ 'common.cancel' | translate }}
+          </button>
+        }
+      </div>
+    </form>
+  </div>
+</div>
+
+@if (loading()) {
+  <app-skeleton-list [count]="5" />
+} @else if (error()) {
+  <app-error-state (retry)="load()" />
+} @else if (participants().length === 0) {
+  <app-empty-state [message]="'adminParticipants.empty' | translate" />
+} @else {
+  <div class="input-group input-group-lg mb-3">
+    <span class="input-group-text"><app-icon name="search" [size]="16" /></span>
+    <input
+      class="form-control"
+      [placeholder]="'adminParticipants.search' | translate"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+    />
+  </div>
+  @if (filtered().length === 0) {
+    <app-empty-state icon="search" [message]="'adminParticipants.noMatches' | translate" />
+  }
+  <div class="vstack gap-2">
+    @for (p of filtered(); track p.id) {
+      <div class="card" [class.border-danger]="p.isEliminated">
+        <div class="card-body py-2 px-3">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div class="fw-semibold">
+                {{ p.name }}
+                @if (p.isEliminated) {
+                  <span class="badge text-bg-danger ms-1">{{
+                    'adminParticipants.eliminated' | translate
+                  }}</span>
+                } @else if (!p.isActive) {
+                  <span class="badge text-bg-secondary ms-1">{{
+                    'adminParticipants.inactive' | translate
+                  }}</span>
+                } @else {
+                  <span class="badge text-bg-success ms-1">{{
+                    'adminParticipants.active' | translate
+                  }}</span>
+                }
+              </div>
+              <small class="text-muted d-block">{{ p.email }}</small>
+              <small class="text-muted">
+                {{ p.totalPoints }} {{ 'adminParticipants.points' | translate }} ·
+                {{ 'adminParticipants.absences' | translate }}: {{ p.absenceCount }} ·
+                {{ 'adminParticipants.penalties' | translate }}: {{ p.penaltyPoints }}
+              </small>
+            </div>
+          </div>
+
+          <div class="d-flex flex-wrap gap-1 mt-2">
+            <button class="btn btn-sm btn-outline-secondary" (click)="edit(p)">
+              {{ 'common.edit' | translate }}
+            </button>
+            @if (p.isActive) {
+              <button class="btn btn-sm btn-outline-warning" (click)="setActive(p, false)">
+                {{ 'adminParticipants.deactivate' | translate }}
+              </button>
+            } @else {
+              <button class="btn btn-sm btn-outline-success" (click)="setActive(p, true)">
+                {{ 'adminParticipants.activate' | translate }}
+              </button>
+            }
+            @if (p.isEliminated) {
+              <button class="btn btn-sm btn-outline-success" (click)="reactivate(p)">
+                {{ 'adminParticipants.reactivate' | translate }}
+              </button>
+            } @else {
+              <button class="btn btn-sm btn-outline-danger" (click)="eliminate(p)">
+                {{ 'adminParticipants.eliminate' | translate }}
+              </button>
+            }
+            <button class="btn btn-sm btn-outline-primary" (click)="toggleAbsences(p)">
+              {{ 'adminParticipants.absencesBtn' | translate }}
+            </button>
+            <button class="btn btn-sm btn-outline-primary" (click)="reviewAbsences(p)">
+              {{ 'adminParticipants.reviewAbsences' | translate }}
+            </button>
+          </div>
+
+          @if (absences()[p.id]; as list) {
+            <ul class="list-unstyled small mt-2 mb-0 border-top pt-2">
+              @if (list.length === 0) {
+                <li class="text-muted">{{ 'adminParticipants.noAbsences' | translate }}</li>
+              } @else {
+                @for (a of list; track a.roundId) {
+                  <li>
+                    {{ 'adminParticipants.round' | translate }}
+                    {{ a.roundNumber | roundLabel: a.roundPart }} —
+                    {{
+                      'adminParticipants.absenceLine'
+                        | translate: { n: a.absenceNumber, penalty: a.penaltyPoints }
+                    }}
+                  </li>
+                }
+              }
+            </ul>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}

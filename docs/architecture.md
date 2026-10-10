@@ -204,10 +204,18 @@ Angular 21 with **standalone components, signals and `OnPush` everywhere**, runn
 
 | Folder | Role |
 |---|---|
-| `core/` | Auth, interceptors, models, API services, theme, i18n — app-wide singletons |
-| `shared/` | Reusable components (badges, skeletons, empty/error states, match lists…), pipes, pure utils |
+| `core/` | Auth, interceptors, theme, i18n; the API's shapes (`models/`, one file per backend area behind the `@core/models` barrel) and one HTTP service per API area (`services/admin/` mirrors the backend's admin controllers) |
+| `shared/` | Reusable components (badges, podium, skeletons, empty/error states, language switcher…), validators, pipes, pure utils with specs |
 | `layout/` | The responsive shell: desktop top bar, mobile bottom navigation |
-| `features/` | One folder per area: auth, dashboard, rounds, standings, admin, public, landing |
+| `features/` | One folder per area: auth, dashboard, rounds, standings, admin (in sub-features with its own routes), public, landing |
+
+The layers are **enforced by ESLint**, the twin of the backend's architecture tests: imports never
+climb more than one level (aliases `@core`, `@shared`, `@env` instead), `core/` imports neither
+`shared/` nor features, `shared/` imports no feature, features never import each other, and models
+come through the barrel. Pure logic lives in tested `*.util.ts` files beside its component; a page
+with several views keeps the state and hands the rendering to presentational children. See
+[ADR 0008](adr/0008-frontend-feature-folders-lint-boundaries.md) and the
+[frontend README](../frontend/README.md).
 
 - **HTTP pipeline.** Functional interceptors add the JWT, the `X-Group-Id` header and
   `Accept-Language`, show error toasts and drive the loading bar. A 401 triggers **one** token refresh
@@ -228,7 +236,7 @@ Angular 21 with **standalone components, signals and `OnPush` everywhere**, runn
 | Backend unit | xUnit + SQLite in-memory (`Palpitao.UnitTests`, 1,066 tests) | Services and rules end to end against a real relational model: scoring, absences, Flávio Rule, tenancy, OCR parsing and matching, providers (stubbed HTTP), background jobs, auth |
 | Backend integration | `WebApplicationFactory` + SQLite in-memory (`Palpitao.IntegrationTests`, 21 tests) | The real HTTP pipeline: login/refresh/logout, the group chokepoint, the public link, the problem-details contract in both languages, rate limiting, health, the OpenAPI document — with no network and no background job |
 | Backend architecture | xUnit + reflection (`Palpitao.ArchitectureTests`, 19 tests) | The dependency rule between the projects, the tenant filter on the EF model, a container that validates |
-| Frontend unit | Vitest (199 tests) | Pure utils (message builders, deadlines, names), guards, interceptors, key components |
+| Frontend unit | Vitest (272 tests) | Pure utils (message builders, deadlines, names, standings ranking), guards, interceptors, key components, and the admin HTTP contract call by call |
 | Frontend e2e | Playwright (93 tests) | Real UI flows in Chromium against an API mocked in `e2e/support.ts` |
 | CI gates | GitHub Actions | All of the above, Prettier, ESLint, the EF model-drift check, actionlint, CodeQL |
 

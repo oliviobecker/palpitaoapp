@@ -11,17 +11,17 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { AuthService } from '../../core/auth/auth.service';
-import { TemporaryStandings } from '../../core/models/models';
-import { ToastService } from '../../core/notifications/toast.service';
-import { GroupContextService } from '../../core/services/group-context.service';
-import { RoundsService } from '../../core/services/rounds.service';
-import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { ErrorState } from '../../shared/components/error-state/error-state';
-import { Icon } from '../../shared/components/icon/icon';
-import { Loading } from '../../shared/components/loading/loading';
-import { copyToClipboard } from '../../shared/utils/clipboard.util';
-import { buildTemporaryStandingsMessage } from '../../shared/utils/temporary-standings-message.util';
+import { AuthService } from '@core/auth/auth.service';
+import { TemporaryStandings } from '@core/models';
+import { ToastService } from '@core/notifications/toast.service';
+import { GroupContextService } from '@core/services/group-context.service';
+import { RoundsService } from '@core/services/rounds.service';
+import { EmptyState } from '@shared/components/empty-state/empty-state';
+import { ErrorState } from '@shared/components/error-state/error-state';
+import { Icon } from '@shared/components/icon/icon';
+import { Loading } from '@shared/components/loading/loading';
+import { copyToClipboard } from '@shared/utils/clipboard.util';
+import { buildTemporaryStandingsMessage } from '@shared/utils/temporary-standings-message.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

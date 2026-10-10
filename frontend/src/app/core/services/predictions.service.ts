@@ -1,15 +1,9 @@
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { environment } from '@env/environment';
 import { SKIP_ERROR_TOAST } from '../interceptors/http-context';
-import { Mirror, MyPredictions } from '../models/models';
-
-export interface PredictionItem {
-  roundMatchId: string;
-  predictedHomeScore: number;
-  predictedAwayScore: number;
-}
+import { Mirror, MyPredictions, PredictionItem } from '@core/models';
 
 @Injectable({ providedIn: 'root' })
 export class PredictionsService {

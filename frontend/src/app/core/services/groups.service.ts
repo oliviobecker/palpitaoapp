@@ -1,8 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
-import { MyGroup, PublicGroup } from '../models/models';
+import { environment } from '@env/environment';
+import { MyGroup, PublicGroup } from '@core/models';
 
 @Injectable({ providedIn: 'root' })
 export class GroupsService {

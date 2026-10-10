@@ -1,0 +1,177 @@
+<app-page-header
+  [title]="'roundForm.title' | translate"
+  [subtitle]="'roundForm.subtitle' | translate"
+>
+  <div trail class="page-trail">
+    <a routerLink="/admin">Admin</a> ·
+    <a routerLink="/admin/rounds">{{ 'nav.rounds' | translate }}</a> ·
+    {{ 'adminRounds.new' | translate }}
+  </div>
+</app-page-header>
+
+<div class="card mb-3">
+  <div class="card-body p-4">
+    <form [formGroup]="form" class="vstack gap-3">
+      <app-form-field
+        [label]="'roundForm.season' | translate"
+        forId="rf-season"
+        [control]="form.controls.seasonId"
+        [errors]="{ default: 'validation.required' | translate }"
+      >
+        <div class="input-group input-group-lg">
+          <span class="input-group-text"><app-icon name="trophy" [size]="16" /></span>
+          <select id="rf-season" class="form-select" formControlName="seasonId">
+            <option value="">{{ 'roundForm.select' | translate }}</option>
+            @for (s of seasons(); track s.id) {
+              <option [value]="s.id">{{ s.name }}{{ s.isActive ? ' ✓' : '' }}</option>
+            }
+          </select>
+        </div>
+      </app-form-field>
+
+      <app-form-field
+        [label]="'roundForm.number' | translate"
+        forId="rf-number"
+        [control]="form.controls.number"
+        [errors]="{ default: 'validation.required' | translate }"
+      >
+        <div class="input-group input-group-lg">
+          <span class="input-group-text">#</span>
+          <input
+            id="rf-number"
+            type="number"
+            min="1"
+            class="form-control"
+            formControlName="number"
+          />
+        </div>
+      </app-form-field>
+
+      <!-- A second list in the same week: one round played in parts (10.1 + 10.2). -->
+      @if (joinTarget(); as t) {
+        <div class="form-check">
+          <input
+            id="rf-join"
+            type="checkbox"
+            class="form-check-input"
+            formControlName="joinPreviousWeek"
+          />
+          <label for="rf-join" class="form-check-label">{{
+            'roundForm.joinPrevious' | translate: { round: t.number }
+          }}</label>
+          @if (form.controls.joinPreviousWeek.value) {
+            <div class="form-text">
+              {{
+                'roundForm.joinPreviousPreview'
+                  | translate: { label: (t.number | roundLabel: t.part) }
+              }}
+            </div>
+            @if (t.scored) {
+              <div class="form-text text-warning-emphasis">
+                {{ 'roundForm.joinPreviousScored' | translate: { round: t.number } }}
+              </div>
+            }
+          }
+        </div>
+      }
+
+      <app-form-field
+        [label]="('roundForm.name' | translate) + ' ' + ('common.optional' | translate)"
+        forId="rf-title"
+      >
+        <div class="input-group input-group-lg">
+          <span class="input-group-text"><app-icon name="tag" [size]="16" /></span>
+          <input
+            id="rf-title"
+            class="form-control"
+            formControlName="title"
+            [placeholder]="'roundForm.namePlaceholder' | translate"
+          />
+        </div>
+      </app-form-field>
+
+      <div class="row g-3">
+        <div class="col-6">
+          <app-form-field
+            [label]="'roundForm.startDate' | translate"
+            forId="rf-startDate"
+            [control]="form.controls.startDate"
+            [errors]="{ default: 'validation.required' | translate }"
+          >
+            <div class="input-group input-group-lg">
+              <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
+              <input
+                id="rf-startDate"
+                type="date"
+                class="form-control"
+                formControlName="startDate"
+              />
+            </div>
+          </app-form-field>
+        </div>
+        <div class="col-6">
+          <app-form-field
+            [label]="'roundForm.endDate' | translate"
+            forId="rf-endDate"
+            [control]="form.controls.endDate"
+            [errors]="{ default: 'validation.required' | translate }"
+            [forceError]="dateRangeInvalid() ? ('fixtures.endBeforeStart' | translate) : ''"
+          >
+            <div class="input-group input-group-lg">
+              <span class="input-group-text"><app-icon name="calendar-days" [size]="16" /></span>
+              <input id="rf-endDate" type="date" class="form-control" formControlName="endDate" />
+            </div>
+          </app-form-field>
+        </div>
+      </div>
+
+      <hr class="my-1" />
+
+      <button
+        type="button"
+        class="btn btn-soft-primary btn-lg w-100"
+        [disabled]="!canSearch() || searching()"
+        (click)="search()"
+      >
+        @if (searching()) {
+          <span class="spinner-border spinner-border-sm me-2"></span>
+        }
+        <app-icon name="search" [size]="16" /> {{ 'fixtures.searchButton' | translate }}
+      </button>
+    </form>
+  </div>
+</div>
+
+@if (searched()) {
+  <div class="card mb-3">
+    <div class="card-body">
+      <app-fixture-selection
+        [fixtures]="fixtures()"
+        [source]="source()"
+        (selectionChange)="onSelection($event)"
+      />
+    </div>
+  </div>
+}
+
+@if (searched() && fixtures().length === 0) {
+  <div class="alert alert-info py-2">{{ 'fixtures.noneFoundManual' | translate }}</div>
+}
+
+@if (searchError()) {
+  <div class="alert alert-warning py-2">{{ 'fixtures.searchError' | translate }}</div>
+}
+
+<button
+  type="button"
+  class="btn btn-primary btn-lg w-100"
+  [disabled]="form.invalid || dateRangeInvalid() || saving() || !selection().canSave"
+  (click)="save()"
+>
+  {{
+    (selection().items.length === 0 ? 'fixtures.createManual' : 'roundForm.createWithFixtures')
+      | translate: { count: selection().items.length }
+  }}
+</button>
+
+<p class="text-muted small mt-2 mb-0">{{ 'fixtures.manualHint' | translate }}</p>

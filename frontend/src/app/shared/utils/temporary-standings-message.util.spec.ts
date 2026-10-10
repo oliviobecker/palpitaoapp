@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { RoundStatus } from '../../core/models/enums';
-import { TemporaryStanding, TemporaryStandings } from '../../core/models/models';
+import { RoundStatus } from '@core/models/enums';
+import { TemporaryStanding, TemporaryStandings } from '@core/models';
 import { buildTemporaryStandingsMessage } from './temporary-standings-message.util';
 
 function row(partial: Partial<TemporaryStanding>): TemporaryStanding {

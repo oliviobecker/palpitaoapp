@@ -118,7 +118,7 @@ troubleshooting.
 | Suite | Command | Count |
 |---|---|---|
 | Backend unit, integration and architecture (xUnit, SQLite in-memory, `WebApplicationFactory`) | `dotnet test backend/Palpitao.slnx` | 1,066 + 21 + 19 |
-| Frontend unit (Vitest) | `cd frontend && npm test -- --watch=false` | 199 |
+| Frontend unit (Vitest) | `cd frontend && npm test -- --watch=false` | 272 |
 | Frontend e2e (Playwright, mocked API) | `cd frontend && npm run e2e` | 93 |
 
 CI runs all three plus Prettier, ESLint, an EF Core model-drift check and actionlint on every pull
@@ -136,7 +136,7 @@ backend/
   tests/Palpitao.IntegrationTests/   the API over real HTTP (auth, tenancy, error contract)
   tests/Palpitao.ArchitectureTests/  layering, tenant filter and DI checks
 frontend/
-  src/app/                 core/ (auth, interceptors, services) · shared/ · layout/ · features/
+  src/app/                 core/ (auth, interceptors, models, services) · shared/ · layout/ · features/ — layers enforced by ESLint
   e2e/                     Playwright specs with a mocked API
 docs/                      architecture, domain rules, feature guides, ADRs, operations
 scripts/                   database maintenance SQL and the staging rehearsal seed

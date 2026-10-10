@@ -8,7 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
-import { ImageViewerService } from '../../../core/notifications/image-viewer.service';
+import { ImageViewerService } from '@core/notifications/image-viewer.service';
 import { Icon } from '../icon/icon';
 
 @Component({

@@ -10,49 +10,18 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import {
-  AbstractControl,
-  FormBuilder,
-  FormGroup,
-  ReactiveFormsModule,
-  ValidationErrors,
-  Validators,
-} from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin } from 'rxjs';
-import { MatchStatus } from '../../../core/models/enums';
-import { RoundMatch } from '../../../core/models/models';
-import { ToastService } from '../../../core/notifications/toast.service';
-import { MatchesService } from '../../../core/services/matches.service';
+import { MatchStatus } from '@core/models/enums';
+import { RoundMatch } from '@core/models';
+import { ToastService } from '@core/notifications/toast.service';
+import { MatchesService } from '@core/services/matches.service';
 import { CompetitionBadge } from '../competition-badge/competition-badge';
 import { Icon } from '../icon/icon';
-
-/** Both scores filled, or neither — a half-filled pair cannot be saved. */
-export function scorePairValidator(group: AbstractControl): ValidationErrors | null {
-  const home = group.get('home')?.value;
-  const away = group.get('away')?.value;
-  const filled = [home, away].filter((v) => v !== null && v !== '').length;
-  return filled === 1 ? { partialPair: true } : null;
-}
-
-/** Indices of the pairs that are complete (both scores present). */
-export function completePairs(values: { home: unknown; away: unknown }[]): number[] {
-  return values.flatMap((v, i) =>
-    v.home !== null && v.home !== '' && v.away !== null && v.away !== '' ? [i] : [],
-  );
-}
-
-/**
- * Indices of the pairs to save: complete, and typed by the admin. A score the form only shows —
- * what the results refresh brought in, a live one included — is never sent: saving it would turn
- * it into a manual final result, which the refresh then leaves alone for good.
- */
-export function pairsToSave(
-  values: { home: unknown; away: unknown }[],
-  edited: readonly boolean[],
-): number[] {
-  return completePairs(values).filter((i) => edited[i]);
-}
+import { scorePairValidator, completePairs, pairsToSave } from './round-results-editor.util';
+import { teamAbbr } from '@shared/utils/team-name.util';
+import { avatarColor } from '@shared/utils/avatar.util';
 
 /**
  * Reusable match-score entry form. Renders one home×away input pair per match and
@@ -257,19 +226,8 @@ export class RoundResultsEditor {
     }
   }
 
-  /** Three-letter team abbreviation for the badge, e.g. "Liverpool" → "LIV". */
-  abbr(name: string): string {
-    return (name.split(/\s+/)[0] ?? '').slice(0, 3).toUpperCase();
-  }
-
-  /** Deterministic colour per team name for the badge. */
-  teamColor(name: string): string {
-    let hash = 0;
-    for (const ch of name) {
-      hash = (hash * 31 + ch.charCodeAt(0)) % 360;
-    }
-    return `hsl(${hash}, 52%, 42%)`;
-  }
+  protected readonly abbr = teamAbbr;
+  protected readonly teamColor = avatarColor;
 
   save(): void {
     if (this.form.invalid) {

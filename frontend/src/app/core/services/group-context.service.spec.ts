@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { GroupRole, GroupUserStatus } from '../models/enums';
-import { MyGroup } from '../models/models';
+import { MyGroup } from '@core/models';
 import { GroupContextService, storedGroupId } from './group-context.service';
 
 const group: MyGroup = {

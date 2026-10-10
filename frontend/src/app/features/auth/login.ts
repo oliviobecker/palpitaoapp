@@ -4,12 +4,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { AuthService } from '../../core/auth/auth.service';
-import { MyGroup } from '../../core/models/models';
-import { httpErrorMessage } from '../../core/notifications/http-error';
-import { GroupContextService } from '../../core/services/group-context.service';
-import { GroupsService } from '../../core/services/groups.service';
-import { FormField } from '../../shared/components/form-field/form-field';
+import { AuthService } from '@core/auth/auth.service';
+import { MyGroup } from '@core/models';
+import { httpErrorMessage } from '@core/notifications/http-error';
+import { GroupContextService } from '@core/services/group-context.service';
+import { GroupsService } from '@core/services/groups.service';
+import { FormField } from '@shared/components/form-field/form-field';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TEAM_SHORT_NAMES, shortTeamName } from './team-name.util';
+import { TEAM_SHORT_NAMES, shortTeamName, teamAbbr } from './team-name.util';
 
 describe('shortTeamName', () => {
   it('shortens the clubs in the table', () => {
@@ -71,5 +71,13 @@ describe('shortTeamName', () => {
       const short = shortTeamName(full);
       expect(shortTeamName(short)).toBe(short);
     }
+  });
+});
+
+describe('teamAbbr', () => {
+  it('takes the first three letters of the first word', () => {
+    expect(teamAbbr('Liverpool')).toBe('LIV');
+    expect(teamAbbr('Manchester City')).toBe('MAN');
+    expect(teamAbbr('  ')).toBe('');
   });
 });

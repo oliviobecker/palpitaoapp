@@ -1,4 +1,4 @@
-import { RoundStatus } from '../../core/models/enums';
+import { RoundStatus } from '@core/models/enums';
 
 // Feminine ordinals (for "rodada") in Portuguese, 1–99 (+100), enough for any
 // realistic season. Beyond that we fall back to "Rodada N".

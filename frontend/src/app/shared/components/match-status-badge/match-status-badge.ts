@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, computed, input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
-import { MatchStatus } from '../../../core/models/enums';
+import { MatchStatus } from '@core/models/enums';
 
 /**
  * Live status of a single match. Stays out of the way while the match has not started

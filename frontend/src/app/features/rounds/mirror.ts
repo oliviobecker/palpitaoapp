@@ -12,11 +12,11 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { Mirror as MirrorView, MirrorParticipant } from '../../core/models/models';
-import { PredictionsService } from '../../core/services/predictions.service';
-import { EmptyState } from '../../shared/components/empty-state/empty-state';
-import { Icon } from '../../shared/components/icon/icon';
-import { Loading } from '../../shared/components/loading/loading';
+import { Mirror as MirrorView, MirrorParticipant } from '@core/models';
+import { PredictionsService } from '@core/services/predictions.service';
+import { EmptyState } from '@shared/components/empty-state/empty-state';
+import { Icon } from '@shared/components/icon/icon';
+import { Loading } from '@shared/components/loading/loading';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

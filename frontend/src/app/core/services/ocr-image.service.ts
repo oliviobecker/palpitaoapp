@@ -1,6 +1,6 @@
+import { OcrImportsService } from '@core/services/admin/ocr-imports.service';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, of, shareReplay, tap } from 'rxjs';
-import { AdminService } from './admin.service';
 
 /**
  * Loads stored OCR upload images as object URLs.
@@ -12,7 +12,7 @@ import { AdminService } from './admin.service';
  */
 @Injectable({ providedIn: 'root' })
 export class OcrImageService {
-  private readonly api = inject(AdminService);
+  private readonly ocrImportsApi = inject(OcrImportsService);
 
   /** batchId -> object URL, so re-opening the viewer does not refetch the bytes. */
   private readonly urls = new Map<string, string>();
@@ -29,7 +29,7 @@ export class OcrImageService {
       return inFlight;
     }
 
-    const request = this.api.getOcrImage(batchId).pipe(
+    const request = this.ocrImportsApi.getOcrImage(batchId).pipe(
       map((blob) => URL.createObjectURL(blob)),
       tap({
         next: (url) => {

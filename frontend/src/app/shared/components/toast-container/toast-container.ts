@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
-import { ToastService } from '../../../core/notifications/toast.service';
+import { ToastService } from '@core/notifications/toast.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,

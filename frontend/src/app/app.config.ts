@@ -69,11 +69,11 @@ import {
   LucideUndo2,
 } from '@lucide/angular';
 import { routes } from './app.routes';
-import { authInterceptor } from './core/interceptors/auth.interceptor';
-import { errorInterceptor } from './core/interceptors/error.interceptor';
-import { groupInterceptor } from './core/interceptors/group.interceptor';
-import { languageInterceptor } from './core/interceptors/language.interceptor';
-import { loadingInterceptor } from './core/interceptors/loading.interceptor';
+import { authInterceptor } from '@core/interceptors/auth.interceptor';
+import { errorInterceptor } from '@core/interceptors/error.interceptor';
+import { groupInterceptor } from '@core/interceptors/group.interceptor';
+import { languageInterceptor } from '@core/interceptors/language.interceptor';
+import { loadingInterceptor } from '@core/interceptors/loading.interceptor';
 
 registerLocaleData(localePt);
 registerLocaleData(localeEn);

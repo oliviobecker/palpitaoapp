@@ -10,13 +10,13 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { AuthService } from '../../core/auth/auth.service';
-import { GroupUserStatus } from '../../core/models/enums';
-import { MyGroup } from '../../core/models/models';
-import { ToastService } from '../../core/notifications/toast.service';
-import { GroupContextService } from '../../core/services/group-context.service';
-import { GroupsService } from '../../core/services/groups.service';
-import { Icon } from '../../shared/components/icon/icon';
+import { AuthService } from '@core/auth/auth.service';
+import { GroupUserStatus } from '@core/models/enums';
+import { MyGroup } from '@core/models';
+import { ToastService } from '@core/notifications/toast.service';
+import { GroupContextService } from '@core/services/group-context.service';
+import { GroupsService } from '@core/services/groups.service';
+import { Icon } from '@shared/components/icon/icon';
 
 /**
  * Shown after login when the account is valid but has no approved group yet. Lists

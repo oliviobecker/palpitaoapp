@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { Competition, MatchPhase, RoundStatus } from '../../core/models/enums';
-import { RoundResults, Standing } from '../../core/models/models';
+import { Competition, MatchPhase, RoundStatus } from '@core/models/enums';
+import { RoundResults, Standing } from '@core/models';
 import { buildClosingMessage } from './closing-message.util';
 
 function match(partial: Partial<RoundResults['matches'][number]>) {

@@ -1,10 +1,10 @@
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, finalize, map, shareReplay, tap, throwError } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { environment } from '@env/environment';
 import { SKIP_AUTH_REFRESH, SKIP_ERROR_TOAST } from '../interceptors/http-context';
 import { UserRole } from '../models/enums';
-import { LoginResponse, User } from '../models/models';
+import { LoginResponse, User } from '@core/models';
 import { TokenStorageService } from './token-storage.service';
 
 @Injectable({ providedIn: 'root' })

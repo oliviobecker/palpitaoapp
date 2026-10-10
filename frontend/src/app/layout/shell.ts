@@ -4,13 +4,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { filter } from 'rxjs';
-import { AuthService } from '../core/auth/auth.service';
-import { Lang, LanguageService } from '../core/i18n/language.service';
-import { ThemeService } from '../core/theme/theme.service';
-import { LoadingService } from '../core/notifications/loading.service';
-import { GroupContextService } from '../core/services/group-context.service';
-import { Icon } from '../shared/components/icon/icon';
-import { APP_BUILD_TIME, APP_COMMIT, APP_VERSION } from '../../version';
+import { AuthService } from '@core/auth/auth.service';
+import { Lang, LanguageService } from '@core/i18n/language.service';
+import { ThemeService } from '@core/theme/theme.service';
+import { LoadingService } from '@core/notifications/loading.service';
+import { GroupContextService } from '@core/services/group-context.service';
+import { Icon } from '@shared/components/icon/icon';
+import { APP_BUILD_TIME, APP_COMMIT, APP_VERSION } from '@version';
+import { initials as initialsOf } from '@shared/utils/avatar.util';
 
 /** Top-level tabs reached from the nav — they don't get a back button. */
 const ROOT_ROUTES = ['/dashboard', '/rounds', '/standings', '/admin'];
@@ -70,11 +71,7 @@ export class Shell {
   /** Up to two initials from the signed-in user's name, for the avatar chip. */
   protected readonly initials = computed(() => {
     const name = this.auth.currentUser()?.name?.trim() ?? '';
-    if (!name) return '?';
-    const parts = name.split(/\s+/);
-    const first = parts[0]?.[0] ?? '';
-    const last = parts.length > 1 ? (parts[parts.length - 1][0] ?? '') : '';
-    return (first + last).toUpperCase();
+    return name ? initialsOf(name) : '?';
   });
 
   logout(): void {

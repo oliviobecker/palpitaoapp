@@ -1,5 +1,5 @@
-import { Competition } from '../../core/models/enums';
-import { Round, ScoringConfig } from '../../core/models/models';
+import { Competition } from '@core/models/enums';
+import { Round, ScoringConfig } from '@core/models';
 import { predictionDeadlineIso } from './deadline.util';
 import { computeMultiplier, phaseLabel } from './match.util';
 import { roundLabel } from './round-name.util';

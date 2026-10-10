@@ -1,9 +1,9 @@
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { environment } from '@env/environment';
 import { SKIP_ERROR_TOAST, SKIP_TENANT_HEADERS } from '../interceptors/http-context';
-import { PublicRound, PublicSeason, PublicStandingRow } from '../models/models';
+import { PublicRound, PublicSeason, PublicStandingRow } from '@core/models';
 
 /**
  * The public standings link. Every call opts out of the session and group headers: the

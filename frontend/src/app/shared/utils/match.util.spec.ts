@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { Competition, MatchPhase, TournamentType } from '../../core/models/enums';
-import { RoundMatch, ScoringConfig } from '../../core/models/models';
+import { Competition, MatchPhase, TournamentType } from '@core/models/enums';
+import { RoundMatch, ScoringConfig } from '@core/models';
 import { computeMultiplier, isClassic } from './match.util';
 
 function match(partial: Partial<RoundMatch>): RoundMatch {
