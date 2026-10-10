@@ -1,10 +1,6 @@
-using Palpitao.Infrastructure.ExternalData.Http;
-using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Enums;
-using Palpitao.Application.Rounds;
 using Palpitao.Domain.Rounds;
-using Xunit;
 
 namespace Palpitao.Api.Tests.Rounds;
 

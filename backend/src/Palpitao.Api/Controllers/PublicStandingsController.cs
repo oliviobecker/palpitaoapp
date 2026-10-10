@@ -2,11 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Palpitao.Api.Auth;
-using Palpitao.Infrastructure.Identity;
-using Palpitao.Application.Auth;
-using Palpitao.Application.Standings;
-using Palpitao.Application.Scoring;
 using Palpitao.Api.Extensions;
+using Palpitao.Application.Standings;
 
 namespace Palpitao.Api.Controllers;
 

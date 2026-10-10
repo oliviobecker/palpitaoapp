@@ -1,5 +1,3 @@
-using Sentry.AspNetCore;
-
 namespace Palpitao.Api.Monitoring;
 
 public static class SentryConfiguration

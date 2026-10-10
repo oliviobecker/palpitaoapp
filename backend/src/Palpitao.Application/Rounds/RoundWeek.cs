@@ -1,7 +1,6 @@
+using Palpitao.Application.Abstractions;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Application.Abstractions;
-using Palpitao.Domain.Rounds;
 
 namespace Palpitao.Application.Rounds;
 

@@ -1,16 +1,15 @@
 using Microsoft.EntityFrameworkCore;
-using Palpitao.Application.Common.Exceptions;
-using Palpitao.Domain.Common;
-using Palpitao.Domain.Entities;
-using Palpitao.Domain.Enums;
+using Palpitao.Application.Abstractions;
 using Palpitao.Application.Audit;
+using Palpitao.Application.Common.Exceptions;
 using Palpitao.Application.Flavio;
 using Palpitao.Application.Groups;
 using Palpitao.Application.Scoring;
-using Palpitao.Domain.Scoring;
-using Palpitao.Domain.Tournaments;
-using Palpitao.Application.Abstractions;
+using Palpitao.Domain.Common;
+using Palpitao.Domain.Entities;
+using Palpitao.Domain.Enums;
 using Palpitao.Domain.Rounds;
+using Palpitao.Domain.Tournaments;
 
 namespace Palpitao.Application.Rounds;
 

@@ -1,6 +1,5 @@
 using Palpitao.Application.Results;
 using Palpitao.Domain.Entities;
-using Palpitao.Infrastructure.BackgroundJobs;
 
 namespace Palpitao.Infrastructure.ExternalData.Results;
 

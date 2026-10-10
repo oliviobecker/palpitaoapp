@@ -1,9 +1,3 @@
-using Palpitao.Application.AdminPredictions;
-using Palpitao.Application.Audit;
-using Palpitao.Application.Flavio;
-using Palpitao.Application.Registrations;
-using Palpitao.Application.Users;
-
 namespace Palpitao.Application.Ocr;
 
 /// <summary>The stored bytes of an upload, ready to be written to the response.</summary>

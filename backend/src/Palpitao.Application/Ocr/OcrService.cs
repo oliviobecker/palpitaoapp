@@ -1,17 +1,13 @@
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Palpitao.Application.Common.Exceptions;
-using Palpitao.Domain.Common;
-using Palpitao.Application.AdminPredictions;
+using Palpitao.Application.Abstractions;
 using Palpitao.Application.Audit;
-using Palpitao.Application.Flavio;
-using Palpitao.Application.Registrations;
-using Palpitao.Application.Users;
+using Palpitao.Application.Common.Exceptions;
+using Palpitao.Application.Groups;
+using Palpitao.Domain.Common;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Application.Groups;
-using Palpitao.Application.Abstractions;
 
 namespace Palpitao.Application.Ocr;
 

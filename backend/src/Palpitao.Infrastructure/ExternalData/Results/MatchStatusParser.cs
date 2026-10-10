@@ -1,7 +1,6 @@
 using System.Text;
-using Palpitao.Domain.Enums;
 using Palpitao.Application.Results;
-using Palpitao.Infrastructure.BackgroundJobs;
+using Palpitao.Domain.Enums;
 
 namespace Palpitao.Infrastructure.ExternalData.Results;
 

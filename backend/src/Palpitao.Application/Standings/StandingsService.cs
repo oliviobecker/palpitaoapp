@@ -1,10 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Palpitao.Application.Abstractions;
 using Palpitao.Application.Common.Exceptions;
-using Palpitao.Domain.Common;
+using Palpitao.Application.Groups;
 using Palpitao.Application.Scoring;
 using Palpitao.Domain.Entities;
-using Palpitao.Application.Groups;
-using Palpitao.Application.Abstractions;
 
 namespace Palpitao.Application.Standings;
 

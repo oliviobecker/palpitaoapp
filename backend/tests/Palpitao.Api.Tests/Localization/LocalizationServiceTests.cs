@@ -1,9 +1,6 @@
-using Palpitao.Infrastructure.ExternalData.Http;
+using Palpitao.Api.Localization;
 using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
-using Palpitao.Api.Localization;
-using Palpitao.Application.Abstractions;
-using Xunit;
 
 namespace Palpitao.Api.Tests.Localization;
 

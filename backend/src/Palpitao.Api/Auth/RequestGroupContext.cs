@@ -1,6 +1,4 @@
 using Palpitao.Application.Abstractions;
-using Palpitao.Application.Auth;
-using Palpitao.Infrastructure.Identity;
 
 namespace Palpitao.Api.Auth;
 

@@ -11,9 +11,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Palpitao.Api.Controllers;
 using Palpitao.Api.Middlewares;
 using Palpitao.Api.Monitoring;
-using Palpitao.Api.Localization;
 using Palpitao.Application.Abstractions;
-using Sentry;
 
 namespace Palpitao.Api.Tests.Monitoring;
 

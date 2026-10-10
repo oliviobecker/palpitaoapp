@@ -1,11 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Palpitao.Infrastructure.ExternalData.Http;
-using Palpitao.Application.Common.Exceptions;
+using Palpitao.Application.Abstractions;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Application.Abstractions;
 
 namespace Palpitao.Infrastructure.Persistence;
 

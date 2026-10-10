@@ -1,13 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Palpitao.Application.Abstractions;
+using Palpitao.Application.Audit;
 using Palpitao.Application.Common.Exceptions;
+using Palpitao.Application.Fixtures;
+using Palpitao.Application.Groups;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Application.Audit;
-using Palpitao.Application.Fixtures;
-using Palpitao.Application.Groups;
-using Palpitao.Application.Abstractions;
 
 namespace Palpitao.Application.Teams;
 

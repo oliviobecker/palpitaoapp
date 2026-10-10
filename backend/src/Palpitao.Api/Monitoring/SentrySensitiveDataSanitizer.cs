@@ -1,5 +1,3 @@
-using Sentry;
-
 namespace Palpitao.Api.Monitoring;
 
 public static class SentrySensitiveDataSanitizer

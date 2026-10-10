@@ -1,10 +1,5 @@
 using Palpitao.Application.Predictions;
 using Palpitao.Domain.Enums;
-using Palpitao.Application.Audit;
-using Palpitao.Application.Flavio;
-using Palpitao.Application.Ocr;
-using Palpitao.Application.Registrations;
-using Palpitao.Application.Users;
 
 namespace Palpitao.Application.AdminPredictions;
 

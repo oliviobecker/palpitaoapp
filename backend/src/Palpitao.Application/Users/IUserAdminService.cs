@@ -1,9 +1,3 @@
-using Palpitao.Application.AdminPredictions;
-using Palpitao.Application.Audit;
-using Palpitao.Application.Flavio;
-using Palpitao.Application.Ocr;
-using Palpitao.Application.Registrations;
-
 namespace Palpitao.Application.Users;
 
 public interface IUserAdminService

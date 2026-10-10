@@ -1,8 +1,3 @@
-using Palpitao.Application.AdminPredictions;
-using Palpitao.Application.Audit;
-using Palpitao.Application.Flavio;
-using Palpitao.Application.Registrations;
-using Palpitao.Application.Users;
 using Palpitao.Domain.Entities;
 
 namespace Palpitao.Application.Ocr;

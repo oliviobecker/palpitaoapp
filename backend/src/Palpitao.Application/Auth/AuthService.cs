@@ -1,12 +1,12 @@
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Palpitao.Application.Abstractions;
+using Palpitao.Application.Audit;
 using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Application.Audit;
 using Group = Palpitao.Domain.Entities.Group;
-using Palpitao.Application.Abstractions;
 
 namespace Palpitao.Application.Auth;
 

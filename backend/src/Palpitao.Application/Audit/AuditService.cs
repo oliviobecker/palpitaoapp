@@ -1,13 +1,8 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Palpitao.Application.AdminPredictions;
-using Palpitao.Application.Flavio;
-using Palpitao.Application.Ocr;
-using Palpitao.Application.Registrations;
-using Palpitao.Application.Users;
-using Palpitao.Domain.Entities;
-using Palpitao.Application.Groups;
 using Palpitao.Application.Abstractions;
+using Palpitao.Application.Groups;
+using Palpitao.Domain.Entities;
 
 namespace Palpitao.Application.Audit;
 

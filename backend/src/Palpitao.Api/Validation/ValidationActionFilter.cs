@@ -1,6 +1,5 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Palpitao.Application.Validation;
 using ValidationException = Palpitao.Application.Common.Exceptions.ValidationException;
 
 namespace Palpitao.Api.Validation;

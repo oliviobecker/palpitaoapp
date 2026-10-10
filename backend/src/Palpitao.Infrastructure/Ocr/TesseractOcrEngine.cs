@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Tesseract;
 using Palpitao.Application.Ocr;
-using Palpitao.Infrastructure.BackgroundJobs;
+using Tesseract;
 
 namespace Palpitao.Infrastructure.Ocr;
 

@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Palpitao.Application.Abstractions;
-using Palpitao.Domain.Rounds;
 
 namespace Palpitao.Application.Rounds;
 

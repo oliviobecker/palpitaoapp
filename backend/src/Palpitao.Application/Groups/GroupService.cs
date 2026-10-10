@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using Palpitao.Domain.Enums;
 using Palpitao.Application.Abstractions;
+using Palpitao.Domain.Enums;
 
 namespace Palpitao.Application.Groups;
 

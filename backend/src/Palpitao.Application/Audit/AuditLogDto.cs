@@ -1,9 +1,3 @@
-using Palpitao.Application.AdminPredictions;
-using Palpitao.Application.Flavio;
-using Palpitao.Application.Ocr;
-using Palpitao.Application.Registrations;
-using Palpitao.Application.Users;
-
 namespace Palpitao.Application.Audit;
 
 public class AuditLogDto

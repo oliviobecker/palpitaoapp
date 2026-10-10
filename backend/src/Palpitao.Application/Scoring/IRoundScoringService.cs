@@ -1,5 +1,4 @@
 using Palpitao.Application.Absences;
-using Palpitao.Domain.Scoring;
 
 namespace Palpitao.Application.Scoring;
 

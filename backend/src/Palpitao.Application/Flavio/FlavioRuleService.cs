@@ -1,12 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Palpitao.Application.Abstractions;
 using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Domain.Tournaments;
-using Palpitao.Application.Abstractions;
-using Palpitao.Application.Scoring;
 using Palpitao.Domain.Scoring;
+using Palpitao.Domain.Tournaments;
 
 namespace Palpitao.Application.Flavio;
 

@@ -1,10 +1,9 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Palpitao.Infrastructure.Persistence;
+using Palpitao.Api.Tests.TestSupport;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Api.Tests.TestSupport;
-using Xunit;
+using Palpitao.Infrastructure.Persistence;
 
 namespace Palpitao.Api.Tests.Groups;
 

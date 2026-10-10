@@ -4,11 +4,8 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Palpitao.Api.Controllers;
-using Palpitao.Infrastructure.Persistence;
-using Palpitao.Infrastructure.BackgroundJobs;
-using Palpitao.Infrastructure.Ocr;
 using Palpitao.Application.Ocr;
-using Xunit;
+using Palpitao.Infrastructure.Persistence;
 
 namespace Palpitao.Api.Tests.Health;
 

@@ -1,8 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Palpitao.Application.Common.Exceptions;
-using Palpitao.Domain.Common;
-using Palpitao.Domain.Enums;
 using Palpitao.Application.Abstractions;
+using Palpitao.Application.Common.Exceptions;
+using Palpitao.Domain.Enums;
 
 namespace Palpitao.Application.Flavio;
 

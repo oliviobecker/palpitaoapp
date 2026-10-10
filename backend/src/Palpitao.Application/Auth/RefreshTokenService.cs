@@ -2,9 +2,9 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Palpitao.Application.Abstractions;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Application.Abstractions;
 
 namespace Palpitao.Application.Auth;
 

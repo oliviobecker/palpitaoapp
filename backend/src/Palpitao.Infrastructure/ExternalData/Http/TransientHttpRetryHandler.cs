@@ -1,6 +1,4 @@
 using System.Net;
-using Palpitao.Domain.Common;
-using Palpitao.Application.Common.Exceptions;
 
 namespace Palpitao.Infrastructure.ExternalData.Http;
 

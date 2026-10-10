@@ -1,6 +1,3 @@
-using Palpitao.Application.Results;
-using Palpitao.Infrastructure.BackgroundJobs;
-
 namespace Palpitao.Infrastructure.ExternalData.Results;
 
 /// <summary>Bound from the "ResultsProvider" configuration section.</summary>

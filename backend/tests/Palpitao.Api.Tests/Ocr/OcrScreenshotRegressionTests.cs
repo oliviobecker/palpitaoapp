@@ -1,11 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Palpitao.Infrastructure.Persistence;
-using Palpitao.Domain.Entities;
-using Palpitao.Infrastructure.BackgroundJobs;
-using Palpitao.Infrastructure.Ocr;
 using Palpitao.Application.Ocr;
-using Xunit;
+using Palpitao.Domain.Entities;
+using Palpitao.Infrastructure.Persistence;
 
 namespace Palpitao.Api.Tests.Ocr;
 

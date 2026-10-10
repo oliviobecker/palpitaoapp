@@ -1,6 +1,3 @@
-using Palpitao.Application.Results;
-using Palpitao.Infrastructure.ExternalData.Results;
-
 namespace Palpitao.Infrastructure.BackgroundJobs;
 
 /// <summary>Bound from the "ResultsRefresh" configuration section. Drives the

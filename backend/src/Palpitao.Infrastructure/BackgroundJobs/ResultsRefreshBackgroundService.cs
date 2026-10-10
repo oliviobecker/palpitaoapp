@@ -2,9 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using Palpitao.Infrastructure.Persistence;
 using Palpitao.Application.Results;
-using Palpitao.Infrastructure.ExternalData.Results;
+using Palpitao.Infrastructure.Persistence;
 
 namespace Palpitao.Infrastructure.BackgroundJobs;
 

@@ -1,9 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using Palpitao.Application.Common.Exceptions;
-using Palpitao.Domain.Common;
-using Palpitao.Domain.Enums;
-using Palpitao.Application.Groups;
 using Palpitao.Application.Abstractions;
+using Palpitao.Application.Common.Exceptions;
+using Palpitao.Application.Groups;
+using Palpitao.Domain.Enums;
 
 namespace Palpitao.Application.Scouts;
 

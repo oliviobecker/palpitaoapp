@@ -1,8 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Palpitao.Infrastructure.Persistence;
 using Palpitao.Domain.Entities;
-using Xunit;
+using Palpitao.Infrastructure.Persistence;
 
 namespace Palpitao.Api.Tests.Data;
 

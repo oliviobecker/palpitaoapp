@@ -1,17 +1,12 @@
 using Microsoft.EntityFrameworkCore;
-using Palpitao.Application.Common.Exceptions;
-using Palpitao.Domain.Common;
-using Palpitao.Application.AdminPredictions;
+using Palpitao.Application.Abstractions;
 using Palpitao.Application.Audit;
-using Palpitao.Application.Ocr;
-using Palpitao.Application.Registrations;
-using Palpitao.Application.Users;
-using Palpitao.Domain.Entities;
-using Palpitao.Domain.Enums;
+using Palpitao.Application.Common.Exceptions;
 using Palpitao.Application.Groups;
 using Palpitao.Application.Scoring;
-using Palpitao.Domain.Scoring;
-using Palpitao.Application.Abstractions;
+using Palpitao.Domain.Common;
+using Palpitao.Domain.Entities;
+using Palpitao.Domain.Enums;
 
 namespace Palpitao.Application.Flavio;
 

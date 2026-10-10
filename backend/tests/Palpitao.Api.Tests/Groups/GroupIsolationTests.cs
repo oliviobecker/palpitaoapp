@@ -1,19 +1,14 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Palpitao.Infrastructure.ExternalData.Http;
-using Palpitao.Application.Common.Exceptions;
-using Palpitao.Domain.Common;
-using Palpitao.Infrastructure.Persistence;
-using Palpitao.Domain.Entities;
-using Palpitao.Domain.Enums;
+using Palpitao.Api.Tests.TestSupport;
 using Palpitao.Application.Audit;
+using Palpitao.Application.Common.Exceptions;
 using Palpitao.Application.Groups;
 using Palpitao.Application.Rounds;
-using Palpitao.Domain.Rounds;
-using Palpitao.Application.Seasons;
 using Palpitao.Application.Standings;
-using Palpitao.Api.Tests.TestSupport;
-using Xunit;
+using Palpitao.Domain.Entities;
+using Palpitao.Domain.Enums;
+using Palpitao.Infrastructure.Persistence;
 
 namespace Palpitao.Api.Tests.Groups;
 

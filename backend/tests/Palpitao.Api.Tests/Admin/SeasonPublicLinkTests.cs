@@ -1,10 +1,9 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Palpitao.Infrastructure.Persistence;
-using Palpitao.Application.Seasons;
-using Palpitao.Application.Audit;
 using Palpitao.Api.Tests.TestSupport;
-using Xunit;
+using Palpitao.Application.Audit;
+using Palpitao.Application.Seasons;
+using Palpitao.Infrastructure.Persistence;
 
 namespace Palpitao.Api.Tests.Admin;
 

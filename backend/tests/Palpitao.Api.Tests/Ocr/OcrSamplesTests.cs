@@ -5,12 +5,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
-using Palpitao.Infrastructure.Persistence;
-using Palpitao.Domain.Entities;
-using Palpitao.Infrastructure.BackgroundJobs;
-using Palpitao.Infrastructure.Ocr;
 using Palpitao.Application.Ocr;
-using Xunit;
+using Palpitao.Domain.Entities;
+using Palpitao.Infrastructure.Ocr;
+using Palpitao.Infrastructure.Persistence;
 using Xunit.Abstractions;
 
 namespace Palpitao.Api.Tests.Ocr;

@@ -1,8 +1,5 @@
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.Extensions.DependencyInjection;
 using Palpitao.Application.Groups;
-using Palpitao.Application.Auth;
-using Palpitao.Infrastructure.Identity;
 
 namespace Palpitao.Api.Auth;
 

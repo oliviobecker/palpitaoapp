@@ -3,19 +3,14 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Palpitao.Infrastructure.ExternalData.Http;
-using Palpitao.Application.Common.Exceptions;
-using Palpitao.Domain.Common;
-using Palpitao.Infrastructure.Persistence;
-using Palpitao.Domain.Entities;
-using Palpitao.Application.Audit;
-using Palpitao.Application.Groups;
-using Palpitao.Api.Tests.TestSupport;
-using Xunit;
 using Palpitao.Api.Auth;
-using Palpitao.Infrastructure.Identity;
-using Palpitao.Application.Auth;
+using Palpitao.Api.Tests.TestSupport;
 using Palpitao.Application.Abstractions;
+using Palpitao.Application.Audit;
+using Palpitao.Application.Common.Exceptions;
+using Palpitao.Application.Groups;
+using Palpitao.Domain.Entities;
+using Palpitao.Infrastructure.Persistence;
 
 namespace Palpitao.Api.Tests.Audit;
 

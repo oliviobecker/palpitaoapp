@@ -1,5 +1,3 @@
-using Palpitao.Application.Scoring;
-
 namespace Palpitao.Application.Standings;
 
 /// <summary>

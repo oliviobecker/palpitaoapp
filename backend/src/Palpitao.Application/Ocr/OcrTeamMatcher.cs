@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
 using Palpitao.Domain.Entities;
 

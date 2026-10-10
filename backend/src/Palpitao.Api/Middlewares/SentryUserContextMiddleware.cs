@@ -1,6 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using Sentry;
 
 namespace Palpitao.Api.Middlewares;
 

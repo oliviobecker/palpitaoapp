@@ -1,18 +1,15 @@
 using FluentValidation;
 using Palpitao.Application.Absences;
 using Palpitao.Application.AdminPredictions;
-using Palpitao.Application.Audit;
-using Palpitao.Application.Flavio;
-using Palpitao.Application.Ocr;
-using Palpitao.Application.Registrations;
-using Palpitao.Application.Users;
 using Palpitao.Application.Auth;
 using Palpitao.Application.Fixtures;
+using Palpitao.Application.Flavio;
 using Palpitao.Application.Groups;
-using Palpitao.Application.Rounds;
 using Palpitao.Application.Predictions;
+using Palpitao.Application.Rounds;
 using Palpitao.Application.Scoring;
 using Palpitao.Application.Seasons;
+using Palpitao.Application.Users;
 
 namespace Palpitao.Application.Validation;
 

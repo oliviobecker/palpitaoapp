@@ -1,16 +1,14 @@
-using Palpitao.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging.Abstractions;
 using Palpitao.Application.Absences;
 using Palpitao.Application.Audit;
 using Palpitao.Application.Flavio;
 using Palpitao.Application.Groups;
 using Palpitao.Application.Scoring;
-using Palpitao.Domain.Scoring;
 using Palpitao.Application.Standings;
 using Palpitao.Application.Users;
-using Palpitao.Api.Auth;
+using Palpitao.Domain.Scoring;
 using Palpitao.Infrastructure.Identity;
-using Palpitao.Application.Auth;
+using Palpitao.Infrastructure.Persistence;
 
 namespace Palpitao.Api.Tests.TestSupport;
 

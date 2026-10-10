@@ -1,9 +1,4 @@
 using Palpitao.Domain.Enums;
-using Palpitao.Application.AdminPredictions;
-using Palpitao.Application.Audit;
-using Palpitao.Application.Flavio;
-using Palpitao.Application.Ocr;
-using Palpitao.Application.Users;
 
 namespace Palpitao.Application.Registrations;
 

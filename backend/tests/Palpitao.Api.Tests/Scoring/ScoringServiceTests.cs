@@ -1,7 +1,5 @@
 using Palpitao.Domain.Enums;
-using Palpitao.Application.Scoring;
 using Palpitao.Domain.Scoring;
-using Xunit;
 
 namespace Palpitao.Api.Tests.Scoring;
 

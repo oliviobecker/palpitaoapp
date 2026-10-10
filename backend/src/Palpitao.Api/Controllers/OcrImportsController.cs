@@ -3,21 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Net.Http.Headers;
 using Palpitao.Api.Auth;
-using Palpitao.Infrastructure.Identity;
-using Palpitao.Application.Auth;
-using Palpitao.Infrastructure.ExternalData.Http;
-using Palpitao.Application.Common.Exceptions;
-using Palpitao.Domain.Common;
-using Palpitao.Application.AdminPredictions;
-using Palpitao.Application.Audit;
-using Palpitao.Application.Flavio;
-using Palpitao.Application.Ocr;
-using Palpitao.Application.Registrations;
-using Palpitao.Application.Users;
-using Palpitao.Infrastructure.BackgroundJobs;
-using Palpitao.Infrastructure.Ocr;
-using Sentry;
 using Palpitao.Api.Extensions;
+using Palpitao.Application.Ocr;
+using Palpitao.Domain.Common;
 
 namespace Palpitao.Api.Controllers;
 

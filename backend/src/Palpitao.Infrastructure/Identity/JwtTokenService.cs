@@ -3,8 +3,8 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Palpitao.Domain.Entities;
 using Palpitao.Application.Auth;
+using Palpitao.Domain.Entities;
 
 namespace Palpitao.Infrastructure.Identity;
 

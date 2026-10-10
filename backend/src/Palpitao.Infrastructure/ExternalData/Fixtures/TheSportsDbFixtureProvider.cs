@@ -1,10 +1,8 @@
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
-using Palpitao.Infrastructure.ExternalData.Http;
-using Palpitao.Application.Common.Exceptions;
-using Palpitao.Domain.Common;
 using Palpitao.Application.Fixtures;
+using Palpitao.Domain.Common;
 using Palpitao.Domain.Enums;
 
 namespace Palpitao.Infrastructure.ExternalData.Fixtures;

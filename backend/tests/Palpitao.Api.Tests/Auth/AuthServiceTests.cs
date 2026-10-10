@@ -1,16 +1,13 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Palpitao.Api.Auth;
-using Palpitao.Infrastructure.Identity;
+using Palpitao.Application.Audit;
 using Palpitao.Application.Auth;
-using Palpitao.Infrastructure.ExternalData.Http;
 using Palpitao.Application.Common.Exceptions;
 using Palpitao.Domain.Common;
-using Palpitao.Infrastructure.Persistence;
 using Palpitao.Domain.Entities;
 using Palpitao.Domain.Enums;
-using Palpitao.Application.Audit;
-using Xunit;
+using Palpitao.Infrastructure.Identity;
+using Palpitao.Infrastructure.Persistence;
 
 namespace Palpitao.Api.Tests.Auth;
 

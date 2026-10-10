@@ -3,19 +3,14 @@ using System.Text.Json.Serialization;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Palpitao.Infrastructure.ExternalData.Http;
-using Palpitao.Application.Common.Exceptions;
-using Palpitao.Domain.Common;
-using Palpitao.Infrastructure.Persistence;
-using Palpitao.Application.Teams;
-using Palpitao.Domain.Entities;
-using Palpitao.Domain.Enums;
-using Palpitao.Application.Audit;
-using Palpitao.Infrastructure.ExternalData.Fixtures;
-using Palpitao.Application.Fixtures;
-using Palpitao.Infrastructure.ExternalData.Teams;
 using Palpitao.Api.Tests.TestSupport;
-using Xunit;
+using Palpitao.Application.Audit;
+using Palpitao.Application.Common.Exceptions;
+using Palpitao.Application.Fixtures;
+using Palpitao.Application.Teams;
+using Palpitao.Domain.Common;
+using Palpitao.Domain.Enums;
+using Palpitao.Infrastructure.Persistence;
 
 namespace Palpitao.Api.Tests.Teams;
 

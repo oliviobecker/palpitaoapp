@@ -2,13 +2,9 @@ using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
-using Palpitao.Infrastructure.ExternalData.Http;
-using Palpitao.Application.Common.Exceptions;
-using Palpitao.Domain.Common;
 using Palpitao.Application.Results;
+using Palpitao.Domain.Common;
 using Palpitao.Domain.Entities;
-using Palpitao.Domain.Enums;
-using Palpitao.Infrastructure.BackgroundJobs;
 
 namespace Palpitao.Infrastructure.ExternalData.Results;
 

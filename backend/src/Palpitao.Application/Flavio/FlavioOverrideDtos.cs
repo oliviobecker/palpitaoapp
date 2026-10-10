@@ -1,9 +1,3 @@
-using Palpitao.Application.AdminPredictions;
-using Palpitao.Application.Audit;
-using Palpitao.Application.Ocr;
-using Palpitao.Application.Registrations;
-using Palpitao.Application.Users;
-
 namespace Palpitao.Application.Flavio;
 
 public class FlavioOverrideRequest

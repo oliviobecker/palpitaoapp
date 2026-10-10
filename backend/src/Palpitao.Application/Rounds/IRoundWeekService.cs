@@ -1,5 +1,3 @@
-using Palpitao.Domain.Rounds;
-
 namespace Palpitao.Application.Rounds;
 
 /// <summary>
