@@ -86,96 +86,9 @@ export const routes: Routes = [
       {
         path: 'admin',
         canActivate: [adminGuard],
-        loadComponent: () => import('./features/admin/admin-layout').then((m) => m.AdminLayout),
-        children: [
-          { path: '', loadComponent: () => import('./features/admin/admin').then((m) => m.Admin) },
-          {
-            path: 'seasons',
-            canDeactivate: [unsavedChangesGuard],
-            loadComponent: () =>
-              import('./features/admin/admin-seasons').then((m) => m.AdminSeasons),
-          },
-          {
-            path: 'rounds',
-            loadComponent: () => import('./features/admin/admin-rounds').then((m) => m.AdminRounds),
-          },
-          {
-            path: 'rounds/new',
-            canDeactivate: [unsavedChangesGuard],
-            loadComponent: () =>
-              import('./features/admin/admin-round-form').then((m) => m.AdminRoundForm),
-          },
-          {
-            path: 'rounds/:id',
-            loadComponent: () =>
-              import('./features/admin/admin-round-detail').then((m) => m.AdminRoundDetail),
-          },
-          {
-            path: 'rounds/:id/matches',
-            canDeactivate: [unsavedChangesGuard],
-            loadComponent: () =>
-              import('./features/admin/admin-matches').then((m) => m.AdminMatches),
-          },
-          {
-            path: 'rounds/:id/audit',
-            loadComponent: () =>
-              import('./features/admin/admin-round-audit').then((m) => m.AdminRoundAudit),
-          },
-          {
-            path: 'rounds/:id/scout',
-            loadComponent: () =>
-              import('./features/admin/admin-round-scout').then((m) => m.AdminRoundScout),
-          },
-          {
-            path: 'rounds/:id/manual-predictions',
-            loadComponent: () =>
-              import('./features/admin/admin-manual-predictions').then(
-                (m) => m.AdminManualPredictions,
-              ),
-          },
-          {
-            path: 'rounds/:id/import-predictions',
-            loadComponent: () =>
-              import('./features/admin/admin-ocr-import').then((m) => m.AdminOcrImport),
-          },
-          {
-            path: 'rounds/:id/import-history',
-            loadComponent: () =>
-              import('./features/admin/admin-ocr-history').then((m) => m.AdminOcrHistory),
-          },
-          {
-            path: 'ocr-aliases',
-            loadComponent: () =>
-              import('./features/admin/admin-ocr-aliases').then((m) => m.AdminOcrAliases),
-          },
-          {
-            path: 'scoring',
-            canDeactivate: [unsavedChangesGuard],
-            loadComponent: () =>
-              import('./features/admin/admin-scoring-rules').then((m) => m.AdminScoringRules),
-          },
-          {
-            path: 'participants',
-            canDeactivate: [unsavedChangesGuard],
-            loadComponent: () =>
-              import('./features/admin/admin-participants').then((m) => m.AdminParticipants),
-          },
-          {
-            path: 'registration-requests',
-            loadComponent: () =>
-              import('./features/admin/admin-registration-requests').then(
-                (m) => m.AdminRegistrationRequests,
-              ),
-          },
-          {
-            path: 'teams',
-            loadComponent: () => import('./features/admin/admin-teams').then((m) => m.AdminTeams),
-          },
-          {
-            path: 'audit',
-            loadComponent: () => import('./features/admin/admin-audit').then((m) => m.AdminAudit),
-          },
-        ],
+        loadComponent: () =>
+          import('./features/admin/shell/admin-layout').then((m) => m.AdminLayout),
+        loadChildren: () => import('./features/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
       },
     ],
   },

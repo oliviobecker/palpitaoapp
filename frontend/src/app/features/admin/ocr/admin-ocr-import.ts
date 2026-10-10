@@ -23,8 +23,8 @@ import { Icon } from '@shared/components/icon/icon';
 import { Loading } from '@shared/components/loading/loading';
 import { RoundLabelPipe } from '@shared/pipes/round-label.pipe';
 import { isPendingOcrBatch } from '@shared/utils/ocr-batch.util';
-import { AdminEntryNotice } from './admin-entry-notice';
-import { adminEntryBlockKey } from './admin-entry.util';
+import { AdminEntryNotice } from '../shared/admin-entry-notice';
+import { adminEntryBlockKey } from '../shared/admin-entry.util';
 import { AdminOcrBatches } from './admin-ocr-batches';
 import { OcrUploadQueue } from './ocr-upload-queue';
 
