@@ -59,7 +59,7 @@ jobs:
           reports: ${{ runner.temp }}/coverage/**/coverage.cobertura.xml
           targetdir: ${{ runner.temp }}/coverage-report
           reporttypes: MarkdownSummaryGithub;HtmlInline
-          assemblyfilters: '-*.Tests'
+          assemblyfilters: '-*Tests'
           classfilters: '-Palpitao.Infrastructure.Persistence.Migrations.*'
 
       - name: Publish coverage summary

@@ -27,7 +27,7 @@ POSIX shell — PowerShell here-strings (`@'...'@`) are not bash heredocs, and v
 Backend (`backend/`):
 ```bash
 dotnet build Palpitao.slnx
-dotnet test  tests/Palpitao.Api.Tests/Palpitao.Api.Tests.csproj
+dotnet test  tests/Palpitao.UnitTests/Palpitao.UnitTests.csproj
 dotnet test  --filter "FullyQualifiedName~ScoringServiceTests"   # one test class/method
 dotnet run   --project src/Palpitao.Api                          # https://localhost:7099
 dotnet ef database update    --project src/Palpitao.Api          # apply migrations + seed
