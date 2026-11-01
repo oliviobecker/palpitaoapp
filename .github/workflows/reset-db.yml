@@ -56,7 +56,7 @@ jobs:
           Write-Host "Confirmed. Will wipe '$($env:ENVIRONMENT)', keep admin '$($env:ADMIN_EMAIL)', drop_all_groups=$($env:DROP_ALL_GROUPS)."
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Prepare wipe SQL (inject admin email + group scope)
         shell: pwsh
