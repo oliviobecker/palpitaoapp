@@ -41,7 +41,7 @@ jobs:
           Write-Host "Confirmed. Seeding the group in '$($env:ENVIRONMENT)'."
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Seed the group
         shell: pwsh
