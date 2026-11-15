@@ -8,7 +8,6 @@ How the app is built, released, deployed and watched, and how secrets stay out o
 flowchart LR
     pr[Pull request] --> ci{{"CI · CodeQL"}}
     ci -->|merge| main[(main)]
-    main --> staging["deploy-staging.yml<br/>staging IIS"]
     main --> release["release.yml<br/>semantic-release"]
     release -->|feat / fix| tag["v* tag +<br/>GitHub Release"]
     tag --> gate{{"production<br/>reviewers"}}
@@ -22,12 +21,13 @@ GitHub Actions workflows live in `.github/workflows/`:
 |---|---|---|
 | `ci.yml` | every pull request + push to `main` | Backend build, tests with coverage, EF model-drift check; frontend format check, lint, build, unit and e2e; workflow lint (actionlint) |
 | `codeql.yml` | pull requests, `main`, weekly | CodeQL security analysis of C#, TypeScript and the workflows themselves |
-| `deploy-staging.yml` | push to `main` (+ manual) | Tests, publishes and deploys to the **staging** environment |
 | `release.yml` | push to `main` | **semantic-release**: tag + GitHub Release, then deploys **production** |
 | `deploy-iis.yml` | called by `release.yml` (+ manual) | Builds + deploys to **production** (reusable) |
-| `reset-db.yml` | manual | Wipes a staging or production database except one super-admin (typed confirmation) |
+| `reset-db.yml` | manual | Wipes the production database except one super-admin (typed confirmation) |
 | `seed-group.yml` | manual | Creates the first group for that super-admin (typed confirmation) |
-| `seed-rehearsal-staging.yml` | manual | Seeds and scores a whole past season on **staging only** (hard-coded environment) |
+
+There is **no staging environment** (removed in November 2026): production is the only deployed
+one. Try risky changes against a local Postgres copy of production first.
 
 Dependabot (`.github/dependabot.yml`) opens monthly, grouped minor/patch updates for NuGet, npm and
 Actions; framework majors are upgraded deliberately.
@@ -35,48 +35,60 @@ Actions; framework majors are upgraded deliberately.
 ### Branch / PR flow
 
 `main` is the single source of truth (trunk-based). Work on a feature branch, open a PR to `main`,
-let CI go green, then merge. Merging into `main` auto-deploys to **staging** and, in parallel,
-runs **semantic-release**: based on the [Conventional Commits](https://www.conventionalcommits.org/)
-since the last release (`feat` → minor, `fix` → patch, `BREAKING CHANGE` → major) it decides the next
-version, tags it and — if there's something to release — deploys that tag to **production**. So a
-single merge can ship to staging and production; commits with no user-facing change (`chore`, `ci`,
-`docs`, `refactor`, `test`) tag nothing and don't deploy to prod. To enforce the PR flow, enable a
+let CI go green, then merge. Merging into `main` runs **semantic-release**: based on the
+[Conventional Commits](https://www.conventionalcommits.org/) since the last release (`feat` → minor,
+`fix` → patch, `BREAKING CHANGE` → major) it decides the next version, tags it and — if there's
+something to release — deploys that tag to **production**. Commits with no user-facing change
+(`chore`, `ci`, `docs`, `refactor`, `test`) tag nothing and deploy nothing. To enforce the PR flow, enable a
 branch ruleset on `main` (Settings → Branches): *Require a pull request before merging* and *Require
 status checks to pass* (the `Backend`, `Frontend` and `Lint workflows (actionlint)` checks from
 `ci.yml`).
 
-### Staging deployment (`deploy-staging.yml`)
+### Production host
 
-Runs on the **self-hosted** IIS runner. It restores, tests, publishes the backend, writes
-`appsettings.Staging.json` from secrets, sets `ASPNETCORE_ENVIRONMENT=Staging` in `web.config`,
-builds the frontend and copies both to the staging IIS site. Staging and production run on the
-**same machine** as **separate IIS sites/app pools**, so they don't collide:
+Production is one Windows machine on the owner's network that runs everything: IIS, PostgreSQL,
+the GitHub Actions runner and the Cloudflare Tunnel. Nothing listens on the internet: the public
+hostname is a **Cloudflare Tunnel**, so Cloudflare terminates TLS and `cloudflared` (a Windows
+service) forwards to the IIS site on a loopback-only binding.
 
-| | Production | Staging |
-|---|---|---|
-| Frontend IIS path | `C:\inetpub\palpitao` | `C:\inetpub\palpitao-staging` |
-| Backend IIS path | `C:\inetpub\palpitao\api` | `C:\inetpub\palpitao-staging\api` |
-| App pool | `palpitao-api` | `palpitao-staging-api` |
+```mermaid
+flowchart LR
+    browser(["Browser"]) -- "https" --> cf["Cloudflare<br/>DNS · TLS"]
+    cf -- tunnel --> cfd["cloudflared<br/>(service)"]
+    subgraph pc["Production host"]
+        cfd -- "http 127.0.0.1:8081" --> site["IIS site palpitao<br/>SPA + /api app"]
+        site --> pg[("PostgreSQL<br/>localhost:5432")]
+        runner["Actions runner<br/>label Palpitao"] -. deploys .-> site
+    end
+```
 
-The staging paths/app pool are overridable repo **Variables** (`STAGING_FRONTEND_IIS_PATH`,
-`STAGING_BACKEND_IIS_PATH`, `STAGING_BACKEND_APP_POOL`); the defaults above are used when unset.
+| Piece | Setting |
+|---|---|
+| Frontend IIS path | `C:\inetpub\palpitao` (repo variable `FRONTEND_IIS_PATH`) |
+| Backend IIS path | `C:\inetpub\palpitao\api`, an IIS application under the site (`BACKEND_IIS_PATH`) |
+| App pool | `palpitao-api`, *No Managed Code* (`BACKEND_APP_POOL`) |
+| Site binding | `http 127.0.0.1:8081` — loopback only; the tunnel is the one way in |
+| Database | PostgreSQL on `localhost:5432`, database `palpitao`, owned by role `palpitao` |
+| Runner | repository runner with the label **`Palpitao`** — every self-hosted job asks for `[self-hosted, Palpitao]`, so a second runner can never pick up a deploy |
 
-**Required GitHub setup** before merging to `main`:
+What the machine needs besides IIS: the **ASP.NET Core Hosting Bundle** (same major as the app),
+**IIS URL Rewrite** (the SPA's `web.config` falls back to `index.html` with it), the
+**IIS Management Scripts and Tools** feature (the deploy stops/starts the app pool through the
+`WebAdministration` module, and only warns without it), the .NET SDK and Node on the runner
+service's `PATH`, and sleep disabled on AC power. The runner service and `cloudflared` start
+automatically, so a reboot brings the site back on its own.
 
-1. Create the `staging` **environment** (Settings → Environments).
-2. Add its **secrets** — the **same names** as production (the environment scopes them):
-   `BACKEND_CONNECTION_STRING`, `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_KEY` (and optional `SENTRY_DSN`).
-   Point `BACKEND_CONNECTION_STRING` at the **staging database**.
-3. On the server, create the staging **IIS site + `/api` application + app pool** at the paths above,
-   pointing the connection string at a **separate staging database** (e.g. `palpitao_staging`) so it
-   never touches production data.
+Behind the tunnel every request reaches the API from `127.0.0.1`, so the per-IP auth rate limit
+buckets every client together until the API reads Cloudflare's `CF-Connecting-IP` header.
 
-> Secrets are **environment-scoped**, so `staging` and `production` each have their own
-> `BACKEND_CONNECTION_STRING` / `JWT_*` — no prefix needed. Make sure they live under the matching
-> environment, not loose at the repo level.
-
-If a required secret is missing the job fails on purpose (at "Write backend staging settings")
-without publishing.
+**Moving the host** to another machine: prepare the pieces above there, register a runner with a
+temporary label, then put the site offline (`app_offline.htm` in the old `api` folder), copy the
+database with `pg_dump -Fc` / `pg_restore --no-owner`, compare `scripts/db-counts.sql` on both sides,
+point the `production` environment's `BACKEND_CONNECTION_STRING` at the new database, move the
+`Palpitao` label to the new runner, run *Build and deploy on IIS Production* by hand, install
+`cloudflared` there with the existing tunnel's token, and stop `cloudflared` on the old machine — two
+connectors on one tunnel would split traffic between both hosts. Keep the old machine stopped, not
+wiped, until the new one has run a few days.
 
 ### Releases & production deployment (`release.yml` + `deploy-iis.yml`)
 
@@ -85,7 +97,7 @@ to `main` it analyses the Conventional Commits since the last `v*` tag, computes
 creates the **git tag + GitHub Release** (the Release notes are your changelog), and then the
 `deploy-production` job builds that tag and deploys it to the `production` environment. The app
 **footer shows the version** — read at build time from the latest git tag (`git describe`), so prod
-shows the released `v*` and staging shows the last release plus the short commit.
+shows the released `v*` (a manual deploy of a branch shows the last release plus the short commit).
 
 You don't bump versions by hand: just merge Conventional Commits and semantic-release does the rest.
 It does **not** push a commit back to `main` (no bump commit), so it works with branch protection and
@@ -213,5 +225,5 @@ client:
 - `seed-group-for-admin.sql` — creates a first group for that admin; does nothing if it already has one.
 - `delete-group.sql`, `delete-season.sql`, `delete-rounds.sql` — targeted deletes that default to a
   **dry run** and print row counts; `db-counts.sql` shows the counts before and after.
-- `rehearsal/` — a seeded, already-played season scored through the real API, used to rehearse a
-  season on staging (`seed-rehearsal-staging.yml`).
+- `rehearsal/` — a seeded, already-played season scored through the real API, to rehearse a season
+  by hand against a local or throwaway database — **never production**.

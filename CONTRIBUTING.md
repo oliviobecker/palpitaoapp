@@ -11,7 +11,7 @@ page is about how changes land.
    — it becomes the squash commit, and semantic-release reads it:
    `feat` → minor release, `fix` → patch release, `BREAKING CHANGE:` → major;
    `build`, `chore`, `ci`, `docs`, `refactor`, `test` ship nothing.
-4. CI must be green. Merging deploys staging; a release deploys production after review.
+4. CI must be green. A release (a merged `feat`/`fix`) deploys production after review.
 
 ## Before you push
 

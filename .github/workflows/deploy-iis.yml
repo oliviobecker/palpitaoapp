@@ -2,8 +2,8 @@ name: Build and deploy on IIS Production
 
 # Production is deployed by the Release workflow (release.yml) after semantic-release
 # publishes a new version — it calls this workflow with the new tag. You can also run
-# it manually from the Actions tab (optionally passing a ref). Pushes to main deploy to
-# staging instead — see deploy-staging.yml.
+# it manually from the Actions tab (optionally passing a ref). There is no staging
+# environment: production is the only deployed one.
 on:
   workflow_call:
     inputs:
@@ -30,7 +30,7 @@ env:
 jobs:
   build-and-deploy:
     name: Build and deploy on IIS Production
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, Palpitao] # the production host's runner (see docs/operations.md)
     environment: production
 
     steps:

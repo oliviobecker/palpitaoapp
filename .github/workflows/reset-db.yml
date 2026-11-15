@@ -3,8 +3,8 @@ name: Reset database (keep super-admin)
 # DANGER: wipes almost all data in the selected environment's database, keeping
 # only the chosen super-admin user and the global "Teams" catalogue. Manual
 # dispatch only. You must type the environment name to confirm, and the job runs
-# under the GitHub `staging`/`production` Environment -- add "Required reviewers"
-# to the production Environment for a second pair of eyes before a prod wipe.
+# under the GitHub `production` Environment -- add "Required reviewers" to it for a
+# second pair of eyes before a wipe.
 on:
   workflow_dispatch:
     inputs:
@@ -13,7 +13,6 @@ on:
         required: true
         type: choice
         options:
-          - staging
           - production
       admin_email:
         description: 'Super-admin to KEEP (matched by email)'
@@ -26,7 +25,7 @@ on:
         default: true
         type: boolean
       confirm:
-        description: 'Type the environment name (staging or production) to confirm'
+        description: 'Type the environment name (production) to confirm'
         required: true
         type: string
 
@@ -39,7 +38,7 @@ concurrency:
 jobs:
   reset:
     name: Reset ${{ inputs.environment }} database
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, Palpitao]
     environment: ${{ inputs.environment }}
     steps:
       - name: Validate confirmation

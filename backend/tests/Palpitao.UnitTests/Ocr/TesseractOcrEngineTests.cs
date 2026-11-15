@@ -9,7 +9,7 @@ namespace Palpitao.UnitTests.Ocr;
 /// <summary>
 /// Covers the language-model lookup only — the part that reads the filesystem and that a deploy
 /// can get wrong. Recognition itself needs the native Tesseract libraries and the ~38 MB models,
-/// so it is exercised by the staging smoke test, not here.
+/// so it is exercised by the post-deploy smoke test (<c>GET /health/ocr</c>) and OcrSamplesTests, not here.
 /// </summary>
 public class TesseractOcrEngineTests : IDisposable
 {

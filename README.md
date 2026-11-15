@@ -63,8 +63,8 @@ own admins, seasons and rules.
 - **Security by default.** Rotating, hashed refresh tokens; per-IP rate limits on anonymous
   endpoints; fail-fast startup checks; PII-scrubbed Sentry; CodeQL and Dependabot on the repository
   — [security](docs/architecture.md#security).
-- **Hands-off delivery.** Conventional Commits drive semantic-release: every merge deploys staging,
-  a release deploys production behind a reviewer, and migrations run before the new build goes live
+- **Hands-off delivery.** Conventional Commits drive semantic-release: a release deploys
+  production behind a reviewer, and migrations run before the new build goes live
   — [operations](docs/operations.md).
 
 ## Architecture
@@ -93,7 +93,7 @@ and the decisions behind it in [docs/adr](docs/adr/README.md).
 | OCR | Tesseract 5 (in process) |
 | Observability | Sentry, structured logging |
 | Tests | xUnit + SQLite in-memory · Vitest · Playwright |
-| Delivery | GitHub Actions, CodeQL, Dependabot, semantic-release, IIS (staging + production) |
+| Delivery | GitHub Actions, CodeQL, Dependabot, semantic-release, IIS + Cloudflare Tunnel (self-hosted) |
 
 ## Getting started
 
@@ -139,8 +139,8 @@ frontend/
   src/app/                 core/ (auth, interceptors, models, services) · shared/ · layout/ · features/ — layers enforced by ESLint
   e2e/                     Playwright specs with a mocked API
 docs/                      architecture, domain rules, feature guides, ADRs, operations
-scripts/                   database maintenance SQL and the staging rehearsal seed
-.github/workflows/         CI, CodeQL, release, staging/production deploys, maintenance jobs
+scripts/                   database maintenance SQL and the rehearsal-season seed
+.github/workflows/         CI, CodeQL, release, production deploy, maintenance jobs
 ```
 
 ## Documentation

@@ -9,23 +9,25 @@ How FanPicks / Palpitão is put together and why. The rules it implements are in
 ```mermaid
 flowchart LR
     user(["Participant / group admin<br/>(mobile browser)"])
-    subgraph host["Windows server · IIS"]
+    cf["Cloudflare<br/>(DNS · TLS · tunnel)"]
+    subgraph host["Windows host · IIS"]
+        tunnel["cloudflared"]
         spa["Angular 21 SPA<br/>static files"]
         api["ASP.NET Core 10 API<br/>mounted at /api"]
         ocr["Tesseract OCR<br/>(in process)"]
+        db[("PostgreSQL")]
     end
-    db[("PostgreSQL 16")]
     of["OneFootball<br/>web-experience API"]
     sentry["Sentry"]
     gh["GitHub Actions<br/>CI · CodeQL · release"]
 
-    user --> spa
+    user --> cf --> tunnel --> spa
     spa -- "JSON + JWT<br/>X-Group-Id" --> api
     api --> db
     api --> ocr
     api -- "fixtures · results · squads" --> of
     api -. errors .-> sentry
-    gh -- "self-hosted runner:<br/>staging + production" --> host
+    gh -- "self-hosted runner:<br/>production" --> host
 ```
 
 One API process serves every group. Each group (a pool of friends) is a tenant in a shared

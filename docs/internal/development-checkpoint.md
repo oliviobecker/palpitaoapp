@@ -24,7 +24,7 @@ _Last updated: 2026-10-05 (a cancelled round can be restored, and a draft/cancel
 
 > Measured on branch `claude/rodada-delete-cancel-f71491` (2026-10-05), cut from `main` at
 > `f6547ee`. No migration. The round delete was only exercised on SQLite (FKs enforced): try it on
-> staging (a cancelled round with predictions) before production.
+> a local Postgres copy (a cancelled round with predictions) before production.
 >
 > ⚠️ **`format:check` fails locally and that is expected.** The working copy is CRLF
 > (`core.autocrlf=true`) while Prettier's default `endOfLine` is `lf`, so ~56 files report as
@@ -34,8 +34,9 @@ _Last updated: 2026-10-05 (a cancelled round can be restored, and a draft/cancel
 > ⚠️ **The PR-level CI workflow is `disabled_manually`** — `gh pr checks` reports nothing, ever.
 > Run the gates locally, **after merging `main` into the branch**: `main` moves during long
 > sessions (PR #45 was cut before #43/#44 landed and had to be re-verified on the merged tree).
-> What a push to `main` *does* run: staging deploy, then semantic-release → production deploy,
-> and `deploy-iis.yml` runs the full `dotnet test` + `npm run build` before publishing.
+> What a push to `main` *does* run: semantic-release → production deploy (there is no staging
+> since November 2026), and `deploy-iis.yml` runs the full `dotnet test` + `npm run build` before
+> publishing.
 
 ## 1. Project overview
 
@@ -455,12 +456,11 @@ node -e "const f=o=>Object.entries(o).flatMap(([k,v])=>v&&typeof v==='object'?f(
 Seed dev admin: `admin@palpitao.local` / `Admin@123`.
 
 **Database reset — keep only the super-admin (go-live wipe):**
-- **Staging / production:** Actions → *Reset database (keep super-admin)*
-  (`.github/workflows/reset-db.yml`) — manual dispatch; pick the environment and type its name to
-  confirm. Keeps the chosen admin (by email) + the global `Teams` catalogue and wipes everything else
+- **Production:** Actions → *Reset database (keep super-admin)*
+  (`.github/workflows/reset-db.yml`) — manual dispatch; type the environment name to confirm. Keeps the chosen admin (by email) + the global `Teams` catalogue and wipes everything else
   (all groups too when `drop_all_groups` is on). The admin's password is preserved; only refresh
   tokens are cleared (re-login needed). Runs the SQL via `scripts/run-sql.cs` (a .NET 10 file-based
-  app) using each environment's `BACKEND_CONNECTION_STRING` secret.
+  app) using the environment's `BACKEND_CONNECTION_STRING` secret.
 - **Local (Docker):** `./scripts/reset-db-keep-admin.ps1 -DropAllGroups` mirrors that wipe (omit the
   switch to keep the admin's own groups). Both paths run the same portable
   `scripts/reset-db-keep-admin.sql`.
@@ -487,16 +487,15 @@ season, `delete-season` drops a season inside a group, `delete-group` takes the 
   names are typed in the UI and copied by eye, and an en dash is invisible on screen but never
   compares equal. A miss lists every existing group/season so the right name can be copied.
 
-**Rehearsal season on staging (`scripts/rehearsal/`):** Actions → *Seed rehearsal season (STAGING
-ONLY)* (`.github/workflows/seed-rehearsal-staging.yml`) seeds a full, already-played English 2025/26
-season (real fixtures + real final scores from the frozen feeds in `scripts/rehearsal/fixtures/`),
-12 test participants, and an empty `Draft` round to run by hand — then scores every round through
-the real API and asserts the result. Phases: `all | seed | score | verify | reset-scoring`.
+**Rehearsal season (`scripts/rehearsal/`), run by hand against a local / throwaway database:**
+`seed-demo-season.cs` seeds a full, already-played English 2025/26 season (real fixtures + real
+final scores from the frozen feeds in `scripts/rehearsal/fixtures/`), 12 test participants, and an
+empty `Draft` round to run by hand; `score-season.ps1` then scores every round through the real API
+and `verify.sql` asserts the result (`reset-scoring.sql` undoes the scoring).
 
-- **Staging only by construction:** the job hardcodes `environment: staging`; there is no
-  `environment` input, so `BACKEND_CONNECTION_STRING` cannot resolve to production. Needs
-  `STAGING_API_BASE_URL` (var) plus `STAGING_ADMIN_PASSWORD` and `SEED_PARTICIPANT_PASSWORD`
-  (secrets) on that environment.
+- **Never against production.** It used to run as a workflow pinned to the staging environment;
+  staging was removed in November 2026 together with that workflow, so nothing stops the scripts
+  from hitting whatever `DB_CONNECTION` / base URL you give them.
 - **The seeder writes raw rows only** (users, memberships, season, rounds, matches, predictions).
   `PredictionScores`, `RoundParticipantResults`, `Absences`, `Standings` and `GroupUsers.IsEliminated`
   come exclusively from `POST /rounds/{id}/score`, driven in ascending order by
@@ -504,7 +503,7 @@ the real API and asserts the result. Phases: `all | seed | score | verify | rese
 - **Re-scoring:** use `phase: reset-scoring`; `POST /seasons/{id}/recalculate` is faithful too since
   the §7a fix (it rebuilds the standings round by round), but the reset phase keeps the rehearsal
   driving every score call itself.
-- `SEED_DRY_RUN=true` (the `dry_run` input) runs the whole seed in a transaction and rolls it back.
+- `SEED_DRY_RUN=true` runs the whole seed in a transaction and rolls it back.
 
 ## 7a. Known scoring bugs found while building the rehearsal tooling
 
@@ -526,7 +525,7 @@ the real API and asserts the result. Phases: `all | seed | score | verify | rese
    (September 2026): the recalculation clears `Standings` and rebuilds them round by round, so the
    Flávio Rule targets the leader at each round; the public link can no longer expose a replay that
    disagrees with the original scoring.
-2. **Smoke-test the public link on staging**: turn publishing on for one season in *Admin → Seasons*,
+2. **Smoke-test the public link in production**: turn publishing on for one season in *Admin → Seasons*,
    open `/p/<key>` in a private window (proves it works with no session), and check a `Scored` round
    against `/admin/rounds/:id/audit` — the numbers must match exactly. Then regenerate the key and
    confirm the old link 404s.

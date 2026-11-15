@@ -2,7 +2,7 @@
 #:package BCrypt.Net-Next@4.2.0
 
 // Seeds a full, already-played "Palpitao England" season for rehearsing the app
-// on STAGING before a real season starts. A .NET 10 "file-based app": run it with
+// on a LOCAL / throwaway database (never production) before a real season starts. A .NET 10 "file-based app": run it with
 // `dotnet run scripts/rehearsal/seed-demo-season.cs` -- no project file needed.
 // Same style/exit-code contract as scripts/run-sql.cs.
 //

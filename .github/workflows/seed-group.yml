@@ -3,7 +3,7 @@ name: Seed a group for the super-admin
 # Manual only. Creates the group defined in scripts/seed-group-for-admin.sql and
 # makes the kept super-admin its GroupAdmin, for go-live bootstrapping after a
 # full reset. Idempotent (no-op if that admin already has a group). Type the
-# environment name to confirm; runs under the staging/production Environment.
+# environment name to confirm; runs under the production Environment.
 on:
   workflow_dispatch:
     inputs:
@@ -12,10 +12,9 @@ on:
         required: true
         type: choice
         options:
-          - staging
           - production
       confirm:
-        description: 'Type the environment name (staging or production) to confirm'
+        description: 'Type the environment name (production) to confirm'
         required: true
         type: string
 
@@ -26,7 +25,7 @@ concurrency:
 jobs:
   seed:
     name: Seed group in ${{ inputs.environment }}
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, Palpitao]
     environment: ${{ inputs.environment }}
     steps:
       - name: Validate confirmation

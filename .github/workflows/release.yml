@@ -5,8 +5,7 @@ name: Release
 # creates the v* tag + GitHub Release. When a release is published, the production
 # deploy runs automatically against that tag.
 #
-# Staging deploys in parallel on the same push (see deploy-staging.yml). Releasing
-# does NOT push a commit back to main (no bump commit), so it works with branch
+# Releasing does NOT push a commit back to main (no bump commit), so it works with branch
 # protection and needs no PAT — the footer version comes from the git tag.
 on:
   push:

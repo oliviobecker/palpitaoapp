@@ -12,7 +12,7 @@
 -- Schema-version tolerant: each per-round / structural / cross-cutting table is
 -- deleted only if it exists (to_regclass guard), so the wipe works on any
 -- deployed schema >= InitialCreate even if some migrations are not yet applied
--- (e.g. a staging DB behind the latest SeasonScoringConfig migration). The core
+-- (e.g. a DB behind the latest SeasonScoringConfig migration). The core
 -- tenancy tables ("Users"/"Groups"/"GroupUsers") always exist, so they are
 -- deleted directly.
 --
