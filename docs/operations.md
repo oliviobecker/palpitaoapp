@@ -48,16 +48,17 @@ status checks to pass* (the `Backend`, `Frontend` and `Lint workflows (actionlin
 
 Production is one Windows machine on the owner's network that runs everything: IIS, PostgreSQL,
 the GitHub Actions runner and the Cloudflare Tunnel. Nothing listens on the internet: the public
-hostname is a **Cloudflare Tunnel**, so Cloudflare terminates TLS and `cloudflared` (a Windows
-service) forwards to the IIS site on a loopback-only binding.
+hostname is a **Cloudflare Tunnel** of its own (`palpitao-becker-alien`, locally managed, not shared
+with any other site), so Cloudflare terminates TLS and `cloudflared` forwards to the IIS site on a
+loopback-only binding.
 
 ```mermaid
 flowchart LR
     browser(["Browser"]) -- "https" --> cf["Cloudflare<br/>DNS · TLS"]
-    cf -- tunnel --> cfd["cloudflared<br/>(service)"]
+    cf -- tunnel --> cfd["cloudflared<br/>(SYSTEM task)"]
     subgraph pc["Production host"]
         cfd -- "http 127.0.0.1:8081" --> site["IIS site palpitao<br/>SPA + /api app"]
-        site --> pg[("PostgreSQL<br/>localhost:5432")]
+        site --> pg[("PostgreSQL cluster<br/>localhost:5433")]
         runner["Actions runner<br/>label Palpitao"] -. deploys .-> site
     end
 ```
@@ -66,17 +67,28 @@ flowchart LR
 |---|---|
 | Frontend IIS path | `C:\inetpub\palpitao` (repo variable `FRONTEND_IIS_PATH`) |
 | Backend IIS path | `C:\inetpub\palpitao\api`, an IIS application under the site (`BACKEND_IIS_PATH`) |
-| App pool | `palpitao-api`, *No Managed Code* (`BACKEND_APP_POOL`) |
+| App pools | `palpitao-api` for `/api` (`BACKEND_APP_POOL`) and `palpitao-web` for the site root, both *No Managed Code*, *AlwaysRunning* |
 | Site binding | `http 127.0.0.1:8081` — loopback only; the tunnel is the one way in |
-| Database | PostgreSQL on `localhost:5432`, database `palpitao`, owned by role `palpitao` |
+| Database | a **dedicated PostgreSQL 17 cluster** (service `postgresql-palpitao`, data in `C:\PostgreSQL\palpitao-17`, `localhost:5433` only), database `palpitao` owned by role `palpitao` — kept apart from any other Postgres on the machine |
+| Tunnel | `cloudflared tunnel --config C:\Windows\System32\config\systemprofile\.cloudflared\config.yml run`, started by the scheduled task *Palpitao Cloudflare Tunnel* (SYSTEM, at boot, restarts on failure); ingress `palpitao.oliviobecker.dev → http://127.0.0.1:8081`, log in `C:\ProgramData\cloudflared-palpitao-logs` |
 | Runner | repository runner with the label **`Palpitao`** — every self-hosted job asks for `[self-hosted, Palpitao]`, so a second runner can never pick up a deploy |
+
+**Backups:** the SYSTEM task *Palpitao DB Backup* runs `C:\PostgreSQL\backup\palpitao-backup.ps1`
+daily at 04:30 — a `pg_dump -Fc` into `C:\PostgreSQL\backup\dumps`, keeping 14 days. The folder is
+readable by Administrators and SYSTEM only (it holds `pgpass.conf`). The dumps live on the same
+disk as the database, so copy them off the machine now and then. Restore with
+`pg_restore --no-owner --no-acl -d palpitao <file>` into an empty database.
+
+The tunnel runs as a scheduled task rather than through `cloudflared service install`: cloudflared's
+own Windows service wrapper exited at start on this host without writing a log, while the same
+command under SYSTEM from Task Scheduler runs fine.
 
 What the machine needs besides IIS: the **ASP.NET Core Hosting Bundle** (same major as the app),
 **IIS URL Rewrite** (the SPA's `web.config` falls back to `index.html` with it), the
 **IIS Management Scripts and Tools** feature (the deploy stops/starts the app pool through the
 `WebAdministration` module, and only warns without it), the .NET SDK and Node on the runner
-service's `PATH`, and sleep disabled on AC power. The runner service and `cloudflared` start
-automatically, so a reboot brings the site back on its own.
+service's `PATH`, and sleep disabled on AC power. The runner service, the Postgres service and the
+tunnel task all start at boot, so a reboot brings the site back on its own.
 
 Behind the tunnel every request reaches the API from `127.0.0.1`, so the per-IP auth rate limit
 buckets every client together until the API reads Cloudflare's `CF-Connecting-IP` header.
@@ -85,10 +97,13 @@ buckets every client together until the API reads Cloudflare's `CF-Connecting-IP
 temporary label, then put the site offline (`app_offline.htm` in the old `api` folder), copy the
 database with `pg_dump -Fc` / `pg_restore --no-owner`, compare `scripts/db-counts.sql` on both sides,
 point the `production` environment's `BACKEND_CONNECTION_STRING` at the new database, move the
-`Palpitao` label to the new runner, run *Build and deploy on IIS Production* by hand, install
-`cloudflared` there with the existing tunnel's token, and stop `cloudflared` on the old machine — two
-connectors on one tunnel would split traffic between both hosts. Keep the old machine stopped, not
-wiped, until the new one has run a few days.
+`Palpitao` label to the new runner and deploy (by hand or with *Build and deploy on IIS Production*).
+For the tunnel, copy `config.yml` and the tunnel's credentials JSON to the new machine and start it
+there, then stop it on the old one — two connectors on one tunnel split traffic between both hosts.
+Never reuse the token of a tunnel that other sites share: it would route their hostnames to the new
+machine too; give the app its own tunnel and repoint only its hostname with
+`cloudflared tunnel route dns --overwrite-dns`. Keep the old machine stopped, not wiped, until the
+new one has run a few days.
 
 ### Releases & production deployment (`release.yml` + `deploy-iis.yml`)
 
