@@ -27,9 +27,9 @@ working, and `GET /health/ocr` names the missing languages.
 > The `*.traineddata` files are large binaries and are gitignored — each machine downloads its own.
 > The native libraries (`leptonica`, `tesseract50.dll`) come with the `Tesseract` NuGet package.
 
-## Servers (staging/production)
+## Production server
 
-Not a manual step: the deploy workflows download both models here **before** `dotnet publish`,
+Not a manual step: the deploy workflow downloads both models here **before** `dotnet publish`,
 pinned to commit `ced7875` of the `tessdata` repository and verified by SHA-256, so they ship inside
 the publish output. **Do not copy anything onto the server by hand** — the deploy mirrors the
 published folder with `robocopy /MIR` and deletes whatever did not come with it. To check an

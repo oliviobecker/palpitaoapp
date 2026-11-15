@@ -8,7 +8,7 @@
 -- Run it AFTER scripts/rehearsal/score-season.ps1. Before scoring, checks B and
 -- onwards will fail by design -- the derived tables simply do not exist yet.
 --
--- v_flavio_round is rewritten by .github/workflows/seed-rehearsal-staging.yml.
+-- Set v_flavio_round to the SEED_FLAVIO_ROUND used when seeding.
 -- ---------------------------------------------------------------------------
 
 DO $$

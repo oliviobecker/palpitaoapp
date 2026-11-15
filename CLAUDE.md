@@ -170,7 +170,7 @@ retries **once** on a 401, and `Accept-Language` injection. The active season is
 Trunk-based on `main`; CI (`.github/workflows/ci.yml`) runs backend build+tests, frontend
 format-check + build + unit + e2e, and actionlint. **Conventional Commits** drive semantic-release
 (`feat` → minor, `fix` → patch, `BREAKING CHANGE` → major; `chore/ci/docs/refactor/test` ship
-nothing). Merge to `main` auto-deploys staging and may release+deploy production. Commit/push only
+nothing). Merge to `main` may release+deploy production (there is no staging). Commit/push only
 when asked; if on `main`, branch first; never force-push or rewrite `main`'s history.
 
 Real secrets (connection string, `Jwt:Key`, `Sentry:Dsn`, `Fixtures:ApiKey`) come only from env /
